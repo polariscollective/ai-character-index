@@ -896,10 +896,30 @@ body.sidebar-collapsed .sidebar-resizer {
 .legend-mark.defining { width: 5px; }
 .document-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; }
 
+/* Half the window of text, a quarter of it either side.
+ *
+ * Proportional rather than the 780px box this used to be: with the menu folded
+ * the panel is most of the window, and a fixed measure left the spec as a
+ * ribbon down the middle of a wide empty field.
+ *
+ * Measured against the window, not the panel. A quarter of the *panel* would
+ * make the column narrower whenever the menu is open than the fixed box it
+ * replaces — 570px against 624px — which is the opposite of the point. Against
+ * the window the measure holds at half the screen whether the menu is there or
+ * not, and only the gutters move.
+ *
+ * The `max` is a floor, for the case where the panel is narrower than half the
+ * window: the subtraction goes negative, and a negative padding is not dropped
+ * politely, it takes the whole declaration with it. Compare mode reaches that
+ * case on every screen and sets its own gutters below anyway — a quarter of a
+ * half-width panel is a column too narrow to read.
+ *
+ * Gutters as padding rather than margins, so the passage rules and washes,
+ * which are laid on the block and bleed into the space beside the text, still
+ * have something to bleed into. */
 .document-body {
-  width: min(100%, 780px);
-  margin: 0 auto;
-  padding: 56px 78px 120px;
+  width: 100%;
+  padding: 56px max(28px, (100% - 50vw) / 2) 120px;
   font-family: var(--reader);
   font-size: 17px;
   line-height: 1.65;
