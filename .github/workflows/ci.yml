@@ -58,6 +58,15 @@ jobs:
       - name: Registry drift gate
         run: python3 engine/generate_behaviour_constants.py --check
 
+      - name: Store, index and migration suites
+        run: |
+          python3 engine/test_store.py
+          python3 engine/test_index_store.py
+          python3 engine/test_migrate_to_supabase.py
+
+      - name: Reader route suite
+        run: node --test app/lib/__tests__/publications.test.mjs
+
       - name: app.js resolution harnesses
         run: |
           node engine/panel/test_appjs_fallthrough.js

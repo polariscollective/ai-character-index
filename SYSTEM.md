@@ -6,7 +6,7 @@
 
 ## What the system is
 
-An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a static site. git is the canonical gate (a merged PR is the push-to-production act); the site is committed static output deployed to Cloudflare Pages. The LLM-panel pipeline does the active knowledge production; the coverage ledger (`data/coverage.json`) is frozen — it still feeds the reader builder's index behaviour set, but nothing writes it any more. Behaviour identity is registry-driven (`data/behaviours.json`); users can register their own specs and behaviours locally (the clone/fork pathway — `specs/user/specs.json` + `set:user` registry entries, nothing pushed back).
+An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase. git is no longer the gate: the artifacts live in the `aci_` tables and a publication row decides what the reader shows. The LLM-panel pipeline does the active knowledge production; the coverage ledger (`data/coverage.json`) is frozen — it still feeds the reader builder's index behaviour set, but nothing writes it any more. Behaviour identity is registry-driven (`data/behaviours.json`); users can register their own specs and behaviours locally (the clone/fork pathway — `specs/user/specs.json` + `set:user` registry entries, nothing pushed back).
 
 ## Global dependency map
 
@@ -29,7 +29,8 @@ graph TB
   arch["archive/general-welfare-strict-reading/ (preserved judgment)"]
   proto["site/index.html (redirect to the reader)"]
   meth["site/methodology.html (static page)"]
-  reader & proto & meth ==>|"deploy.yml on site/** changes"| cf["Cloudflare Pages"]
+  reader & proto & meth ==>|"copied into public/ by prebuild"| vc["Next.js on Vercel"]
+  sb["Supabase aci_ tables"] -->|"/api/reader/documents, /api/reader/payload"| reader
   notion["Notion DBs"] -.->|"planned sync -- engine/notion-sync/ is empty"| cov
 ```
 
@@ -45,9 +46,9 @@ graph TB
 | `archive/` | Preserved analytical artifact: the cross-spec strict-reading judgment (self-describing README inside) | — |
 | `methodology/` | Depth rubric, public site copy, method-exploration findings | [methodology/OVERVIEW.md](methodology/OVERVIEW.md) |
 | `site/` | Two static surfaces, no build step | [site/OVERVIEW.md](site/OVERVIEW.md) |
-| `.github/` | One deploy workflow + Issues-page contact link | [.github/OVERVIEW.md](.github/OVERVIEW.md) |
+| `.github/` | One CI workflow + Issues-page contact link | [.github/OVERVIEW.md](.github/OVERVIEW.md) |
 | `design/`, `vision/` | Settled-design log (Jul 2026) and the originating brief | [design/OVERVIEW.md](design/OVERVIEW.md), [vision/OVERVIEW.md](vision/OVERVIEW.md) |
-| root files | PLAN.md, README.md, pnpm-for-wrangler setup | [ROOT.md](ROOT.md) |
+| root files | PLAN.md, README.md, the Next.js application and its two reader routes | [ROOT.md](ROOT.md) |
 | branch/local territory | Experiment branches, parked CI work, local-only branches | [experiments-branches.md](experiments-branches.md) |
 
 ## System-level contracts (the tissue between components)
@@ -56,8 +57,8 @@ HEAD
 1. **Locator grammar** — `specs/CITATION.md` defines the format; `cite.py` implements it (bundled specs + optional user manifest); every stored citation in `data/` and site payloads depends on byte-exact resolution. CI re-resolves on every PR (the `tests/` suite re-resolves every published locator through `cite.py`; `tests/test_coverage_json.py` byte-compares every quote in the frozen ledger).
 2. **Behaviour identity** — registry-driven since #28: `data/behaviours.json` is the source of truth; `engine/generate_behaviour_constants.py` regenerates the derived constants (`build-spec-reader-data.py BEHAVIOURS`, the judge-prompt titles in `engine/panel/behaviours.json` -- keys are registry slugs, the same slugs the panel runlogs are keyed by), with `tests/test_behaviour_registry.py` as the drift gate. `behaviour_id` remains **file-local across disjoint numbering spaces** (id 1 = "No sycophancy" in `coverage.json`; the registry's reader-test set starts at "Helpfulness"); the registry namespaces ids per set and slugs are the global key.
 3. **Runlog convention** — JSONL rows keyed by rubric version; defaults still disagree between `harness.RUNLOG` and the executors. The canonical shipped runlog is committed (`engine/panel/runlog-v5.jsonl`, the v5 full bench on the 9-point scale, documented in `runlog-v5.md`; the v3-era `runlog-v3.jsonl` stays committed with its record) and `engine/panel/verify_panel_provenance.py` proves the shipped payload rebuilds from it byte-identically; other runlogs stay gitignored. The v5 prompt port has landed (`engine/panel/prompts/v5.txt`, byte-identical to the calibration source), so `whole_doc.py` stamps v5 by default; v3-family reruns sit behind `--rubric=v3w`/`v3s`.
-4. **Site payloads** — the reader (`site/spec-reader/`) holds its own `data/`: `documents.json` for the spec text (built by `engine/build-spec-reader-data.py`) and the behaviour payloads (built by `engine/panel/build_site_data.py`), resolved ?data=<name> pin -> `manifest.json` latest -> the committed `behaviours.json` fallback. Panel runs emit timestamped payloads + `manifest.json` (latest-by-default, both gitignored); `data/` also carries the calibration variants and the band-filtered keep-set (`behaviours-v5-reader.json` -- exactly what the client can render, since nothing below the related cut ever displays) as `?data=` pins. Panel citations carry `exampleBlock` flags anchoring example blocks. The compare view shows any two registered documents side by side; a picker chooses the pair once more than two are registered, and a user-registered spec is a first-class pane.
-5. **Deploy trigger** — pushes to main filtered to `site/**` and `.github/workflows/deploy.yml` (plus manual dispatch): data/engine changes are invisible to production until baked into committed payloads.
+4. **Site payloads** — the reader takes both from routes: `/api/reader/documents` for the spec text and the frozen ledger, `/api/reader/payload` for the behaviour set, each streaming one column of one publication, resolved from a `?publication=<uuid>` pin or the current publication. Both are materialised at publication time by the builders that own their shapes (`engine/build-spec-reader-data.py` and `engine/panel/build_site_data.py`, each with `--from-supabase`), so nothing is reassembled per request and there is one implementation of each payload. The committed payloads under `site/spec-reader/data/` are no longer served: they are the oracle `engine/verify_supabase_provenance.py` compares the database against. Panel citations carry `exampleBlock` flags anchoring example blocks. The compare view shows any two registered documents side by side; a picker chooses the pair once more than two are registered, and a user-registered spec is a first-class pane.
+5. **Deploy trigger** — Vercel builds on a push to main; `prebuild` copies `site/` into `public/`. Data changes reach production without a deploy at all: the reader's two payloads come from the current publication row, so publishing is a database write and not a commit.
 
 ## Cross-cutting as-is risks (synthesized from all overviews)
 
