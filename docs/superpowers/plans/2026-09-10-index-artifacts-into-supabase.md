@@ -2,6 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: executed, 2026-09-10.** All six tasks are done and committed. The
+acceptance test passes: `python3 engine/verify_supabase_provenance.py` rebuilds
+both payloads from the database and finds them byte-identical to the committed
+ones. Two things went differently from the plan, both recorded in the commits:
+the v3 runlog is not migrated, and `Store.select` gained paging after PostgREST's
+thousand-row ceiling silently truncated an idempotency check.
+
 **Goal:** Every artifact the index publishes lives in the `evals` Supabase
 project under the `aci_` prefix, and the reader payload rebuilt from the
 database is byte-identical to the one committed today.
