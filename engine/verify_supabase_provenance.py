@@ -27,6 +27,7 @@ And one guard, because the third claim rests on it: the spec-version rows are
 insert-only, so nothing can move text a stored locator points at.
 """
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -44,6 +45,26 @@ from store import Store, StoreError   # noqa: E402
 
 PAYLOAD = ROOT / "site" / "spec-reader" / "data" / "behaviours-v5-reader.json"
 DOCUMENTS = ROOT / "site" / "spec-reader" / "data" / "documents.json"
+RECORD = HERE / "published-artefacts.sha256.json"
+
+
+def recorded():
+    """The digests of what the index published when the migration was verified.
+
+    These stand in for the committed payloads once those are deleted: the
+    question stops being "do the rebuilt bytes equal this file" and becomes "does
+    the database still produce the artifact that carried this digest", which
+    needs a few lines rather than twenty megabytes to ask.
+    """
+    return json.loads(RECORD.read_text())["published"]
+
+
+def digest(payload):
+    """The digest of a payload as its builder serialises it."""
+    if isinstance(payload, (bytes, bytearray)):
+        return hashlib.sha256(payload).hexdigest()
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False,
+                                     separators=(",", ":")).encode()).hexdigest()
 
 failures = []
 
@@ -163,6 +184,24 @@ def check_ledger_citations_still_resolve(store):
            f"{checked} citations, {mismatched} mismatched")
 
 
+def check_the_published_artefacts_still_carry_their_digests(store):
+    """The oracle, once the committed payloads are gone. It asks the database
+    what it publishes and holds it to what was verified."""
+    publication = index_store.current_publication(store)
+    if publication is None:
+        report(False, "the published artefacts carry their recorded digests",
+               "nothing is published")
+        return
+    want = recorded()
+    for name, column in (("payload", "payload_sha256"),
+                         ("documents", "documents_sha256")):
+        got = publication[column]
+        report(got == want[name]["sha256"],
+               f"the published {name} carries its recorded digest",
+               "unchanged" if got == want[name]["sha256"]
+               else f"{got[:16]} against {want[name]['sha256'][:16]}")
+
+
 def check_publication_carries_both_payloads(store):
     """The routes stream these two columns and rebuild nothing, so what is
     stored must be what the builders produce. Checked against the committed
@@ -261,6 +300,7 @@ def main():
         scratch = Path(scratch)
         check_behaviour_payload(scratch)
         check_documents_payload(scratch)
+    check_the_published_artefacts_still_carry_their_digests(store)
     check_publication_carries_both_payloads(store)
     check_behaviours_carry_the_judging_entry(store)
     check_the_prompt_composes_the_same_from_either_source(store)

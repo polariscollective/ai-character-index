@@ -1,0 +1,67 @@
+{
+  "_comment": "What the index published when the migration was verified. `published` is what the verifier holds the database to; `sources` records the files it was built from, which are gone from the branch and recoverable from git history at `recorded_at_commit`.",
+  "recorded_on": "2026-09-10",
+  "recorded_at_commit": "085fd2e0749564234bed861c110946ba44d94a3a",
+  "published": {
+    "payload": {
+      "sha256": "805510ca9a809b100fb91a395364ea4ce1d0ab78c3210b5edc56b2f9c6442e3c",
+      "served_by": "/api/reader/payload"
+    },
+    "documents": {
+      "sha256": "12bf2a464fb55bef4033dd6c20fa702ba0d2f877c1a8dbb956b66057ce69ba50",
+      "served_by": "/api/reader/documents"
+    }
+  },
+  "sources": {
+    "runlog-v5": {
+      "path": "engine/panel/runlog-v5.jsonl",
+      "sha256": "05ba1e1c010e39ac6f8574e208af780e3a5354682e7aa2a39868bb265caffb9c",
+      "bytes": 8153358
+    },
+    "display-registry": {
+      "path": "data/behaviours.json",
+      "sha256": "972ca12f2e77e7a92fef0b69568b5e3dc0660233ebca9090d5115d181cc8212a",
+      "bytes": 7023
+    },
+    "judging-registry": {
+      "path": "engine/panel/behaviours.json",
+      "sha256": "ee26e2a11eeb8ae281c6bbaf4f06305c8612dfed324dc20f4dd21352d5869197",
+      "bytes": 9371
+    },
+    "coverage-ledger": {
+      "path": "data/coverage.json",
+      "sha256": "41cf6dfbe2ac66ab7ae9c78de0003d9560e3f4f1ce843951281f0cdda3b9405c",
+      "bytes": 47146
+    },
+    "cell-curation": {
+      "path": "data/panel-cell-curation.json",
+      "sha256": "8e5d508b79b8564cd926d607ec0d8a9a352728b951ab013216a1fdc1b7854900",
+      "bytes": 3781
+    },
+    "labs": {
+      "path": "data/labs.json",
+      "sha256": "7cda4c364d35a5e39f6203cf73b1f16c34ff92bd17f46b06b42da1f5ce10c9d9",
+      "bytes": 695
+    },
+    "constitution": {
+      "path": "specs/claude-constitution/20260120-constitution.md",
+      "sha256": "251440a71a9068dd43bfaab2b8694d6e2a4f519c403f1b9a70785f830d05f327",
+      "bytes": 186895
+    },
+    "model-spec": {
+      "path": "specs/openai-model-spec/model_spec.md",
+      "sha256": "8c95f02085548b145468ea45b4c9d99ab6f915e097854fa919dd35b34fd077c0",
+      "bytes": 272120
+    },
+    "payload-file": {
+      "path": "site/spec-reader/data/behaviours-v5-reader.json",
+      "sha256": "805510ca9a809b100fb91a395364ea4ce1d0ab78c3210b5edc56b2f9c6442e3c",
+      "bytes": 338315
+    },
+    "documents-file": {
+      "path": "site/spec-reader/data/documents.json",
+      "sha256": "32557e6d85144655a8943127013f0c734b67f529ac7407408bfc6ff49f77b908",
+      "bytes": 511243
+    }
+  }
+}
