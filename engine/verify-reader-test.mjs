@@ -102,7 +102,7 @@ async function readView(url) {
   url += (url.includes("?") ? "&" : "?") + "tiers=defining,core,related";
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForFunction(
-    () => !document.querySelector("#passage-count").textContent.startsWith("Loading"),
+    () => !document.querySelector(".passage-count").textContent.startsWith("Loading"),
     { timeout: 10000 },
   );
   await page.waitForTimeout(150);
@@ -236,14 +236,14 @@ if (behaviours.length === 0) {
         `${behaviour.slug} · ${document.id}`,
       );
       // Tint/role agreement, continuously: every Related-tinted passage must
-      // carry the "Related ·" role prefix and every solid passage must not.
+      // carry the "Related," role prefix and every solid passage must not.
       const tint = await page.evaluate(() => {
         const ps = [...document.querySelectorAll("[data-passage-id]")];
         let bad = 0;
         for (const el of ps) {
           const adj = el.classList.contains("adjacent");
           const role = el.querySelector(".passage-reason-role")?.textContent ?? "";
-          if (adj !== role.includes("Related \u00b7")) bad++;
+          if (adj !== role.includes("Related,")) bad++;
         }
         return { n: ps.length, bad };
       });
@@ -274,7 +274,7 @@ if (behaviours.length === 0) {
           && seen.status === ""
           && seen.sharedMarked === seen.sharedCited
           && seen.ticked.join(",") === slugs.join(","),
-        `${slugs.length} behaviors · ${document.id}`,
+        `${slugs.length} behaviours · ${document.id}`,
         `${seen.passages} passages, ${seen.sharedMarked} shared`
         + (accounted ? "" : `  unaccounted: ${short.join(", ")}`)
         + (seen.status ? `, status: ${seen.status}` : ""),
@@ -329,7 +329,7 @@ if (behaviours.length === 0) {
     cleared.passages === 0
       && cleared.hiddenBlocks === 0
       && cleared.collapsedSections === 0
-      && cleared.behaviour === "No behaviors selected"
+      && cleared.behaviour === "No behaviours selected"
       && cleared.focusToggleHidden
       && cleared.url === null,
     "nothing ticked · anthropic",
@@ -364,7 +364,7 @@ if (behaviours.length === 0) {
     || !markdown.includes(passage.role));
   const written = (markdown.match(/^#### /gm) || []).length;
   const hint = (await page.textContent("#download-hint")).trim();
-  const expectedHint = `${exported.length} behaviors · ${citations.length} passages, both specs`;
+  const expectedHint = `${exported.length} behaviours, ${citations.length} passages, both specs`;
   report(
     missing.length === 0
       && written === citations.length
@@ -374,7 +374,7 @@ if (behaviours.length === 0) {
         && markdown.includes(behaviour.definition))
       && documents.every(document =>
         markdown.includes(`### ${document.lab} · ${document.title} (${document.version})`)),
-    `export · ${exported.length} behaviors`,
+    `export · ${exported.length} behaviours`,
     `${download.suggestedFilename()}, ${written}/${citations.length} citations, menu reads ${hint}`
     + (missing.length ? `, missing ${missing.slice(0, 3).map(passage => passage.locator).join("; ")}` : ""),
   );

@@ -122,8 +122,11 @@ const state = {
   selectedSpec: "anthropic",
   comparing: false,
   embedded: false,
-  passageIndex: 0,
-  anchors: [],
+  /* Which panel the keyboard walks. The passages themselves live on the panels
+   * — `panel._anchors` and `panel._passageIndex` — because the panels are
+   * re-cloned on every rebuild and so is their contents; only the choice of
+   * which one has the reader's attention outlives that. */
+  activePanel: null,
   documentFocus: { anthropic: false, openai: false },
   sidebarWidth: 292,
   sidebarCollapsed: false,
@@ -143,9 +146,7 @@ const elements = {
   findingBehaviour: document.querySelector("#finding-behaviour"),
   findingDefinition: document.querySelector("#finding-definition"),
   mode: document.querySelector("#mode"),
-  nextPassage: document.querySelector("#next-passage"),
-  passageCount: document.querySelector("#passage-count"),
-  previousPassage: document.querySelector("#previous-passage"),
+  compareToggle: document.querySelector("#compare-toggle"),
   readerStatus: document.querySelector("#reader-status"),
   selectAllBehaviours: document.querySelector("#select-all-behaviours"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
@@ -414,7 +415,7 @@ const KEY_NOTES = {
       "A 3, the top of the scale, and the only grade the rubric rations. It is " +
       "reserved for the document's fullest statement of the behaviour: the passage " +
       "a reader citing one single place would be sent to. The bar is relative to " +
-      "the document rather than absolute — a judge who finds no passage standing " +
+      "the document rather than absolute. A judge who finds no passage standing " +
       "above the rest is told to award no 3 at all, and most behaviours draw " +
       "between none and three across a whole specification.",
     reader:
@@ -428,7 +429,7 @@ const KEY_NOTES = {
       "A 2. The document establishes the behaviour here: the passage states the " +
       "norm itself, defines its criteria or factors, or sets out its decision " +
       "procedure. A single clause or list item counts for what it says about this " +
-      "behaviour. The rubric sets no quota in either direction — a behaviour " +
+      "behaviour. The rubric sets no quota in either direction: a behaviour " +
       "carried by one load-bearing passage and merely applied everywhere else " +
       "should collect one core mark, not many, because promoting the applications " +
       "buries the passage that actually carries it.",
@@ -448,7 +449,7 @@ const KEY_NOTES = {
     reader:
       "Drawn when at least two judges are behind it, which is four of nine on the " +
       "default panel. A lone related vote is kept in the data and not drawn. This " +
-      "tier is off until you ask for it — the toggles in the document header " +
+      "tier is off until you ask for it. The toggles in the document header " +
       "beside the version turn it on.",
   },
   overlap: {
@@ -549,7 +550,7 @@ function setupKeyNotes() {
 function setSidebarCollapsed(collapsed, persist = false) {
   state.sidebarCollapsed = collapsed;
   document.body.classList.toggle("sidebar-collapsed", collapsed);
-  const label = collapsed ? "Show the behavior menu" : "Hide the behavior menu";
+  const label = collapsed ? "Show the behaviour menu" : "Hide the behaviour menu";
   elements.sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
   elements.sidebarToggle.setAttribute("aria-label", label);
   elements.sidebarToggle.title = label;
@@ -669,9 +670,9 @@ function renderBehaviourList() {
   if (empty) {
     elements.behaviourList.innerHTML = `
       <div class="behaviour-empty">
-        <strong>No behaviors under test yet.</strong>
+        <strong>No behaviours under test yet.</strong>
         <p>Both specifications are shown here in full, with no passages highlighted.
-        Behaviors appear in this menu once their passage mappings are published to this reader.</p>
+        Behaviours appear in this menu once their passage mappings are published to this reader.</p>
       </div>`;
     updateExportControl();
     return;
@@ -748,13 +749,13 @@ function updateExportControl() {
     return;
   }
   if (!behaviours.length) {
-    elements.downloadHint.textContent = "Tick a behavior to export its passages.";
+    elements.downloadHint.textContent = "Tick a behaviour to export its passages.";
     return;
   }
   const passages = selectedPassageTotal();
   elements.downloadHint.textContent =
-    `${behaviours.length} ${behaviours.length === 1 ? "behavior" : "behaviors"}`
-    + ` · ${passages} ${passages === 1 ? "passage" : "passages"}, both specs`;
+    `${behaviours.length} ${behaviours.length === 1 ? "behaviour" : "behaviours"}`
+    + `, ${passages} ${passages === 1 ? "passage" : "passages"}, both specs`;
 }
 
 /* The reader's own date, not UTC: an export made in the evening is dated the day it was
@@ -786,7 +787,7 @@ function passagesMarkdown() {
     "",
     `Exported from the AI Character Index LLM panel on ${today()}.`,
     "",
-    `Behaviors: ${behaviours.map(behaviour => `${paddedNumber(behaviour)} ${behaviour.name}`).join(", ")}.`,
+    `Behaviours: ${behaviours.map(behaviour => `${paddedNumber(behaviour)} ${behaviour.name}`).join(", ")}.`,
     "",
     `Specifications read: ${documents.map(doc => `${doc.lab} · ${doc.title} (${doc.version})`).join("; ")}.`,
     "",
@@ -835,7 +836,7 @@ function exportFilename() {
   const behaviours = selectedBehaviours();
   const subject = behaviours.length === 1
     ? behaviours[0].slug
-    : `${behaviours.length}-behaviors`;
+    : `${behaviours.length}-behaviours`;
   return `spec-reader-${subject}-passages-${today()}.md`;
 }
 
@@ -863,10 +864,10 @@ function updateFindingBar(overlaps = null) {
   const behaviours = selectedBehaviours();
   if (!behaviours.length) {
     const loaded = payloadBehaviours().length;
-    elements.findingBehaviour.textContent = loaded ? "No behaviors selected" : "No behavior under test";
+    elements.findingBehaviour.textContent = loaded ? "No behaviours selected" : "No behaviour under test";
     elements.findingDefinition.textContent = loaded
-      ? "Both specifications are shown in full. Tick a behavior in the menu to highlight the passages that bear on it."
-      : "Reading both specifications in full -- nothing is highlighted until a behavior is published to this reader.";
+      ? "Both specifications are shown in full. Tick a behaviour in the menu to highlight the passages that bear on it."
+      : "Reading both specifications in full -- nothing is highlighted until a behaviour is published to this reader.";
     return;
   }
 
@@ -877,8 +878,8 @@ function updateFindingBar(overlaps = null) {
   }
   const shared = overlaps === null
     ? ""
-    : ` · ${overlaps} ${overlaps === 1 ? "passage is" : "passages are"} cited by more than one`;
-  elements.findingDefinition.textContent = `${behaviours.length} behaviors read over the same text${shared}.`;
+    : `, ${overlaps} ${overlaps === 1 ? "passage is" : "passages are"} cited by more than one`;
+  elements.findingDefinition.textContent = `${behaviours.length} behaviours read over the same text${shared}.`;
 }
 
 /* Ticking or unticking never re-renders the specification, only its highlight layer, so
@@ -1297,6 +1298,8 @@ function railTint(marks) {
  *
  * Every element here is inline, because a block is whatever the markdown made it -- often a
  * <p>, where insertAdjacentHTML would drop a <div> straight back out again. */
+const spoken = value => (value || "").split(" · ").join(", ");
+
 function passageLabels(marks, passageId) {
   const naming = marks.filter(mark => mark.anchored.length);
   const chips = naming.map(mark => `
@@ -1311,7 +1314,7 @@ function passageLabels(marks, passageId) {
       ${pairs.length > 1
         ? `<span class="passage-reason-behaviour">${escapeHTML(mark.behaviour.name)}</span>`
         : ""}
-      <span class="passage-reason-role">${passage.adjacent ? "Related · " : ""}${
+      <span class="passage-reason-role">${passage.adjacent ? "Related, " : ""}${
         applyInlineFormatting(escapeHTML(passage.role))}</span>
     </span>
   `).join("");
@@ -1632,7 +1635,6 @@ function renderDocument(doc) {
   const source = panel.querySelector(".source-link");
   source.href = doc.sourceUrl;
   source.title = `Open ${doc.title} at its publisher`;
-  panel.querySelector(".compare-toggle").setAttribute("aria-pressed", String(state.comparing));
   // Toggle state comes from the shared band set; in compare mode the twin header
   // is kept in step by the rebuild that toggleBand triggers.
   panel.querySelectorAll(".tier-toggle").forEach(button => {
@@ -1718,16 +1720,16 @@ function renderRunProvenance() {
     judgesPerCellLabel(),
     prov.runDate,
   ].filter(Boolean);
-  summary.textContent = bits.length ? bits.join(" · ") : "Run details";
+  summary.textContent = bits.length ? bits.join(", ") : "Run details";
   box.classList.toggle("fell-through", Boolean(src.requested));
 
   const rows = [];
   if (src.requested) {
     rows.push(["Requested", src.requested.refused
-      ? `${src.requested.name} — not a loadable payload name`
-      : `${src.requested.name} — not available`]);
+      ? `${src.requested.name}, not a loadable payload name`
+      : `${src.requested.name}, not available`]);
   }
-  rows.push(["Showing", `${src.name || "—"}${src.origin ? ` (${src.origin})` : ""}`]);
+  rows.push(["Showing", `${src.name || "none"}${src.origin ? ` (${src.origin})` : ""}`]);
   if (prov.method) rows.push(["Method", prov.method]);
   if (prov.rubric) rows.push(["Rubric", prov.rubric]);
   if ((prov.panel || []).length) rows.push(["Panel", prov.panel.join(", ")]);
@@ -1774,7 +1776,7 @@ function updatePanelMeta(panel, doc) {
           </div>`
         : `<div class="zero-coverage" role="note">
             <strong>${several
-              ? "None of the selected behaviors map to a passage in this specification."
+              ? "None of the selected behaviours map to a passage in this specification."
               : "No mapped passages in this specification."}</strong>
             <span>Absence of coverage is an index finding, not missing data.</span>
           </div>`,
@@ -1785,12 +1787,16 @@ function updatePanelMeta(panel, doc) {
 /* Lay the current selection over documents that are already rendered. Nothing here
  * touches the specification text, so ticking a behaviour cannot move the reader. */
 function applyHighlights() {
-  const previous = state.anchors[state.passageIndex] || null;
-  const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
+  // One remembered passage per panel: the two documents hold their places
+  // independently, and a change of selection must not shuffle one because the
+  // other moved.
+  const previous = new Map(panels().map(panel =>
+    [panel.dataset.documentId, panel._anchors?.[panel._passageIndex] || null]));
+  const rendered = panels();
   const missing = [];
   let overlaps = 0;
 
-  panels.forEach(panel => {
+  rendered.forEach(panel => {
     const doc = state.payload.documents.find(item => item.id === panel.dataset.documentId);
     clearHighlights(panel);
     const annotated = annotatePassages(panel, doc);
@@ -1813,10 +1819,13 @@ function applyHighlights() {
   requestAnimationFrame(() => {
     collectAnchors();
     updateRails();
-    // Hold the reader's place: the passage it was on keeps the cursor if it survived
-    // the change of selection, and nothing scrolls if it did not.
-    const index = previous ? state.anchors.indexOf(previous) : -1;
-    focusPassage(Math.max(0, index), false);
+    // Hold each reader's place: the passage a panel was on keeps its cursor if it
+    // survived the change of selection, and nothing scrolls if it did not.
+    panels().forEach(panel => {
+      const was = previous.get(panel.dataset.documentId);
+      const index = was ? panel._anchors.indexOf(was) : -1;
+      focusPassage(panel, Math.max(0, index), false);
+    });
   });
 }
 
@@ -1859,7 +1868,7 @@ function openSpecPicker(button) {
     name.textContent = doc.lab;
     const detail = document.createElement("small");
     const version = (doc.version || "").replaceAll("-", ".");
-    detail.textContent = version ? `${doc.title} · ${version}` : doc.title;
+    detail.textContent = version ? `${doc.title}, ${version}` : doc.title;
     option.append(name, detail);
     option.addEventListener("click", () => {
       picker.hidePopover();
@@ -1929,35 +1938,44 @@ function rebuildReader() {
     elements.documentReader.style.gridTemplateColumns = "";
     if (state.comparing) setCompareFirst(state.compareFirst);
   }
-  state.passageIndex = 0;
-  state.anchors = [];
 
   applyHighlights();
   requestAnimationFrame(revealHashTarget);
 }
 
+/* Each document counts and walks its own passages.
+ *
+ * It used to be one list spanning both panels, with a single pair of arrows
+ * above them, so stepping through Anthropic eventually crossed into OpenAI and
+ * the counter said which one you had landed in. Two documents scored against
+ * the same behaviour are two separate readings; walking one should not walk out
+ * of it. */
 function collectAnchors() {
-  state.anchors = [...elements.documentReader.querySelectorAll("[data-passage-id]")];
-  elements.previousPassage.disabled = state.anchors.length === 0;
-  elements.nextPassage.disabled = state.anchors.length === 0;
-
-  if (!state.anchors.length) {
-    if (!payloadBehaviours().length) elements.passageCount.textContent = "No behaviors under test";
-    else if (!highlightsActive()) elements.passageCount.textContent = "No behaviors selected";
-    else if (state.comparing) elements.passageCount.textContent = "No passages in either spec";
-    else elements.passageCount.textContent = "No passages in this spec";
-  }
+  panels().forEach(panel => {
+    panel._anchors = [...panel.querySelectorAll("[data-passage-id]")];
+    if (panel._passageIndex === undefined) panel._passageIndex = 0;
+    const empty = panel._anchors.length === 0;
+    panel.querySelector(".previous-passage").disabled = empty;
+    panel.querySelector(".next-passage").disabled = empty;
+    if (empty) {
+      panel.querySelector(".passage-count").textContent =
+        !payloadBehaviours().length ? "No behaviours under test"
+        : !highlightsActive() ? "No behaviours selected"
+        : "No passages in this spec";
+    }
+  });
+  if (!panels().includes(state.activePanel)) state.activePanel = panels()[0] || null;
 }
 
-function updatePassageCount() {
-  const total = state.anchors.length;
+function panels() {
+  return [...elements.documentReader.querySelectorAll(".document-panel")];
+}
+
+function updatePassageCount(panel) {
+  const total = panel._anchors?.length || 0;
   if (!total) return;
-  const current = state.anchors[state.passageIndex];
-  const panel = current.closest(".document-panel");
-  const lab = panel.querySelector(".document-lab").textContent;
-  elements.passageCount.textContent = state.comparing
-    ? `${lab} · ${state.passageIndex + 1} of ${total}`
-    : `${state.passageIndex + 1} of ${total} passages`;
+  panel.querySelector(".passage-count").textContent =
+    `${panel._passageIndex + 1} of ${total} passages`;
 }
 
 function updateRails() {
@@ -1979,38 +1997,42 @@ function updateRails() {
       mark.setAttribute(
         "aria-label",
         `${overlap ? "Shared" : bandLabel(anchor.dataset.band)}`
-        + ` passage ${localIndex + 1}, ${anchor.dataset.behaviours}: ${anchor.dataset.role}`,
+        + ` passage ${localIndex + 1}, ${spoken(anchor.dataset.behaviours)}: ${spoken(anchor.dataset.role)}`,
       );
-      mark.title = `${anchor.dataset.behaviours} · ${anchor.dataset.role}`;
-      mark.addEventListener("click", () => focusPassage(state.anchors.indexOf(anchor)));
+      mark.title = `${spoken(anchor.dataset.behaviours)}: ${spoken(anchor.dataset.role)}`;
+      mark.addEventListener("click", () => focusPassage(panel, localIndex));
       return mark;
     }));
   });
 }
 
-function focusPassage(index, shouldScroll = true) {
-  if (!state.anchors.length) return;
-  state.passageIndex = (index + state.anchors.length) % state.anchors.length;
-  document.querySelectorAll(".passage.current, .rail-mark.current").forEach(item => item.classList.remove("current"));
+/* Walk one document's passages. The wrap is inside that document: the last
+ * passage of a spec leads back to its own first, never into the other pane. */
+function focusPassage(panel, index, shouldScroll = true) {
+  if (!panel?._anchors?.length) return;
+  const total = panel._anchors.length;
+  panel._passageIndex = (index + total) % total;
+  state.activePanel = panel;
+  panel.querySelectorAll(".passage.current, .rail-mark.current")
+    .forEach(item => item.classList.remove("current"));
 
-  const anchor = state.anchors[state.passageIndex];
+  const anchor = panel._anchors[panel._passageIndex];
   const body = anchor.closest(".document-body");
   let sectionChild = anchor;
   while (sectionChild.parentElement && sectionChild.parentElement !== body) {
     sectionChild = sectionChild.parentElement;
   }
-  const panel = anchor.closest(".document-panel");
   (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
   updateSectionVisibility(panel);
   anchor.classList.add("current");
-  document
+  panel
     .querySelector(`.rail-mark[data-for-passage="${CSS.escape(anchor.dataset.passageId)}"]`)
     ?.classList.add("current");
 
   if (shouldScroll) {
     anchor.scrollIntoView({ behavior: "smooth", block: "center" });
   }
-  updatePassageCount();
+  updatePassageCount(panel);
 }
 
 elements.selectAllBehaviours.addEventListener("click", () => {
@@ -2018,34 +2040,45 @@ elements.selectAllBehaviours.addEventListener("click", () => {
 });
 elements.clearBehaviours.addEventListener("click", () => setSelection([]));
 
-/* The title opens the list of documents; the Compare button beside it switches
- * the mode. Both are re-cloned by every rebuildReader, so both are delegated.
- *
- * Turning comparison ON carries the document you were reading onto the left,
- * rather than falling back to the first two registered. Reading OpenAI and
- * asking to compare should not silently put Anthropic in front of you. */
+/* The title opens the list of documents. Re-cloned by every rebuildReader, so
+ * delegated. */
 elements.documentReader.addEventListener("click", event => {
   const picker = event.target.closest?.(".document-picker");
   if (picker) {
     openSpecPicker(picker);
     return;
   }
-  const compare = event.target.closest?.(".compare-toggle");
-  if (!compare) return;
-  const from = compare.closest(".document-panel")?.dataset.documentId;
+});
+
+/* The arrows belong to a document and are re-cloned with it, so they delegate
+ * and each one steps the panel it sits in. */
+elements.documentReader.addEventListener("click", event => {
+  const step = event.target.closest?.(".previous-passage, .next-passage");
+  if (!step) return;
+  const panel = step.closest(".document-panel");
+  const delta = step.classList.contains("next-passage") ? 1 : -1;
+  focusPassage(panel, (panel._passageIndex || 0) + delta);
+});
+
+/* Comparison is one mode over both panels, so its switch is in the band both
+ * panels share rather than repeated in each of their headers.
+ *
+ * Turning it on carries the document being read onto the left; turning it off
+ * keeps the left-hand document rather than reverting to whatever was selected
+ * before. Either way the reader stays with the text they were looking at. */
+elements.compareToggle.addEventListener("click", () => {
+  const first = panels()[0]?.dataset.documentId;
   state.comparing = !state.comparing;
-  if (state.comparing && from) {
-    const other = state.payload.documents.find(doc => doc.id !== from);
-    if (other) state.comparePair = [from, other.id];
-  } else if (!state.comparing && from) {
-    state.selectedSpec = from;
+  if (state.comparing && first) {
+    const other = state.payload.documents.find(doc => doc.id !== first);
+    if (other) state.comparePair = [first, other.id];
+  } else if (!state.comparing && first) {
+    state.selectedSpec = first;
   }
+  elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
   syncURL();
   rebuildReader();
 });
-
-elements.previousPassage.addEventListener("click", () => focusPassage(state.passageIndex - 1));
-elements.nextPassage.addEventListener("click", () => focusPassage(state.passageIndex + 1));
 
 document.addEventListener("keydown", event => {
   // Text entry keeps its keys; a checkbox in the behaviour menu does not, so j and k
@@ -2058,8 +2091,10 @@ document.addEventListener("keydown", event => {
   // Browser/OS shortcuts keep their keys: Ctrl/Cmd/Alt + a letter must not move the
   // passage cursor (e.g. Ctrl+J opens the browser's downloads).
   if (event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.key === "j") focusPassage(state.passageIndex + 1);
-  if (event.key === "k") focusPassage(state.passageIndex - 1);
+  // The panel the reader last stepped through, or the only one there is.
+  const panel = state.activePanel || panels()[0];
+  if (event.key === "j") focusPassage(panel, (panel?._passageIndex || 0) + 1);
+  if (event.key === "k") focusPassage(panel, (panel?._passageIndex || 0) - 1);
 });
 
 window.addEventListener("resize", () => {
@@ -2254,14 +2289,14 @@ async function initialize() {
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
+    elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     updateFindingBar();
     renderBehaviourList();
     syncURL();
     rebuildReader();
   } catch (error) {
     elements.readerStatus.classList.add("visible");
-    elements.readerStatus.textContent = "The cached spec documents or the reader's behavior set could not be loaded. Serve this directory over HTTP and reload.";
-    elements.passageCount.textContent = "Documents unavailable";
+    elements.readerStatus.textContent = "The cached spec documents or the reader's behaviour set could not be loaded. Serve this directory over HTTP and reload.";
     console.error(error);
   }
 }

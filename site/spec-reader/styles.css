@@ -1,17 +1,14 @@
 :root {
-  --serif: "EB Garamond", Garamond, "Hoefler Text", "Iowan Old Style", Georgia, serif;
-  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+  /* Polaris design framework v1.1. Bricolage Grotesque where the page speaks
+     as a heading, Instrument Sans everywhere else, IBM Plex Mono for data.
 
-  /* The two faces of polariscollective.org: Spectral where the page announces
-     itself, Inter everywhere the interface speaks in its own voice.
-
-     `--reader` is deliberately not either of them. The spec text is the one
-     thing on this page that is neither chrome nor brand, and EB Garamond was
-     chosen for it — a long document read for an hour at a time. Restyling the
-     tool is no reason to restyle the document it exists to show. */
-  --display: "Spectral", Georgia, "Times New Roman", serif;
-  --ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --reader: var(--serif);
+     `--reader` is Instrument Sans too. The framework admits no serif face, and
+     the spec text is not an exception to it: a document read for an hour at a
+     time is read in the family the rest of the surface is set in. */
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --reader: var(--ui);
 
   /* The chrome's two heights, stated once. `.app-shell` subtracts both to fill
      what is left, and got them wrong the moment a footer appeared under a
@@ -23,24 +20,33 @@
   --sidebar-rail: 40px;
 }
 
+/* The framework's core tokens, written into the roles this reader already had.
+   --paper, --ink, --olive, --olive-deep, --chartreuse and --gold are the six;
+   --neutral and --fail are two of the four functional colours. Every value that
+   carries text was checked to clear 4.5:1 on the ground it sits on, which is
+   why --faint is darker here than the framework's --neutral: --neutral labels a
+   status beside a word, it does not set small text. */
 body[data-palette="daylight"] {
-  --chrome: #EDE6D6;
-  --chrome-deep: #E5DCCB;
-  --paper: #F8F3E7;
-  --ink: #26221A;
-  --muted: #5C564A;
-  --faint: #8A8272;
-  --line: #D8CEBA;
-  --line-light: #E4DCCB;
-  /* Polaris olive, the exact accent of polariscollective.org. White clears
-     4.5:1 on it, which the toggles below rely on. */
-  --accent: #5F6B3A;
-  --accent-soft: #E1E6CB;
-  --on-accent: #FFFFFF;
-  --adjacent-mark: #8A5F14;
-  --focus: #A93732;
-  --gap-soft: #F1DEDA;
-  --shadow: rgba(90, 75, 50, .25);
+  --chrome: #E9E6D7;
+  --chrome-deep: #DFDCCA;
+  --paper: #F1EFE3;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  /* Accented text is olive-deep, never chartreuse: the framework forbids
+     chartreuse as a text colour, and gives it the energy roles instead --
+     active states, focus, rules, selected rows. */
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --accent-soft: #E6EAC8;
+  --on-accent: #F1EFE3;
+  --adjacent-mark: #C9A227;
+  --gap-soft: #F0E3D6;
+  --fail: #A0522D;
+  /* No drop shadows. Structure is drawn with 1px rules and whitespace. */
+  --shadow: transparent;
 
   /* One colour per behaviour, deep enough to read as a wash over cream paper. */
   --hue-1: 74 83 179;
@@ -67,26 +73,28 @@ body[data-palette="daylight"] {
 
 }
 
+/* The framework's dark surface: --olive-deep as the ground, --paper as the
+   text, the same accents. The name stays "umber" because it is what the URL and
+   the stored preference say; the ground is olive now. */
 body[data-palette="umber"] {
-  --chrome: #1A1510;
-  --chrome-deep: #211B14;
-  --paper: #262017;
-  --ink: #EDE5D3;
-  --muted: #ABA08D;
-  --faint: #6F6659;
-  --line: #332B21;
-  --line-light: #3D3428;
-  /* The olive has nothing to stand against on the umber ground, so it
-     lightens — the same substitution evals-playground makes on its dark
-     panels. Light enough that what sits *on* it must now be dark: hence
-     `--on-accent`, which is why the toggles no longer say `white`. */
-  --accent: #B2BD8B;
-  --accent-soft: #3D4526;
-  --on-accent: #211F1B;
-  --adjacent-mark: #BC8A2F;
-  --focus: #C95550;
-  --gap-soft: #3A2420;
-  --shadow: rgba(0, 0, 0, .5);
+  --chrome: #2A331C;
+  --chrome-deep: #323C23;
+  --paper: #333D22;
+  --ink: #F1EFE3;
+  --muted: #C4CBA8;
+  --faint: #A2AA88;
+  --line: #4A552F;
+  --line-light: #3E4827;
+  /* Olive lifted until it clears 4.5:1 on the olive-deep ground. Light enough
+     that what sits *on* it must be dark: hence `--on-accent`. */
+  --accent: #C7D69A;
+  --energy: #B7C94B;
+  --accent-soft: #46522A;
+  --on-accent: #23281B;
+  --adjacent-mark: #D9B93F;
+  --gap-soft: #4A3020;
+  --fail: #C97A4D;
+  --shadow: transparent;
 
   /* The same twelve, lifted so they read as light laid on a dark surface. */
   --hue-1: 139 148 236;
@@ -165,18 +173,18 @@ button { font: inherit; }
   gap: 10px;
 }
 
-/* The collective's star, from the header of polariscollective.org. It carries
-   the accent while the wordmark keeps the ink: the star says whose site this
-   is, the wordmark says what it is. */
-.polaris-star {
-  width: 13px;
-  height: 13px;
+/* The broken orbit, the collective's one mark. It carries the accent while the
+   wordmark keeps the ink: the mark says whose site this is, the wordmark says
+   what it is. It appears here, in the footer and in the icons, nowhere else. */
+.polaris-mark {
+  width: 20px;
+  height: 20px;
   flex: none;
   align-self: center;
   color: var(--accent);
 }
 
-/* The star, the collective's name, a rule, then what the site is — the same
+/* The mark, the collective's name, a rule, then what the site is — the same
    three pieces in the same order as the bar of evals-playground. One
    difference: there the pair is deliberately not a link, that application
    having nowhere else to go. Here it leaves for polariscollective.org, which
@@ -186,12 +194,16 @@ button { font: inherit; }
   text-decoration: none;
   font-family: var(--display);
   font-size: 15px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
+/* The framework's link hover: a chartreuse highlight fills behind the text and
+   the text itself goes to ink. Not an underline that thickens, not a colour
+   change on the glyphs. */
 .collective:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: var(--energy);
+  color: var(--ink);
 }
 
 .brand-divider {
@@ -206,10 +218,8 @@ button { font: inherit; }
   font-family: var(--display);
   color: var(--ink);
   text-decoration: none;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  font-variant-caps: all-small-caps;
-  letter-spacing: .18em;
 }
 
 .site-header nav { display: flex; align-items: center; gap: 24px; }
@@ -217,22 +227,22 @@ button { font: inherit; }
   color: var(--muted);
   text-decoration: none;
   font-size: 14px;
-  font-variant-caps: all-small-caps;
-  letter-spacing: .1em;
 }
-.site-header nav a:hover,
-.site-header nav a.active { color: var(--ink); }
-.site-header nav a.active { text-decoration: underline; text-underline-offset: 6px; }
+.site-header nav a:hover { background: var(--energy); color: var(--ink); }
+/* The page you are on carries the chartreuse rule under it. */
+.site-header nav a.active {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--energy);
+}
 .mode {
   padding: 4px 6px;
   border: 0;
   background: transparent;
-  color: var(--faint);
-  font-family: var(--serif);
-  font-size: 17px;
+  color: var(--muted);
+  font-size: 16px;
   cursor: pointer;
 }
-.mode:hover { color: var(--ink); }
+.mode:hover { background: var(--energy); color: var(--ink); }
 
 .app-shell {
   --sidebar-width: 292px;
@@ -263,9 +273,8 @@ button { font: inherit; }
 }
 
 .site-footer a:hover {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  background: var(--energy);
+  color: var(--ink);
 }
 
 body.embedded .skip-link,
@@ -310,14 +319,14 @@ body.embedded .app-shell {
   position: absolute;
   inset: 0 4px;
   background: var(--line);
-  transition: inset .12s ease, background-color .12s ease;
+  transition: inset .15s ease, background-color .15s ease;
 }
 .column-resizer:hover::before,
 .column-resizer:focus-visible::before,
 .column-resizer.dragging::before {
   inset-right: 3px;
   inset-left: 3px;
-  background: var(--accent);
+  background: var(--energy);
 }
 .column-resizer::after {
   content: "";
@@ -350,13 +359,14 @@ body.resizing-columns {
   gap: 10px;
   border-bottom: 1px solid var(--line);
 }
+/* Was an eyebrow: small, tracked, upper-case. The framework has no eyebrows, so
+   this is what it always was, a heading, said at heading size in sentence case. */
 .eyebrow {
   margin: 0;
-  color: var(--accent);
-  font-size: 11px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: .14em;
-  text-transform: uppercase;
 }
 
 .behaviour-toolbar {
@@ -367,24 +377,22 @@ body.resizing-columns {
   gap: 10px;
   border-bottom: 1px solid var(--line-light);
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: 11px;
 }
 .behaviour-toolbar[hidden] { display: none; }
 .behaviour-toolbar-actions { display: inline-flex; gap: 4px; }
+/* Secondary button: 1px olive border, ink text, transparent ground, pill. */
 .behaviour-toolbar-actions button {
-  padding: 3px 8px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
   background: transparent;
   color: var(--ink);
-  font-size: 10px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: 11px;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
-.behaviour-toolbar-actions button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.behaviour-toolbar-actions button:hover:not(:disabled) { background: var(--energy); color: var(--ink); }
 .behaviour-toolbar-actions button:disabled { opacity: .4; cursor: default; }
 
 .behaviour-list { flex: 1; min-height: 0; overflow: auto; padding: 8px 0 18px; }
@@ -393,11 +401,9 @@ body.resizing-columns {
   margin: 0;
   padding: 15px 25px 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: .12em;
   line-height: 1.35;
-  text-transform: uppercase;
 }
 .behaviour-group ul { list-style: none; margin: 0; padding: 0 10px 10px; }
 .behaviour-option {
@@ -427,13 +433,13 @@ body.resizing-columns {
   pointer-events: none;
 }
 .behaviour-box {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   flex: none;
   align-self: center;
-  border: 1px solid var(--faint);
-  border-radius: 3px;
-  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
 }
 .behaviour-option:hover .behaviour-box { border-color: rgb(var(--bh) / var(--rule-core)); }
 .behaviour-option.checked .behaviour-box {
@@ -453,7 +459,7 @@ body.resizing-columns {
   transform: rotate(42deg);
 }
 .behaviour-check:focus-visible + .behaviour-box {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--energy);
   outline-offset: 2px;
 }
 /* A stippled group is marked in the menu as well as in the text: its heading rule and the
@@ -485,8 +491,8 @@ body.resizing-columns {
   width: 20px;
   flex: none;
   color: var(--faint);
-  font-family: var(--reader);
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 .behaviour-option .name { flex: 1; font-size: 12px; line-height: 1.35; }
@@ -503,31 +509,31 @@ body.resizing-columns {
   gap: 6px;
   border-top: 1px solid var(--line);
 }
+/* Primary button: olive-deep ground, paper text, pill; chartreuse on hover with
+   the text going to ink. */
 .download-passages {
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--chrome-deep);
-  color: var(--ink);
-  font-size: 10px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
 .download-passages:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--paper);
+  background: var(--energy);
+  color: var(--ink);
 }
 .download-passages:disabled { opacity: .4; cursor: default; }
 .download-hint {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
   text-align: center;
 }
@@ -539,7 +545,7 @@ body.resizing-columns {
   gap: 6px 13px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 /* Each entry opens a note saying what the mark means and what the judge was
    asked for it. Buttons rather than the spans they were: the thing is clickable
@@ -559,7 +565,7 @@ body.resizing-columns {
 }
 
 .key-item:hover { background: var(--chrome-deep); color: var(--ink); }
-.key-item:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.key-item:focus-visible { outline: 2px solid var(--energy); outline-offset: 1px; }
 
 /* The note. `position: fixed` with the corner set from the button it belongs to:
    a popover lands in the top layer, where the browser's own centring would put
@@ -571,11 +577,10 @@ body.resizing-columns {
   max-height: min(70vh, 520px);
   overflow: auto;
   padding: 16px 18px 18px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 14px 40px var(--shadow);
 }
 
 .key-note::backdrop { background: transparent; }
@@ -583,7 +588,7 @@ body.resizing-columns {
 .key-note-title {
   margin: 0 0 10px;
   font-family: var(--display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -594,14 +599,18 @@ body.resizing-columns {
 /* The two halves of every note: what the judge was asked, and what the reader
    draws from the answers. They are not the same thing, and the whole point of
    the note is that they are told apart. */
+/* The framework's section heading: a short chartreuse rule above, the heading
+   under it in sentence case. */
 .key-note-body h3 {
-  margin: 14px 0 4px;
+  margin: 16px 0 5px;
+  padding-top: 9px;
+  border-top: 3px solid var(--energy);
+  width: 56px;
   color: var(--accent);
-  font-family: var(--ui);
-  font-size: 10px;
+  font-family: var(--display);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .key-note-body h3:first-child { margin-top: 0; }
@@ -652,17 +661,18 @@ body.resizing-columns {
 .workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .compare-toggle, .source-link {
   min-height: 34px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  padding: 8px 14px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
   background: transparent;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
 .compare-toggle { display: inline-flex; align-items: center; gap: 8px; }
-.compare-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.compare-toggle[aria-pressed="true"] { border-color: transparent; background: var(--accent); color: var(--on-accent); }
 /* The menu folds away. On a document this wide it is consulted in bursts and
    read past the rest of the time, and the reader is the point.
 
@@ -685,7 +695,7 @@ body.resizing-columns {
   cursor: pointer;
 }
 
-.sidebar-toggle:hover { border-color: var(--line); color: var(--ink); }
+.sidebar-toggle:hover { background: var(--energy); color: var(--ink); }
 
 .chevron { width: 12px; height: 12px; }
 
@@ -732,7 +742,7 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
-.source-link:hover, .compare-toggle:hover { border-color: var(--muted); }
+.source-link:hover, .compare-toggle:hover { background: var(--energy); color: var(--ink); border-color: transparent; }
 
 .finding-bar {
   min-height: 54px;
@@ -761,29 +771,55 @@ body.sidebar-collapsed .sidebar-resizer {
   box-shadow: inset 2px 0 0 rgb(var(--bh) / var(--rule-core));
   white-space: nowrap;
 }
-.finding-definition { color: var(--muted); font-family: var(--reader); font-size: 14px; font-style: italic; }
-.passage-controls { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.passage-controls span { margin-right: 7px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.passage-controls button {
-  width: 30px;
-  height: 30px;
+.finding-definition { color: var(--muted); font-size: 13px; }
+/* The walk through a document's passages, in that document's own header. It
+   used to be one pair of arrows above both panels, stepping a single list that
+   ran from one specification into the other. */
+.passage-nav { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.passage-count {
+  margin-right: 6px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.passage-nav button {
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--muted);
   border-radius: 50%;
   background: transparent;
   color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
-.passage-controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.passage-controls button:disabled { opacity: .35; cursor: default; }
+.passage-nav button:hover:not(:disabled) { border-color: transparent; background: var(--energy); color: var(--ink); }
+.passage-nav button:disabled { opacity: .35; cursor: default; }
+
+/* Version on the left of its line, the walk on the right. One row, so the
+   header gains a control without gaining a line. */
+.meta-top {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Comparison is one mode over both panels, so its switch sits in the band both
+   panels share. */
+.finding-actions { display: flex; align-items: center; gap: 7px; flex: none; }
 
 .reader-status {
   display: none;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--focus);
+  border-bottom: 1px solid var(--fail);
   background: var(--gap-soft);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
 }
 .reader-status.visible { display: block; }
 
@@ -817,25 +853,16 @@ body.sidebar-collapsed .sidebar-resizer {
    The title steps down so it stops wrapping under its own caret. */
 .document-grid.compare .document-header { padding: 10px 16px; gap: 12px; }
 .document-grid.compare .document-title { font-size: 17px; }
-.document-grid.compare .document-version { font-size: 9px; }
+.document-grid.compare .document-version { font-size: 10px; }
 
-/* And the mode switch shows once. Two lit buttons side by side, both reading
-   "Compare" and both meaning the one global mode that is already on, said the
-   same thing twice and left the reader guessing what the second one did.
-   Sibling combinator rather than :first-of-type: the panels are separated by
-   resizer divs, so "first of its type" is not the question being asked. */
-.document-grid.compare .document-panel ~ .document-panel .compare-toggle {
-  display: none;
-}
+
 .document-lab {
   margin: 0 0 2px;
-  color: var(--accent);
-  font-size: 9px;
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: .14em;
-  text-transform: uppercase;
 }
-.document-title { margin: 0; font-family: var(--reader); font-size: 21px; font-weight: 500; }
+.document-title { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 600; }
 
 /* The title is the control that changes the document. It carries no button
    chrome until it is pointed at: a bordered box around the document's name
@@ -854,7 +881,8 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 
 .document-picker:hover { color: var(--accent); }
-.document-picker:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.document-picker:hover .document-title { background: var(--energy); color: var(--ink); }
+.document-picker:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 
 .picker-caret {
   align-self: center;
@@ -879,19 +907,20 @@ body.sidebar-collapsed .sidebar-resizer {
   justify-content: flex-end;
   gap: 6px 10px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
-.document-version { flex-basis: 100%; text-align: right; }
+.document-version { font-family: var(--mono); font-size: 11px; }
 .document-focus-toggle {
-  padding: 2px 0;
+  padding: 2px 4px;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--energy);
   background: transparent;
   color: var(--ink);
-  font-size: 9px;
+  font-size: 11px;
   cursor: pointer;
+  transition: background-color .15s ease;
 }
-.document-focus-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.document-focus-toggle:hover { background: var(--energy); }
 /* The toggles carry their counts, which makes the legend wide enough to overrun a
    phone-width header. Each button stays unbroken (nowrap); the row wraps instead. */
 .rail-legend {
@@ -916,18 +945,18 @@ body.sidebar-collapsed .sidebar-resizer {
   gap: 5px;
   padding: 3px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 999px;
   background: transparent;
   color: var(--faint);
   cursor: pointer;
-  transition: color .12s ease, border-color .12s ease, background-color .12s ease;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
 }
 .tier-toggle .legend-mark { background: currentColor; }
 .tier-toggle .legend-mark.adjacent { margin-left: 0; }
-.tier-toggle:hover { color: var(--muted); border-color: var(--line-light); }
+.tier-toggle:hover { color: var(--ink); border-color: var(--line); }
 .tier-toggle[aria-pressed="true"] {
-  border-color: var(--line);
-  background: var(--chrome-deep);
+  border-color: transparent;
+  background: rgb(183 201 75 / .32);
   color: var(--ink);
 }
 /* The run block sits under the key, closing the sidebar: collapsed it is one line of
@@ -936,7 +965,7 @@ body.sidebar-collapsed .sidebar-resizer {
   padding: 10px 22px 14px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .sidebar-run > summary {
   cursor: pointer;
@@ -957,12 +986,12 @@ body.sidebar-collapsed .sidebar-resizer {
   padding: 1px 6px;
   border: 1px solid currentColor;
   border-radius: 3px;
-  color: var(--warn, #b4690e);
-  font-size: 9px;
+  color: var(--adjacent-mark);
+  font-size: 10px;
 }
 .run-detail { margin: 9px 0 0; display: grid; grid-template-columns: 1fr; gap: 2px; }
-.run-detail dt { color: var(--faint); text-transform: uppercase; letter-spacing: .04em; font-size: 9px; }
-.run-detail dd { margin: 0 0 7px; color: var(--muted); overflow-wrap: anywhere; }
+.run-detail dt { color: var(--faint); font-size: 11px; }
+.run-detail dd { margin: 0 0 7px; color: var(--muted); font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
 
 .tier-count { font-variant-numeric: tabular-nums; opacity: .7; }
 /* A tier this data cannot reach: dimmed, not clickable, and it keeps its count (0)
@@ -1002,22 +1031,29 @@ body.sidebar-collapsed .sidebar-resizer {
   padding: 56px max(28px, (100% - 50vw) / 2) 120px;
   font-family: var(--reader);
   font-size: 17px;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 .document-grid.compare .document-body { padding-right: 58px; padding-left: 58px; font-size: 16px; }
 .document-body h1, .document-body h2, .document-body h3,
 .document-body h4, .document-body h5 {
   color: var(--ink);
-  font-family: var(--reader);
-  font-weight: 500;
+  font-family: var(--display);
+  font-weight: 600;
   line-height: 1.16;
   scroll-margin-top: 60px;
 }
-.document-body h1 { margin: 0 0 30px; font-size: 42px; letter-spacing: -.03em; }
-.document-body h2 { margin: 62px 0 17px; padding-top: 17px; border-top: 1px solid var(--line); font-size: 29px; letter-spacing: -.02em; }
-.document-body h3 { margin: 42px 0 14px; font-size: 23px; }
-.document-body h4 { margin: 32px 0 12px; font-size: 19px; }
-.document-body h5 { margin: 26px 0 9px; color: var(--muted); font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.document-body h1 { margin: 0 0 30px; font-size: 40px; }
+/* The framework's section heading: a 56px chartreuse rule above the heading,
+   not a hairline drawn the width of the column. */
+.document-body h2 {
+  margin: 62px 0 17px;
+  padding-top: 19px;
+  font-size: 28px;
+  background: linear-gradient(var(--energy), var(--energy)) 0 0 / 56px 3px no-repeat;
+}
+.document-body h3 { margin: 42px 0 14px; font-size: 22px; }
+.document-body h4 { margin: 32px 0 12px; font-size: 18px; }
+.document-body h5 { margin: 26px 0 9px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .document-body .section-heading { position: relative; }
 .section-heading-button {
   width: 100%;
@@ -1048,43 +1084,65 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 .section-heading.section-collapsed .section-heading-button {
   min-height: 34px;
-  padding: 7px 10px;
-  border: 1px solid var(--line-light);
-  border-radius: 4px;
-  background: var(--chrome-deep);
+  padding: 7px 14px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: transparent;
   color: var(--muted);
   font-family: var(--ui);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0;
   line-height: 1.35;
-  text-transform: none;
+  transition: background-color .15s ease, color .15s ease;
 }
 .section-heading.section-collapsed .section-heading-button:hover {
-  border-color: var(--line);
-  background: var(--chrome);
+  border-color: transparent;
+  background: var(--energy);
   color: var(--ink);
 }
 .section-heading.section-collapsed .section-chevron { transform: rotate(-90deg); }
 .section-heading.section-has-passage > .section-heading-button::before {
   content: "";
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   flex: none;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--energy);
   transform: translateY(-2px);
 }
 .document-body p { margin: 0 0 1.05em; }
-.document-body a { color: var(--accent); text-decoration-color: var(--line); text-underline-offset: 2px; }
+/* The framework's link: ink text over a 2px chartreuse underline; hover fills
+   the highlight behind it and the text stays ink. */
+.document-body a {
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 var(--energy);
+  transition: background-color .15s ease;
+}
+.document-body a:hover { background: var(--energy); }
 .document-body strong { font-weight: 600; }
 .document-body em { color: var(--muted); }
 .document-body ul, .document-body ol { margin: 0 0 1.2em; padding-left: 1.45em; }
 .document-body li { margin: .35em 0; padding-left: .18em; }
+/* Bullets are 6px chartreuse circles. Ordered lists keep their numerals, in
+   mono, because a numeral is data. */
+.document-body ul { list-style: none; padding-left: 1.15em; }
+.document-body ul > li { position: relative; }
+.document-body ul > li::before {
+  content: "";
+  position: absolute;
+  top: .62em;
+  left: -.95em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--energy);
+}
+.document-body ol > li::marker { font-family: var(--mono); font-size: .85em; color: var(--muted); }
 .document-body blockquote {
   margin: 1.4em 0;
   padding: .2em 0 .2em 1.2em;
-  border-left: 2px solid var(--line);
+  border-left: 3px solid var(--energy);
   color: var(--muted);
 }
 .document-body hr { height: 1px; margin: 45px 0; border: 0; background: var(--line); }
@@ -1092,43 +1150,42 @@ body.sidebar-collapsed .sidebar-resizer {
   margin: 1.1em 0 1.8em;
   padding: 15px 17px;
   overflow-x: auto;
-  border: 1px solid var(--line-light);
+  border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--chrome-deep);
   color: var(--muted);
-  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 11px;
+  font-family: var(--mono);
+  font-size: 12px;
   line-height: 1.55;
   white-space: pre-wrap;
 }
 .document-body .admonition {
   margin: 1.35em 0;
   padding: 13px 16px 2px;
-  border: 1px solid var(--line-light);
-  border-left: 3px solid var(--line);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--energy);
   background: var(--chrome-deep);
 }
 .document-body .admonition-label {
   margin-bottom: 7px;
   color: var(--muted);
-  font-family: var(--ui);
-  font-size: 9px;
+  font-family: var(--display);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
 }
-.document-body .raw-table { overflow: auto; font-family: ui-monospace, monospace; font-size: 10px; white-space: pre; }
+.document-body .raw-table { overflow: auto; font-family: var(--mono); font-size: 11px; white-space: pre; }
 .zero-coverage {
   margin: 0 0 36px;
   padding: 16px 18px;
-  border: 1px solid var(--adjacent-mark);
+  border: 1px solid var(--fail);
+  border-left: 3px solid var(--fail);
   border-radius: 4px;
   background: var(--gap-soft);
   font-family: var(--ui);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
-.zero-coverage strong { display: block; margin-bottom: 3px; color: var(--focus); }
+.zero-coverage strong { display: block; margin-bottom: 3px; color: var(--fail); }
 .zero-coverage span { color: var(--muted); }
 
 /* Every colour on a passage is written by app.js into --tint (the wash), --gutter (one
@@ -1179,14 +1236,12 @@ body.sidebar-collapsed .sidebar-resizer {
 .passage-label {
   color: rgb(var(--bh));
   font-family: var(--ui);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: .06em;
   line-height: 1.35;
-  text-transform: uppercase;
 }
 .passage-label + .passage-label::before {
-  content: "·";
+  content: ",";
   margin-right: 8px;
   color: var(--faint);
 }
@@ -1208,7 +1263,7 @@ body.sidebar-collapsed .sidebar-resizer {
   line-height: 1;
   cursor: pointer;
   opacity: .62;
-  transition: opacity .12s ease, background-color .12s ease;
+  transition: opacity .15s ease, background-color .15s ease;
 }
 .passage-why:hover,
 .passage-why:focus-visible,
@@ -1225,10 +1280,9 @@ body.sidebar-collapsed .sidebar-resizer {
   top: calc(100% + 5px);
   right: 0;
   padding: 3px 7px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: var(--chrome);
-  box-shadow: 0 2px 8px var(--shadow);
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
   color: var(--muted);
   font-family: var(--ui);
   font-size: 11px;
@@ -1239,7 +1293,7 @@ body.sidebar-collapsed .sidebar-resizer {
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .12s ease;
+  transition: opacity .15s ease;
 }
 .passage-why:hover::after,
 .passage-why:focus-visible::after { opacity: 1; }
@@ -1253,7 +1307,7 @@ body.sidebar-collapsed .sidebar-resizer {
   border-radius: 3px 0 0 3px;
   background: rgb(var(--bh-primary) / .07);
   font-family: var(--ui);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 .passage-rationale[hidden] { display: none; }
@@ -1261,12 +1315,10 @@ body.sidebar-collapsed .sidebar-resizer {
 .passage-reason + .passage-reason { margin-top: 5px; }
 .passage-reason-behaviour {
   color: rgb(var(--bh));
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
 }
-.passage-reason-behaviour::after { content: " · "; }
+.passage-reason-behaviour::after { content: ": "; }
 
 .passage-rail {
   position: sticky;
@@ -1308,12 +1360,14 @@ body.sidebar-collapsed .sidebar-resizer {
   right: 1px;
   width: 9px;
   min-height: 7px;
-  box-shadow: 0 0 0 1px var(--paper), 0 0 0 2px var(--focus);
+  box-shadow: 0 0 0 1px var(--paper), 0 0 0 2px var(--energy);
   opacity: 1;
 }
 
-button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
-  outline: 2px solid var(--focus);
+/* One focus ring for the whole surface: 2px chartreuse, always visible. */
+button:focus-visible, a:focus-visible, .column-resizer:focus-visible,
+summary:focus-visible, dialog:focus-visible {
+  outline: 2px solid var(--energy);
   outline-offset: 2px;
 }
 
@@ -1352,7 +1406,7 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
 @media (max-width: 620px) {
   .site-header { padding: 0 16px; }
   .site-footer { padding: 0 16px; }
-  /* Two names and a menu do not fit. The star carries the collective on its
+  /* Two names and a menu do not fit. The mark carries the collective on its
      own here, and its name is still a link in the footer. */
   .collective,
   .brand-divider { display: none; }
@@ -1381,10 +1435,10 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
   margin: 4px 14px;
   padding: 16px 15px;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--chrome-deep);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.55;
 }
 .behaviour-empty strong { display: block; margin-bottom: 5px; color: var(--ink); }
@@ -1412,10 +1466,9 @@ body.no-behaviours .sidebar-export { display: none; }
   max-height: min(60vh, 420px);
   overflow: auto;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
   background: var(--paper);
-  box-shadow: 0 14px 40px var(--shadow);
 }
 
 .spec-picker::backdrop { background: transparent; }
@@ -1435,8 +1488,8 @@ body.no-behaviours .sidebar-export { display: none; }
 
 .spec-choice:hover { background: var(--chrome-deep); color: var(--ink); }
 .spec-choice[aria-selected="true"] { color: var(--ink); }
-.spec-choice-lab { display: block; font-size: 12px; font-weight: 600; }
-.spec-choice small { display: block; margin-top: 2px; color: var(--faint); font-size: 10px; }
+.spec-choice-lab { display: block; font-size: 13px; font-weight: 600; }
+.spec-choice small { display: block; margin-top: 2px; color: var(--faint); font-family: var(--mono); font-size: 11px; }
 
 /* Local mode: the marker that this page is showing specifications registered on this
    machine, and the nav link to the analysis surface that only exists once a user
@@ -1449,16 +1502,13 @@ body.no-behaviours .sidebar-export { display: none; }
      justify-content sees it, so the marker stays beside the wordmark at every width. */
   margin: 0 auto 0 16px;
   padding: 2px 8px;
-  border: 1px solid var(--accent);
-  border-radius: 3px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
   color: var(--accent);
-  font-size: 10px;
-  font-variant-caps: all-small-caps;
-  letter-spacing: .12em;
+  font-size: 11px;
   white-space: nowrap;
   cursor: help;
 }
-nav a[data-local-only] { font-variant-caps: all-small-caps; }
 
 /* The 16px above is 16px the wordmark no longer has, which moves its wrap threshold
    up: measured, the margin alone pushes the width at which the wordmark breaks out of

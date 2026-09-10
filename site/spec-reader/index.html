@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="The spec reader with passages scored for behaviour relevance by a panel of frontier models.">
-  <title>Spec reader · AI Character Index</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><circle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%23faf7f0%22/><path fill=%22%235f6b3a%22 d=%22M16 4.5 L17.06 14.94 L27.5 16 L17.06 17.06 L16 27.5 L14.94 17.06 L4.5 16 L14.94 14.94 Z%22/></svg>">
+  <title>Spec reader, AI Character Index</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&family=Spectral:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-palette="daylight">
@@ -16,7 +16,7 @@
 
   <header class="site-header">
     <span class="site-brand">
-      <svg class="polaris-star" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 0.5 L7.6 6.4 L13.5 7 L7.6 7.6 L7 13.5 L6.4 7.6 L0.5 7 L6.4 6.4 Z"/></svg>
+      <svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg>
       <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
       <span class="brand-divider" aria-hidden="true"></span>
       <a class="wordmark" href="./">AI Character Index</a>
@@ -29,7 +29,7 @@
   </header>
 
   <main class="app-shell">
-    <aside id="behaviour-sidebar" class="behaviour-sidebar" aria-label="Behaviors under test">
+    <aside id="behaviour-sidebar" class="behaviour-sidebar" aria-label="Behaviours under test">
       <div class="sidebar-intro">
         <h1 class="eyebrow">Spec reader</h1>
         <button
@@ -38,8 +38,8 @@
           type="button"
           aria-expanded="true"
           aria-controls="behaviour-sidebar"
-          aria-label="Hide the behavior menu"
-          title="Hide the behavior menu"
+          aria-label="Hide the behaviour menu"
+          title="Hide the behaviour menu"
         ><svg class="chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false"
           ><path d="M7.5 2 L3.5 6 L7.5 10" fill="none" stroke="currentColor" stroke-width="1.5"
             stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -57,7 +57,7 @@
           id="download-passages"
           class="download-passages"
           type="button"
-          title="Download a Markdown file with each ticked behavior's definition and the passages shown for it under the current tier selection, in both specifications."
+          title="Download a Markdown file with each ticked behaviour's definition and the passages shown for it under the current tier selection, in both specifications."
         >
           <span aria-hidden="true">↓</span> Download passages
         </button>
@@ -80,7 +80,7 @@
       id="sidebar-resizer"
       class="column-resizer sidebar-resizer"
       role="separator"
-      aria-label="Resize behavior menu"
+      aria-label="Resize behaviour menu"
       aria-orientation="vertical"
       aria-valuemin="200"
       aria-valuemax="480"
@@ -93,10 +93,11 @@
           <span class="finding-behaviour" id="finding-behaviour">Loading…</span>
           <span class="finding-definition" id="finding-definition"></span>
         </div>
-        <div class="passage-controls">
-          <span id="passage-count">Loading passages…</span>
-          <button id="previous-passage" type="button" aria-label="Previous highlighted passage">↑</button>
-          <button id="next-passage" type="button" aria-label="Next highlighted passage">↓</button>
+        <div class="finding-actions">
+          <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false">
+            <span class="split-icon" aria-hidden="true"></span>
+            Compare
+          </button>
         </div>
       </div>
 
@@ -114,7 +115,7 @@
 
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
-    <span>The standalone original: <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a> · <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
+    <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
   </footer>
 
   <template id="document-template">
@@ -130,12 +131,19 @@
           </h2>
         </div>
         <div class="document-meta">
-          <span class="document-version"></span>
+          <div class="meta-top">
+            <span class="document-version"></span>
+            <span class="passage-nav">
+              <span class="passage-count">Loading passages…</span>
+              <button class="previous-passage" type="button" aria-label="Previous highlighted passage in this document">↑</button>
+              <button class="next-passage" type="button" aria-label="Next highlighted passage in this document">↓</button>
+            </span>
+          </div>
           <button class="document-focus-toggle" type="button">Expand all</button>
           <span class="rail-legend" role="group" aria-label="Passage tiers shown">
             <button class="tier-toggle" type="button" data-tier="defining" aria-pressed="false"
-              title="Passages the panel scored as defining for the behavior"
-              data-title-default="Passages the panel scored as defining for the behavior">
+              title="Passages the panel scored as defining for the behaviour"
+              data-title-default="Passages the panel scored as defining for the behaviour">
               <i class="legend-mark defining" aria-hidden="true"></i> Defining<span class="tier-count"></span>
             </button>
             <button class="tier-toggle" type="button" data-tier="core" aria-pressed="false"
@@ -149,11 +157,7 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
-          <button class="compare-toggle" type="button" aria-pressed="false">
-            <span class="split-icon" aria-hidden="true"></span>
-            Compare
-          </button>
-          <a class="source-link" href="#" target="_blank" rel="noopener">Original ↗</a>
+          <a class="source-link" href="#" target="_blank" rel="noopener">Original</a>
         </div>
       </header>
       <div class="document-scroll">

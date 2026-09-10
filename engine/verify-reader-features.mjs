@@ -69,7 +69,7 @@ const check = (ok, label, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` -- ${detail}` : ""}`);
 };
 const ready = () => {
-  const el = document.querySelector("#passage-count");
+  const el = document.querySelector(".passage-count");
   return el && !el.textContent.startsWith("Loading");
 };
 async function load(base, query) {
@@ -169,7 +169,7 @@ await acmeAll("&tiers=defining,core,related");
     [...document.querySelectorAll(".passage")].some(p => /score 2\/2/.test(p.textContent)));
   check(role, "passage card carries the recomputed score text (score 2/2)");
   const countText = await page.evaluate(() =>
-    document.querySelector("#passage-count").textContent.trim());
+    document.querySelector(".passage-count").textContent.trim());
   check(/of 2 passages/.test(countText), "passage counter total tracks the rendered anchors", countText);
 }
 await acmeAll("&tiers=none");
@@ -250,7 +250,7 @@ await at(`?compare=1`);
     "?compare=1 renders the chosen two documents",
     `${out.panels} panels, ${resizers} resizers`);
   check(out.toggle === "true", "compare toggle reflects ?compare=1");
-  check(out.link === "Original ↗",
+  check(out.link === "Original",
     "each pane links its own document rather than a shared 'Sources'", out.link);
 }
 await at("?embedded=1");
@@ -265,8 +265,8 @@ await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
     !document.querySelector("#download-passages").disabled);
   check(enabled, "export-passages button enabled with a behaviour selected");
   const prevNext = await page.evaluate(() => ({
-    prev: !document.querySelector("#previous-passage").disabled,
-    next: !document.querySelector("#next-passage").disabled,
+    prev: !document.querySelector(".previous-passage").disabled,
+    next: !document.querySelector(".next-passage").disabled,
   }));
   check(prevNext.prev && prevNext.next, "prev/next passage buttons enabled with anchors present");
 }
@@ -485,9 +485,9 @@ await at("?behavior=helpfulness&spec=anthropic&tiers=defining,core,related");
 await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
 {
   const counter = () => page.evaluate(() =>
-    document.querySelector("#passage-count").textContent.trim());
+    document.querySelector(".passage-count").textContent.trim());
   const before = await counter();
-  await page.click("#next-passage");
+  await page.locator(".next-passage").first().click();
   await page.waitForTimeout(250);
   const after = await counter();
   check(after !== before, "next-passage advances the passage counter",
