@@ -2,6 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: executed, 2026-09-10**, except the Vercel project itself, which needs
+the account holder. Everything runs locally: `pnpm dev` serves the reader, both
+payloads come from the index tables, and every gate passes. Two things went
+differently from the plan. The publication tables were recreated a second time
+to store the payloads as `json` rather than `jsonb`, because jsonb reorders keys
+and the publication carries a digest of the bytes the builder produced. And the
+browser walkers answer the routes from committed files rather than the database,
+so they keep testing the page without needing credentials.
+
 **Goal:** The spec reader gets its two payloads from routes backed by the index
 tables, and the site runs as a Next.js application instead of static files on
 Cloudflare Pages.
