@@ -40,9 +40,14 @@
            padding: 16px 40px; border-bottom: 1px solid var(--hair); }
   .site-brand { display: flex; align-items: baseline; gap: 10px; }
   /* The broken orbit, carrying the accent while the wordmark keeps the ink. */
-  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--spec); align-self: center; }
+  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--spec); }
+  /* The mark leaves for polariscollective.org, the same place its name leaves
+     for. Second link to one destination, so it stays out of the reading order
+     and out of the tab order. */
+  .mark-link { display: flex; flex: none; align-self: center; }
   .collective { color: var(--spec); text-decoration: none;
                 font-family: var(--display); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .mark-link:hover + .collective,
   .collective:hover { background: var(--energy); color: var(--ink); }
   .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair); }
   .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600; }
@@ -128,7 +133,7 @@
 
 <header>
   <span class="site-brand">
-    <svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg>
+    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
     <span class="wordmark"><a href="spec-reader/">AI Character Index</a></span>
