@@ -126,6 +126,7 @@ const state = {
   anchors: [],
   documentFocus: { anthropic: false, openai: false },
   sidebarWidth: 292,
+  sidebarCollapsed: false,
   compareFirst: 50,
   comparePair: null,   // [idA, idB]; null = the first two documents
 };
@@ -152,6 +153,7 @@ const elements = {
   readerStatus: document.querySelector("#reader-status"),
   selectAllBehaviours: document.querySelector("#select-all-behaviours"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
+  sidebarToggle: document.querySelector("#sidebar-toggle"),
   sourceLink: document.querySelector("#source-link"),
   specSwitcher: document.querySelector(".spec-switcher"),
   template: document.querySelector("#document-template"),
@@ -335,6 +337,17 @@ function saveNumber(key, value) {
   try { localStorage.setItem(key, String(value)); } catch (error) {}
 }
 
+/* Flags do not go through savedNumber, which reads anything not greater than
+ * zero as absent and hands back the fallback — a deliberately expanded menu
+ * would come back collapsed the day the default changed. */
+function savedFlag(key) {
+  try { return localStorage.getItem(key) === "1"; } catch (error) { return false; }
+}
+
+function saveFlag(key, value) {
+  try { localStorage.setItem(key, value ? "1" : "0"); } catch (error) {}
+}
+
 function setSidebarWidth(width, persist = false) {
   const desktop = window.matchMedia("(min-width: 901px)").matches;
   const maximum = desktop
@@ -384,6 +397,34 @@ function startColumnDrag(event, resizer, update, finish) {
   resizer.addEventListener("pointermove", move);
   resizer.addEventListener("pointerup", end);
   resizer.addEventListener("pointercancel", end);
+}
+
+/* Folding the menu away, and remembering it folded.
+ *
+ * `--sidebar-width` is left alone on purpose: the grid override in the
+ * stylesheet is what hides the column, so the width the reader dragged to
+ * survives the fold and comes back with it. Re-applying it on expand is not
+ * redundant — the ceiling setSidebarWidth clamps against is derived from the
+ * shell's width, which may have changed while the menu was away. */
+function setSidebarCollapsed(collapsed, persist = false) {
+  state.sidebarCollapsed = collapsed;
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  const label = collapsed ? "Show the behavior menu" : "Hide the behavior menu";
+  elements.sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+  elements.sidebarToggle.setAttribute("aria-label", label);
+  elements.sidebarToggle.title = label;
+  if (!collapsed) setSidebarWidth(state.sidebarWidth);
+  if (persist) saveFlag("aci-sidebar-collapsed", collapsed);
+  // The passage rail is positioned against the document's width, which the fold
+  // has just changed. Without this its marks keep the old column's coordinates.
+  requestAnimationFrame(updateRails);
+}
+
+function setupSidebarToggle() {
+  setSidebarCollapsed(savedFlag("aci-sidebar-collapsed"));
+  elements.sidebarToggle.addEventListener("click", () => {
+    setSidebarCollapsed(!state.sidebarCollapsed, true);
+  });
 }
 
 function setupSidebarResizer() {
@@ -462,6 +503,7 @@ function createDocumentResizer() {
 }
 
 setupSidebarResizer();
+setupSidebarToggle();
 
 function behaviourGroups() {
   const groups = new Map();

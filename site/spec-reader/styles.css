@@ -268,6 +268,7 @@ button { font: inherit; }
 body.embedded .skip-link,
 body.embedded .site-header,
 body.embedded .site-footer,
+body.embedded .sidebar-toggle,
 body.embedded .behaviour-sidebar {
   display: none;
 }
@@ -586,7 +587,7 @@ body.resizing-columns {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px 20px;
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
@@ -609,8 +610,8 @@ body.resizing-columns {
 .spec-option small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .02em; }
 .spec-option.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px var(--shadow); }
 
-.view-actions { display: flex; align-items: center; gap: 7px; }
-.compare-toggle, .source-link {
+.view-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+.compare-toggle, .sidebar-toggle, .source-link {
   min-height: 34px;
   padding: 8px 12px;
   border: 1px solid var(--line);
@@ -623,9 +624,33 @@ body.resizing-columns {
 }
 .compare-toggle { display: inline-flex; align-items: center; gap: 8px; }
 .compare-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+/* The menu folds away. On a document this wide it is consulted in bursts and
+   read past the rest of the time, and the reader is the point.
+
+   Collapsing overrides the grid rather than setting `--sidebar-width` to zero:
+   the width the reader dragged the menu to is worth keeping, and expanding then
+   restores it without a second thing to remember. */
+body.sidebar-collapsed .app-shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.sidebar-collapsed .behaviour-sidebar,
+body.sidebar-collapsed .sidebar-resizer {
+  display: none;
+}
+
+.sidebar-toggle { display: inline-flex; align-items: center; flex: none; }
+
+/* The glyph idiom of `.split-icon` beside it: a box, and a mark inside saying
+   what the box holds. Filled while the menu is there and hollow once it is
+   gone, so the button shows which way it will go. */
+.panel-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
+.panel-icon::after { content: ""; display: block; width: 4px; height: 100%; background: currentColor; }
+body.sidebar-collapsed .panel-icon::after { background: transparent; }
+
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
-.source-link:hover, .compare-toggle:hover { border-color: var(--muted); }
+.source-link:hover, .compare-toggle:hover, .sidebar-toggle:hover { border-color: var(--muted); }
 
 .finding-bar {
   min-height: 54px;

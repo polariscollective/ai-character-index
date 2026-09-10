@@ -29,7 +29,7 @@
   </header>
 
   <main class="app-shell">
-    <aside class="behaviour-sidebar" aria-label="Behaviors under test">
+    <aside id="behaviour-sidebar" class="behaviour-sidebar" aria-label="Behaviors under test">
       <div class="sidebar-intro">
         <h1 class="eyebrow">Spec reader</h1>
       </div>
@@ -78,6 +78,15 @@
 
     <section class="workspace" aria-label="Specification reader">
       <div class="reader-toolbar">
+        <button
+          id="sidebar-toggle"
+          class="sidebar-toggle"
+          type="button"
+          aria-expanded="true"
+          aria-controls="behaviour-sidebar"
+          aria-label="Hide the behavior menu"
+          title="Hide the behavior menu"
+        ><span class="panel-icon" aria-hidden="true"></span></button>
         <div class="spec-switcher" role="group" aria-label="Choose specification"></div>
         <div id="compare-picker" class="compare-picker" hidden>
           <label class="compare-picker-field">Compare specification
