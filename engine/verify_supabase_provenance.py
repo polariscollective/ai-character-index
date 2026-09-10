@@ -163,6 +163,31 @@ def check_ledger_citations_still_resolve(store):
            f"{checked} citations, {mismatched} mismatched")
 
 
+def check_publication_carries_both_payloads(store):
+    """The routes stream these two columns and rebuild nothing, so what is
+    stored must be what the builders produce. Checked against the committed
+    files, which is the same oracle the two rebuild checks above use."""
+    publication = index_store.current_publication(store)
+    if publication is None:
+        report(False, "the publication carries both payloads", "no publication")
+        return
+
+    same_payload = publication["payload"] == json.loads(PAYLOAD.read_text())
+    report(same_payload, "the stored behaviour payload is the committed one",
+           "equal" if same_payload else "differs")
+
+    stored = dict(publication["documents"])
+    committed = json.loads(DOCUMENTS.read_text())
+    generated = stored.pop("generatedFrom")
+    committed.pop("generatedFrom")
+    dump = lambda payload: json.dumps(payload, ensure_ascii=False,
+                                      separators=(",", ":")).encode("utf-8")
+    same_documents = dump(stored) == dump(committed)
+    report(same_documents, "the stored documents payload is the committed one",
+           "equal apart from generatedFrom, which names "
+           + ", ".join(generated) if same_documents else "differs")
+
+
 def check_spec_versions_are_insert_only(store):
     versions = store.select("aci_spec_versions", {"select": "id", "limit": "1"})
     if not versions:
@@ -185,6 +210,7 @@ def main():
         scratch = Path(scratch)
         check_behaviour_payload(scratch)
         check_documents_payload(scratch)
+    check_publication_carries_both_payloads(store)
     check_panel_passages_still_resolve(store)
     check_ledger_citations_still_resolve(store)
     check_spec_versions_are_insert_only(store)

@@ -183,7 +183,10 @@ def published_runlog_rows(store, publication=None):
 def published_spec_version_ids(store, publication=None):
     publication = publication or current_publication(store)
     if publication is None:
-        return []
+        # Nothing published yet: the newest version of each spec, which is what
+        # documents() does with None. The migration builds the very first
+        # documents payload in exactly this state.
+        return None
     return sorted({c["spec_version_id"] for c in _rows(store, "aci_publication_cells")
                    if c["publication_id"] == publication["id"]})
 

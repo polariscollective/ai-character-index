@@ -91,21 +91,36 @@ class PlanTest(unittest.TestCase):
                          json.loads(migration.PAYLOAD.read_text()))
 
 
+# The documents payload is built by the real builder against the real database.
+# These tests prove the mapping, so they stub it out and stay offline.
+STUB_DOCUMENTS = lambda: ({"documents": []}, "0" * 64)
+
+
 class MigrateTest(unittest.TestCase):
     def test_a_second_run_inserts_nothing(self):
         store = MemoryStore()
-        first = migration.migrate(store)
+        first = migration.migrate(store, build_documents=STUB_DOCUMENTS)
         self.assertTrue(all(counts["new"] == counts["total"]
                             for counts in first.values()))
         store.inserted.clear()
-        second = migration.migrate(store)
+        second = migration.migrate(store, build_documents=STUB_DOCUMENTS)
         self.assertTrue(all(counts["new"] == 0 for counts in second.values()),
                         f"re-inserted: {[t for t, c in second.items() if c['new']]}")
         self.assertEqual(store.inserted, [])
 
+    def test_the_publication_is_written_with_both_payloads(self):
+        store = MemoryStore()
+        migration.migrate(store, build_documents=STUB_DOCUMENTS)
+        [publication] = store.tables["aci_publications"]
+        self.assertEqual(publication["payload"],
+                         json.loads(migration.PAYLOAD.read_text()))
+        self.assertEqual(publication["documents"], {"documents": []})
+        self.assertEqual(publication["documents_sha256"], "0" * 64)
+
     def test_a_dry_run_writes_nothing(self):
         store = MemoryStore()
-        report = migration.migrate(store, dry_run=True)
+        report = migration.migrate(store, dry_run=True,
+                                   build_documents=STUB_DOCUMENTS)
         self.assertEqual(store.inserted, [])
         self.assertEqual(report["aci_judgements"]["new"], 31293)
 

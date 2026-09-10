@@ -19,7 +19,9 @@ It stays committed, with `engine/panel/runlog-v3.md` as its record.
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -177,6 +179,8 @@ def plan():
     payload = json.loads(PAYLOAD.read_text())
     payload_digest = sha256(PAYLOAD.read_text())
     publication_id = ident("publication", payload_digest)
+    # `documents` is filled in by migrate(), not here: it is built from the rows
+    # this migration is about to write, so it cannot be computed before writing.
     publication = {
         "id": publication_id, "published_by": ACTOR,
         "notes": "The bench in production at the time of the migration. "
@@ -224,8 +228,33 @@ KEYS = {
 ORDER = list(KEYS)
 
 
-def migrate(store, dry_run=False):
-    """Insert what is missing, table by table, in foreign-key order."""
+def build_documents_payload():
+    """The documents payload, built from the database by the builder that owns
+    that shape. Running the real builder rather than reimplementing it is the
+    point: the payload a route will serve is the payload the provenance verifier
+    compares, because there is one implementation of it."""
+    with tempfile.TemporaryDirectory() as scratch:
+        out = Path(scratch) / "documents.json"
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "engine" / "build-spec-reader-data.py"),
+             "--from-supabase", f"--out={out}"],
+            capture_output=True, text=True)
+        if result.returncode != 0:
+            sys.exit("building the documents payload failed:\n"
+                     + (result.stderr or result.stdout))
+        text = out.read_text()
+    return json.loads(text), sha256(text)
+
+
+def migrate(store, dry_run=False, build_documents=None):
+    """Insert what is missing, table by table, in foreign-key order.
+
+    The publication comes last and is completed rather than planned: its
+    documents payload is built from the rows written just above it. That builder
+    is injectable for the same reason the store's transport is: the tests prove
+    the mapping, and proving it should not need a database.
+    """
+    build_documents = build_documents or build_documents_payload
     rows_by_table = plan()
     report = {}
     for table in ORDER:
@@ -235,8 +264,14 @@ def migrate(store, dry_run=False):
                    for row in store.select(table, {"select": ",".join(key)})}
         new = [row for row in rows if tuple(row[c] for c in key) not in present]
         report[table] = {"total": len(rows), "new": len(new)}
-        if new and not dry_run:
-            store.insert(table, new)
+        if not new or dry_run:
+            continue
+        if table == "aci_publications":
+            documents, digest = build_documents()
+            for row in new:
+                row["documents"] = documents
+                row["documents_sha256"] = digest
+        store.insert(table, new)
     return report
 
 
