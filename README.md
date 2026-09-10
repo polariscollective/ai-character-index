@@ -1,5 +1,7 @@
 # Spec Reader
 
+Run by Polaris Collective, started by Andres Cotton.
+
 A tool for researchers working in the model-spec space. Point a panel of LLM judges at a spec -- Anthropic's constitution, OpenAI's Model Spec, or a document of your own -- and give the panel a behaviour you care about. You get back a passage-level coverage map: every place the spec addresses that behaviour, scored by each judge and quoted verbatim, browsable in a local reader.
 
 What people use it for:
@@ -10,6 +12,23 @@ What people use it for:
 - **Experiment with spec edits.** Register your own spec versions locally, run the panel against each, and compare how coverage shifts as you rewrite.
 
 The repo ships with a complete bench out of the box: ten behaviours judged against both bundled specs by a three-judge frontier panel, so you can explore an example with results before running anything yourself.
+
+## Origins
+
+This repository is Polaris Collective's continuation of the AI Character Index,
+created by [Andrés Cotton](https://github.com/AndresCotton). The vision and the
+initial execution are his, including the first version of the spec reader; Matt
+Stults did the work of getting that production ready. The project passed to
+Polaris Collective in September 2026, with Andrés's agreement, to be carried
+further.
+
+**The original repository is
+[`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index),
+and it is the one to clone if you want to run the tool yourself.** It stands
+alone -- Python, a browser, nothing else. This fork is heading somewhere
+different, towards a hosted authenticated surface backed by Supabase and Cloud
+Run, and that direction will in time cost it the property of running from a bare
+clone. The upstream repository keeps it.
 
 ## Quickstart
 
@@ -208,6 +227,17 @@ python3 engine/validate_data.py                  # schema-check data/, incl. you
 | [`site/`](site/)                                       | The local reader surfaces                                                                                                  |
 
 The remaining directories (`research/`, `methodology/`, `design/`, and friends) are the project's own editorial records and maintenance; none of them are needed to use the tool.
+
+## Contributors
+
+- **[Andrés Cotton](https://github.com/AndresCotton)** -- creator. The vision and
+  the initial execution, including the first version of the spec reader.
+- **Matt Stults** -- got that initial work production ready.
+- **[Polaris Collective](https://polariscollective.org)** -- maintains the project
+  from September 2026.
+
+The original authors' copyright and citation metadata are unchanged: see
+[`NOTICE`](NOTICE) and [`CITATION.cff`](CITATION.cff).
 
 ## Licence and citation
 
