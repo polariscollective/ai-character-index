@@ -152,10 +152,14 @@ button { font: inherit; }
   background: var(--chrome);
 }
 
+/* Aligned on the baseline, not on the boxes. The wordmark is small-caps at
+   16px and the collective's name ordinary text at 15px: centred, their boxes
+   line up while their letters do not, and the wordmark rides visibly low. The
+   star and the rule are not text and keep to the centre. */
 .site-brand {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: baseline;
+  gap: 10px;
 }
 
 /* The collective's star, from the header of polariscollective.org. It carries
@@ -165,7 +169,34 @@ button { font: inherit; }
   width: 13px;
   height: 13px;
   flex: none;
+  align-self: center;
   color: var(--accent);
+}
+
+/* The star, the collective's name, a rule, then what the site is — the same
+   three pieces in the same order as the bar of evals-playground. One
+   difference: there the pair is deliberately not a link, that application
+   having nowhere else to go. Here it leaves for polariscollective.org, which
+   is somewhere else. */
+.collective {
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.collective:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 15px;
+  flex: none;
+  align-self: center;
+  background: var(--line);
 }
 
 .wordmark {
@@ -1144,6 +1175,10 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
 @media (max-width: 620px) {
   .site-header { padding: 0 16px; }
   .site-footer { padding: 0 16px; }
+  /* Two names and a menu do not fit. The star carries the collective on its
+     own here, and its name is still a link in the footer. */
+  .collective,
+  .brand-divider { display: none; }
   /* The credit line alone. The bar's height is a constant the shell subtracts,
      so nothing here may wrap: at this width the two halves together take three
      lines and the second is cut off mid-sentence. The pointer it carries is in

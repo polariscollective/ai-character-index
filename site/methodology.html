@@ -46,6 +46,13 @@
   .site-brand { display: flex; align-items: baseline; gap: 9px; }
   /* The collective's star, carrying the accent while the wordmark keeps the ink. */
   .polaris-star { width: 14px; height: 14px; flex: none; color: var(--spec); align-self: center; }
+  /* The star, the collective's name, a rule, then what the site is. */
+  /* No `align-self` here: the name shares the wordmark's baseline, which the
+     star and the rule, not being text, do not. */
+  .collective { color: var(--spec); text-decoration: none;
+                font-family: var(--display); font-size: 15px; white-space: nowrap; }
+  .collective:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair2); }
   .wordmark { font-family: var(--display); font-size: 19px; font-weight: 600; font-variant-caps: all-small-caps; letter-spacing: .22em; }
   .wordmark a { color: inherit; text-decoration: none; }
   nav { display: flex; gap: 24px; }
@@ -106,6 +113,9 @@
 
   @media (max-width: 880px) {
     header { padding: 18px 22px 12px; flex-wrap: wrap; gap: 6px 18px; }
+    /* Two names and a menu do not fit. The star carries the collective alone,
+       and its name is still a link in the footer. */
+    .collective, .brand-divider { display: none; }
     .sheet { margin: 22px 14px 0; }
     footer { margin: 14px 14px 30px; }
     .m-head, section.m { padding-left: 22px; padding-right: 22px; }
@@ -117,6 +127,8 @@
 <header>
   <span class="site-brand">
     <svg class="polaris-star" viewBox="0 0 14 14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 0.5 L7.6 6.4 L13.5 7 L7.6 7.6 L7 13.5 L6.4 7.6 L0.5 7 L6.4 6.4 Z"/></svg>
+    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
     <span class="wordmark"><a href="spec-reader/">AI Character Index</a></span>
   </span>
   <nav aria-label="site navigation">
@@ -154,6 +166,26 @@
   </section>
 
   <section class="m">
+    <h2>Two repositories, and which one you want</h2>
+    <p><b>The original is <a href="https://github.com/AndresCotton/ai-character-index"
+    target="_blank" rel="noopener">AndresCotton/ai-character-index</a>, and it is the one to
+    clone.</b> It stands alone: Python, a browser, and no other machinery. That is what the
+    commands below assume, nothing in it depends on us, and it is the version to take if you
+    want to run the tool yourself. It is published at
+    <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">ai-character-index.pages.dev</a>.</p>
+    <p><b>This site is the fork,
+    <a href="https://github.com/polariscollective/ai-character-index" target="_blank"
+    rel="noopener">polariscollective/ai-character-index</a>, run by
+    <a href="https://polariscollective.org" target="_blank" rel="noopener">Polaris
+    Collective</a>.</b> It is going somewhere different: a signed-in surface with the judging
+    panel running on our own infrastructure, so that a new behaviour, a new judge or a new
+    specification can be added from the browser instead of a terminal. That direction will in
+    time cost this copy the ability to run from a bare clone. The original keeps it, which is
+    why it stays the one we point you at.</p>
+  </section>
+
+  <section class="m">
     <h2>Get it</h2>
     <p>Open a terminal and copy-paste:</p>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
@@ -175,13 +207,21 @@ python3 -m http.server 8080 --directory site</code></pre>
 
   <section class="m">
     <h2>Credits</h2>
-    <p>Developed by Andr&eacute;s Cotton in collaboration with Matt Stults. This work was supported
-    by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact.</p>
-    <p>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by
-    <a href="https://github.com/AndresCotton">Andres Cotton</a>. The vision and the initial
-    execution, including the first version of the spec reader, are Andr&eacute;s's; Matt Stults
-    got that work production ready. The standalone version, the one to clone and run yourself,
-    stays at <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a>.</p>
+    <p><b>The AI Character Index was created by
+    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s Cotton</a>
+    and <a href="https://github.com/MattStults" target="_blank" rel="noopener">Matt Stults</a>, and
+    almost everything you are using is theirs.</b> The vision and the initial execution are
+    Andr&eacute;s's, including the first version of this spec reader; Matt did the work of getting
+    that production ready. Between them they wrote the judging pipeline, the citation resolver and
+    the reader itself, in
+    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+    rel="noopener">AndresCotton/ai-character-index</a>, published at
+    <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">ai-character-index.pages.dev</a>.</p>
+    <p>Their work was supported by Generator Residency (Kairos &amp; Constellation) and BlueDot
+    Impact.</p>
+    <p>Run by <a href="https://polariscollective.org" target="_blank" rel="noopener">Polaris
+    Collective</a> since September 2026, with Andr&eacute;s's agreement, and started by him.</p>
   </section>
 
 </div>
@@ -192,7 +232,9 @@ python3 -m http.server 8080 --directory site</code></pre>
       <a href="https://github.com/AndresCotton">Andres Cotton</a></span>
   </div>
   <div class="f-row">
-    <span>documentation lives with the code ·
+    <span>the standalone original ·
+      <a href="https://ai-character-index.pages.dev" target="_blank"
+      rel="noopener">ai-character-index.pages.dev</a> ·
       <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
       rel="noopener">github.com/AndresCotton/ai-character-index</a></span>
     <span class="proto-flag">apache-2.0 code · cc by 4.0 writing &amp; data</span>
