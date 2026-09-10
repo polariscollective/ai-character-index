@@ -1,9 +1,9 @@
 /*
  * Spec reader -- both specifications in full with a behaviour menu laid over them.
  * The behaviour set and its per-passage citations come from a panel run
- * (engine/panel/build_site_data.py), resolved in order from a ?data=<name> pin,
- * data/manifest.json "latest", or the shipped data/behaviours.json fallback (see
- * loadBehaviours); each citation carries per-model verdicts scored into tiers --
+ * (engine/panel/build_site_data.py), served by /api/reader/payload and resolved
+ * from a ?publication=<uuid> pin or the current publication (see loadBehaviours);
+ * each citation carries per-model verdicts scored into tiers --
  * defining / core / related -- which the header band toggles show or hide
  * (applyPanelThreshold); and the menu is a checklist, so any number of behaviours
  * can be read over the same text at once, side by side in the compare view when it
@@ -12,86 +12,57 @@
  * by more than one selected behaviour blends their colours and shows one gutter
  * rule per behaviour. Colour distinguishes the behaviours; the margin rule's
  * texture distinguishes the groups -- see GROUP_TEXTURE below. The spec text is
- * data/documents.json, built by engine/build-spec-reader-data.py.
+ * /api/reader/documents, built by engine/build-spec-reader-data.py.
  */
 
-const DOCUMENTS_URL = "./data/documents.json";
-/* Which behaviour payload the reader loads, resolved in this order:
- *   1. ?data=<name>  -- a pin, name only, no paths (lets prompt-calibration iterations
- *      sit side by side, e.g. ?data=behaviours-v4a, or any timestamped run);
- *   2. data/manifest.json "latest" -- the newest timestamped run emitted by
- *      engine/panel/build_site_data.py (run files and the manifest stay local);
- *   3. data/behaviours.json -- the shipped fallback, always tracked.
- * A source that fails to fetch or parse falls through to the next, so a stale pin,
- * a dangling manifest entry, or a fresh clone (no manifest at all) never breaks the
- * page. The same chain, CLI-side, is engine/panel/select_run.py. */
-const MANIFEST_URL = "./data/manifest.json";
-const FALLBACK_DATA_URL = "./data/behaviours.json";
-const FALLBACK_DATA_NAME = "behaviours.json";
-const DATA_NAME = /^[\w.-]+$/;
+const DOCUMENTS_URL = "/api/reader/documents";
+/* Which publication the reader shows, resolved in this order:
+ *   1. ?publication=<uuid> -- a pin, which lets one publication be linked to and
+ *      compared against another long after a newer one has gone live;
+ *   2. the current publication, which is the newest one.
+ * A pin that fails falls through to the current publication, so a stale link never
+ * breaks the page; the sidebar run block says when that happened, because a dead
+ * link and a live one are otherwise indistinguishable.
+ *
+ * There is no third step any more. The manifest was a ledger of local runs and the
+ * shipped fallback existed for a fresh clone, and neither has anything left to
+ * protect now that the payload comes from a route. */
+const PAYLOAD_URL = "/api/reader/payload";
+const PUBLICATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function dataUrl(name) {
-  return `./data/${dataName(name)}`;
+/* Whether a ?publication= pin may be asked for. The route validates it too; this
+ * side refuses first so a malformed link costs no request. Mirrors
+ * app/lib/publications.mjs::isPublicationId(). */
+function payloadName(id) {
+  return typeof id === "string" && PUBLICATION_ID.test(id);
 }
 
-/* payloadName() is a predicate; this is the filename it approves. */
-function dataName(name) {
-  return `${name.replace(/\.json$/, "")}.json`;
-}
-
-/* Whether a ?data= pin or a manifest "latest" entry may resolve as a payload. It must
- * pass the DATA_NAME charset AND be a behaviours payload -- never the manifest. Loading
- * manifest.json itself would render the run ledger as if it were a behaviour set, so the
- * chain refuses it; only behaviours*.json files are payloads here. Mirrors
- * engine/panel/build_site_data.py's _payload_name(). */
-function payloadName(name) {
-  if (typeof name !== "string" || !name) return false;
-  if (!DATA_NAME.test(name)) return false;
-  const fname = name.endsWith(".json") ? name : `${name}.json`;
-  if (fname === "manifest.json") return false;
-  return fname.startsWith("behaviours");
+function payloadUrl(id) {
+  return id ? `${PAYLOAD_URL}?publication=${encodeURIComponent(id)}` : PAYLOAD_URL;
 }
 
 /* Resolves the payload AND records which source won, in state.payloadSource:
- * {origin: "pin"|"latest"|"fallback", name, requested}. The fall-through itself is
- * deliberate -- a stale pin must never break the page -- but the viewer has to be able
- * to tell that it happened, or a dead link is indistinguishable from a live one. The
- * sidebar run block reads this; `requested` is set only when a pin was asked for and
- * not served, which is exactly the case worth flagging. */
+ * {origin: "pin"|"current", name, requested}. `requested` is set only when a pin was
+ * asked for and not served, which is exactly the case worth flagging. */
 async function loadBehaviours() {
-  const pinned = new URLSearchParams(location.search).get("data");
+  const pinned = new URLSearchParams(location.search).get("publication");
   if (payloadName(pinned)) {
-    const url = dataUrl(pinned);
+    const url = payloadUrl(pinned);
     try {
       const payload = await loadJSON(url);
-      state.payloadSource = { origin: "pin", name: dataName(pinned) };
+      state.payloadSource = { origin: "pin", name: pinned };
       return payload;
     } catch (error) {
-      console.warn(`Pinned panel data ${url} unavailable (${error.message}); falling back.`);
+      console.warn(`Pinned publication ${pinned} unavailable (${error.message}); falling back.`);
     }
   }
-  // Two different failures, and the reader deserves to know which: a validly-named
-  // pin that could not be fetched (stale link) versus a name payloadName() refuses
-  // outright (manifest.json, a traversal attempt). Both fall through by design.
+  // Two different failures, and the reader deserves to know which: a well-formed pin
+  // that could not be fetched (a publication that is gone) versus one payloadName()
+  // refuses outright. Both fall through by design.
   const requested = pinned ? { name: pinned, refused: !payloadName(pinned) } : null;
-  let latest = null;
-  try {
-    latest = (await loadJSON(MANIFEST_URL)).latest;
-  } catch {
-    /* No manifest (fresh clone) or an unreadable one -- fall through to the shipped data. */
-  }
-  if (payloadName(latest)) {
-    const url = dataUrl(latest);
-    try {
-      const payload = await loadJSON(url);
-      state.payloadSource = { origin: "latest", name: dataName(latest), requested };
-      return payload;
-    } catch (error) {
-      console.warn(`Latest run ${url} unavailable (${error.message}); falling back.`);
-    }
-  }
-  state.payloadSource = { origin: "fallback", name: FALLBACK_DATA_NAME, requested };
-  return loadJSON(FALLBACK_DATA_URL);
+  const payload = await loadJSON(payloadUrl(null));
+  state.payloadSource = { origin: "current", name: "current publication", requested };
+  return payload;
 }
 
 /* Shown for a document when no behaviour is under test. */
@@ -1679,7 +1650,7 @@ function updateTierToggles(panel, doc) {
  * substitution -- and the page has never drawn any of it, so a reader could not tell
  * one run from another, could not see that a judge was substituted on some cells, and
  * had no way to know the judge count that sets the tier cuts they are toggling.
- * It doubles as the fall-through signal: when a ?data= pin cannot be served the page
+ * It doubles as the fall-through signal: when a ?publication= pin cannot be served the page
  * still renders (by design), and this is where it says so. */
 /* The judge count that MATTERS is the per-PASSAGE one: applyPanelThreshold bands each
  * passage on its own verdict count, so that is the number explaining its tier. This

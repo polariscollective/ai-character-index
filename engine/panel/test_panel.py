@@ -688,55 +688,73 @@ class TestSafeNameAscii(unittest.TestCase):
 
 
 class TestAppJSResolution(unittest.TestCase):
-    """site/spec-reader/app.js is the other half of the resolution chain
-    select_run.py / build_site_data.py implement. These guard it without a browser:
-    the three-tier fetch fallthrough drives the REAL app.js loadBehaviours in Node
-    against a stubbed loadJSON, and the name-validation check compares the REAL
-    app.js payloadName() against _payload_name() live. Both skip (not fail) when the
-    `node` binary is absent -- the panel Python suite itself has no JS dependency."""
+    """site/spec-reader/app.js resolves which publication the reader shows.
+    These guard it without a browser: the fall-through drives the REAL app.js
+    loadBehaviours in Node against a stubbed loadJSON, and the parity check
+    compares the REAL app.js pin validator against the route's own. Both skip
+    (not fail) when the `node` binary is absent -- the panel Python suite itself
+    has no JS dependency.
+
+    The parity that matters changed with the payload's source. It used to be
+    between app.js and build_site_data._payload_name(), because both had to agree
+    on which FILENAME was a payload. A payload now comes from a route and a pin
+    is a publication id, so the two halves that must agree are the page and the
+    route it calls: app.js::payloadName() and app/lib/publications.mjs. A pin the
+    page accepts and the route rejects would 404 every time; one the page rejects
+    and the route accepts would be unreachable."""
 
     APP_JS = HERE.parent.parent / "site" / "spec-reader" / "app.js"
+    LIB = HERE.parent.parent / "app" / "lib" / "publications.mjs"
     HARNESS = HERE / "test_appjs_fallthrough.js"
 
     def setUp(self):
         if shutil.which("node") is None:
             self.skipTest("node is not available")
 
-    def test_three_tier_fallthrough_in_appjs(self):
-        # pin -> manifest latest -> shipped default, incl. manifest-exclusion; the
-        # assertions live in the Node harness so they run standalone too.
+    def test_payload_resolution_in_appjs(self):
+        # pin -> current publication, including a dead pin that falls through and
+        # a malformed one that never asks; the assertions live in the Node
+        # harness so they run standalone too.
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("three-tier fallthrough: PASS", out.stdout)
+        self.assertIn("app.js payload resolution: PASS", out.stdout)
 
-    def test_payload_name_parity_python_vs_js(self):
-        names = ["manifest", "manifest.json", "behaviours", "behaviours.json",
-                 "behaviours-2026-08-18T10-00-00.json", "behaviours-v4a",
-                 "other.json", "explicit", "../x", "sub/dir.json", "",
-                 None, 123, ["behaviours.json"], "MANIFEST.JSON",
-                 "behaviours-ünïcode.json", "название.json"]
-        expected = [bs._payload_name(n) for n in names]
+    def test_the_page_and_the_route_agree_on_what_a_pin_is(self):
+        page = self.APP_JS.read_text(encoding="utf-8")
+        route = self.LIB.read_text(encoding="utf-8")
+        page_re = next(l.split("=", 1)[1].strip().rstrip(";")
+                       for l in page.splitlines()
+                       if l.startswith("const PUBLICATION_ID"))
+        route_re = next(l.split("=", 1)[1].strip().rstrip(";")
+                        for l in route.splitlines() if l.startswith("const UUID"))
+        self.assertEqual(page_re, route_re,
+                         "the page and the route disagree on what a pin is; a pin "
+                         "the page accepts and the route rejects 404s every time, "
+                         "and one the page rejects is unreachable")
+
+    def test_the_pin_validator_is_doing_something(self):
+        pins = ["3114dd65-c6f2-5cb3-bf98-af5b314381c3",
+                "3114DD65-C6F2-5CB3-BF98-AF5B314381C3",
+                "behaviours-v5-reader", "manifest.json", "../../etc/passwd",
+                "3114dd65c6f25cb3bf98af5b314381c3", "", None, 123,
+                "3114dd65-c6f2-5cb3-bf98-af5b3143813"]
+        expected = [True, True, False, False, False, False, False, False, False, False]
         script = (
             'const fs=require("fs");'
-            'const lines=fs.readFileSync(process.argv[1],"utf8").split("\\n");'
-            'const start=lines.findIndex(l=>l.startsWith("function payloadName(name)"));'
-            'let end=-1;for(let i=start+1;i<lines.length;i++){if(lines[i].trim()==="}"){end=i;break;}}'
-            'const dn=lines.find(l=>l.startsWith("const DATA_NAME"));'
-            'if(start<0||end<0||!dn){console.error("payloadName/DATA_NAME not found");process.exit(2);}'
-            'const names=JSON.parse(process.argv[2]);'
-            'const code=dn+"\\n"+lines.slice(start,end+1).join("\\n")+'
-            '"+\\nconsole.log(JSON.stringify(names.map(n=>payloadName(n))));";'
-            'eval(code);'
+            'const pins=JSON.parse(process.argv[2]);'
+            'const page=fs.readFileSync(process.argv[1],"utf8").split("\\n");'
+            'const start=page.findIndex(l=>l.startsWith("function payloadName(id)"));'
+            'let end=-1;for(let i=start+1;i<page.length;i++){if(page[i].trim()==="}"){end=i;break;}}'
+            'const re=page.find(l=>l.startsWith("const PUBLICATION_ID"));'
+            'if(start<0||end<0||!re){console.error("payloadName/PUBLICATION_ID not found");process.exit(2);}'
+            'eval(re+"\\n"+page.slice(start,end+1).join("\\n"));'
+            'console.log(JSON.stringify(pins.map(p=>payloadName(p))));'
         )
-        out = subprocess.run(["node", "-e", script, str(self.APP_JS), json.dumps(names)],
+        out = subprocess.run(["node", "-e", script, str(self.APP_JS), json.dumps(pins)],
                              capture_output=True, text=True, timeout=60)
         self.assertEqual(out.returncode, 0, out.stderr)
-        got = json.loads(out.stdout)
-        self.assertEqual(got, expected,
-                         "app.js payloadName drifted from build_site_data._payload_name: "
-                         + ", ".join(f"{n!r}: js={g} py={p}"
-                                     for n, g, p in zip(names, got, expected) if g != p))
+        self.assertEqual(json.loads(out.stdout), expected)
 
 
 class TestAppJSTiers(unittest.TestCase):
