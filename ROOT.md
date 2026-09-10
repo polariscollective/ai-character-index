@@ -10,7 +10,7 @@ The root holds the project's two entry documents (`PLAN.md`, `README.md`) and th
 |---|---|
 | `PLAN.md` | Build plan & system design (written 2026-07-10): three-layer architecture, data model, page map, CI/CD table (§5), build phases (§6), repo map (§8). The source of the "what should exist" claims cross-checked in this doc set |
 | `README.md` | Front door: positioning paragraph, short how-it-works, repo-map table, Contributing points to the Issues-page contact link |
-| `package.json` | Root package `ai-character-index` (private); `packageManager: pnpm@11.12.0`; `engines.node >= 22`; scripts: `dev`/`build`/`start` for Next, `test:routes`, and the `predev`/`prebuild` pair that copies `site/` into the gitignored `public/`; deps: `next`, `react`, `react-dom`; devDep: `playwright-core ^1.61.1` |
+| `package.json` | Root package `ai-character-index` (private); `packageManager: pnpm@11.26.0`; `engines.node >= 22`; scripts: `dev`/`build`/`start` for Next, `test:routes`, and the `predev`/`prebuild` pair that copies `site/` into the gitignored `public/`; deps: `next`, `react`, `react-dom`; devDep: `playwright-core ^1.61.1` |
 | `pnpm-workspace.yaml` | Declares no packages; only `allowBuilds` (esbuild, sharp, workerd) — the pnpm ≥10 allowlist for transitive deps that run postinstall builds |
 | `pnpm-lock.yaml` | Lockfile v9; exactly one importer (`.` = root) |
 | `.gitignore` | Standard entries (node_modules, dist, .env, logs, .DS_Store), `.claude/` local settings, local panel run outputs (timestamped payloads + `manifest.json`; runlogs/metrics via `engine/panel/.gitignore`), user-registered specs (`specs/user/`), builder smoke scratch, plus two repo-specific private paths: `research/sources/Founding an AI Charter organisation.pdf` and `outreach/` |
@@ -39,4 +39,4 @@ graph LR
 - PLAN.md §8's repo map lists `outreach/` as a repo folder, but `.gitignore` excludes `outreach/` — it can only exist in local clones, never on main.
 - PLAN.md §5's CI/CD table promises `ci.yml`, `notion-sync.yml`, `spec-watch.yml` alongside a deploy workflow; only `ci.yml` exists now — deployment is Vercel's, fired by a push rather than by a workflow here (see `.github/OVERVIEW.md`).
 - `engines`/`scripts` nothing calls: none — `playwright-core` is used by the two `engine/verify-*.mjs`, in CI's browser job and locally.
-- Node version tension: `package.json` declares `engines.node >=22`, but pnpm 11.12 needs Node ≥ 22.13 — Node 22.0–22.12 satisfies `engines` yet not the pinned packageManager. CI's `node-version: 22` resolves to the latest 22.x, which clears 22.13; the `engines` floor is simply looser than reality.
+- `engines.node` is `>=22.13 <25`: the floor is the one pnpm actually needs, and the ceiling stops the runtime following every new Node major on its own — a deploy warned about exactly that. It was `>=22`, which admitted Node 22.0–22.12, versions the pinned packageManager will not run on.

@@ -1,9 +1,9 @@
 {
   "name": "ai-character-index",
   "private": true,
-  "packageManager": "pnpm@11.12.0",
+  "packageManager": "pnpm@11.26.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13 <25"
   },
   "scripts": {
     "prebuild": "rm -rf public && mkdir -p public && cp -R site/. public/",
