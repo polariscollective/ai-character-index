@@ -171,6 +171,18 @@ button { font: inherit; }
   display: flex;
   align-items: baseline;
   gap: 10px;
+  /* The mark and the name take one pair of tones and move together, as they do
+     in the bar of evals-playground: olive at rest, olive-deep under the
+     pointer, ink while pressed. On the umber surface there is nothing darker
+     than the ground to move to, so the pair brightens to paper instead. */
+  --brand-rest: var(--muted);
+  --brand-lit: var(--accent);
+  --brand-pressed: var(--ink);
+}
+
+body[data-palette="umber"] .site-brand {
+  --brand-lit: var(--ink);
+  --brand-pressed: var(--ink);
 }
 
 /* The broken orbit, the collective's one mark. It carries the accent while the
@@ -183,7 +195,7 @@ button { font: inherit; }
   /* Olive, not the olive-deep the framework gives the mark on paper: at 20px
      the deep tone reads as a smudge beside its name. The darkening that tone
      would have been is spent on hover instead. */
-  color: var(--muted);
+  color: var(--brand-rest);
   transition: color .15s ease;
 }
 
@@ -197,34 +209,37 @@ button { font: inherit; }
   align-self: center;
 }
 
-/* The mark, the collective's name, a rule, then what the site is — the same
-   three pieces in the same order as the bar of evals-playground. One
-   difference: there the pair is deliberately not a link, that application
-   having nowhere else to go. Here it leaves for polariscollective.org, which
-   is somewhere else. */
+/* The mark, the collective's name, a rule, then what the site is: the same
+   pieces in the same order as the bar of evals-playground, leaving for the
+   same place, polariscollective.org. */
 .collective {
-  color: var(--accent);
+  color: var(--brand-rest);
   text-decoration: none;
   font-family: var(--display);
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-}
-
-/* The framework's link hover: a chartreuse highlight fills behind the text and
-   the text itself goes to ink. Not an underline that thickens, not a colour
-   change on the glyphs. */
-.mark-link:hover + .collective,
-.collective:hover {
-  background: var(--energy);
-  color: var(--ink);
+  transition: color .15s ease;
 }
 
 /* Mark and name are one target and answer as one: whichever half the pointer
-   is over, the name lights and the mark goes to ink. */
+   is over, both darken. The framework's chartreuse highlight is for links in
+   prose, and is not used here: it would fill a block behind the name that the
+   mark beside it cannot take, and the two halves of one lockup would answer
+   the pointer differently. The name of the collective darkens, the bar it sits
+   in does not move. */
 .mark-link:hover .polaris-mark,
-.site-brand:has(.collective:hover) .polaris-mark {
-  color: var(--ink);
+.site-brand:has(.collective:hover) .polaris-mark,
+.mark-link:hover + .collective,
+.collective:hover {
+  color: var(--brand-lit);
+}
+
+.mark-link:active .polaris-mark,
+.site-brand:has(.collective:active) .polaris-mark,
+.mark-link:active + .collective,
+.collective:active {
+  color: var(--brand-pressed);
 }
 
 .brand-divider {

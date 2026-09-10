@@ -38,23 +38,39 @@
   /* ---------- header (as on the reader) ---------- */
   header { display: flex; align-items: baseline; justify-content: space-between;
            padding: 16px 40px; border-bottom: 1px solid var(--hair); }
-  .site-brand { display: flex; align-items: baseline; gap: 10px; }
+  /* The mark and the name take one pair of tones and move together, as they do
+     in the bar of evals-playground: olive at rest, olive-deep under the
+     pointer, ink while pressed. On the umber surface there is nothing darker
+     than the ground to move to, so the pair brightens to paper instead. */
+  .site-brand { display: flex; align-items: baseline; gap: 10px;
+                --brand-rest: var(--ink2); --brand-lit: var(--spec); --brand-pressed: var(--ink); }
+  body[data-palette="umber"] .site-brand { --brand-lit: var(--ink); --brand-pressed: var(--ink); }
   /* The broken orbit, carrying the accent while the wordmark keeps the ink. */
   /* Olive rather than the framework's olive-deep: at 20px the deep tone reads
      as a smudge beside its name, and the darkening is spent on hover instead. */
-  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--ink2);
+  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--brand-rest);
                   transition: color .15s ease; }
   /* The mark leaves for polariscollective.org, the same place its name leaves
      for. Second link to one destination, so it stays out of the reading order
      and out of the tab order. */
   .mark-link { display: flex; flex: none; align-self: center; }
-  .collective { color: var(--spec); text-decoration: none;
+  .collective { color: var(--brand-rest); text-decoration: none; transition: color .15s ease;
                 font-family: var(--display); font-size: 15px; font-weight: 600; white-space: nowrap; }
-  .mark-link:hover + .collective,
-  .collective:hover { background: var(--energy); color: var(--ink); }
-  /* Mark and name are one target and answer as one. */
+  /* Mark and name are one target and answer as one: whichever half the pointer
+     is over, both darken. The chartreuse highlight this page gives a link in
+     prose is turned off for the pair: it would fill a block behind the name
+     that the mark beside it cannot take, and the bar would move under the
+     pointer instead of the name darkening in it. */
+  .mark-link:hover,
+  .collective:hover { background: none; }
   .mark-link:hover .polaris-mark,
-  .site-brand:has(.collective:hover) .polaris-mark { color: var(--ink); }
+  .site-brand:has(.collective:hover) .polaris-mark,
+  .mark-link:hover + .collective,
+  .collective:hover { color: var(--brand-lit); }
+  .mark-link:active .polaris-mark,
+  .site-brand:has(.collective:active) .polaris-mark,
+  .mark-link:active + .collective,
+  .collective:active { color: var(--brand-pressed); }
   .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair); }
   .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600; }
   .wordmark a { color: inherit; text-decoration: none; }
