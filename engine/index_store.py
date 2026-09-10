@@ -142,3 +142,88 @@ def runlog_rows(store, run_id):
             "via": via,
         })
     return rows
+
+
+def current_publication(store):
+    """The publication the reader serves: the newest one. A publication is
+    insert-only, so newest and current are the same thing."""
+    publications = _rows(store, "aci_publications")
+    if not publications:
+        return None
+    return max(publications, key=lambda row: row["published_at"])
+
+
+def published_runlog_rows(store, publication=None):
+    """The judgement rows behind a publication, in the JSONL shape.
+
+    A publication selects a run per cell, so this is the union over the runs it
+    names, restricted to the cells it actually published. A run may hold cells
+    an older publication used and this one did not.
+    """
+    publication = publication or current_publication(store)
+    if publication is None:
+        return []
+    cells = [c for c in _rows(store, "aci_publication_cells")
+             if c["publication_id"] == publication["id"]]
+    wanted = {(c["behaviour_slug"], c["spec_version_id"]) for c in cells}
+    spec_of_version = {v["id"]: v["spec_id"]
+                       for v in _rows(store, "aci_spec_versions")}
+
+    rows = []
+    for run_id in sorted({c["run_id"] for c in cells}):
+        for row in runlog_rows(store, run_id):
+            rows.append(row)
+    # runlog_rows keys by spec name; the cell filter is by version id, so map back.
+    spec_names = {spec_of_version[version_id]: version_id
+                  for _, version_id in wanted}
+    return [row for row in rows
+            if (row["behaviour"], spec_names.get(row["spec"])) in wanted]
+
+
+def published_spec_version_ids(store, publication=None):
+    publication = publication or current_publication(store)
+    if publication is None:
+        return []
+    return sorted({c["spec_version_id"] for c in _rows(store, "aci_publication_cells")
+                   if c["publication_id"] == publication["id"]})
+
+
+def coverage(store):
+    """The frozen ledger in the shape data/coverage.json holds under `coverage`.
+
+    The file keys a record by the index set's file-local numeric id; the table
+    keys it by slug, which is the global key. This maps back, because
+    coverage_payload() and the reader both still speak in numeric ids.
+    """
+    numeric_of_slug = {slug: entry["numeric_id"]
+                       for slug, entry in behaviours(store).items()
+                       if entry["set"] == "index"}
+    names = {slug: entry["name"] for slug, entry in behaviours(store).items()}
+    records = []
+    for row in _rows(store, "aci_coverage"):
+        records.append({
+            "behaviour_id": numeric_of_slug[row["behaviour_slug"]],
+            "behaviour_name": names[row["behaviour_slug"]],
+            "lab_id": row["lab_id"],
+            "verdict": row["verdict"],
+            "depth_0_4": row["depth_0_4"],
+            "depth_note": row["depth_note"],
+            "verified_against_version": row["verified_against_version"],
+            "verified_date": row["verified_date"],
+            "citation_format": row["citation_format"],
+            "citations": row["citations"],
+        })
+    return records
+
+
+def index_behaviours(store):
+    """The index-set behaviours that carry a coverage record, in numeric order,
+    in the shape build-spec-reader-data.py's BEHAVIOURS constant holds. That
+    constant is generated from the registry today; here it is read."""
+    registry = behaviours(store)
+    covered = {row["behaviour_slug"] for row in _rows(store, "aci_coverage")}
+    rows = [(entry["numeric_id"], slug, entry) for slug, entry in registry.items()
+            if entry["set"] == "index" and slug in covered]
+    return [{"id": numeric_id, "slug": slug, "name": entry["name"],
+             "definition": entry["definition"], "category": entry["group"]}
+            for numeric_id, slug, entry in sorted(rows)]

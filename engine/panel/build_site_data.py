@@ -366,8 +366,15 @@ def main(argv=None):
     out_name = None
     registry_path = ROOT / "data" / "behaviours.json"
     run_date = str(date.today())
+    from_supabase = False
     for a in argv:
-        if a.startswith("--runlog="):
+        if a == "--from-supabase":
+            # The index out of its tables rather than out of committed files:
+            # the registry, the judgements behind the current publication, the
+            # curated cells, and -- through cite.py's document source -- the
+            # spec text every locator resolves against. Nothing below changes.
+            from_supabase = True
+        elif a.startswith("--runlog="):
             runlog = Path(a.split("=", 1)[1])
         elif a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
@@ -406,17 +413,28 @@ def main(argv=None):
             # payload + manifest. Asking for help must not mutate the repo.
             sys.exit(f"unknown argument {a!r} -- valid: --runlog= --rubric= --panel= "
                      "--behaviours= --registry= --run-date= --out= "
-                     "--threshold= --solid-threshold=")
+                     "--threshold= --solid-threshold= --from-supabase")
     panel = resolve_panel(config, DISPLAY["panel"])
-    registry = json.loads(registry_path.read_text())
+    store = None
+    if from_supabase:
+        sys.path.insert(0, str(ROOT / "engine"))
+        import index_store            # noqa: E402
+        from store import Store       # noqa: E402
+        store = Store.from_env()
+        index_store.install_registry(store)
+        registry = index_store.behaviours(store)
+        registry_path = "supabase aci_behaviours"
+        log_rows = index_store.published_runlog_rows(store)
+    else:
+        registry = json.loads(registry_path.read_text())
+        log_rows = (json.loads(line) for line in runlog.read_text().splitlines())
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()
     spec_of = {}
     runlog_keys = set()
     max_verdict = 0   # scale of the admitted rows; names the scoring rule in provenance
-    for line in runlog.read_text().splitlines():
-        d = json.loads(line)
+    for d in log_rows:
         runlog_keys.add(d["behaviour"])
         runlog_models.add(d["model"])   # pre-filter, so a zero can name them
         runlog_rubrics.add(d.get("rubric", "v1"))
@@ -442,7 +460,8 @@ def main(argv=None):
         for loc, sec, t in h.passages(s):
             text[loc] = t
 
-    src = json.loads((ROOT / "data" / "panel-cell-curation.json").read_text())
+    src = ({"cells": index_store.cell_curation(store)} if from_supabase
+           else json.loads((ROOT / "data" / "panel-cell-curation.json").read_text()))
     keep = DISPLAY["behaviours"]
     behaviours = display_behaviours(keep, registry, registry_path)
     # curated per-lab cell rows, keyed (slug, lab)
