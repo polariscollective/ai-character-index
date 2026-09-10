@@ -1143,6 +1143,12 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
 
 @media (max-width: 620px) {
   .site-header { padding: 0 16px; }
+  .site-footer { padding: 0 16px; }
+  /* The credit line alone. The bar's height is a constant the shell subtracts,
+     so nothing here may wrap: at this width the two halves together take three
+     lines and the second is cut off mid-sentence. The pointer it carries is in
+     the README and on the methodology page, both of which have room. */
+  .site-footer span + span { display: none; }
   .reader-toolbar { padding: 10px; }
   .spec-switcher { width: 100%; }
   .spec-option { min-width: 0; flex: 1; }
