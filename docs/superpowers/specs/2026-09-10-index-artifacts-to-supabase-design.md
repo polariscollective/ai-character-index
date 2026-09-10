@@ -48,8 +48,8 @@ this index is made of, and the unit a reader compares across time.
 
 A **judge call** is one model reading one whole spec version for one behaviour
 and returning a verdict for every passage in it. It is the unit of work, of
-cost, of failure and of resume. The shipped bench is sixty of them, and they
-produced 31,293 judgements between them.
+cost, of failure and of resume. The shipped bench is 67 of them over 18 cells,
+and they produced 31,293 judgements between them.
 
 A **run** is a batch of judge calls someone asked for. It is not the whole
 index. Adding a lab's spec is one run of thirty calls; adding a behaviour is one
@@ -60,10 +60,28 @@ not a document, and it is not a run. Today that decision is a merged pull
 request; after this work it is a row per cell. Nothing is published by the mere
 fact of existing.
 
-A publication must be homogeneous: every cell it selects shares one panel and
-one rubric. An index whose argument is comparison between labs cannot publish an
-Anthropic cell judged by one panel beside an OpenAI cell judged by another. The
-constraint is enforced on insert rather than written down as method.
+A publication must be homogeneous: every cell it selects was judged by the same
+set of models under the same rubric. An index whose argument is comparison
+between labs cannot publish an Anthropic cell judged by one panel beside an
+OpenAI cell judged by another. The constraint is enforced on insert rather than
+written down as method.
+
+**The bench already in production does not satisfy it**, and this was found by
+counting rather than assumed. Four behaviours were judged by more models on the
+Anthropic constitution than on the OpenAI model spec: six against three twice,
+six against five once, five against three once. The other five behaviours are
+three against three. The reader compensates by scoring every cell against its
+own maximum, which is why this was invisible, but a depth reached before six
+judges and a depth reached before three are not the same claim.
+
+Migrating is not the moment to fix it. The acceptance test of this whole
+document is that the payload rebuilt from the database is byte-identical to the
+one in production, and a payload built from a homogeneous subset would be a
+different payload with nothing to compare against. So exactly one publication is
+exempt: the one the migration writes, carrying `grandfathered`, and a partial
+unique index makes sure a second can never exist. Filling the nine missing calls
+is then a dated, visible piece of work rather than a side effect of a
+migration.
 
 ## The data model
 
@@ -189,6 +207,9 @@ create table aci_publications (
   -- it is the homogeneity claim, and it should be readable without a join.
   panel          text[] not null,
   rubric         text not null,
+  -- The one exemption from the homogeneity check below, for the bench already
+  -- in production. A partial unique index allows exactly one, ever.
+  grandfathered  boolean not null default false,
   build_params   jsonb not null,
   payload        jsonb not null,
   payload_sha256 text not null
@@ -203,6 +224,44 @@ create table aci_publication_cells (
   run_id          uuid not null references aci_runs(id),
   primary key (publication_id, behaviour_slug, spec_version_id)
 );
+
+create unique index aci_publications_one_grandfathered
+  on aci_publications ((true)) where grandfathered;
+
+-- Homogeneity, enforced rather than documented: every cell of a publication
+-- must have been judged by exactly the models the publication names, all of
+-- them done. The grandfathered publication is the single exemption.
+create or replace function aci_publication_cell_is_publishable()
+returns trigger language plpgsql as $$
+declare
+  pub  aci_publications%rowtype;
+  seen text[];
+begin
+  select * into pub from aci_publications where id = new.publication_id;
+  if pub.grandfathered then
+    return new;
+  end if;
+  if (select rubric from aci_runs where id = new.run_id) is distinct from pub.rubric then
+    raise exception 'run % does not carry rubric % of publication %',
+      new.run_id, pub.rubric, new.publication_id;
+  end if;
+  select array_agg(model order by model) into seen
+    from aci_judge_calls
+   where run_id = new.run_id
+     and behaviour_slug = new.behaviour_slug
+     and spec_version_id = new.spec_version_id
+     and status = 'done';
+  if seen is distinct from (select array_agg(m order by m) from unnest(pub.panel) m) then
+    raise exception 'cell %/% was judged by %, publication panel is %',
+      new.behaviour_slug, new.spec_version_id, seen, pub.panel;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger aci_publication_cells_publishable
+  before insert on aci_publication_cells
+  for each row execute function aci_publication_cell_is_publishable();
 
 create table aci_cell_curation (
   behaviour_slug text not null references aci_behaviours(slug),
@@ -232,7 +291,7 @@ Three shapes deserve a sentence.
 spec, judge model, passage and verdict. Those first three name a judge call and
 the last two are the verdict it returned for one passage, which is why the log
 splits cleanly in two: `aci_judge_calls` and `aci_judgements`. The shipped v5
-log becomes one run of sixty calls and 31,293 judgements; the v3 log becomes a
+log becomes one run of 67 calls and 31,293 judgements; the v3 log becomes a
 second run, kept for the record.
 
 **A run does not enumerate its work; its calls do.** The run carries what the
@@ -290,12 +349,18 @@ request is not a serving strategy. Materialising also makes the payload
 immutable, which lets the route set a long cache lifetime keyed on the
 publication id.
 
-Two rules are checked before a publication is written, and both refuse rather
-than warn. Every selected cell must share the publication's panel and rubric.
-And every selected cell must be complete: each of the panel's models must have a
-`done` call for it. A half-judged cell scores against a scale the panel never
-reached, and the reader's band maths would read that as a weaker verdict rather
-than as missing work.
+One rule is checked before a publication cell is written, and it refuses rather
+than warns: the cell must have been judged by exactly the models the publication
+names, every one of them `done`. That covers both failures at once. A cell
+judged by a different panel breaks the comparison between labs, and a cell
+missing one of its judges scores against a scale the panel never reached, which
+the reader's band maths would read as a weaker verdict rather than as missing
+work.
+
+The check lives in the database because it is the claim the index sells, and it
+must not depend on which code path wrote the row. The single grandfathered
+publication is the exemption, and the index that guards it means the exemption
+cannot be reused.
 
 Two routes serve the reader.
 
@@ -334,7 +399,7 @@ can be repeated.
 | `data/labs.json` | `aci_labs`, `aci_specs` |
 | `specs/*/[spec].md` | `aci_spec_versions` |
 | `data/behaviours.json` | `aci_behaviours` |
-| `engine/panel/runlog-v5.jsonl` | one `aci_runs` row, 60 `aci_judge_calls`, 31,293 `aci_judgements` |
+| `engine/panel/runlog-v5.jsonl` | one `aci_runs` row, 67 `aci_judge_calls`, 31,293 `aci_judgements` |
 | `engine/panel/runlog-v3.jsonl` | a second run, kept for the record |
 | `engine/panel/panel-config.json` | the runs' `config` |
 | `engine/panel/prompts/v5.txt` | the runs' `prompt` |
@@ -393,8 +458,9 @@ Four checks alongside it:
 - An `update` against `aci_spec_versions` fails on grants.
 - Two spec versions sharing a label but not a digest both insert, and their
   judgements stay separable.
-- A publication whose cells disagree on panel or rubric is refused, and so is
-  one whose cell is missing a `done` call for a model in its panel.
+- A publication whose cell was judged by a set of models other than its panel
+  is refused, and so is one whose run carries a different rubric.
+- A second `grandfathered` publication is refused by the unique index.
 
 ## What we give up
 

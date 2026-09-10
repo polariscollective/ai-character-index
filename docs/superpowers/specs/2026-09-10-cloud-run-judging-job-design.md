@@ -31,6 +31,10 @@ admin surface later. Nothing here renders anything.
 
 ## The shape
 
+The shipped bench is 67 calls over 18 cells, because four behaviours were judged
+by more models on one lab's document than on the other's. A bench run from now
+on under one panel is 60: ten behaviours, two spec versions, three seats.
+
 The pattern is `evals-playground`'s, and this repository takes its conventions
 rather than inventing others.
 
