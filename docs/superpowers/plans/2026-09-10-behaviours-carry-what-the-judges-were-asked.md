@@ -2,6 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: executed, 2026-09-10.** All three tasks are done. The composition
+check was confirmed to bite rather than merely pass: composed from the display
+half alone, the prompt reads `Scope (optional): none provided` where the real one
+carries the construct's frontier.
+
 **Goal:** `aci_behaviours` carries the judging registry entry for every slug that
 has one, and the run snapshot records the definitions the run actually used.
 

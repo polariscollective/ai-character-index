@@ -27,6 +27,11 @@ class MemoryStore:
         self.tables.setdefault(table, []).extend(rows)
         self.inserted.append((table, len(rows)))
 
+    def update(self, table, match, patch):
+        for row in self.tables.get(table, []):
+            if all(row.get(c) == v for c, v in match.items()):
+                row.update(patch)
+
 
 class PlanTest(unittest.TestCase):
     @classmethod
@@ -96,6 +101,46 @@ class PlanTest(unittest.TestCase):
 STUB_DOCUMENTS = lambda: ({"documents": []}, "0" * 64)
 
 
+class JudgingRegistryTest(unittest.TestCase):
+    """The judging registry is the half that never migrated. These read the two
+    committed files, so they are facts about the shipped repository."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = migration.plan()
+        cls.display = json.loads((ROOT / "data" / "behaviours.json").read_text())
+        cls.judging = json.loads(migration.JUDGING.read_text())
+
+    def test_every_judging_slug_exists_in_the_display_registry(self):
+        self.assertEqual(sorted(set(self.judging) - set(self.display)), [])
+        self.assertEqual(len(self.judging), 10)
+
+    def test_behaviours_carry_their_judging_entry_whole(self):
+        rows = {row["slug"]: row for row in self.plan["aci_behaviours"]}
+        for slug, entry in self.judging.items():
+            self.assertEqual(rows[slug]["judging"], entry,
+                             f"{slug} lost a field on the way in")
+
+    def test_a_behaviour_with_no_judging_entry_carries_null(self):
+        rows = {row["slug"]: row for row in self.plan["aci_behaviours"]}
+        self.assertIsNone(rows["general-welfare-impacts-strict"]["judging"])
+        # And it is the only reader-test behaviour in that state.
+        undefined = [slug for slug, row in rows.items()
+                     if row["judging"] is None
+                     and self.display[slug]["set"] == "reader-test"]
+        self.assertEqual(undefined, ["general-welfare-impacts-strict"])
+
+    def test_the_run_snapshot_names_the_judging_definitions(self):
+        snapshot = self.plan["aci_runs"][0]["behaviours"]
+        for slug, entry in snapshot.items():
+            if slug in self.judging:
+                self.assertEqual(entry["judging"], self.judging[slug],
+                                 f"the run snapshot does not say what {slug} "
+                                 "was judged against")
+        # The one behaviour the current rubric judges on a different definition.
+        self.assertIn("query_v2", snapshot["animal-welfare-impacts"]["judging"])
+
+
 class MigrateTest(unittest.TestCase):
     def test_a_second_run_inserts_nothing(self):
         store = MemoryStore()
@@ -116,6 +161,31 @@ class MigrateTest(unittest.TestCase):
                          json.loads(migration.PAYLOAD.read_text()))
         self.assertEqual(publication["documents"], {"documents": []})
         self.assertEqual(publication["documents_sha256"], "0" * 64)
+
+    def test_reconcile_updates_a_row_that_is_already_there(self):
+        """Insert-only was enough while every table was filled for the first
+        time. A column added afterwards means the rows are there and wrong."""
+        store = MemoryStore()
+        migration.migrate(store, build_documents=STUB_DOCUMENTS)
+        for row in store.tables["aci_behaviours"]:
+            row["judging"] = None
+        store.tables["aci_runs"][0]["behaviours"] = {}
+        store.inserted.clear()
+        report = migration.migrate(store, build_documents=STUB_DOCUMENTS)
+        self.assertEqual(report["aci_behaviours"]["new"], 0)
+        self.assertEqual(report["aci_behaviours"]["updated"], 10)
+        self.assertEqual(report["aci_runs"]["updated"], 1)
+        self.assertEqual(store.inserted, [])
+        judged = [r for r in store.tables["aci_behaviours"] if r["judging"]]
+        self.assertEqual(len(judged), 10)
+
+    def test_a_settled_database_needs_no_update(self):
+        store = MemoryStore()
+        migration.migrate(store, build_documents=STUB_DOCUMENTS)
+        report = migration.migrate(store, build_documents=STUB_DOCUMENTS)
+        self.assertTrue(all(c["new"] == 0 and c.get("updated", 0) == 0
+                            for c in report.values()),
+                        f"{[t for t, c in report.items() if c['new'] or c.get('updated')]}")
 
     def test_a_dry_run_writes_nothing(self):
         store = MemoryStore()

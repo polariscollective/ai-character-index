@@ -188,6 +188,57 @@ def check_publication_carries_both_payloads(store):
            + ", ".join(generated) if same_documents else "differs")
 
 
+def check_behaviours_carry_the_judging_entry(store):
+    """The judging registry is the half that reached the database late."""
+    judging = json.loads((HERE / "panel" / "behaviours.json").read_text())
+    rows = {row["slug"]: row for row in store.select("aci_behaviours")}
+    wrong = [slug for slug, entry in judging.items()
+             if rows.get(slug, {}).get("judging") != entry]
+    report(not wrong, "every judging entry reached the database",
+           f"{len(judging)} entries" if not wrong else f"differs: {wrong}")
+
+
+def check_the_prompt_composes_the_same_from_either_source(store):
+    """The check that would have caught the omission.
+
+    The other two compare records. This one composes the behaviour block of the
+    judge prompt from the database and from the file, and compares the text a
+    model would actually be sent. A missing boundary shows up here as a scope
+    slot reading "the user left this field blank", and nowhere else.
+    """
+    h = load_module("h", HERE / "panel" / "harness.py")
+    from_file = h.load_registry()
+    from_db = {row["slug"]: row["judging"]
+               for row in store.select("aci_behaviours") if row["judging"]}
+
+    missing = sorted(set(from_file) - set(from_db))
+    differing = [slug for slug in sorted(set(from_file) & set(from_db))
+                 if h.compose_query(slug, "v3", from_file)
+                 != h.compose_query(slug, "v3", from_db)]
+    report(not missing and not differing,
+           "the judge prompt composes the same from the database as from the file",
+           f"{len(from_file)} behaviours" if not (missing or differing)
+           else f"missing {missing}, differing {differing}")
+
+
+def check_the_run_snapshot_says_what_it_judged_against(store):
+    judging = json.loads((HERE / "panel" / "behaviours.json").read_text())
+    runs = store.select("aci_runs")
+    if not runs:
+        report(False, "the run snapshot names the judging definitions", "no runs")
+        return
+    snapshot = runs[0]["behaviours"]
+    wrong = [slug for slug, entry in snapshot.items()
+             if slug in judging and entry.get("judging") != judging[slug]]
+    # The one behaviour the current rubric judges on a different definition than
+    # the one it displays; if the snapshot lost that, it lost the point.
+    v2 = snapshot.get("animal-welfare-impacts", {}).get("judging", {})
+    report(not wrong and "query_v2" in v2,
+           "the run snapshot names the definitions the run was given",
+           f"{len(snapshot)} behaviours" if not wrong
+           else f"differs: {wrong}")
+
+
 def check_spec_versions_are_insert_only(store):
     versions = store.select("aci_spec_versions", {"select": "id", "limit": "1"})
     if not versions:
@@ -211,6 +262,9 @@ def main():
         check_behaviour_payload(scratch)
         check_documents_payload(scratch)
     check_publication_carries_both_payloads(store)
+    check_behaviours_carry_the_judging_entry(store)
+    check_the_prompt_composes_the_same_from_either_source(store)
+    check_the_run_snapshot_says_what_it_judged_against(store)
     check_panel_passages_still_resolve(store)
     check_ledger_citations_still_resolve(store)
     check_spec_versions_are_insert_only(store)

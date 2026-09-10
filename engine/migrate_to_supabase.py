@@ -36,6 +36,9 @@ from store import Store  # noqa: E402
 NS = uuid.UUID("5f3a9e64-1c1c-4a3b-9c0e-2a7c1c9f0b21")
 
 RUNLOG = HERE / "panel" / "runlog-v5.jsonl"
+# The judging registry: what the panel is told about a behaviour, as opposed
+# to what the reader displays. Keyed by the same slugs.
+JUDGING = HERE / "panel" / "behaviours.json"
 PROMPT = HERE / "panel" / "prompts" / "v5.txt"
 PANEL_CONFIG = HERE / "panel" / "panel-config.json"
 PAYLOAD = ROOT / "site" / "spec-reader" / "data" / "behaviours-v5-reader.json"
@@ -67,6 +70,11 @@ def plan():
     and the tests offline."""
     labs_file = json.loads((ROOT / "data" / "labs.json").read_text())["labs"]
     registry = json.loads((ROOT / "data" / "behaviours.json").read_text())
+    judging = json.loads(JUDGING.read_text())
+    unknown = sorted(set(judging) - set(registry))
+    if unknown:
+        sys.exit(f"judging registry names behaviours the display registry does "
+                 f"not know: {unknown}")
     curation = json.loads((ROOT / "data" / "panel-cell-curation.json").read_text())
     coverage = json.loads((ROOT / "data" / "coverage.json").read_text())["coverage"]
     documents = load_documents_constant()
@@ -105,10 +113,13 @@ def plan():
         version_of_spec[spec_id] = version_id
 
     # behaviours ----------------------------------------------------------
+    # `judging` is null where a behaviour has no entry: defined and judged are
+    # independent states, and a behaviour can legitimately be neither.
     behaviours = [{
         "slug": slug, "name": entry["name"], "set_name": entry["set"],
         "numeric_id": entry["numeric_id"], "group_name": entry["group"],
         "definition": entry["definition"], "facets": entry["facets"],
+        "judging": judging.get(slug),
     } for slug, entry in registry.items()]
 
     # the run, its calls, its judgements -----------------------------------
@@ -127,7 +138,10 @@ def plan():
         "id": run_id, "created_by": ACTOR, "status": "done", "rubric": rubric,
         "prompt": prompt, "prompt_sha256": prompt_digest, "panel": panel,
         "config": json.loads(PANEL_CONFIG.read_text()) | {"via": via},
-        "behaviours": {slug: registry[slug]
+        # What the run judged against, which is the display entry AND the entry
+        # the panel was actually given. Recording only the first said the run
+        # used definitions it did not.
+        "behaviours": {slug: registry[slug] | {"judging": judging.get(slug)}
                        for slug in sorted({row["behaviour"] for row in log})},
     }
 
@@ -227,6 +241,16 @@ KEYS = {
 }
 ORDER = list(KEYS)
 
+# Tables whose existing rows are brought back into line with the plan, and the
+# columns the plan owns on each. Insert-only was enough while every table was
+# being filled for the first time; a column added afterwards leaves the rows
+# there and wrong. Only these two take an update at all.
+RECONCILE = {
+    "aci_behaviours": ("name", "set_name", "numeric_id", "group_name",
+                       "definition", "facets", "judging"),
+    "aci_runs": ("behaviours",),
+}
+
 
 def build_documents_payload():
     """The documents payload, built from the database by the builder that owns
@@ -264,7 +288,26 @@ def migrate(store, dry_run=False, build_documents=None):
                    for row in store.select(table, {"select": ",".join(key)})}
         new = [row for row in rows if tuple(row[c] for c in key) not in present]
         report[table] = {"total": len(rows), "new": len(new)}
-        if not new or dry_run:
+        stale = []
+        if table in RECONCILE:
+            columns = RECONCILE[table]
+            stored = {tuple(row[c] for c in key): row
+                      for row in store.select(
+                          table, {"select": ",".join(key + columns)})}
+            for row in rows:
+                was = stored.get(tuple(row[c] for c in key))
+                if was is None:
+                    continue
+                patch = {c: row[c] for c in columns if was.get(c) != row[c]}
+                if patch:
+                    stale.append(({c: row[c] for c in key}, patch))
+            report[table]["updated"] = len(stale)
+
+        if dry_run or not (new or stale):
+            continue
+        for match, patch in stale:
+            store.update(table, match, patch)
+        if not new:
             continue
         if table == "aci_publications":
             documents, digest = build_documents()
@@ -284,8 +327,11 @@ def main(argv=None):
     report = migrate(Store.from_env(), dry_run=dry_run)
     width = max(len(name) for name in report)
     for table, counts in report.items():
-        print(f"  {table:<{width}}  {counts['total']:>6} rows, "
-              f"{counts['new']:>6} to insert")
+        line = (f"  {table:<{width}}  {counts['total']:>6} rows, "
+                f"{counts['new']:>6} to insert")
+        if "updated" in counts:
+            line += f", {counts['updated']:>3} to update"
+        print(line)
     print("nothing written (--dry-run)" if dry_run else "written")
 
 
