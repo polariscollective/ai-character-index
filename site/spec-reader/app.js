@@ -154,6 +154,9 @@ const elements = {
   selectAllBehaviours: document.querySelector("#select-all-behaviours"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
   sidebarToggle: document.querySelector("#sidebar-toggle"),
+  keyNote: document.querySelector("#key-note"),
+  keyNoteTitle: document.querySelector("#key-note-title"),
+  keyNoteBody: document.querySelector("#key-note-body"),
   sourceLink: document.querySelector("#source-link"),
   specSwitcher: document.querySelector(".spec-switcher"),
   template: document.querySelector("#document-template"),
@@ -399,6 +402,150 @@ function startColumnDrag(event, resizer, update, finish) {
   resizer.addEventListener("pointercancel", end);
 }
 
+/* What each mark in the key means, and what the panel was asked for it.
+ *
+ * Two different things, and every note keeps them apart. A judge grades one
+ * passage on a four-point scale, alone and against the behaviour's definition;
+ * the reader draws a tier from what the whole panel returned. "Core" is the
+ * same word on both sides of that and does not mean the same thing — one judge
+ * saying core is a verdict, every judge saying core is a tier — and leaving
+ * that unsaid was the confusion this key stood on for as long as it was five
+ * bare words.
+ *
+ * The judge halves paraphrase the v5 rubric, which is the authority and lives
+ * with the pipeline. Rewriting that prompt dates these. */
+const KEY_NOTES = {
+  defining: {
+    title: "Defining",
+    judge:
+      "A 3, the top of the scale, and the only grade the rubric rations. It is " +
+      "reserved for the document's fullest statement of the behaviour: the passage " +
+      "a reader citing one single place would be sent to. The bar is relative to " +
+      "the document rather than absolute — a judge who finds no passage standing " +
+      "above the rest is told to award no 3 at all, and most behaviours draw " +
+      "between none and three across a whole specification.",
+    reader:
+      "Drawn when the panel's total clears unanimous core by at least a point, " +
+      "which takes a 3 from some judge on top of a panel that all called it core. " +
+      "On the default three-seat panel that is seven of a possible nine.",
+  },
+  core: {
+    title: "Core",
+    judge:
+      "A 2. The document establishes the behaviour here: the passage states the " +
+      "norm itself, defines its criteria or factors, or sets out its decision " +
+      "procedure. A single clause or list item counts for what it says about this " +
+      "behaviour. The rubric sets no quota in either direction — a behaviour " +
+      "carried by one load-bearing passage and merely applied everywhere else " +
+      "should collect one core mark, not many, because promoting the applications " +
+      "buries the passage that actually carries it.",
+    reader:
+      "Drawn when every judge marked the passage at least core. On the default " +
+      "three-seat panel that is six of nine.",
+  },
+  related: {
+    title: "Related",
+    judge:
+      "A 1, which the rubric calls adjacent. The passage bears materially on the " +
+      "behaviour without establishing it: it applies or exemplifies a norm set out " +
+      "elsewhere, restates it in passing while making some other point, carries " +
+      "machinery the behaviour depends on, sets one of its boundaries, or is a " +
+      "cross-reference a careful reader should see. However clearly such a passage " +
+      "reflects the behaviour, echoing a norm is not establishing it.",
+    reader:
+      "Drawn when at least two judges are behind it, which is four of nine on the " +
+      "default panel. A lone related vote is kept in the data and not drawn. This " +
+      "tier is off until you ask for it — the toggles in the document header " +
+      "beside the version turn it on.",
+  },
+  overlap: {
+    title: "Shared",
+    judge:
+      "Nothing. No judge is asked about this, and no verdict produces it. Each " +
+      "behaviour is judged against the document on its own, and none of them knows " +
+      "what the others were given.",
+    reader:
+      "A passage that more than one of the behaviours you have ticked cites. Its " +
+      "gutter then carries one rule per behaviour side by side, the wash behind it " +
+      "blends their colours, and the tier it is named with is the strongest claim " +
+      "any one of them makes for it. Tick a single behaviour and this mark cannot " +
+      "appear.",
+  },
+  stipple: {
+    title: "Guideline",
+    judge:
+      "Nothing here either. It is a property of the behaviour, decided when the " +
+      "behaviour was registered, not of any passage or any verdict.",
+    reader:
+      "Marks the rows of the General Guidelines group. Those behaviours are defined " +
+      "by a filter laid over the specifications rather than by a norm either " +
+      "document names, so their passages bear on the subject without ever naming " +
+      "it. Their margin rule is broken rather than solid, and that texture is the " +
+      "only thing telling them apart in the text.",
+  },
+};
+
+/* Beside the entry that opened it, not in the middle of the window.
+ *
+ * A popover renders in the top layer, where the browser centres it by default
+ * and where nothing in the page can push it around. So the corner is set here,
+ * from the button's own rectangle, and clamped: the note is wider than the
+ * column it hangs off, and on a narrow window there is no room to its right. */
+function placeKeyNote(anchor) {
+  const note = elements.keyNote;
+  const rect = anchor.getBoundingClientRect();
+  const box = note.getBoundingClientRect();
+  const gap = 10;
+  const edge = 12;
+
+  // Out of the column, not over it: anchored on the sidebar's right edge rather
+  // than the entry's own, which is a 50px word in the middle of it and would
+  // leave the note lying across the key it explains.
+  const column = document.querySelector(".behaviour-sidebar");
+  const from = column ? column.getBoundingClientRect().right : rect.right;
+  let left = from + gap;
+  if (left + box.width > window.innerWidth - edge) {
+    left = Math.max(edge, rect.left - box.width - gap);
+  }
+  // Bottom-aligned on the entry: the key sits at the foot of the column, so a
+  // note dropped below it would leave the window every time.
+  let top = Math.min(rect.bottom - box.height, window.innerHeight - box.height - edge);
+  note.style.left = `${Math.round(left)}px`;
+  note.style.top = `${Math.round(Math.max(edge, top))}px`;
+}
+
+function setupKeyNotes() {
+  const note = elements.keyNote;
+  // No popover in this browser: the entries stay as they read, plain labels.
+  // Better a key that explains nothing than one whose buttons do nothing.
+  if (!note || typeof note.showPopover !== "function") {
+    document.querySelectorAll(".key-item").forEach(button => { button.disabled = true; });
+    return;
+  }
+
+  document.querySelectorAll(".key-item").forEach(button => {
+    button.addEventListener("click", () => {
+      const entry = KEY_NOTES[button.dataset.key];
+      if (!entry) return;
+      elements.keyNoteTitle.textContent = entry.title;
+      // Our own literals, never anything read from a payload.
+      elements.keyNoteBody.innerHTML =
+        `<h3>What the judge is asked</h3><p>${entry.judge}</p>` +
+        `<h3>What the reader draws</h3><p>${entry.reader}</p>`;
+      // Re-opening an open popover throws, and moving between two entries can
+      // land the click before the light dismiss has run.
+      if (note.matches(":popover-open")) note.hidePopover();
+      note.showPopover();
+      placeKeyNote(button);
+    });
+  });
+
+  // The corner was measured against a window that no longer has those edges.
+  window.addEventListener("resize", () => {
+    if (note.matches(":popover-open")) note.hidePopover();
+  });
+}
+
 /* Folding the menu away, and remembering it folded.
  *
  * `--sidebar-width` is left alone on purpose: the grid override in the
@@ -504,6 +651,7 @@ function createDocumentResizer() {
 
 setupSidebarResizer();
 setupSidebarToggle();
+setupKeyNotes();
 
 function behaviourGroups() {
   const groups = new Map();

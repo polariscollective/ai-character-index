@@ -544,7 +544,71 @@ body.resizing-columns {
   color: var(--muted);
   font-size: 10px;
 }
-.sidebar-key span { display: inline-flex; align-items: center; gap: 5px; }
+/* Each entry opens a note saying what the mark means and what the judge was
+   asked for it. Buttons rather than the spans they were: the thing is clickable
+   and reachable by keyboard, and only a button says both. */
+.key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.key-item:hover { background: var(--chrome-deep); color: var(--ink); }
+.key-item:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+/* The note. `position: fixed` with the corner set from the button it belongs to:
+   a popover lands in the top layer, where the browser's own centring would put
+   it in the middle of the window rather than beside what was clicked. */
+.key-note {
+  position: fixed;
+  inset: auto;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 14px 40px var(--shadow);
+}
+
+.key-note::backdrop { background: transparent; }
+
+.key-note-title {
+  margin: 0 0 10px;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.key-note-body { font-size: 13px; line-height: 1.55; }
+.key-note-body p { margin: 0 0 10px; }
+.key-note-body p:last-child { margin-bottom: 0; }
+
+/* The two halves of every note: what the judge was asked, and what the reader
+   draws from the answers. They are not the same thing, and the whole point of
+   the note is that they are told apart. */
+.key-note-body h3 {
+  margin: 14px 0 4px;
+  color: var(--accent);
+  font-family: var(--ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.key-note-body h3:first-child { margin-top: 0; }
+.key-note-body em { color: var(--muted); font-style: italic; }
 /* The key is painted the way a passage is: the margin rules on the right, the wash behind. */
 .key-swatch {
   width: 16px;

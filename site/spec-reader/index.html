@@ -64,11 +64,11 @@
         <span id="download-hint" class="download-hint"></span>
       </div>
       <div class="sidebar-key">
-        <span><i class="key-swatch defining"></i> Defining</span>
-        <span><i class="key-swatch core"></i> Core</span>
-        <span><i class="key-swatch related"></i> Related</span>
-        <span><i class="key-swatch overlap"></i> Shared</span>
-        <span title="Rows in the General Guidelines group carry a broken margin rule rather than a solid one: they are defined by a filter over the specs, so their passages bear on the subject without ever naming it."><i class="key-swatch stipple"></i> Guideline</span>
+        <button type="button" class="key-item" data-key="defining"><i class="key-swatch defining"></i> Defining</button>
+        <button type="button" class="key-item" data-key="core"><i class="key-swatch core"></i> Core</button>
+        <button type="button" class="key-item" data-key="related"><i class="key-swatch related"></i> Related</button>
+        <button type="button" class="key-item" data-key="overlap"><i class="key-swatch overlap"></i> Shared</button>
+        <button type="button" class="key-item" data-key="stipple"><i class="key-swatch stipple"></i> Guideline</button>
       </div>
       <details id="run-provenance" class="sidebar-run">
         <summary><span id="run-summary">Run details</span></summary>
@@ -124,6 +124,11 @@
       <div id="document-reader" class="document-grid" tabindex="-1"></div>
     </section>
   </main>
+
+  <div id="key-note" class="key-note" popover>
+    <h2 id="key-note-title" class="key-note-title"></h2>
+    <div id="key-note-body" class="key-note-body"></div>
+  </div>
 
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
