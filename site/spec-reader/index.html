@@ -32,6 +32,17 @@
     <aside id="behaviour-sidebar" class="behaviour-sidebar" aria-label="Behaviors under test">
       <div class="sidebar-intro">
         <h1 class="eyebrow">Spec reader</h1>
+        <button
+          id="sidebar-toggle"
+          class="sidebar-toggle"
+          type="button"
+          aria-expanded="true"
+          aria-controls="behaviour-sidebar"
+          aria-label="Hide the behavior menu"
+          title="Hide the behavior menu"
+        ><svg class="chevron" viewBox="0 0 12 12" aria-hidden="true" focusable="false"
+          ><path d="M7.5 2 L3.5 6 L7.5 10" fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <div id="behaviour-toolbar" class="behaviour-toolbar" hidden>
         <span id="behaviour-count" class="behaviour-count" aria-live="polite">0 selected</span>
@@ -78,15 +89,6 @@
 
     <section class="workspace" aria-label="Specification reader">
       <div class="reader-toolbar">
-        <button
-          id="sidebar-toggle"
-          class="sidebar-toggle"
-          type="button"
-          aria-expanded="true"
-          aria-controls="behaviour-sidebar"
-          aria-label="Hide the behavior menu"
-          title="Hide the behavior menu"
-        ><span class="panel-icon" aria-hidden="true"></span></button>
         <div class="spec-switcher" role="group" aria-label="Choose specification"></div>
         <div id="compare-picker" class="compare-picker" hidden>
           <label class="compare-picker-field">Compare specification

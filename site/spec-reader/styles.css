@@ -18,6 +18,9 @@
      hardcoded `calc(100vh - 54px)`. */
   --header-height: 54px;
   --footer-height: 30px;
+  /* What the menu leaves behind when it folds: enough for the button that
+     brings it back, and nothing else. */
+  --sidebar-rail: 40px;
 }
 
 body[data-palette="daylight"] {
@@ -342,7 +345,14 @@ body.resizing-columns {
 /* The reader's name and nothing else. What this surface is for belongs in the
    note that sends a reviewer here, not standing over the menu they came to use --
    the sidebar's whole height is worth more as behaviours than as an explanation read once. */
-.sidebar-intro { padding: 15px 25px 14px; border-bottom: 1px solid var(--line); }
+.sidebar-intro {
+  padding: 15px 25px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
 .eyebrow {
   margin: 0;
   color: var(--accent);
@@ -611,7 +621,7 @@ body.resizing-columns {
 .spec-option.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px var(--shadow); }
 
 .view-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
-.compare-toggle, .sidebar-toggle, .source-link {
+.compare-toggle, .source-link {
   min-height: 34px;
   padding: 8px 12px;
   border: 1px solid var(--line);
@@ -627,30 +637,73 @@ body.resizing-columns {
 /* The menu folds away. On a document this wide it is consulted in bursts and
    read past the rest of the time, and the reader is the point.
 
-   Collapsing overrides the grid rather than setting `--sidebar-width` to zero:
-   the width the reader dragged the menu to is worth keeping, and expanding then
-   restores it without a second thing to remember. */
-body.sidebar-collapsed .app-shell {
-  grid-template-columns: minmax(0, 1fr);
+   Folded, the column keeps a rail rather than going to nothing. The button that
+   brings the menu back has to live somewhere, and a control that moves when you
+   use it is a control you hunt for the second time — so it stays at the head of
+   its own column in both states, and the rail is what that costs. */
+.sidebar-toggle {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
 }
 
-body.sidebar-collapsed .behaviour-sidebar,
+.sidebar-toggle:hover { border-color: var(--line); color: var(--ink); }
+
+.chevron { width: 12px; height: 12px; }
+
+/* Folded, the chevron turns around: the button points where the menu will go,
+   not where it is. */
+body.sidebar-collapsed .chevron { transform: scaleX(-1); }
+
+/* Everything the rail does not keep. The head of the column stays, holding the
+   button; its eyebrow goes, having no room to be read. */
+body.sidebar-collapsed .eyebrow,
+body.sidebar-collapsed .behaviour-toolbar,
+body.sidebar-collapsed .behaviour-list,
+body.sidebar-collapsed .sidebar-export,
+body.sidebar-collapsed .sidebar-key,
+body.sidebar-collapsed .sidebar-run {
+  display: none;
+}
+
+/* Only above the breakpoint. Below it the shell is a single column with the
+   menu stacked on top, where a 40px rail beside the document means nothing —
+   the rules above already reduce it to a strip carrying the button. */
+@media (min-width: 901px) {
+  /* Two tracks, not three with a zero in the middle: the resizer below is
+     `display: none`, which takes it out of the grid altogether, and the
+     workspace would then land in that zero-width column. */
+  body.sidebar-collapsed .app-shell {
+    grid-template-columns: var(--sidebar-rail) minmax(0, 1fr);
+  }
+
+  /* The 9px resizer column carried the separation; folded, it is gone. */
+  body.sidebar-collapsed .behaviour-sidebar {
+    border-right: 1px solid var(--line);
+  }
+
+  body.sidebar-collapsed .sidebar-intro {
+    padding: 15px 0 14px;
+    justify-content: center;
+  }
+}
+
 body.sidebar-collapsed .sidebar-resizer {
   display: none;
 }
 
-.sidebar-toggle { display: inline-flex; align-items: center; flex: none; }
-
-/* The glyph idiom of `.split-icon` beside it: a box, and a mark inside saying
-   what the box holds. Filled while the menu is there and hollow once it is
-   gone, so the button shows which way it will go. */
-.panel-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
-.panel-icon::after { content: ""; display: block; width: 4px; height: 100%; background: currentColor; }
-body.sidebar-collapsed .panel-icon::after { background: transparent; }
-
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
-.source-link:hover, .compare-toggle:hover, .sidebar-toggle:hover { border-color: var(--muted); }
+.source-link:hover, .compare-toggle:hover { border-color: var(--muted); }
 
 .finding-bar {
   min-height: 54px;
