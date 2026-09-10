@@ -65,8 +65,29 @@ class Store:
                              f"{payload.decode('utf-8', 'replace')[:500]}")
         return payload
 
+    PAGE = 1000   # PostgREST's own ceiling on one response
+
     def select(self, table, params=None):
-        return json.loads(self._request("GET", table, query=params or {}) or b"[]")
+        """Every matching row, paged.
+
+        PostgREST answers at most a thousand rows and does not say so anywhere
+        the caller trips over, so a naive select over a big table quietly
+        returns a prefix and everything downstream is wrong about a smaller
+        world. A caller that passes its own `limit` is asking for one page and
+        gets exactly that.
+        """
+        params = dict(params or {})
+        if "limit" in params:
+            return json.loads(self._request("GET", table, query=params) or b"[]")
+        rows, offset = [], 0
+        while True:
+            page = json.loads(self._request(
+                "GET", table,
+                query=params | {"limit": str(self.PAGE), "offset": str(offset)}) or b"[]")
+            rows.extend(page)
+            if len(page) < self.PAGE:
+                return rows
+            offset += self.PAGE
 
     def insert(self, table, rows, chunk=1000):
         """Rows in batches. A whole runlog is thirty thousand rows, and one

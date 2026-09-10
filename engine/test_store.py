@@ -64,6 +64,31 @@ class StoreTest(unittest.TestCase):
         self.assertIn("id=eq.abc", t.calls[0]["url"])
         self.assertEqual(json.loads(t.calls[0]["body"]), {"status": "done"})
 
+    def test_select_pages_past_the_thousand_row_ceiling(self):
+        """PostgREST answers at most a thousand rows and says so in nothing the
+        caller can see. Taking that for the whole table is silent data loss."""
+        page = lambda n: (200, json.dumps([{"i": i} for i in range(n)]).encode())
+        t = FakeTransport([page(1000), page(1000), page(500)])
+        rows = self.store(t).select("aci_judgements")
+        self.assertEqual(len(rows), 2500)
+        self.assertEqual(len(t.calls), 3)
+        self.assertIn("offset=0", t.calls[0]["url"])
+        self.assertIn("offset=1000", t.calls[1]["url"])
+        self.assertIn("offset=2000", t.calls[2]["url"])
+
+    def test_a_short_page_ends_the_paging(self):
+        t = FakeTransport([(200, b'[{"i": 1}]')])
+        rows = self.store(t).select("aci_judgements")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(len(t.calls), 1)
+
+    def test_an_explicit_limit_is_the_caller_asking_for_one_page(self):
+        t = FakeTransport([(200, json.dumps([{"i": i} for i in range(5)]).encode())])
+        rows = self.store(t).select("aci_labs", {"limit": "5"})
+        self.assertEqual(len(rows), 5)
+        self.assertEqual(len(t.calls), 1)
+        self.assertNotIn("offset=", t.calls[0]["url"])
+
     def test_a_refused_write_is_loud_and_quotes_the_body(self):
         t = FakeTransport([(403, b'{"message":"permission denied"}')])
         with self.assertRaises(StoreError) as caught:
