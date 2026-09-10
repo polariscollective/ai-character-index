@@ -180,8 +180,21 @@ button { font: inherit; }
   width: 20px;
   height: 20px;
   flex: none;
+  /* Olive, not the olive-deep the framework gives the mark on paper: at 20px
+     the deep tone reads as a smudge beside its name. The darkening that tone
+     would have been is spent on hover instead. */
+  color: var(--muted);
+  transition: color .15s ease;
+}
+
+/* The mark leaves for polariscollective.org, the same place its name leaves
+   for. It is a second link to one destination, so it is kept out of the
+   reading order and out of the tab order: the name beside it is the one link
+   a keyboard or a screen reader meets. */
+.mark-link {
+  display: flex;
+  flex: none;
   align-self: center;
-  color: var(--accent);
 }
 
 /* The mark, the collective's name, a rule, then what the site is — the same
@@ -201,8 +214,16 @@ button { font: inherit; }
 /* The framework's link hover: a chartreuse highlight fills behind the text and
    the text itself goes to ink. Not an underline that thickens, not a colour
    change on the glyphs. */
+.mark-link:hover + .collective,
 .collective:hover {
   background: var(--energy);
+  color: var(--ink);
+}
+
+/* Mark and name are one target and answer as one: whichever half the pointer
+   is over, the name lights and the mark goes to ink. */
+.mark-link:hover .polaris-mark,
+.site-brand:has(.collective:hover) .polaris-mark {
   color: var(--ink);
 }
 
