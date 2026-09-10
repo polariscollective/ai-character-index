@@ -82,6 +82,43 @@ DEFAULT_VERSION = {}
 # {"title": str, "sourceUrl": str} carrying only the keys the entry gave.
 USER_SPEC_META = {}
 
+# What turns a registry value into markdown. None is the file-backed default:
+# the value is a repository-relative path, which is what the bundled registry
+# and the user manifest both hold. The Supabase store installs one that takes a
+# spec-version row id instead. Additive on purpose -- every existing test and
+# corpus golden runs through the default and is untouched by this.
+DOCUMENT_SOURCE = None
+
+
+def use_registry(entries, defaults, meta, document_source):
+    """Install a registry and the reader that resolves its values.
+
+    entries: {(name, version): key}, defaults: {name: version},
+    meta: {(name, version): {"title": ..., "sourceUrl": ...}},
+    document_source: key -> markdown text.
+    """
+    global SPECS, DEFAULT_VERSION, USER_SPEC_META, DOCUMENT_SOURCE
+    SPECS = dict(entries)
+    DEFAULT_VERSION = dict(defaults)
+    USER_SPEC_META = dict(meta)
+    DOCUMENT_SOURCE = document_source
+
+
+def reset_registry():
+    """Back to bundled specs plus the user manifest, reading from disk."""
+    global DOCUMENT_SOURCE
+    DOCUMENT_SOURCE = None
+    load_user_manifest()
+
+
+def _read_document(spec, version, key):
+    if DOCUMENT_SOURCE is not None:
+        return DOCUMENT_SOURCE(key)
+    try:
+        return (REPO_ROOT / key).read_text(encoding="utf-8")
+    except OSError as e:
+        sys.exit(f"cannot read spec document '{key}' for {spec}@{version}: {e}")
+
 
 def load_user_manifest(manifest_path=None):
     """Rebuild SPECS / DEFAULT_VERSION / USER_SPEC_META as bundled specs +
@@ -373,22 +410,15 @@ def resolve_spec(spec, version):
 
 
 def load_spec(spec, version):
-    version, path = resolve_spec(spec, version)
-    try:
-        lines = (REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
-    except OSError as e:
-        sys.exit(f"cannot read spec document '{path}' for {spec}@{version}: {e}")
+    version, key = resolve_spec(spec, version)
+    lines = _read_document(spec, version, key).splitlines()
     return version, parse_sections(lines), lines
 
 
 def first_heading_title(path, spec, version):
     """Derive a display title from the document's first heading. Used when a
     user-spec manifest entry omits 'title'. Loud if there is no heading."""
-    try:
-        lines = (REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
-    except OSError as e:
-        sys.exit(f"cannot read spec document '{path}' for {spec}@{version}: {e}")
-    sections = parse_sections(lines)
+    sections = parse_sections(_read_document(spec, version, path).splitlines())
     if not sections:
         sys.exit(
             f"user spec '{spec}@{version}' has no 'title' in its manifest "
