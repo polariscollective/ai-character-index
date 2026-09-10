@@ -1,8 +1,23 @@
 :root {
   --serif: "EB Garamond", Garamond, "Hoefler Text", "Iowan Old Style", Georgia, serif;
   --mono: "SF Mono", ui-monospace, Menlo, monospace;
-  --ui: var(--serif);
+
+  /* The two faces of polariscollective.org: Spectral where the page announces
+     itself, Inter everywhere the interface speaks in its own voice.
+
+     `--reader` is deliberately not either of them. The spec text is the one
+     thing on this page that is neither chrome nor brand, and EB Garamond was
+     chosen for it — a long document read for an hour at a time. Restyling the
+     tool is no reason to restyle the document it exists to show. */
+  --display: "Spectral", Georgia, "Times New Roman", serif;
+  --ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --reader: var(--serif);
+
+  /* The chrome's two heights, stated once. `.app-shell` subtracts both to fill
+     what is left, and got them wrong the moment a footer appeared under a
+     hardcoded `calc(100vh - 54px)`. */
+  --header-height: 54px;
+  --footer-height: 30px;
 }
 
 body[data-palette="daylight"] {
@@ -14,8 +29,11 @@ body[data-palette="daylight"] {
   --faint: #8A8272;
   --line: #D8CEBA;
   --line-light: #E4DCCB;
-  --accent: #4A53B3;
-  --accent-soft: #DEE0F2;
+  /* Polaris olive, the exact accent of polariscollective.org. White clears
+     4.5:1 on it, which the toggles below rely on. */
+  --accent: #5F6B3A;
+  --accent-soft: #E1E6CB;
+  --on-accent: #FFFFFF;
   --adjacent-mark: #8A5F14;
   --focus: #A93732;
   --gap-soft: #F1DEDA;
@@ -55,8 +73,13 @@ body[data-palette="umber"] {
   --faint: #6F6659;
   --line: #332B21;
   --line-light: #3D3428;
-  --accent: #7B85D6;
-  --accent-soft: #343854;
+  /* The olive has nothing to stand against on the umber ground, so it
+     lightens — the same substitution evals-playground makes on its dark
+     panels. Light enough that what sits *on* it must now be dark: hence
+     `--on-accent`, which is why the toggles no longer say `white`. */
+  --accent: #B2BD8B;
+  --accent-soft: #3D4526;
+  --on-accent: #211F1B;
   --adjacent-mark: #BC8A2F;
   --focus: #C95550;
   --gap-soft: #3A2420;
@@ -94,7 +117,10 @@ body {
   background: var(--chrome);
   color: var(--ink);
   font-family: var(--ui);
-  font-size: 15px;
+  /* 14px, not the 15px this carried under EB Garamond. Inter has much the
+     larger x-height: kept at 15 it reads a size bigger and the sidebar, which
+     is dense and fixed-width, stops fitting. */
+  font-size: 14px;
   overflow: hidden;
 }
 
@@ -108,14 +134,16 @@ button { font: inherit; }
   left: 8px;
   padding: 9px 13px;
   background: var(--ink);
-  color: white;
+  /* Not `white`: `--ink` is the cream #EDE5D3 under the umber palette, and the
+     link — the one affordance a keyboard user meets first — was white on it. */
+  color: var(--chrome);
   transform: translateY(-150%);
 }
 
 .skip-link:focus { transform: none; }
 
 .site-header {
-  height: 54px;
+  height: var(--header-height);
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -124,7 +152,24 @@ button { font: inherit; }
   background: var(--chrome);
 }
 
+.site-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* The collective's star, from the header of polariscollective.org. It carries
+   the accent while the wordmark keeps the ink: the star says whose site this
+   is, the wordmark says what it is. */
+.polaris-star {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--accent);
+}
+
 .wordmark {
+  font-family: var(--display);
   color: var(--ink);
   text-decoration: none;
   font-size: 16px;
@@ -157,13 +202,41 @@ button { font: inherit; }
 
 .app-shell {
   --sidebar-width: 292px;
-  height: calc(100vh - 54px);
+  height: calc(100vh - var(--header-height) - var(--footer-height));
   display: grid;
   grid-template-columns: var(--sidebar-width) 9px minmax(0, 1fr);
 }
 
+/* Where the project came from, and who runs it now. One slim bar: this is a
+   full-height application, and every pixel here is a pixel of spec text not
+   shown. */
+.site-footer {
+  height: var(--footer-height);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.site-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 body.embedded .skip-link,
 body.embedded .site-header,
+body.embedded .site-footer,
 body.embedded .behaviour-sidebar {
   display: none;
 }
@@ -518,7 +591,7 @@ body.resizing-columns {
   cursor: pointer;
 }
 .compare-toggle { display: inline-flex; align-items: center; gap: 8px; }
-.compare-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: white; }
+.compare-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
 .source-link:hover, .compare-toggle:hover { border-color: var(--muted); }
