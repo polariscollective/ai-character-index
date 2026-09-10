@@ -1,0 +1,144 @@
+"""The index, read back out of its tables in the shapes the builders expect.
+
+Every function here returns what a committed file used to hold, so the builders
+downstream keep working on the shape they already know. The seam is deliberate:
+the builders' logic is the part that has been proved byte-identical for a year,
+and moving the data should not disturb it.
+
+One inherited constraint is worth stating. A reader document is keyed by its
+lab, not by its spec: `documents.json` calls them `anthropic` and `openai` while
+locators call them `constitution` and `model-spec`. Two labs are two documents,
+but a lab that published two specs would collide. That is upstream's shape, kept
+here because the payload and the ?spec= parameter both depend on it.
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "spec-cite"))
+import cite  # noqa: E402
+
+
+def _rows(store, table, params=None):
+    return store.select(table, params)
+
+
+def spec_registry(store):
+    """(entries, defaults, meta, source), the four arguments cite.use_registry
+    takes. The markdown arrives with the version rows, so `source` is a lookup
+    and never a second query."""
+    specs = {row["id"]: row for row in _rows(store, "aci_specs")}
+    versions = _rows(store, "aci_spec_versions")
+
+    entries, meta, text = {}, {}, {}
+    newest = {}
+    for version in versions:
+        spec = specs[version["spec_id"]]
+        key = (spec["id"], version["version"])
+        entries[key] = version["id"]
+        text[version["id"]] = version["markdown"]
+        meta[key] = {"title": spec["title"], "sourceUrl": version["source_url"]}
+        if version["version"] > newest.get(spec["id"], ""):
+            newest[spec["id"]] = version["version"]
+
+    return entries, newest, meta, text.__getitem__
+
+
+def install_registry(store):
+    """Point cite.py at the database for the rest of this process."""
+    cite.use_registry(*spec_registry(store))
+
+
+def documents(store, spec_version_ids=None):
+    """The `documents` entries of the reader payload, markdown included.
+
+    Ordered by lab id, which is the document id the reader and the ?spec=
+    parameter both use, so the order is stable against anything but a new lab.
+    """
+    labs = {row["id"]: row for row in _rows(store, "aci_labs")}
+    specs = {row["id"]: row for row in _rows(store, "aci_specs")}
+    versions = _rows(store, "aci_spec_versions")
+    if spec_version_ids is not None:
+        wanted = set(spec_version_ids)
+        versions = [v for v in versions if v["id"] in wanted]
+    else:
+        newest = {}
+        for version in versions:
+            if version["version"] > newest.get(version["spec_id"], {}).get("version", ""):
+                newest[version["spec_id"]] = version
+        versions = list(newest.values())
+
+    out = []
+    for version in versions:
+        spec = specs[version["spec_id"]]
+        lab = labs[spec["lab_id"]]
+        document = {
+            "id": lab["id"],
+            "lab": lab["name"],
+            "title": spec["title"],
+            "shortTitle": spec["short_title"],
+            "version": version["version"],
+        }
+        if version["source_url"]:
+            document["sourceUrl"] = version["source_url"]
+        document["markdown"] = version["markdown"]
+        out.append(document)
+    return sorted(out, key=lambda d: d["id"])
+
+
+def behaviours(store):
+    """The behaviour registry in the shape data/behaviours.json holds, keyed by
+    slug. Three columns are renamed back: `set` and `group` are reserved words
+    in SQL and could not carry their own names in the table."""
+    out = {}
+    for row in _rows(store, "aci_behaviours"):
+        out[row["slug"]] = {
+            "name": row["name"],
+            "set": row["set_name"],
+            "numeric_id": row["numeric_id"],
+            "group": row["group_name"],
+            "definition": row["definition"],
+            "facets": row["facets"],
+        }
+    return out
+
+
+def cell_curation(store):
+    """The rows data/panel-cell-curation.json carries under `cells`."""
+    return [{"slug": row["behaviour_slug"], "lab_id": row["lab_id"],
+             "verdict": row["verdict"], "depth_0_4": row["depth_0_4"],
+             "verified_date": row["verified_date"]}
+            for row in _rows(store, "aci_cell_curation")]
+
+
+def runlog_rows(store, run_id):
+    """A run's judgements in the JSONL row shape the builders already consume.
+
+    Only calls that finished contribute. A call in `error` kept its raw output
+    and wrote no judgement, and one still `pending` has nothing to say; neither
+    belongs in a log that stands for what the panel decided.
+    """
+    run = next(r for r in _rows(store, "aci_runs") if r["id"] == run_id)
+    spec_of_version = {v["id"]: v["spec_id"]
+                       for v in _rows(store, "aci_spec_versions")}
+    calls = {c["id"]: c for c in _rows(store, "aci_judge_calls")
+             if c["run_id"] == run_id and c["status"] == "done"}
+
+    via = (run.get("config") or {}).get("via")
+    rows = []
+    for judgement in _rows(store, "aci_judgements"):
+        call = calls.get(judgement["call_id"])
+        if call is None:
+            continue
+        rows.append({
+            "behaviour": call["behaviour_slug"],
+            "spec": spec_of_version[call["spec_version_id"]],
+            "model": call["model"],
+            "locator": judgement["locator"],
+            "verdict": judgement["verdict"],
+            "relevant": judgement["relevant"],
+            "parsed": judgement["parsed"],
+            "rubric": run["rubric"],
+            "via": via,
+        })
+    return rows
