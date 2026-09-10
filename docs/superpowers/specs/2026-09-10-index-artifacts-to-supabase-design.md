@@ -226,7 +226,7 @@ create table aci_publication_cells (
 );
 
 create unique index aci_publications_one_grandfathered
-  on aci_publications ((true)) where grandfathered;
+  on aci_publications (grandfathered) where grandfathered;
 
 -- Homogeneity, enforced rather than documented: every cell of a publication
 -- must have been judged by exactly the models the publication names, all of
