@@ -20,6 +20,8 @@ import { extname, join, normalize } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { serveReaderRoute, CURRENT_PUBLICATION, KEEP_SET_PUBLICATION }
+  from "./reader-routes.mjs";
 
 const ENGINE = join(fileURLToPath(new URL("..", import.meta.url)), "engine");
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
@@ -40,12 +42,16 @@ const USER = stageInfo.userBehaviour;          // acme-transparency
 const USER_SPEC = stageInfo.userSpec;          // acme-spec
 const PAYLOAD = stageInfo.payload;             // behaviours-<ts>.json
 const userPayload = JSON.parse(readFileSync(join(SITE, "spec-reader/data", PAYLOAD), "utf8"));
-// The band-filtered keep-set variant: used below to exercise the ?data= pin
-// path; untouched by staging.
+// The band-filtered keep-set variant: used below as a second publication, to
+// exercise the 9-point band path; untouched by staging.
 const keepSet = JSON.parse(readFileSync(join(SITE, "spec-reader/data/behaviours-v5-reader.json"), "utf8")).behaviours;
 
 // --- Serve the staged site ----------------------------------------------------
 const server = createServer(async (req, res) => {
+  // Answered from the staged tree's own payloads, so the user-extended run is
+  // what the page under test resolves. PAYLOAD is the staged timestamped run.
+  if (await serveReaderRoute(req, res, join(SITE, "spec-reader", "data"),
+                             PAYLOAD.replace(/\.json$/, ""))) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
   try {
@@ -92,26 +98,33 @@ const blockOf = locator => locator.replace(/ s\d+(?:-s?\d+)?$/, "");
 console.log("== Reader: payload resolution (bundled vs user-extended) ==");
 await at("");
 check((await sidebar()).includes("Acme transparency"),
-  "default load resolves manifest latest = the user-extended run");
+  "no pin resolves the current publication = the user-extended run");
 check(pageErrors.length === 0, "default load: no console errors", pageErrors.join("; "));
 
-await at("?data=behaviours");
-{
-  const sb = await sidebar();
-  check(!sb.includes("Acme transparency"), "?data=behaviours pin loads the shipped fallback");
-}
-await at(`?data=${PAYLOAD.replace(/\.json$/, "")}`);
+await at(`?publication=${CURRENT_PUBLICATION}`);
 check((await sidebar()).includes("Acme transparency"),
-  "?data=<staged run> pin loads the user-extended run");
-await at("?data=manifest.json");
+  "a pin on the current publication loads it");
+
+await at("?publication=00000000-0000-0000-0000-000000000000");
+{
+  // A well-formed pin that names nothing can only be found out by asking, so the
+  // 404 is the correct observable and the browser logs it. What must hold is
+  // that it is the only complaint and that the page still renders.
+  const unexpected = pageErrors.filter(text => !/404|Not Found/.test(text));
+  check(unexpected.length === 0 && (await sidebar()).includes("Acme transparency"),
+    "a pin naming no publication degrades to the current one, with only its 404",
+    unexpected.join("; "));
+}
+
+await at("?publication=behaviours-v5-reader");
 check(pageErrors.length === 0 && (await sidebar()).includes("Acme transparency"),
-  "?data=manifest.json is refused as a pin and degrades to manifest latest (no error)",
+  "a pin that is not a uuid is refused and degrades to the current one (no error)",
   pageErrors.join("; "));
 
-// The reader loads the band-filtered keep-set variant (a legal behaviours*
-// pin) and runs applyPanelThreshold's full path against the 9-scale + ragged
-// shapes.
-await at("?data=behaviours-v5-reader&behavior=helpfulness&spec=anthropic"
+// A second publication carries the band-filtered keep-set, the only committed
+// payload on the 9-point scale, and running applyPanelThreshold's full path
+// against its ragged shapes is what this pin is for.
+await at(`?publication=${KEEP_SET_PUBLICATION}&behavior=helpfulness&spec=anthropic`
   + "&tiers=defining,core,related");
 await page.waitForTimeout(400);
 {
@@ -121,7 +134,7 @@ await page.waitForTimeout(400);
     () => document.querySelectorAll("[data-passage-id]").length);
   const role = await page.evaluate(
     () => document.querySelector(".passage-reason-role")?.textContent ?? "");
-  check(anchors === expected, `keep-set pin loads (${expected} helpfulness/anthropic passages)`,
+  check(anchors === expected, `the keep-set publication loads (${expected} helpfulness/anthropic passages)`,
     `${anchors} anchors`);
   check(/score \d+\/9/.test(role), "reader rewrites role fractions to the 9-scale", role.slice(0, 40));
   check(pageErrors.length === 0, "keep-set pin: no console errors",

@@ -133,36 +133,62 @@ def empty_coverage():
 def main(argv=None) -> None:
     out = OUTPUT
     manifest_override = None
+    from_supabase = False
     for arg in (sys.argv[1:] if argv is None else argv):
-        if arg.startswith("--user-manifest="):
+        if arg == "--from-supabase":
+            # Documents, the frozen ledger and the behaviour set out of the
+            # index's tables rather than out of committed files and a generated
+            # constant. Everything below is unchanged.
+            from_supabase = True
+        elif arg.startswith("--user-manifest="):
             manifest_override = arg.split("=", 1)[1]
         elif arg.startswith("--out="):
             out = Path(arg.split("=", 1)[1])
         else:
             raise SystemExit(
                 f"unknown argument {arg!r} "
-                "(supported: --user-manifest=PATH, --out=PATH)"
+                "(supported: --from-supabase, --user-manifest=PATH, --out=PATH)"
             )
     if manifest_override is not None:
         cite.load_user_manifest(manifest_override)
     # no flag: cite imported the ambient manifest already (SPEC_CITE_USER_SPECS
     # or specs/user/specs.json); absent manifest = bundled-only state
 
-    coverage = json.loads((ROOT / "data" / "coverage.json").read_text())
-    records = coverage["coverage"]
-
-    user_docs = user_documents()
-
-    documents = [
-        {key: value for key, value in document.items() if key != "path"}
-        | {"markdown": document["path"].read_text()}
-        for document in DOCUMENTS + user_docs
-    ]
+    if from_supabase:
+        sys.path.insert(0, str(ROOT / "engine"))
+        import index_store            # noqa: E402
+        from store import Store       # noqa: E402
+        store = Store.from_env()
+        index_store.install_registry(store)
+        records = index_store.coverage(store)
+        behaviour_set = index_store.index_behaviours(store)
+        bundled = index_store.documents(
+            store, index_store.published_spec_version_ids(store))
+        user_docs = []
+        documents = bundled
+        generated_from = ["supabase: aci_spec_versions", "supabase: aci_coverage"]
+    else:
+        coverage = json.loads((ROOT / "data" / "coverage.json").read_text())
+        records = coverage["coverage"]
+        behaviour_set = BEHAVIOURS
+        bundled = DOCUMENTS
+        user_docs = user_documents()
+        documents = [
+            {key: value for key, value in document.items() if key != "path"}
+            | {"markdown": document["path"].read_text()}
+            for document in DOCUMENTS + user_docs
+        ]
+        generated_from = [
+            "specs/claude-constitution/20260120-constitution.md",
+            "specs/openai-model-spec/model_spec.md",
+        ] + [display_path(document["path"]) for document in user_docs] + [
+            "data/coverage.json",
+        ]
 
     behaviours = []
-    for behaviour in BEHAVIOURS:
+    for behaviour in behaviour_set:
         per_document = {}
-        for document in DOCUMENTS:
+        for document in bundled:
             matches = [
                 item
                 for item in records
@@ -184,12 +210,7 @@ def main(argv=None) -> None:
         behaviours.append(behaviour | {"coverage": per_document})
 
     payload = {
-        "generatedFrom": [
-            "specs/claude-constitution/20260120-constitution.md",
-            "specs/openai-model-spec/model_spec.md",
-        ]
-        + [display_path(document["path"]) for document in user_docs]
-        + ["data/coverage.json"],
+        "generatedFrom": generated_from,
         "behaviours": behaviours,
         "documents": documents,
     }

@@ -1,7 +1,9 @@
 # CI/CD workflows
 
-Per PLAN.md §5. `ci.yml` (PR-time verification) and `deploy.yml` (site
-publish) exist; `notion-sync.yml` and `spec-watch.yml` are still to come.
+`ci.yml` is the only workflow here. Deployment is Vercel's: it builds the
+Next.js application on a push, so there is nothing for a workflow to publish.
+PLAN.md §5 also promises `notion-sync.yml` and `spec-watch.yml`; neither
+exists.
 
 ## `ci.yml` -- verify on every PR
 
@@ -18,25 +20,17 @@ merging). Two jobs:
 
 No secrets are needed; `contents: read` is the only permission.
 
-## `deploy.yml` -- publish the site on merge to main
+## Deployment
 
-Deploys the static site in `site/` to Cloudflare Pages (project
-`ai-character-index`) whenever `site/**` changes land on `main`. Can also be
-run by hand from the Actions tab (`workflow_dispatch`).
+There is no deploy workflow. The site is a Next.js application: `prebuild`
+copies `site/` into `public/`, `next build` runs, and Vercel deploys the result
+on a push to `main`.
 
-### One-time setup
+Two environment variables must be set on the Vercel project, and nowhere else:
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. They are read by the two reader
+routes, server-side. Neither is prefixed `NEXT_PUBLIC_`, and neither may be: the
+browser reads routes, and routes read the database.
 
-Two repository secrets are required
-(Settings → Secrets and variables → Actions, or `gh secret set`):
-
-| Secret | Value |
-|---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account id (`wrangler whoami` prints it). |
-| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token scoped to **Account → Cloudflare Pages → Edit** for this account. |
-
-To mint the token: Cloudflare dashboard → My Profile → API Tokens → Create
-Token → "Edit Cloudflare Pages" template (or a custom token with the
-*Account · Cloudflare Pages · Edit* permission), scoped to this account.
-
-The local `pnpm deploy:site` command still works for manual deploys from a
-logged-in machine; it uses your interactive `wrangler login`, not these secrets.
+Publishing the index is not a deploy at all. The reader's two payloads come from
+the current publication row, so what the public sees changes with a database
+write.

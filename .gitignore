@@ -49,3 +49,8 @@ local/
 # Golden corpus dumps: pinned by digest in tests/golden/corpus-sha256.json, not by
 # committed text. dump_goldens.py --write corpus regenerates them locally for diffing.
 tests/golden/cite-corpus-*.txt
+
+# The Next.js application. public/ is a copy of site/ made at build time; site/
+# is the source and the only one tracked.
+.next/
+public/

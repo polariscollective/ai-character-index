@@ -6,10 +6,19 @@
     "node": ">=22"
   },
   "scripts": {
-    "deploy:site": "wrangler pages deploy site --project-name ai-character-index"
+    "prebuild": "rm -rf public && mkdir -p public && cp -R site/. public/",
+    "predev": "rm -rf public && mkdir -p public && cp -R site/. public/",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:routes": "node --test app/lib/__tests__/publications.test.mjs"
   },
   "devDependencies": {
-    "playwright-core": "^1.61.1",
-    "wrangler": "^4.110.0"
+    "playwright-core": "^1.61.1"
+  },
+  "dependencies": {
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   }
 }

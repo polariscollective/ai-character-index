@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-/* Automated guard for the three-tier payload resolution that
- * site/spec-reader/app.js implements:  ?data= pin -> manifest "latest" ->
- * shipped behaviours.json.  app.js runs DOM code at module scope, so it cannot be
- * imported directly; instead the resolution functions (dataUrl, payloadName,
- * loadBehaviours) are extracted verbatim from the real file and loadBehaviours is
- * driven against a stubbed loadJSON, exactly as the browser's fetch would resolve it.
+/* Automated guard for the payload resolution that site/spec-reader/app.js
+ * implements:  ?publication=<uuid> pin -> the current publication.  app.js runs
+ * DOM code at module scope, so it cannot be imported directly; instead the
+ * resolution functions (payloadName, payloadUrl, loadBehaviours) are extracted
+ * verbatim from the real file and loadBehaviours is driven against a stubbed
+ * loadJSON, exactly as the browser's fetch would resolve it.
  *
- * Exits 0 when every tier falls through as documented, 1 otherwise.
+ * The chain used to have three tiers and now has two. The manifest was a ledger
+ * of local runs and the shipped fallback existed for a fresh clone; a payload
+ * that comes from a route has neither.
+ *
+ * Exits 0 when the fall-through behaves as documented, 1 otherwise.
  * Run:  node engine/panel/test_appjs_fallthrough.js
  * (driven from test_panel.py::TestAppJSResolution; needs Node, no browser/keys)
  */
@@ -34,10 +38,8 @@ function extractFn(header) {
 }
 
 const consts = lines.filter(l =>
-  l.startsWith("const MANIFEST_URL") ||
-  l.startsWith("const FALLBACK_DATA_URL") ||
-  l.startsWith("const FALLBACK_DATA_NAME") ||
-  l.startsWith("const DATA_NAME")).join("\n");
+  l.startsWith("const PAYLOAD_URL") ||
+  l.startsWith("const PUBLICATION_ID")).join("\n");
 
 let runner, readSource;
 eval(consts + "\n" +
@@ -48,92 +50,68 @@ eval(consts + "\n" +
   "  if (url in fetchMap) return fetchMap[url];\n" +
   "  throw new Error(\"HTTP 404 for \" + url);\n" +
   "}\n" +
-  extractFn("function dataName(name)") + "\n" +
-  extractFn("function dataUrl(name)") + "\n" +
-  extractFn("function payloadName(name)") + "\n" +
+  extractFn("function payloadName(id)") + "\n" +
+  extractFn("function payloadUrl(id)") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
   "runner = async (search, map) => { fetchMap = map; location = { search }; state.payloadSource = undefined; return loadBehaviours(); };\n" +
   "readSource = () => state.payloadSource;");
 
+const PINNED_ID = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
+const CURRENT_URL = "/api/reader/payload";
+const PINNED_URL = `${CURRENT_URL}?publication=${PINNED_ID}`;
 const PIN = { behaviours: ["PIN"] };
-const LATEST = { behaviours: ["LATEST"] };
-const FALLBACK = { behaviours: ["FALLBACK"] };
+const CURRENT = { behaviours: ["CURRENT"] };
 
 let failures = 0;
-function check(label, actual, expected) {
-  const got = JSON.stringify(actual);
-  const want = JSON.stringify(expected);
-  if (got === want) console.log(`PASS  ${label}: ${got}`);
-  else { failures++; console.log(`FAIL  ${label}: got ${got}, expected ${want}`); }
+function check(ok, label, detail) {
+  console.log(`${ok ? "PASS" : "FAIL"}  ${label}: ${detail}`);
+  if (!ok) failures += 1;
 }
 
-/* payloadSource with undefined keys dropped, so a served pin and a fallen-through one
-   are compared on the same shape. */
-const source = () => JSON.parse(JSON.stringify(readSource() ?? null));
-
-const realWarn = console.warn; console.warn = () => {};   // silence expected fall-through warnings
-
 (async () => {
-  // Tier 1: a resolvable pin wins over latest and the shipped default.
-  let r = await runner("?data=behaviours-pin", {
-    "./data/behaviours-pin.json": PIN,
-    "./data/manifest.json": { latest: "behaviours-latest" },
-    "./data/behaviours-latest.json": LATEST,
-    "./data/behaviours.json": FALLBACK });
-  check("tier 1: pin resolves", r.behaviours, ["PIN"]);
-  // The sidebar run block reads payloadSource; a served pin reports no `requested`,
-  // because there is nothing the viewer asked for and did not get.
-  check("tier 1: source recorded", source(), { origin: "pin", name: "behaviours-pin.json" });
-
-  // Tier 2: a stale/absent pin falls through to the manifest's latest run.
-  r = await runner("?data=behaviours-missing", {
-    "./data/manifest.json": { latest: "behaviours-latest" },
-    "./data/behaviours-latest.json": LATEST,
-    "./data/behaviours.json": FALLBACK });
-  check("tier 2: manifest latest", r.behaviours, ["LATEST"]);
-  check("tier 2: fall-through names what was asked for", source(),
-    { origin: "latest", name: "behaviours-latest.json",
-      requested: { name: "behaviours-missing", refused: false } });
-
-  // Tier 3: stale pin + no manifest (fresh clone) falls through to the shipped default.
-  r = await runner("?data=behaviours-missing", {
-    "./data/behaviours.json": FALLBACK });
-  check("tier 3: shipped default", r.behaviours, ["FALLBACK"]);
-  check("tier 3: fall-through to shipped names what was asked for", source(),
-    { origin: "fallback", name: "behaviours.json",
-      requested: { name: "behaviours-missing", refused: false } });
-
-  // Manifest exclusion: ?data=manifest.json must never load the run ledger -- the pin
-  // tier refuses it and the chain falls through to the next source (latest here).
-  r = await runner("?data=manifest.json", {
-    "./data/manifest.json": { latest: "behaviours-latest" },
-    "./data/behaviours-latest.json": LATEST,
-    "./data/behaviours.json": FALLBACK });
-  check("refused pin is recorded as refused, not merely unavailable", (await (async () => {
-    await runner("?data=manifest.json", {
-      "./data/manifest.json": { latest: "behaviours-latest" },
-      "./data/behaviours-latest.json": LATEST,
-      "./data/behaviours.json": FALLBACK });
-    return source().requested;
-  })()), { name: "manifest.json", refused: true });
-
-  check("pin=manifest.json falls through, ledger not loaded", r.behaviours, ["LATEST"]);
-
-  // A self-referential manifest ("latest": "manifest.json") must not load the ledger.
-  r = await runner("", {
-    "./data/manifest.json": { latest: "manifest.json" },
-    "./data/behaviours.json": FALLBACK });
-  check("latest=manifest.json refused", r.behaviours, ["FALLBACK"]);
-
-  console.warn = realWarn;
-  if (failures) {
-    console.log(`app.js three-tier fallthrough: ${failures} FAILURE(S)`);
-    process.exit(1);
+  {
+    const payload = await runner(`?publication=${PINNED_ID}`,
+      { [PINNED_URL]: PIN, [CURRENT_URL]: CURRENT });
+    check(payload.behaviours[0] === "PIN", "a pin resolves",
+          JSON.stringify(payload.behaviours));
+    check(readSource().origin === "pin" && readSource().name === PINNED_ID,
+          "the source is recorded", JSON.stringify(readSource()));
   }
-  console.log("app.js three-tier fallthrough: PASS " +
-    "(pin -> manifest latest -> shipped default; manifest never loadable as a payload)");
-})().catch(error => {
-  console.warn = realWarn;
-  console.log(`app.js three-tier fallthrough: ERROR ${error.message}`);
-  process.exit(1);
-});
+  {
+    const payload = await runner("", { [CURRENT_URL]: CURRENT });
+    check(payload.behaviours[0] === "CURRENT", "no pin resolves the current publication",
+          JSON.stringify(payload.behaviours));
+    check(readSource().origin === "current" && readSource().requested === null,
+          "nothing was requested and unserved", JSON.stringify(readSource()));
+  }
+  {
+    // A well-formed pin naming a publication that is gone: the request is made,
+    // it fails, and the page falls through rather than breaking.
+    const payload = await runner(`?publication=${PINNED_ID}`, { [CURRENT_URL]: CURRENT });
+    check(payload.behaviours[0] === "CURRENT", "a dead pin falls through",
+          JSON.stringify(payload.behaviours));
+    check(readSource().requested.name === PINNED_ID
+          && readSource().requested.refused === false,
+          "the fall-through names what was asked for and does not call it refused",
+          JSON.stringify(readSource()));
+  }
+  {
+    // A pin that is not a uuid is refused before any request: a malformed link
+    // must cost nothing, and the marker says refused rather than unavailable.
+    const asked = [];
+    const payload = await runner("?publication=behaviours-v5-reader", {
+      get [CURRENT_URL]() { asked.push(CURRENT_URL); return CURRENT; },
+    });
+    check(payload.behaviours[0] === "CURRENT", "a malformed pin falls through",
+          JSON.stringify(payload.behaviours));
+    check(readSource().requested.refused === true,
+          "it is recorded as refused, not merely unavailable",
+          JSON.stringify(readSource().requested));
+  }
+
+  console.log(failures === 0
+    ? "app.js payload resolution: PASS (pin -> current publication; a dead pin "
+      + "falls through, a malformed one never asks)"
+    : `app.js payload resolution: ${failures} FAILURE(S)`);
+  process.exit(failures === 0 ? 0 : 1);
+})();

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Verify the spec reader (site/spec-reader/) against its behaviour payload --
 // the shipped panel run it resolves by default (its own data/behaviours.json:
-// the resolution chain is ?data= pin -> data/manifest.json latest -> fallback,
-// and the committed state carries neither a pin nor a manifest) -- and the
+// the resolution chain is a ?publication= pin, then the current publication,
+// both answered here from the committed files) -- and the
 // spec text it renders. The client's band math renders nothing below the
 // related cut, so the view at all tiers shows exactly the band keep-set: the
 // committed data/behaviours-v5-reader.json (the same v5 run cut at that
@@ -19,6 +19,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { serveReaderRoute } from "./reader-routes.mjs";
 
 const SITE = join(fileURLToPath(new URL("..", import.meta.url)), "site");
 const MIME = {
@@ -35,7 +36,12 @@ const MIME = {
  * to the shipped data) -- but Chrome logs each one as a console error, and so
  * would a genuinely moved file. The server-side audit tells the two apart. */
 const missingPaths = [];
+const READER_DATA = join(SITE, "spec-reader", "data");
+
 const server = createServer(async (request, response) => {
+  // The reader takes its two payloads from routes now. Answered here from the
+  // committed files: this walker tests the page, not the database.
+  if (await serveReaderRoute(request, response, READER_DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(request.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
   try {
@@ -181,7 +187,7 @@ const navIssues = await page.evaluate(async expected => {
 report(navIssues.length === 0, "navigation links resolve",
   navIssues.length ? navIssues.join("; ") : "self-link, methodology");
 
-// The committed state resolves to the shipped fallback: no ?data= pin, and no
+// The committed state resolves to the current publication: no ?publication= pin, and no
 // manifest (it is gitignored run output). A local manifest would shadow the
 // fallback and silently swap the payload under test, so fail loud on it; and
 // the fallback file itself must serve, or the menu empties.
