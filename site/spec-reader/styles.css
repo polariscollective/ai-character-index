@@ -286,9 +286,6 @@ body.embedded .app-shell {
   grid-template-columns: minmax(0, 1fr);
 }
 
-body.embedded .reader-toolbar {
-  min-height: 62px;
-}
 
 .behaviour-sidebar {
   min-height: 0;
@@ -653,38 +650,6 @@ body.resizing-columns {
 }
 
 .workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-/* The toolbar gained a third group (the compare picker), and the spec switcher grows
-   with every registered document, so it wraps rather than overflowing the page. */
-.reader-toolbar {
-  min-height: 72px;
-  padding: 10px 18px 10px 23px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px 20px;
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
-}
-
-/* One option per registered document, so the row grows with every user spec and
-   must wrap rather than push the toolbar past the viewport. */
-.spec-switcher { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 8px; background: var(--chrome-deep); }
-.spec-option {
-  min-width: 165px;
-  padding: 7px 12px 6px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  text-align: left;
-}
-.spec-option span { display: block; font-size: 12px; font-weight: 600; }
-.spec-option small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .02em; }
-.spec-option.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px var(--shadow); }
-
-.view-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
 .compare-toggle, .source-link {
   min-height: 34px;
   padding: 8px 12px;
@@ -847,6 +812,21 @@ body.sidebar-collapsed .sidebar-resizer {
   gap: 20px;
   border-bottom: 1px solid var(--line-light);
 }
+
+/* Comparing, the same header has half the width to say the same five things in.
+   The title steps down so it stops wrapping under its own caret. */
+.document-grid.compare .document-header { padding: 10px 16px; gap: 12px; }
+.document-grid.compare .document-title { font-size: 17px; }
+.document-grid.compare .document-version { font-size: 9px; }
+
+/* And the mode switch shows once. Two lit buttons side by side, both reading
+   "Compare" and both meaning the one global mode that is already on, said the
+   same thing twice and left the reader guessing what the second one did.
+   Sibling combinator rather than :first-of-type: the panels are separated by
+   resizer divs, so "first of its type" is not the question being asked. */
+.document-grid.compare .document-panel ~ .document-panel .compare-toggle {
+  display: none;
+}
 .document-lab {
   margin: 0 0 2px;
   color: var(--accent);
@@ -856,16 +836,52 @@ body.sidebar-collapsed .sidebar-resizer {
   text-transform: uppercase;
 }
 .document-title { margin: 0; font-family: var(--reader); font-size: 21px; font-weight: 500; }
+
+/* The title is the control that changes the document. It carries no button
+   chrome until it is pointed at: a bordered box around the document's name
+   would read as decoration on a heading, and the caret is what says it opens. */
+.document-picker {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 2px 8px 2px 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.document-picker:hover { color: var(--accent); }
+.document-picker:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+.picker-caret {
+  align-self: center;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: .55;
+}
+
+.document-picker:hover .picker-caret { opacity: 1; }
+
+/* Version, expand-all, the tier toggles, and now the two controls that used to
+   live in the band above: the mode switch and the link to this document at its
+   publisher. Flexed rather than the two-column grid it was — the row has five
+   groups now, and they wrap where the panel is narrow. */
 .document-meta {
-  display: grid;
-  grid-template-columns: auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-items: end;
-  gap: 3px 10px;
+  justify-content: flex-end;
+  gap: 6px 10px;
   color: var(--muted);
   font-size: 9px;
 }
-.document-version { grid-column: 1 / -1; }
+.document-version { flex-basis: 100%; text-align: right; }
 .document-focus-toggle {
   padding: 2px 0;
   border: 0;
@@ -1320,7 +1336,6 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
   .download-hint { text-align: left; }
   .sidebar-key { display: none; }
   .workspace { min-height: 75vh; }
-  .reader-toolbar { flex-wrap: wrap; }
   .finding-definition { display: none; }
   .document-grid, .document-grid.compare { min-height: 70vh; grid-template-columns: 1fr; }
   .document-panel { min-height: 70vh; }
@@ -1346,10 +1361,6 @@ button:focus-visible, a:focus-visible, .column-resizer:focus-visible {
      lines and the second is cut off mid-sentence. The pointer it carries is in
      the README and on the methodology page, both of which have room. */
   .site-footer span + span { display: none; }
-  .reader-toolbar { padding: 10px; }
-  .spec-switcher { width: 100%; }
-  .spec-option { min-width: 0; flex: 1; }
-  .view-actions { width: 100%; justify-content: space-between; }
   .finding-bar { padding: 8px 12px; }
   .document-header { padding: 11px 15px; }
   /* Asymmetric on a phone: the right margin has to hold the passage rules and the rail,
@@ -1391,32 +1402,41 @@ body.no-behaviours .sidebar-export { display: none; }
 /* panel rationale: model-vote list uses newlines */
 .passage-reason-role { white-space: pre-line; }
 
-/* The compare picker: two selects that only appear when there is a third document to
-   choose between. Sized to sit in the toolbar without pushing the spec switcher. */
-.compare-picker { display: inline-flex; align-items: center; gap: 8px; }
-.compare-picker[hidden] { display: none; }
-.compare-picker-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-.compare-picker select {
-  max-width: 190px;
-  padding: 3px 6px;
+/* The list a document's title opens: one entry per registered document, so it
+   grows with every spec a reader adds. Comparing, each panel opens its own and
+   changes only its own half of the pair. */
+.spec-picker {
+  position: fixed;
+  inset: auto;
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(60vh, 420px);
+  overflow: auto;
+  padding: 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 10px;
   background: var(--paper);
-  color: var(--ink);
-  font: inherit;
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
+  box-shadow: 0 14px 40px var(--shadow);
 }
-.compare-picker select:hover { border-color: var(--accent); }
+
+.spec-picker::backdrop { background: transparent; }
+
+.spec-choice {
+  width: 100%;
+  display: block;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spec-choice:hover { background: var(--chrome-deep); color: var(--ink); }
+.spec-choice[aria-selected="true"] { color: var(--ink); }
+.spec-choice-lab { display: block; font-size: 12px; font-weight: 600; }
+.spec-choice small { display: block; margin-top: 2px; color: var(--faint); font-size: 10px; }
 
 /* Local mode: the marker that this page is showing specifications registered on this
    machine, and the nav link to the analysis surface that only exists once a user

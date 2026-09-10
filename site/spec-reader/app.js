@@ -137,10 +137,6 @@ const elements = {
   behaviourList: document.querySelector("#behaviour-list"),
   behaviourToolbar: document.querySelector("#behaviour-toolbar"),
   clearBehaviours: document.querySelector("#clear-behaviours"),
-  compareToggle: document.querySelector("#compare-toggle"),
-  comparePicker: document.querySelector("#compare-picker"),
-  compareA: document.querySelector("#compare-a"),
-  compareB: document.querySelector("#compare-b"),
   documentReader: document.querySelector("#document-reader"),
   downloadHint: document.querySelector("#download-hint"),
   downloadPassages: document.querySelector("#download-passages"),
@@ -154,11 +150,10 @@ const elements = {
   selectAllBehaviours: document.querySelector("#select-all-behaviours"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
   sidebarToggle: document.querySelector("#sidebar-toggle"),
+  specPicker: document.querySelector("#spec-picker"),
   keyNote: document.querySelector("#key-note"),
   keyNoteTitle: document.querySelector("#key-note-title"),
   keyNoteBody: document.querySelector("#key-note-body"),
-  sourceLink: document.querySelector("#source-link"),
-  specSwitcher: document.querySelector(".spec-switcher"),
   template: document.querySelector("#document-template"),
 };
 
@@ -269,13 +264,11 @@ function syncURL() {
   params.set("spec", state.selectedSpec);
   if (state.comparing) {
     params.set("compare", "1");
-    // Only when there is a choice to record. With the two bundled specifications the
-    // pair is forced, so a shared two-document link keeps the shape it always had.
-    if ((state.payload?.documents || []).length > 2) {
-      params.set("compare-with", comparePair().join(","));
-    } else {
-      params.delete("compare-with");
-    }
+    // Always, now that each panel picks its own document from its own title. With
+    // two specifications the pair used to be forced and was left out of the URL;
+    // it no longer is, because which of them sits on the left is a choice the
+    // reader made and a shared link should carry.
+    params.set("compare-with", comparePair().join(","));
   } else {
     params.delete("compare");
     params.delete("compare-with");
@@ -1631,8 +1624,15 @@ function renderDocument(doc) {
   };
   panel.dataset.documentId = doc.id;
   panel.querySelector(".document-lab").textContent = doc.lab;
-  panel.querySelector(".document-title").textContent = doc.title;
+  panel.querySelector(".document-name").textContent = doc.title;
   panel.querySelector(".document-version").textContent = `Version ${doc.version}`;
+  // Each panel points at its own source. That is the whole reason this link left
+  // the row above: up there it could only ever name one of two documents, and
+  // when comparing it gave up and said "Sources".
+  const source = panel.querySelector(".source-link");
+  source.href = doc.sourceUrl;
+  source.title = `Open ${doc.title} at its publisher`;
+  panel.querySelector(".compare-toggle").setAttribute("aria-pressed", String(state.comparing));
   // Toggle state comes from the shared band set; in compare mode the twin header
   // is kept in step by the rebuild that toggleBand triggers.
   panel.querySelectorAll(".tier-toggle").forEach(button => {
@@ -1831,24 +1831,80 @@ function visibleDocuments() {
 /* The picker is the only new control, and it earns its place only when there is a
  * choice to make: with the two bundled documents it stays hidden and compare behaves
  * exactly as it always has. A user spec registered locally is what brings it out. */
-function renderComparePicker() {
-  const docs = state.payload?.documents || [];
-  const box = elements.comparePicker;
-  if (!box) return;
-  const choosable = state.comparing && docs.length > 2;
-  box.hidden = !choosable;
-  if (!choosable) return;
-  const [a, b] = comparePair();
-  [[elements.compareA, a], [elements.compareB, b]].forEach(([select, selected]) => {
-    if (!select) return;
-    select.replaceChildren(...docs.map(doc => {
-      const option = document.createElement("option");
-      option.value = doc.id;
-      option.textContent = doc.title || doc.id;
-      option.selected = doc.id === selected;
-      return option;
-    }));
-  });
+/* Which document a panel shows, chosen from the panel's own title.
+ *
+ * This replaces both the row of tabs above the reader and the pair of selects
+ * that appeared beside them when comparing. One control, in the one place that
+ * names the thing it changes, and in compare mode each side carries its own —
+ * so choosing the other half of a comparison no longer means finding a second
+ * widget somewhere else on the page.
+ *
+ * A popover, like the key's notes: light dismiss and Escape come from the
+ * browser, and the top layer keeps the list off the document it hangs over. */
+function openSpecPicker(button) {
+  const panel = button.closest(".document-panel");
+  const current = panel?.dataset.documentId;
+  const picker = elements.specPicker;
+  if (!picker || typeof picker.showPopover !== "function") return;
+
+  picker.replaceChildren(...(state.payload?.documents || []).map(doc => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "spec-choice";
+    option.role = "option";
+    option.dataset.spec = doc.id;
+    option.setAttribute("aria-selected", String(doc.id === current));
+    const name = document.createElement("span");
+    name.className = "spec-choice-lab";
+    name.textContent = doc.lab;
+    const detail = document.createElement("small");
+    const version = (doc.version || "").replaceAll("-", ".");
+    detail.textContent = version ? `${doc.title} · ${version}` : doc.title;
+    option.append(name, detail);
+    option.addEventListener("click", () => {
+      picker.hidePopover();
+      chooseSpec(panel, doc.id);
+    });
+    return option;
+  }));
+
+  if (picker.matches(":popover-open")) picker.hidePopover();
+  picker.showPopover();
+  placeUnder(picker, button);
+}
+
+/* What choosing a document means depends on how many are on screen.
+ *
+ * Comparing, it replaces this panel's half of the pair, and which half is read
+ * from the panel's position rather than stored: the reader already knows the
+ * order, and a second source of truth for it would be one to keep in step.
+ * Alone, it is simply the document being read. */
+function chooseSpec(panel, id) {
+  if (!panel) return;
+  if (state.comparing) {
+    const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
+    setComparePair(panels.indexOf(panel) === 1 ? "b" : "a", id);
+    return;
+  }
+  state.selectedSpec = id;
+  syncURL();
+  rebuildReader();
+}
+
+/* A popover under the control that opened it, clamped to the window. The top
+ * layer is outside the page's own layout, so the corner is set from script —
+ * the same reason the key's notes place themselves. */
+function placeUnder(popover, anchor) {
+  const rect = anchor.getBoundingClientRect();
+  const box = popover.getBoundingClientRect();
+  const edge = 12;
+  const left = Math.max(edge, Math.min(rect.left, window.innerWidth - box.width - edge));
+  const below = rect.bottom + 6;
+  const top = below + box.height > window.innerHeight - edge
+    ? Math.max(edge, rect.top - box.height - 6)
+    : below;
+  popover.style.left = `${Math.round(left)}px`;
+  popover.style.top = `${Math.round(top)}px`;
 }
 
 /* Picking a document that is already on the other side swaps them rather than
@@ -1869,22 +1925,12 @@ function rebuildReader() {
     ? panels.flatMap((panel, i) => (i < panels.length - 1 ? [panel, createDocumentResizer()] : [panel]))
     : panels;
   elements.documentReader.replaceChildren(...children);
-  renderComparePicker();
   {
     elements.documentReader.style.gridTemplateColumns = "";
     if (state.comparing) setCompareFirst(state.compareFirst);
   }
   state.passageIndex = 0;
   state.anchors = [];
-
-  const selected = state.payload.documents.find(doc => doc.id === state.selectedSpec);
-  elements.sourceLink.href = selected.sourceUrl;
-  elements.sourceLink.textContent = state.comparing ? "Sources ↗" : "Original ↗";
-
-  document.querySelectorAll(".spec-option").forEach(option => {
-    option.classList.toggle("active", option.dataset.spec === state.selectedSpec);
-    option.setAttribute("aria-pressed", String(option.dataset.spec === state.selectedSpec));
-  });
 
   applyHighlights();
   requestAnimationFrame(revealHashTarget);
@@ -1972,12 +2018,28 @@ elements.selectAllBehaviours.addEventListener("click", () => {
 });
 elements.clearBehaviours.addEventListener("click", () => setSelection([]));
 
-elements.compareA?.addEventListener("change", event => setComparePair("a", event.target.value));
-elements.compareB?.addEventListener("change", event => setComparePair("b", event.target.value));
-
-elements.compareToggle.addEventListener("click", () => {
+/* The title opens the list of documents; the Compare button beside it switches
+ * the mode. Both are re-cloned by every rebuildReader, so both are delegated.
+ *
+ * Turning comparison ON carries the document you were reading onto the left,
+ * rather than falling back to the first two registered. Reading OpenAI and
+ * asking to compare should not silently put Anthropic in front of you. */
+elements.documentReader.addEventListener("click", event => {
+  const picker = event.target.closest?.(".document-picker");
+  if (picker) {
+    openSpecPicker(picker);
+    return;
+  }
+  const compare = event.target.closest?.(".compare-toggle");
+  if (!compare) return;
+  const from = compare.closest(".document-panel")?.dataset.documentId;
   state.comparing = !state.comparing;
-  elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
+  if (state.comparing && from) {
+    const other = state.payload.documents.find(doc => doc.id !== from);
+    if (other) state.comparePair = [from, other.id];
+  } else if (!state.comparing && from) {
+    state.selectedSpec = from;
+  }
   syncURL();
   rebuildReader();
 });
@@ -2156,33 +2218,6 @@ async function loadJSON(url) {
   return response.json();
 }
 
-/* Spec options follow documents.json rather than a hardcoded pair (C12), so a
- * user-registered spec gets its own switcher button the moment it is folded in. */
-function renderSpecOptions() {
-  const options = state.payload.documents.map(doc => {
-    const option = document.createElement("button");
-    option.className = "spec-option";
-    option.dataset.spec = doc.id;
-    option.type = "button";
-    const name = document.createElement("span");
-    name.textContent = doc.lab;
-    const detail = document.createElement("small");
-    const version = (doc.version || "").replaceAll("-", ".");
-    detail.textContent = version ? `${doc.title} · ${version}` : doc.title;
-    option.append(name, detail);
-    option.addEventListener("click", () => {
-      state.selectedSpec = doc.id;
-      if (state.comparing) {
-        state.comparing = false;
-        elements.compareToggle.setAttribute("aria-pressed", "false");
-      }
-      syncURL();
-      rebuildReader();
-    });
-    return option;
-  });
-  elements.specSwitcher.replaceChildren(...options);
-}
 
 async function initialize() {
   renderBehaviourList();
@@ -2198,7 +2233,6 @@ async function initialize() {
       documents: documents.documents,
       behaviours: applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours,
     };
-    renderSpecOptions();
     renderRunProvenance();
     const loaded = state.payload.behaviours;
     state.documentFocus = { anthropic: loaded.length > 0, openai: loaded.length > 0 };
@@ -2220,7 +2254,6 @@ async function initialize() {
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
-    elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     updateFindingBar();
     renderBehaviourList();
     syncURL();

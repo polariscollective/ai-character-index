@@ -204,7 +204,7 @@ console.log("== Reader: document view, source link, compare, embedded ==");
 await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
 {
   const href = await page.evaluate(() =>
-    document.querySelector("#source-link")?.getAttribute("href") || "");
+    document.querySelector(".source-link")?.getAttribute("href") || "");
   check(href === "https://acme.example.com/spec",
     "source link carries the user spec's sourceUrl", href);
   const bodyText = await page.evaluate(() =>
@@ -214,31 +214,33 @@ await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
 await at(`?behavior=${USER}&spec=no-such-spec`);
 check(pageErrors.length === 0, "unknown ?spec= degrades to the default document without errors",
   pageErrors.join("; "));
-// The spec switcher is generated from documents.json: the user spec
-// gets a button, and clicking it selects the spec.
+// The list of documents is generated from documents.json and opens from the
+// panel's own title, which replaced the row of tabs above the reader.
 await at(`?behavior=${USER}`);
+await page.click(".document-picker");
+await page.waitForTimeout(150);
 {
   const options = await page.evaluate(() =>
-    [...document.querySelectorAll(".spec-option")].map(o => o.dataset.spec));
+    [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
   check(options.includes(USER_SPEC),
     "spec options are generated from documents.json (user spec included)",
     options.join(","));
 }
-await page.click(`.spec-option[data-spec="${USER_SPEC}"]`);
+await page.click(`.spec-choice[data-spec="${USER_SPEC}"]`);
 await page.waitForTimeout(250);
 {
   const href = await page.evaluate(() =>
-    document.querySelector("#source-link")?.getAttribute("href") || "");
+    document.querySelector(".source-link")?.getAttribute("href") || "");
   check(href === "https://acme.example.com/spec",
-    "clicking the generated spec option selects the user spec", href);
+    "choosing the user spec from the title selects it", href);
 }
 await at(`?compare=1`);
 {
   const out = await page.evaluate(() => ({
     panels: document.querySelectorAll(".document-panel").length,
     comparing: document.querySelector("#document-reader")?.classList.contains("compare"),
-    toggle: document.querySelector("#compare-toggle")?.getAttribute("aria-pressed"),
-    link: document.querySelector("#source-link")?.textContent.trim(),
+    toggle: document.querySelector(".compare-toggle")?.getAttribute("aria-pressed"),
+    link: document.querySelector(".source-link")?.textContent.trim(),
   }));
   // Compare is a two-document view: exactly two panes and one boundary, whichever
   // pair the reader chose.
@@ -248,7 +250,8 @@ await at(`?compare=1`);
     "?compare=1 renders the chosen two documents",
     `${out.panels} panels, ${resizers} resizers`);
   check(out.toggle === "true", "compare toggle reflects ?compare=1");
-  check(out.link === "Sources ↗", "source link switches to 'Sources ↗' in compare view", out.link);
+  check(out.link === "Original ↗",
+    "each pane links its own document rather than a shared 'Sources'", out.link);
 }
 await at("?embedded=1");
 check(await page.evaluate(() => document.body.classList.contains("embedded")),
@@ -289,29 +292,53 @@ console.log("== Reader: compare is a two-document choice ==");
 // The staged fixture registers one user spec on top of the two bundled ones, so the
 // reader has three documents and therefore a choice to make.
 {
+  // The pair is read off the panels themselves now. The two selects that used to
+  // report it are gone: each panel picks its own document from its own title, so
+  // the panels ARE the state and there is nothing else left to disagree with them.
   const compareState = () => page.evaluate(() => ({
     panes: document.querySelectorAll(".document-panel").length,
     resizers: document.querySelectorAll(".document-grid .column-resizer").length,
-    titles: [...document.querySelectorAll(".document-title")].map(t => t.textContent.trim()),
-    pickerHidden: document.querySelector("#compare-picker")?.hidden,
-    a: document.querySelector("#compare-a")?.value,
-    b: document.querySelector("#compare-b")?.value,
-    options: [...(document.querySelector("#compare-a")?.options || [])].map(o => o.value),
+    titles: [...document.querySelectorAll(".document-name")].map(t => t.textContent.trim()),
+    pickers: document.querySelectorAll(".document-picker").length,
+    a: document.querySelectorAll(".document-panel")[0]?.dataset.documentId,
+    b: document.querySelectorAll(".document-panel")[1]?.dataset.documentId,
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   }));
+
+  /* Choose a document for one side, through the control a reader would use.
+   * Indexed on the panels rather than with :nth-of-type, which counts among
+   * siblings of the same element type and so is thrown by the resizer div
+   * sitting between the two panels. */
+  const pickerFor = side =>
+    page.locator(".document-panel").nth(side === "a" ? 0 : 1).locator(".document-picker");
+
+  const pick = async (side, id) => {
+    await pickerFor(side).click();
+    await page.waitForTimeout(150);
+    await page.click(`.spec-choice[data-spec="${id}"]`);
+    await page.waitForTimeout(300);
+  };
 
   await load(base, "?compare=1");
   let c = await compareState();
   check(c.panes === 2 && c.resizers === 1,
     "compare renders exactly two panes and one boundary", `${c.panes} panes, ${c.resizers} resizers`);
   check(c.overflow === 0, "compare does not overflow the page", `${c.overflow}px`);
-  check(c.pickerHidden === false, "picker is shown when there are more than two documents");
-  check(c.options.length === 3, "picker offers every registered document", c.options.join(","));
+  check(c.pickers === 2, "each pane carries its own document picker", `${c.pickers} pickers`);
   check(c.a !== c.b, "the two sides are never the same document", `${c.a} / ${c.b}`);
 
+  {
+    await pickerFor("a").click();
+    await page.waitForTimeout(150);
+    const options = await page.evaluate(() =>
+      [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
+    check(options.length === 3, "the picker offers every registered document", options.join(","));
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(150);
+  }
+
   // Choosing the user spec must actually swap a pane, and survive into the URL.
-  await page.selectOption("#compare-b", USER_SPEC);
-  await page.waitForTimeout(300);
+  await pick("b", USER_SPEC);
   c = await compareState();
   check(c.b === USER_SPEC && c.titles.some(t => /Acme/i.test(t)),
     "choosing the user spec renders it as the second pane", c.titles.join(" | "));
@@ -324,9 +351,8 @@ console.log("== Reader: compare is a two-document choice ==");
   check(c.a === USER_SPEC && c.b === "openai",
     "?compare-with= restores the pair from a shared link", `${c.a} / ${c.b}`);
 
-  // Selecting the document already on the other side swaps rather than duplicating.
-  await page.selectOption("#compare-a", "openai");
-  await page.waitForTimeout(300);
+  // Choosing the document already on the other side swaps rather than duplicating.
+  await pick("a", "openai");
   c = await compareState();
   check(c.a === "openai" && c.b !== "openai",
     "picking the other side's document swaps them instead of duplicating", `${c.a} / ${c.b}`);
@@ -370,15 +396,17 @@ console.log("== Local mode: a run of your own is marked ==");
 // =============================================================================
 console.log("== Reader: user-extended documents ==");
 await load(base, "");
+await page.click(".document-picker");
+await page.waitForTimeout(150);
 {
   const options = await page.evaluate(() =>
-    [...document.querySelectorAll(".spec-option")].map(o => o.dataset.spec));
+    [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
   check(options.join(",") === `anthropic,openai,${USER_SPEC}`,
     "reader spec options are generated from documents.json, incl. the user spec",
     options.join(","));
 }
-// Selecting the user spec VIA ITS GENERATED BUTTON renders it.
-await page.click(`.spec-option[data-spec="${USER_SPEC}"]`);
+// Selecting the user spec VIA ITS GENERATED ENTRY renders it.
+await page.click(`.spec-choice[data-spec="${USER_SPEC}"]`);
 await page.waitForTimeout(250);
 {
   const out = await page.evaluate(() => ({
@@ -390,7 +418,9 @@ await page.waitForTimeout(250);
   check(out.passages === 0, "user spec view shows 0 published passages (graceful empty state)");
   check(pageErrors.length === 0, "reader user-spec view: no console errors", pageErrors.join("; "));
 }
-await page.click('.spec-option[data-spec="anthropic"]');
+await page.click(".document-picker");
+await page.waitForTimeout(150);
+await page.click('.spec-choice[data-spec="anthropic"]');
 await page.waitForTimeout(250);
 {
   const n = await page.evaluate(() => document.querySelectorAll("[data-passage-id]").length);
@@ -493,11 +523,11 @@ console.log("== Reader: compare toggle (click path) ==");
 // The URL path into compare is covered above; this is the button a reader
 // actually clicks, from an ordinary one-document view.
 await load(base, "?behavior=helpfulness");
-await page.click("#compare-toggle");
+await page.click(".compare-toggle");
 await page.waitForTimeout(250);
 {
   const out = await page.evaluate(() => ({
-    pressed: document.querySelector("#compare-toggle").getAttribute("aria-pressed"),
+    pressed: document.querySelector(".compare-toggle").getAttribute("aria-pressed"),
     comparing: document.querySelector("#document-reader").classList.contains("compare"),
   }));
   check(out.pressed === "true" && out.comparing,

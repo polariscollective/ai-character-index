@@ -88,26 +88,6 @@
     ></div>
 
     <section class="workspace" aria-label="Specification reader">
-      <div class="reader-toolbar">
-        <div class="spec-switcher" role="group" aria-label="Choose specification"></div>
-        <div id="compare-picker" class="compare-picker" hidden>
-          <label class="compare-picker-field">Compare specification
-            <select id="compare-a" aria-label="First specification to compare"></select>
-          </label>
-          <label class="compare-picker-field">with
-            <select id="compare-b" aria-label="Second specification to compare"></select>
-          </label>
-        </div>
-
-        <div class="view-actions">
-          <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false">
-            <span class="split-icon" aria-hidden="true"></span>
-            Compare
-          </button>
-          <a id="source-link" class="source-link" href="#" target="_blank" rel="noopener">Original ↗</a>
-        </div>
-      </div>
-
       <div class="finding-bar" aria-live="polite">
         <div>
           <span class="finding-behaviour" id="finding-behaviour">Loading…</span>
@@ -125,6 +105,8 @@
     </section>
   </main>
 
+  <div id="spec-picker" class="spec-picker" popover role="listbox" aria-label="Choose a specification"></div>
+
   <div id="key-note" class="key-note" popover>
     <h2 id="key-note-title" class="key-note-title"></h2>
     <div id="key-note-body" class="key-note-body"></div>
@@ -140,7 +122,12 @@
       <header class="document-header">
         <div>
           <p class="document-lab"></p>
-          <h2 class="document-title"></h2>
+          <h2 class="document-title">
+            <button class="document-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="document-name"></span>
+              <span class="picker-caret" aria-hidden="true"></span>
+            </button>
+          </h2>
         </div>
         <div class="document-meta">
           <span class="document-version"></span>
@@ -162,6 +149,11 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
+          <button class="compare-toggle" type="button" aria-pressed="false">
+            <span class="split-icon" aria-hidden="true"></span>
+            Compare
+          </button>
+          <a class="source-link" href="#" target="_blank" rel="noopener">Original ↗</a>
         </div>
       </header>
       <div class="document-scroll">
