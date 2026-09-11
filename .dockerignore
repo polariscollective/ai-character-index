@@ -1,0 +1,19 @@
+# The image carries the engine and nothing else.
+.git
+.github
+.next
+.venv
+node_modules
+public
+site
+tests
+docs
+design
+research
+methodology
+vision
+archive
+experiments
+specs
+*.md
+.env*

@@ -1,0 +1,56 @@
+# Build the judging job's image and point the Cloud Run Job at it.
+#
+# The image carries the engine and nothing else; the site is Vercel's and
+# deploys on its own. This fires only when something the image contains changes,
+# because a site-only commit has nothing to rebuild.
+name: Deploy runner
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "engine/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/deploy-runner.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-runner
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push
+        run: |
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/polaris-docker/ai-character-index-runner:${{ github.sha }}"
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Point the job at it
+        run: |
+          gcloud run jobs update ai-character-index-runner \
+            --image "$IMAGE" \
+            --region "${{ vars.GCP_REGION }}" \
+            --project "${{ vars.GCP_PROJECT }}"

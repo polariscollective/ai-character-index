@@ -44,6 +44,12 @@ jobs:
           python3 engine/panel/test_new_behaviour.py
           python3 -m unittest discover -s tests
 
+      - name: Judging job suites
+        run: |
+          python3 engine/panel/test_judge_call.py
+          python3 engine/panel/test_batch_job.py
+          python3 engine/panel/test_compose_run.py
+
       - name: Store and index suites
         run: |
           python3 engine/test_store.py

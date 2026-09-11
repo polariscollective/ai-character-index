@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))          # judge_call, harness: this directory
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "spec-cite"))
 
@@ -207,9 +208,14 @@ def cancelled(store, run_id):
 
 def finish(store, run_id, report):
     calls = [c for c in store.select("aci_judge_calls") if c["run_id"] == run_id]
-    cost = sum(c["cost_usd"] or 0 for c in calls)
-    store.update("aci_runs", {"id": run_id},
-                 {"status": "done", "finished_at": now(), "cost_usd": cost})
+    metered = [c["cost_usd"] for c in calls if c["cost_usd"] is not None]
+    patch = {"status": "done", "finished_at": now()}
+    # Null means unknown and zero means free, and they are not the same claim.
+    # The migrated bench carries no per-call cost -- its meter readings lived in
+    # a gitignored metrics file -- so summing its calls must leave it unknown.
+    if metered:
+        patch["cost_usd"] = round(sum(metered), 6)
+    store.update("aci_runs", {"id": run_id}, patch)
 
 
 def main():
