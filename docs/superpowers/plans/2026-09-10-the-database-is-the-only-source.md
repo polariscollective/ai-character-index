@@ -2,6 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: executed, 2026-09-12.** All six tasks are done. Three things went
+differently from the plan. The corpus goldens were never committed as text, only
+as digests, so the pattern this plan applied to the payloads was already in the
+repository one level down. The builder's run ledger went too: timestamped run
+files and a manifest were how a local run got pinned by `?data=`, and they lived
+in a directory this plan deletes. And seventeen smoke tests on the judging CLIs
+were lost rather than rewritten, because they ran against a staged file tree that
+cannot exist now; the Cloud Run job supersedes those CLIs.
+
 **Goal:** No module reads the index from a file. The `aci_` tables are the only
 place the behaviour registry, the spec text, the judgements and the payloads
 live.
