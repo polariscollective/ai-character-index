@@ -2,6 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: executed, 2026-09-12**, except `terraform apply` and the two secret
+values, which need the account holder. The image was built and run against the
+real database on a run with nothing pending, which proved the container reaches
+Supabase and reads a run, and turned up two things: the image's PYTHONPATH did
+not carry the panel directory, and `finish()` summed a run with no metered calls
+to zero, saying free where the truth is unknown.
+
 **Goal:** A run's judge calls are executed on Cloud Run, writing judgements to
 Supabase as they land, started by an HTTP request rather than a terminal.
 
