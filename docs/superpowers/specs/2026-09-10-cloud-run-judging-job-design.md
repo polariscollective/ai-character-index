@@ -2,6 +2,7 @@
 
 Date: 2026-09-10
 Status: approved, not started
+Amended: 2026-09-12, for two things that landed after it was written
 
 ## Why
 
@@ -15,15 +16,33 @@ be judged. That asks for the work to happen somewhere it can be started by an
 HTTP request, watched by someone who did not start it, and resumed after a
 crash.
 
+## What changed under this document
+
+Two things landed since it was written, and both make the job simpler rather
+than harder.
+
+`aci_behaviours` now carries the judging half of the registry whole, in
+`judging`: the definition the panel is given, the boundary of the construct, and
+for one behaviour a definition the current rubric prefers. Without it the job
+would have composed every prompt with a blank scope. It hands that column
+straight to `compose_query`.
+
+And the database is the only source. `harness.load_registry()` reads it,
+`cite.py` resolves spec text from it, and the committed files the old CLI read
+are gone. So the job does not need a flag to say where to look, and neither does
+anything it calls.
+
 ## Scope
 
 This is the second of three documents.
 
-1. **Artifacts in Supabase.** Written: the tables, the migration, the citation
-   guarantee, and the move to Vercel.
+1. **Artifacts in Supabase.** Done: the tables, the migration, the citation
+   guarantee, the move to Vercel, the judging half of the behaviour registry,
+   and the removal of every file the index used to be read from.
 2. **The Cloud Run job.** This document.
-3. **The admin surface.** The authenticated pages that register a spec, compose
-   a run, and publish a result. Its own document.
+3. **The admin surface.** The authenticated pages that register a spec or a
+   behaviour, compose a run, and publish a result. Its own document, and it
+   waits on this one: a button that judges needs something that judges.
 
 This document assumes the tables of the first exist. It stops at the point where
 a run and its calls are rows: what puts them there is a small CLI here, and the
