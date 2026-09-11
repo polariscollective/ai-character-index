@@ -6,32 +6,28 @@
 
 ## What the system is
 
-An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase. git is no longer the gate: the artifacts live in the `aci_` tables and a publication row decides what the reader shows. The LLM-panel pipeline does the active knowledge production; the coverage ledger (`data/coverage.json`) is frozen — it still feeds the reader builder's index behaviour set, but nothing writes it any more. Behaviour identity is registry-driven (`data/behaviours.json`); users can register their own specs and behaviours locally (the clone/fork pathway — `specs/user/specs.json` + `set:user` registry entries, nothing pushed back).
+An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase.
+
+**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables, and a publication row decides what the reader shows. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
+
+Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot run the panel or register a spec, and the upstream repository `AndresCotton/ai-character-index` keeps that property. And CI knows no secret: it verifies the code against fixtures, while `provenance.yml` verifies the published data on a schedule, where the credentials already are.
 
 ## Global dependency map
 
 ```mermaid
 graph TB
-  upstream["lab spec repos (OpenAI, Anthropic)"] -->|"manual gh pull"| specs["specs/ mirrors + CITATION.md"]
-  specs --> cite["engine/spec-cite/cite.py (bundled + user-spec manifest, test-pinned)"]
-  um["specs/user/specs.json (gitignored)"] -.->|user-manifest| cite
-  core["research/core-behaviour-list.md (12 behaviours)"] --> reg["data/behaviours.json (registry)"]
-  cov["data/coverage.json (frozen ledger)"] --> bsr
-  panel["engine/panel/ (LLM judge APIs)"] -->|"runlog-v5.jsonl (committed canonical log; provenance-verified)"| bsd["engine/panel/build_site_data.py"]
-  reg --> gbc["engine/generate_behaviour_constants.py (drift-gated)"]
-  reg -->|behaviour metadata| bsd
-  gbc -->|derived constants| bsr
-  cur["data/panel-cell-curation.json (cell curation)"] --> bsd
-  um -.->|user docs| bsr["engine/build-spec-reader-data.py"]
-  specs -->|"full text inlined"| bsr
-  bsr -->|"documents.json (spec text)"| reader["site/spec-reader/"]
-  bsd -->|"behaviours payloads: timestamped runs + manifest (gitignored), behaviours.json fallback, keep-set + calibration variants"| reader
-  arch["archive/general-welfare-strict-reading/ (preserved judgment)"]
-  proto["site/index.html (redirect to the reader)"]
-  meth["site/methodology.html (static page)"]
-  reader & proto & meth ==>|"copied into public/ by prebuild"| vc["Next.js on Vercel"]
-  sb["Supabase aci_ tables"] -->|"/api/reader/documents, /api/reader/payload"| reader
-  notion["Notion DBs"] -.->|"planned sync -- engine/notion-sync/ is empty"| cov
+  labs["lab spec repos (OpenAI, Anthropic)"] -->|"registered through the admin surface"| sb
+  sb["Supabase aci_ tables<br/>specs · versions · behaviours · runs · calls · judgements · publications"]
+  panel["engine/panel/ (LLM judge APIs)"] -->|"judgements"| sb
+  sb -->|"registry + spec text"| cite["engine/spec-cite/cite.py"]
+  sb -->|"judgements + registry"| bsd["engine/panel/build_site_data.py"]
+  sb -->|"spec text + frozen ledger"| bsr["engine/build-spec-reader-data.py"]
+  bsd & bsr -->|"materialised at publication time"| pub["aci_publications"]
+  pub -->|"/api/reader/payload, /api/reader/documents"| reader["site/spec-reader/ (served from public/)"]
+  reader ==> vc["Next.js on Vercel"]
+  rec["engine/published-artefacts.sha256.json"] -->|"the oracle"| ver["engine/verify_supabase_provenance.py"]
+  sb --> ver
+  fix["tests/fixtures/ (parser corpus, fixture index, reader payloads)"] -->|"offline"| ci["CI"]
 ```
 
 ## Component catalogue
@@ -40,37 +36,69 @@ graph TB
 |---|---|---|
 | `.claude/skills/` | Retired procedure layer: no live skills; index files record the retirement (root `AGENTS.md` points here) | [.claude/skills/OVERVIEW.md](.claude/skills/OVERVIEW.md) |
 | `engine/` | Automation: citation resolution, LLM panel judging, payload builders, E2E + feature-harness verifiers | [engine/OVERVIEW.md](engine/OVERVIEW.md) |
-| `data/` | Canonical machine-readable data: behaviour registry, coverage ledger (frozen), labs, schema/ | [data/OVERVIEW.md](data/OVERVIEW.md) |
-| `specs/` | Version-pinned lab-spec mirrors + locator grammar | [specs/OVERVIEW.md](specs/OVERVIEW.md) |
+| `specs/` | The locator grammar and the mirrors' provenance notes; the texts themselves are in the database | [specs/OVERVIEW.md](specs/OVERVIEW.md) |
 | `research/` | Canonical behaviour list | [research/OVERVIEW.md](research/OVERVIEW.md) |
 | `archive/` | Preserved analytical artifact: the cross-spec strict-reading judgment (self-describing README inside) | — |
 | `methodology/` | Depth rubric, public site copy, method-exploration findings | [methodology/OVERVIEW.md](methodology/OVERVIEW.md) |
-| `site/` | Two static surfaces, no build step | [site/OVERVIEW.md](site/OVERVIEW.md) |
-| `.github/` | One CI workflow + Issues-page contact link | [.github/OVERVIEW.md](.github/OVERVIEW.md) |
+| `site/` | The reader's source, copied into `public/` at build time | [site/OVERVIEW.md](site/OVERVIEW.md) |
+| `.github/` | CI on fixtures, a scheduled provenance job, and the Issues-page contact link | [.github/OVERVIEW.md](.github/OVERVIEW.md) |
 | `design/`, `vision/` | Settled-design log (Jul 2026) and the originating brief | [design/OVERVIEW.md](design/OVERVIEW.md), [vision/OVERVIEW.md](vision/OVERVIEW.md) |
 | root files | PLAN.md, README.md, the Next.js application and its two reader routes | [ROOT.md](ROOT.md) |
 | branch/local territory | Experiment branches, parked CI work, local-only branches | [experiments-branches.md](experiments-branches.md) |
 
 ## System-level contracts (the tissue between components)
 
-HEAD
-1. **Locator grammar** — `specs/CITATION.md` defines the format; `cite.py` implements it (bundled specs + optional user manifest); every stored citation in `data/` and site payloads depends on byte-exact resolution. CI re-resolves on every PR (the `tests/` suite re-resolves every published locator through `cite.py`; `tests/test_coverage_json.py` byte-compares every quote in the frozen ledger).
-2. **Behaviour identity** — registry-driven since #28: `data/behaviours.json` is the source of truth; `engine/generate_behaviour_constants.py` regenerates the derived constants (`build-spec-reader-data.py BEHAVIOURS`, the judge-prompt titles in `engine/panel/behaviours.json` -- keys are registry slugs, the same slugs the panel runlogs are keyed by), with `tests/test_behaviour_registry.py` as the drift gate. `behaviour_id` remains **file-local across disjoint numbering spaces** (id 1 = "No sycophancy" in `coverage.json`; the registry's reader-test set starts at "Helpfulness"); the registry namespaces ids per set and slugs are the global key.
-3. **Runlog convention** — JSONL rows keyed by rubric version; defaults still disagree between `harness.RUNLOG` and the executors. The canonical shipped runlog is committed (`engine/panel/runlog-v5.jsonl`, the v5 full bench on the 9-point scale, documented in `runlog-v5.md`; the v3-era `runlog-v3.jsonl` stays committed with its record) and `engine/panel/verify_panel_provenance.py` proves the shipped payload rebuilds from it byte-identically; other runlogs stay gitignored. The v5 prompt port has landed (`engine/panel/prompts/v5.txt`, byte-identical to the calibration source), so `whole_doc.py` stamps v5 by default; v3-family reruns sit behind `--rubric=v3w`/`v3s`.
-4. **Site payloads** — the reader takes both from routes: `/api/reader/documents` for the spec text and the frozen ledger, `/api/reader/payload` for the behaviour set, each streaming one column of one publication, resolved from a `?publication=<uuid>` pin or the current publication. Both are materialised at publication time by the builders that own their shapes (`engine/build-spec-reader-data.py` and `engine/panel/build_site_data.py`, each with `--from-supabase`), so nothing is reassembled per request and there is one implementation of each payload. The committed payloads under `site/spec-reader/data/` are no longer served: they are the oracle `engine/verify_supabase_provenance.py` compares the database against. Panel citations carry `exampleBlock` flags anchoring example blocks. The compare view shows any two registered documents side by side; a picker chooses the pair once more than two are registered, and a user-registered spec is a first-class pane.
-5. **Deploy trigger** — Vercel builds on a push to main; `prebuild` copies `site/` into `public/`. Data changes reach production without a deploy at all: the reader's two payloads come from the current publication row, so publishing is a database write and not a commit.
+1. **Locator grammar** — `specs/CITATION.md` defines the format; `cite.py`
+   implements it. Every stored citation depends on byte-exact resolution, and
+   `cite.py` registers nothing at import time: a caller installs a registry
+   through `use_registry`, from the database (`index_store.install_registry`) or
+   from a fixture. Forgetting is a loud error naming the fix, which is the point
+   — a silent fall back to files that are no longer there is the failure this
+   arrangement exists to remove.
+2. **Behaviour identity** — the slug is the global key, and `aci_behaviours` is
+   the only registry. Each row carries the display half (name, set, numeric id,
+   group, definition) and, where one exists, the judging half whole, in
+   `judging`: the definition the panel is given, the boundary of the construct,
+   the provenance, and for one behaviour a definition the current rubric prefers.
+   `numeric_id` is namespaced per set and is not a global identifier. **Defined
+   and judged are independent states**: a behaviour is defined once it carries a
+   query, and judged once a call for it reaches `done`.
+3. **Judging** — a run is a batch of judge calls, one per behaviour × spec
+   version × model; a call is the unit of work, cost, failure and resume; a
+   judgement is one verdict on one passage. A run freezes what it judged
+   against, so it stays replayable after the registry moves on.
+4. **Publication** — a publication selects, cell by cell, which run answers, and
+   materialises both payloads the routes serve. Its cells must have been judged
+   by exactly the models it names, enforced by a trigger rather than by method;
+   the bench inherited from before that rule is the single `grandfathered`
+   exemption, and a partial unique index means there can never be a second.
+5. **Provenance** — `engine/published-artefacts.sha256.json` records what the
+   index published when the migration was verified. The committed payloads it
+   replaced are gone from the branch and recoverable from git history at the
+   commit it names. `verify_supabase_provenance.py` holds the database to it.
+6. **Serving** — Vercel builds on a push, `prebuild` copies `site/` into
+   `public/`, and the reader takes its two payloads from routes. Publishing is
+   not a deploy: what the public sees changes with a database write.
 
-## Cross-cutting as-is risks (synthesized from all overviews)
+## Cross-cutting as-is risks
 
-1. **CI runs on every PR** (`.github/workflows/ci.yml`): the offline battery (panel/provenance/cite/registry suites, data gate, builder byte-identity, app.js harnesses) plus the two Playwright walkers against an installed Chrome. The pre-commit gate from the parked `hooks/fast-gate` branch remains unlanded.
-2. **`cite.py` is the foundation** of every chain — the trickiest code in the repo. Its bundled + user-manifest contracts are now pinned by tests and corpus goldens.
-3. **Behaviour metadata is registry-driven** (`data/behaviours.json` → derived constants, drift-gated): `engine/generate_behaviour_constants.py` regenerates the reader builder's `BEHAVIOURS` list too, which currently enumerates ids 1–3 because those are the covered behaviours — expected sequencing, not hardcoding. Residual fragmentation: the disjoint per-file id spaces persist (documented in the registry's per-set semantics).
-4. **Documentation describes a system that half-exists**: PLAN.md promises Notion sync, four workflows, Astro, schemas; reality has one workflow, vanilla JS, and an empty `notion-sync/` — and this doc set now records the gap file-by-file.
-5. **Hand-maintained surfaces**: The reader's keep-set payload is a derived build (`build_site_data.py --threshold=4 --solid-threshold=6` on the committed v5 run), committed at `site/spec-reader/data/behaviours-v5-reader.json`; its cell curation lives in `data/panel-cell-curation.json`.
-6. **Provenance is committed and verified**: the shipped panel runlog is committed and byte-identity-verified; every quote in the frozen coverage ledger re-resolves through `cite.py` in CI (`tests/test_coverage_json.py`). Residual: the substitution note in the payload is still a hand-edited string, and single-judge runs degenerate the tier cutoffs (display model assumes ≥2 judges).
-7. **No Python packaging**: importlib/sys.path wiring persists (config is now lazy/injectable; dead code and the stale config comment are removed).
-8. **Residue**: `spec-watch` no longer fetches the dated release archives (nothing consumes them; they exceeded the contents API's inline limit) and aborts loud when upstream versions diverge from cite.py's registry. Root agent-context exists (`AGENTS.md`) pointing at the live procedures (`engine/panel/README.md`, the clone/fork pathway).
+1. **`cite.py` is the foundation** of every chain and the trickiest code here.
+   Its parser is pinned by a corpus dumped from `tests/fixtures/parser-corpus.md`,
+   a document written to carry every construction it recognises;
+   `tests/test_parser_corpus.py` asserts that coverage construction by
+   construction rather than assuming it, which is the only thing that makes a
+   synthetic corpus worth anything.
+2. **CI verifies the code, not the data.** A regression in what the index
+   publishes is caught by the scheduled provenance job rather than on a pull
+   request. That is the price of keeping CI offline and secretless.
+3. **The judging CLIs lost their smoke tests.** `whole_doc.py` and
+   `run_rollout.py` were exercised end to end against a staged file tree, which
+   cannot exist now that they read the database. The Cloud Run job supersedes
+   them; until it lands they are less covered than they were.
+4. **One publication is exempt** from the homogeneity check, because the bench
+   it carries was judged by unequal panels across labs on four behaviours. See
+   CLAUDE.md; filling the nine missing calls is dated work, not a side effect.
 
 ## Reading order for a cold-start agent
 
-`README.md` → this file → `engine/panel/README.md` (panel track) → the `OVERVIEW.md` of the directory being touched.
+`README.md` → this file → `docs/superpowers/specs/` for why the index moved → `engine/panel/README.md` (panel track) → the `OVERVIEW.md` of the directory being touched.

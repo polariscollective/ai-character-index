@@ -33,6 +33,12 @@ ROOT = dump.ROOT
 DIFF_LINES = 60
 
 
+def setUpModule():
+    """cite.py registers nothing at import time. The goldens are dumped from the
+    parser corpus, so install it before anything tries to resolve."""
+    dump.install()
+
+
 class GoldenSnapshotTest(unittest.TestCase):
     def assert_golden(self, golden_name, current, family):
         golden = (dump.GOLDEN / golden_name).read_text(encoding="utf-8")
@@ -237,31 +243,6 @@ class ParseLocatorTest(unittest.TestCase):
         self.assertEqual(
             cite.parse_locator("constitution > A > B > ¶1")[2], "A > B"
         )
-
-
-class PublishedQuotesFindableTest(unittest.TestCase):
-    """Invariant `find` and the term sweep rely on: folding never loses a
-    published quote. Each locator is checked against the spec version it
-    pins (parse_locator + load_spec(spec, version), cached per
-    (spec, version)), so a spec-mirror update cannot false-fail the test.
-    Runs in-process (no subprocess per citation) so the whole corpus stays
-    cheap."""
-
-    def test_every_published_quote_survives_folding(self):
-        coverage = json.loads((ROOT / "data" / "coverage.json").read_text(encoding="utf-8"))
-        specs = {}
-        misses = []
-        for behaviour in coverage["coverage"]:
-            for citation in behaviour.get("citations", []):
-                spec, version, _, _ = cite.parse_locator(citation["locator"])
-                key = (spec, version)
-                if key not in specs:
-                    _, _, lines = cite.load_spec(spec, version)
-                    specs[key] = cite.match_normalize("\n".join(lines))
-                needle = cite.match_normalize(citation["quote"])
-                if needle not in specs[key]:
-                    misses.append(citation["locator"])
-        self.assertEqual(misses, [], f"quotes no longer findable after folding: {misses}")
 
 
 if __name__ == "__main__":

@@ -100,6 +100,10 @@ def behaviours(store):
             "definition": row["definition"],
             "facets": row["facets"],
         }
+        # Carried through rather than dropped: judging_registry() below reads it,
+        # and the payload builders ignore what they do not use.
+        if row.get("judging") is not None:
+            out[row["slug"]]["judging"] = row["judging"]
     return out
 
 
@@ -230,3 +234,18 @@ def index_behaviours(store):
     return [{"id": numeric_id, "slug": slug, "name": entry["name"],
              "definition": entry["definition"], "category": entry["group"]}
             for numeric_id, slug, entry in sorted(rows)]
+
+
+def judging_registry(store):
+    """{slug: entry} in the shape harness.load_registry() returns.
+
+    The judging entry where a behaviour has one, the display entry where it does
+    not. harness._panel_shape adapts the second, which is what lets a behaviour
+    someone has just registered be judged before anyone has written its
+    boundary -- against a blank scope, which is a weaker instruction and says so.
+    """
+    out = {}
+    for slug, entry in behaviours(store).items():
+        judging = entry.pop("judging", None)
+        out[slug] = judging or entry
+    return out

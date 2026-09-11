@@ -20,6 +20,12 @@ CORPUS = ROOT / "tests" / "fixtures" / "parser-corpus.md"
 SPEC_NAME = "corpus"
 SPEC_VERSION = "2026-01-01"
 
+# A second document, because the reader compares two panes and a fixture with one
+# document cannot exercise that at all.
+SECOND = ROOT / "tests" / "fixtures" / "second-document.md"
+SECOND_NAME = "second"
+SECOND_VERSION = "2026-02-01"
+
 # One behaviour the panel could judge properly, and one it could only judge
 # against a blank scope. The difference is the whole point of the judging
 # registry, so a fixture that carried only the first would hide it.
@@ -50,14 +56,17 @@ DISPLAY = {
 
 
 def install_spec():
-    """Put the parser corpus in front of cite.py as the only registered spec."""
-    text = CORPUS.read_text(encoding="utf-8")
+    """Put the two fixture documents in front of cite.py."""
+    text = {"corpus": CORPUS.read_text(encoding="utf-8"),
+            "second": SECOND.read_text(encoding="utf-8")}
     cite.use_registry(
-        {(SPEC_NAME, SPEC_VERSION): "corpus"},
-        {SPEC_NAME: SPEC_VERSION},
+        {(SPEC_NAME, SPEC_VERSION): "corpus", (SECOND_NAME, SECOND_VERSION): "second"},
+        {SPEC_NAME: SPEC_VERSION, SECOND_NAME: SECOND_VERSION},
         {(SPEC_NAME, SPEC_VERSION): {"title": "Parser corpus",
-                                     "sourceUrl": "https://example.invalid/corpus"}},
-        lambda key: text)
+                                     "sourceUrl": "https://example.invalid/corpus"},
+         (SECOND_NAME, SECOND_VERSION): {"title": "Second document",
+                                         "sourceUrl": "https://example.invalid/second"}},
+        text.__getitem__)
 
 
 def judging_registry():

@@ -1,0 +1,34 @@
+# The published index, held to what was verified.
+#
+# CI verifies the code and knows no secret. This verifies the data, and needs
+# credentials to do it, so it runs here rather than on every pull request: a
+# failure means the database moved, not that someone's branch is wrong.
+name: Provenance
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The python side is stdlib-only by design, so the runner's preinstalled
+      # python3 is all it needs.
+      - name: Verify the published index
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python3 engine/verify_supabase_provenance.py

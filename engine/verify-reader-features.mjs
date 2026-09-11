@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Tier-1 feature harness for the site's spec reader (site/spec-reader/),
 // driven against TWO data states: the bundled payloads that ship in the repo,
-// and a user-extended staging built by engine/stage_user_demo.py (synthetic
-// user spec + set:user behaviour, staged into a scratch copy of site/ -- the
-// repo itself is restored untouched). Covers the reader's URL/DOM-state
+// against the fixture index served through the reader's two routes (the
+// two payloads it serves). Covers the reader's URL/DOM-state
 // features and the user-data path; interactive-only features (resizer drags,
 // focus toggles, scroll behaviour) stay manual (Tier 2). The reader's passage
 // anchoring against the shipped payload is covered by verify-reader-test.mjs
@@ -12,46 +11,41 @@
 // Usage:  node engine/verify-reader-features.mjs   (needs Chrome + python3)
 // Exits 0 when every check passes, 1 otherwise.
 
-import { spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { readFile as readFileAsync } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
-import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { serveReaderRoute, CURRENT_PUBLICATION, KEEP_SET_PUBLICATION }
-  from "./reader-routes.mjs";
+import { serveReaderRoute, CURRENT_PUBLICATION } from "./reader-routes.mjs";
 
-const ENGINE = join(fileURLToPath(new URL("..", import.meta.url)), "engine");
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
                ".md": "text/markdown", ".txt": "text/plain" };
 
-// --- Stage the user-extended site into a scratch dir -------------------------
-const scratch = mkdtempSync(join(tmpdir(), "reader-features-"));
-const staged = spawnSync("python3", [join(ENGINE, "stage_user_demo.py"), "--out", scratch],
-                         { encoding: "utf8" });
-if (staged.status !== 0) {
-  console.error("staging failed:\n" + staged.stdout + staged.stderr);
-  process.exit(2);
-}
-const stageInfo = JSON.parse(staged.stdout);
-const SITE = stageInfo.site;
-const USER = stageInfo.userBehaviour;          // acme-transparency
-const USER_SPEC = stageInfo.userSpec;          // acme-spec
-const PAYLOAD = stageInfo.payload;             // behaviours-<ts>.json
-const userPayload = JSON.parse(readFileSync(join(SITE, "spec-reader/data", PAYLOAD), "utf8"));
-// The band-filtered keep-set variant: used below as a second publication, to
-// exercise the 9-point band path; untouched by staging.
-const keepSet = JSON.parse(readFileSync(join(SITE, "spec-reader/data/behaviours-v5-reader.json"), "utf8")).behaviours;
+// --- The fixture index --------------------------------------------------------
+// This walker used to run twice: once against the committed payloads and once
+// against a user-extended staging, which demonstrated the clone-and-fork path.
+// That path is gone -- the index lives in Supabase and a reader without
+// credentials cannot register a spec -- so the staging went with it. What is
+// served here is the fixture: the parser corpus as the one document, and two
+// behaviours, one carrying a boundary and one not.
+const SITE = join(fileURLToPath(new URL("..", import.meta.url)), "site");
+const DATA = join(fileURLToPath(new URL("..", import.meta.url)),
+                  "tests", "fixtures", "reader");
+const payloadDoc = JSON.parse(readFileSync(join(DATA, "behaviours.json"), "utf8"));
+const keepSet = payloadDoc.behaviours;
+const fixtureDocs = JSON.parse(readFileSync(join(DATA, "documents.json"), "utf8")).documents;
+const DOC_ID = fixtureDocs[0].id;
+const DOC_B = fixtureDocs[1].id;
+const DEFINED = "defined-behaviour";
+const UNDEFINED = "undefined-behaviour";
 
 // --- Serve the staged site ----------------------------------------------------
 const server = createServer(async (req, res) => {
-  // Answered from the staged tree's own payloads, so the user-extended run is
-  // what the page under test resolves. PAYLOAD is the staged timestamped run.
-  if (await serveReaderRoute(req, res, join(SITE, "spec-reader", "data"),
-                             PAYLOAD.replace(/\.json$/, ""))) return;
+  // Answered from the staged tree's own payloads, so the fixture index is
+  if (await serveReaderRoute(req, res, DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
   try {
@@ -97,12 +91,12 @@ const blockOf = locator => locator.replace(/ s\d+(?:-s?\d+)?$/, "");
 // =============================================================================
 console.log("== Reader: payload resolution (bundled vs user-extended) ==");
 await at("");
-check((await sidebar()).includes("Acme transparency"),
-  "no pin resolves the current publication = the user-extended run");
+check((await sidebar()).includes("Defined behaviour"),
+  "no pin resolves the current publication = the fixture index");
 check(pageErrors.length === 0, "default load: no console errors", pageErrors.join("; "));
 
 await at(`?publication=${CURRENT_PUBLICATION}`);
-check((await sidebar()).includes("Acme transparency"),
+check((await sidebar()).includes("Defined behaviour"),
   "a pin on the current publication loads it");
 
 await at("?publication=00000000-0000-0000-0000-000000000000");
@@ -111,35 +105,15 @@ await at("?publication=00000000-0000-0000-0000-000000000000");
   // 404 is the correct observable and the browser logs it. What must hold is
   // that it is the only complaint and that the page still renders.
   const unexpected = pageErrors.filter(text => !/404|Not Found/.test(text));
-  check(unexpected.length === 0 && (await sidebar()).includes("Acme transparency"),
+  check(unexpected.length === 0 && (await sidebar()).includes("Defined behaviour"),
     "a pin naming no publication degrades to the current one, with only its 404",
     unexpected.join("; "));
 }
 
 await at("?publication=behaviours-v5-reader");
-check(pageErrors.length === 0 && (await sidebar()).includes("Acme transparency"),
+check(pageErrors.length === 0 && (await sidebar()).includes("Defined behaviour"),
   "a pin that is not a uuid is refused and degrades to the current one (no error)",
   pageErrors.join("; "));
-
-// A second publication carries the band-filtered keep-set, the only committed
-// payload on the 9-point scale, and running applyPanelThreshold's full path
-// against its ragged shapes is what this pin is for.
-await at(`?publication=${KEEP_SET_PUBLICATION}&behavior=helpfulness&spec=anthropic`
-  + "&tiers=defining,core,related");
-await page.waitForTimeout(400);
-{
-  const expected = new Set(keepSet.find(b => b.slug === "helpfulness")
-    .coverage.anthropic.passages.map(p => blockOf(p.locator))).size;
-  const anchors = await page.evaluate(
-    () => document.querySelectorAll("[data-passage-id]").length);
-  const role = await page.evaluate(
-    () => document.querySelector(".passage-reason-role")?.textContent ?? "");
-  check(anchors === expected, `the keep-set publication loads (${expected} helpfulness/anthropic passages)`,
-    `${anchors} anchors`);
-  check(/score \d+\/9/.test(role), "reader rewrites role fractions to the 9-scale", role.slice(0, 40));
-  check(pageErrors.length === 0, "keep-set pin: no console errors",
-    pageErrors.join("; "));
-}
 
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
@@ -149,16 +123,18 @@ await at("");
   check(sb.includes("Behaviours under test"),
     "group header present (user behaviour shares the bundled group spelling)",
     sb.replace(/\s+/g, " ").slice(0, 100));
-  check(sb.includes("Helpfulness"), "bundled behaviour present in the user-extended payload");
+  check(sb.includes("Undefined behaviour"),
+    "every behaviour of the payload is listed, defined or not");
 }
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const finding = await page.evaluate(() => ({
     name: document.querySelector("#finding-behaviour")?.textContent.trim(),
     def: document.querySelector("#finding-definition")?.textContent.trim() || "",
   }));
-  check(finding.name === "Acme transparency", "?behavior= selects the user behaviour", finding.name);
-  check(finding.def.includes("disclose compute usage"), "user behaviour definition renders");
+  check(finding.name === "Defined behaviour", "?behavior= selects the defined behaviour", finding.name);
+  check(finding.def.includes("say what it means"),
+    "the behaviour definition renders", finding.def.slice(0, 50));
 }
 await at("?behavior=no-such-behaviour");
 check(pageErrors.length === 0 && (await page.evaluate(() =>
@@ -168,13 +144,13 @@ check(pageErrors.length === 0 && (await page.evaluate(() =>
 
 // =============================================================================
 console.log("== Reader: tier bands (incl. the single-judge floor, B1) ==");
-const acmeAll = q => at(`?behavior=${USER}&spec=${USER_SPEC}${q}`);
-await acmeAll("");                       // default bands: defining + core
+const definedAll = q => at(`?behavior=${DEFINED}&spec=${DOC_ID}${q}`);
+await definedAll("");                       // default bands: defining + core
 {
   const n = await cards();
   check(n === 1, "default bands: lone core vote renders, lone related vote waits in the related band", `${n} cards`);
 }
-await acmeAll("&tiers=defining,core,related");
+await definedAll("&tiers=defining,core,related");
 {
   const n = await cards();
   check(n === 2, "all bands on: the single judge's related vote is reachable", `${n} cards`);
@@ -185,15 +161,15 @@ await acmeAll("&tiers=defining,core,related");
     document.querySelector(".passage-count").textContent.trim());
   check(/of 2 passages/.test(countText), "passage counter total tracks the rendered anchors", countText);
 }
-await acmeAll("&tiers=none");
+await definedAll("&tiers=none");
 check((await cards()) === 0, "?tiers=none hides every band");
-await acmeAll("&tiers=defining,core,related&related=0");
+await definedAll("&tiers=defining,core,related&related=0");
 check((await cards()) === 1, "?related=0 zeroes the lone related vote (weight tuning survives B1)");
 
 // The toggles report what they hold, and a tier this data cannot reach is disabled
 // rather than left inert. On the staged single-judge v3w cell the defining cut clamps
 // onto the core cut, so core is structurally empty -- the case the counts exist for.
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const tiers = () => page.evaluate(() =>
     Object.fromEntries([...document.querySelectorAll(".document-panel .tier-toggle")].map(b => [
@@ -214,37 +190,38 @@ await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
 
 // =============================================================================
 console.log("== Reader: document view, source link, compare, embedded ==");
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const href = await page.evaluate(() =>
     document.querySelector(".source-link")?.getAttribute("href") || "");
-  check(href === "https://acme.example.com/spec",
-    "source link carries the user spec's sourceUrl", href);
+  check(href === "https://example.invalid/corpus",
+    "the source link carries the document's sourceUrl", href);
   const bodyText = await page.evaluate(() =>
     document.querySelector("#document-reader")?.textContent || "");
-  check(bodyText.includes("disclose compute usage"), "user spec text renders behind the cards");
+  check(bodyText.includes("A document written to exercise"),
+    "the document text renders behind the cards");
 }
-await at(`?behavior=${USER}&spec=no-such-spec`);
+await at(`?behavior=${DEFINED}&spec=no-such-spec`);
 check(pageErrors.length === 0, "unknown ?spec= degrades to the default document without errors",
   pageErrors.join("; "));
 // The list of documents is generated from documents.json and opens from the
 // panel's own title, which replaced the row of tabs above the reader.
-await at(`?behavior=${USER}`);
+await at(`?behavior=${DEFINED}`);
 await page.click(".document-picker");
 await page.waitForTimeout(150);
 {
   const options = await page.evaluate(() =>
     [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
-  check(options.includes(USER_SPEC),
-    "spec options are generated from documents.json (user spec included)",
+  check(options.includes(DOC_B),
+    "spec options are generated from the documents payload",
     options.join(","));
 }
-await page.click(`.spec-choice[data-spec="${USER_SPEC}"]`);
+await page.click(`.spec-choice[data-spec="${DOC_ID}"]`);
 await page.waitForTimeout(250);
 {
   const href = await page.evaluate(() =>
     document.querySelector(".source-link")?.getAttribute("href") || "");
-  check(href === "https://acme.example.com/spec",
+  check(href === "https://example.invalid/corpus",
     "choosing the user spec from the title selects it", href);
 }
 await at(`?compare=1`);
@@ -272,7 +249,7 @@ check(await page.evaluate(() => document.body.classList.contains("embedded")),
 
 // =============================================================================
 console.log("== Reader: toolbar controls ==");
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const enabled = await page.evaluate(() =>
     !document.querySelector("#download-passages").disabled);
@@ -283,14 +260,14 @@ await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
   }));
   check(prevNext.prev && prevNext.next, "prev/next passage buttons enabled with anchors present");
 }
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 await page.click("#clear-behaviours");
 await page.waitForTimeout(250);
 check((await cards()) === 0, "clear-behaviours empties the view");
 await page.click("#select-all-behaviours");
 await page.waitForTimeout(250);
 check((await cards()) > 0, "select-all-behaviours restores the view");
-await at("?behavior=helpfulness");
+await at("?behavior=${DEFINED}");
 {
   const before = await page.evaluate(() => document.body.dataset.palette);
   await page.click("#mode");
@@ -345,29 +322,30 @@ console.log("== Reader: compare is a two-document choice ==");
     await page.waitForTimeout(150);
     const options = await page.evaluate(() =>
       [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
-    check(options.length === 3, "the picker offers every registered document", options.join(","));
+    check(options.length === fixtureDocs.length,
+      "the picker offers every registered document", options.join(","));
     await page.keyboard.press("Escape");
     await page.waitForTimeout(150);
   }
 
   // Choosing the user spec must actually swap a pane, and survive into the URL.
-  await pick("b", USER_SPEC);
+  await pick("b", DOC_B);
   c = await compareState();
-  check(c.b === USER_SPEC && c.titles.some(t => /Acme/i.test(t)),
-    "choosing the user spec renders it as the second pane", c.titles.join(" | "));
-  check(new URL(page.url()).searchParams.get("compare-with") === `${c.a},${USER_SPEC}`,
+  check(c.b === DOC_B && c.titles.some(t => /Second/i.test(t)),
+    "choosing a document renders it as the second pane", c.titles.join(" | "));
+  check(new URL(page.url()).searchParams.get("compare-with") === `${c.a},${DOC_B}`,
     "the chosen pair is written to ?compare-with=", new URL(page.url()).searchParams.get("compare-with"));
 
   // A shared link restores the pair.
-  await load(base, `?compare=1&compare-with=${USER_SPEC},openai`);
+  await load(base, `?compare=1&compare-with=${DOC_B},${DOC_ID}`);
   c = await compareState();
-  check(c.a === USER_SPEC && c.b === "openai",
+  check(c.a === DOC_B && c.b === DOC_ID,
     "?compare-with= restores the pair from a shared link", `${c.a} / ${c.b}`);
 
   // Choosing the document already on the other side swaps rather than duplicating.
-  await pick("a", "openai");
+  await pick("a", DOC_ID);
   c = await compareState();
-  check(c.a === "openai" && c.b !== "openai",
+  check(c.a === DOC_ID && c.b !== DOC_ID,
     "picking the other side's document swaps them instead of duplicating", `${c.a} / ${c.b}`);
 
   // A stale or nonsense pair degrades to the first two documents rather than breaking.
@@ -380,80 +358,20 @@ console.log("== Reader: compare is a two-document choice ==");
 }
 
 // =============================================================================
-console.log("== Local mode: a run of your own is marked ==");
-// The staged site registers a user specification, so the reader is showing local
-// data and should say so. The reader is linked from the site's navs by default;
-// local mode adds a status marker only, never a second nav entry for the page
-// you are already on.
+console.log("== Navigation: exactly one entry marks the page you are on ==")
 {
   await load(base, "");
-  const out = await page.evaluate(() => ({
-    marked: document.body.dataset.localData === "true",
-    badge: (document.querySelector("#local-data-note")?.textContent || "").trim(),
-    badgeVisible: !!document.querySelector("#local-data-note")?.offsetParent,
-    noteInNav: !!document.querySelector('nav #local-data-note'),
-    selfLinks: [...document.querySelectorAll("nav a")]
-      .filter(a => a.getAttribute("aria-current") === "page").length,
-  }));
-  check(out.marked, "local data is marked on the document");
-  check(out.badgeVisible && /local/i.test(out.badge),
-    "a visible note says the data is local", out.badge);
-  // A status marker is not a destination. Inside <nav> it reads as a link to
-  // anything traversing the list, screen readers included.
-  check(!out.noteInNav, "the marker is not inside the navigation list");
-  check(out.selfLinks === 1,
-    "exactly one nav entry marks the page you are on", `${out.selfLinks} entries`);
-  check(pageErrors.length === 0, "local mode: no console errors", pageErrors.join("; "));
-}
-
-// =============================================================================
-console.log("== Reader: user-extended documents ==");
-await load(base, "");
-await page.click(".document-picker");
-await page.waitForTimeout(150);
-{
-  const options = await page.evaluate(() =>
-    [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
-  check(options.join(",") === `anthropic,openai,${USER_SPEC}`,
-    "reader spec options are generated from documents.json, incl. the user spec",
-    options.join(","));
-}
-// Selecting the user spec VIA ITS GENERATED ENTRY renders it.
-await page.click(`.spec-choice[data-spec="${USER_SPEC}"]`);
-await page.waitForTimeout(250);
-{
-  const out = await page.evaluate(() => ({
-    body: document.querySelector("#document-reader")?.textContent || "",
-    passages: document.querySelectorAll("[data-passage-id]").length,
-  }));
-  check(out.body.includes("disclose compute usage"),
-    "clicking the generated user-spec option renders the user doc");
-  check(out.passages === 0, "user spec view shows 0 published passages (graceful empty state)");
-  check(pageErrors.length === 0, "reader user-spec view: no console errors", pageErrors.join("; "));
-}
-await page.click(".document-picker");
-await page.waitForTimeout(150);
-await page.click('.spec-choice[data-spec="anthropic"]');
-await page.waitForTimeout(250);
-{
-  const n = await page.evaluate(() => document.querySelectorAll("[data-passage-id]").length);
-  check(n > 0, "clicking a bundled spec option returns to its coverage", `${n} passages`);
-}
-{
-  // Anchoring regression: the staged surface resolves the staged manifest latest,
-  // so a published view must anchor exactly the staged run's own coverage.
-  const expected = new Set(userPayload.behaviours.find(x => x.slug === "helpfulness")
-    .coverage.anthropic.passages.map(p => blockOf(p.locator))).size;
-  await load(base, "?behavior=helpfulness&spec=anthropic");
-  const seen = await page.evaluate(() =>
-    document.querySelectorAll("[data-passage-id]").length);
-  check(seen === expected, "staged coverage anchors exactly (helpfulness · anthropic)",
-    `${seen}/${expected} passages`);
+  const selfLinks = await page.evaluate(() =>
+    [...document.querySelectorAll("nav a")]
+      .filter(a => a.getAttribute("aria-current") === "page").length);
+  check(selfLinks === 1,
+    "exactly one nav entry marks the page you are on", `${selfLinks} entries`);
+  check(pageErrors.length === 0, "navigation: no console errors", pageErrors.join("; "));
 }
 
 // =============================================================================
 console.log("== Reader: interactions (Tier-2) ==");
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   await page.focus("#sidebar-resizer");
   await page.keyboard.press("Home");
@@ -480,7 +398,7 @@ await at("?compare=1");
     "compare: the single boundary responds to the keyboard",
     JSON.stringify({ before, afterRight, afterHome }));
 }
-await at("?behavior=helpfulness&spec=anthropic&tiers=defining,core,related");
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const collapsed = () => page.evaluate(() =>
     document.querySelectorAll(".section-collapsed").length);
@@ -495,7 +413,7 @@ await at("?behavior=helpfulness&spec=anthropic&tiers=defining,core,related");
     "document focus toggle collapses/expands sections (reversible)",
     `${c0} -> ${c1} -> ${c2} collapsed`);
 }
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const counter = () => page.evaluate(() =>
     document.querySelector(".passage-count").textContent.trim());
@@ -506,28 +424,29 @@ await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
   check(after !== before, "next-passage advances the passage counter",
     `${before} -> ${after}`);
 }
-await at(`?behavior=${USER}&spec=${USER_SPEC}&tiers=defining,core,related`);
+await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.click("#download-passages"),
   ]);
-  const exportPath = join(scratch, "export-check.md");
+  const exportPath = join(tmpdir(), "export-check.md");
   await download.saveAs(exportPath);
   const text = readFileSync(exportPath, "utf8");
-  check(text.includes("disclose compute usage"),
+  check(text.includes("say what it means"),
     "export downloads markdown containing the selected passages", `${text.length} chars`);
 }
 await at("");
 {
-  await page.evaluate((user) => {
-    const label = [...document.querySelectorAll(".behaviour-option")]
-      .find(l => l.textContent.includes("Acme transparency"));
-    label.click();
-  }, USER);
+  // The one the reader did not open on: clicking the selected behaviour unticks
+  // it, which takes it out of the URL rather than putting it in.
+  await page.evaluate(() => {
+    [...document.querySelectorAll(".behaviour-option")]
+      .find(l => l.textContent.includes("Undefined behaviour")).click();
+  });
   await page.waitForTimeout(300);
   const search = await page.evaluate(() => decodeURIComponent(location.search));
-  check(search.includes(USER),
+  check(search.includes(UNDEFINED),
     "clicking a sidebar behaviour syncs it into ?behavior=", search);
 }
 
@@ -535,7 +454,7 @@ await at("");
 console.log("== Reader: compare toggle (click path) ==");
 // The URL path into compare is covered above; this is the button a reader
 // actually clicks, from an ordinary one-document view.
-await load(base, "?behavior=helpfulness");
+await load(base, "?behavior=${DEFINED}");
 await page.click(".compare-toggle");
 await page.waitForTimeout(250);
 {
@@ -550,6 +469,5 @@ await page.waitForTimeout(250);
 // =============================================================================
 await browser.close();
 server.close();
-rmSync(scratch, { recursive: true, force: true });
 console.log(failures ? `${failures} FAILURES` : "ALL FEATURE CHECKS PASSED.");
 process.exit(failures ? 1 : 0);

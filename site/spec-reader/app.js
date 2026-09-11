@@ -90,7 +90,10 @@ const state = {
   rawBehaviours: null,   // unfiltered panel data; the tier toggles re-filter from this
   bands: null,           // Set of "defining" | "core" | "related" -- which tiers render
   selectedSlugs: [],
-  selectedSpec: "anthropic",
+  /* Which document is on screen. Null until the payload arrives: it used to
+   * default to the string "anthropic", which assumed a lab the index happens to
+   * carry and rendered nothing at all against a payload without it. */
+  selectedSpec: null,
   comparing: false,
   embedded: false,
   /* Which panel the keyboard walks. The passages themselves live on the panels
@@ -2253,9 +2256,10 @@ async function initialize() {
     else if (!params.has("behavior") && loaded.length) state.selectedSlugs = [loaded[0].slug];
 
     const requestedSpec = params.get("spec");
-    if (state.payload.documents.some(document => document.id === requestedSpec)) {
-      state.selectedSpec = requestedSpec;
-    }
+    state.selectedSpec =
+      state.payload.documents.some(document => document.id === requestedSpec)
+        ? requestedSpec
+        : (state.payload.documents[0]?.id ?? null);
     state.comparing = params.get("compare") === "1";
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()

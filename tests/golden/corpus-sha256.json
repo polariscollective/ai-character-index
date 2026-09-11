@@ -10,6 +10,11 @@
       "sha256": "1d1dfb7548198e23165c4bb537e79d3c806e94dcbe9b7461b9f19cc47dec6824",
       "bytes": 413417,
       "lines": 7029
+    },
+    "cite-corpus-corpus.txt": {
+      "sha256": "a6d52e37e821bbce1e9ea904fb9b92e1cacd8a5883ddee57e2513c1a821dd300",
+      "bytes": 11364,
+      "lines": 304
     }
   }
 }

@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-"""Proof that the index in Supabase is the index that was in git.
+"""Proof that the index the routes serve is the index that was verified.
 
     python3 engine/verify_supabase_provenance.py
 
-Three claims, and the first is the one that matters. If the migration lost or
-altered anything, the payload the reader serves comes out different, and the
-bytes say so without anyone having to decide what "the same" means.
+Everything here reads the database. The committed payloads this used to compare
+against are gone: they were the oracle, and their digests took over that job,
+recorded in engine/published-artefacts.sha256.json at the commit named there.
 
-    1. The behaviour payload rebuilt from the database is byte-identical to the
-       committed site/spec-reader/data/behaviours-v5-reader.json.
-    2. The documents payload rebuilt from the database is byte-identical to the
-       committed site/spec-reader/data/documents.json apart from generatedFrom,
-       which names the database and therefore must differ.
-    3. Every locator the published payload cites, and every citation in the
-       frozen ledger, still resolves against the spec text stored beside it and
-       returns the stored quote byte for byte.
+Four claims.
 
-Two conventions meet here, and conflating them makes a check that fails on
-correct data. A panel passage carries citation_quote() applied to the normalised
-text passages() yields; a ledger citation carries the raw span, and a locator
-with no span means the whole section rather than nothing. Each is checked
-through the code that produced it, which is the only way the check means
-anything.
+    1. Both payloads, rebuilt from the database, still carry those digests. If
+       anything was lost or altered, the bytes say so without anyone having to
+       decide what "the same" means.
+    2. The publication row still holds them, which is what the routes stream.
+    3. Every behaviour that carries a boundary reaches the panel carrying it.
+       This one exists because a boundary once failed to migrate and nothing
+       noticed: the prompt read "none provided" and the panel judged against a
+       weaker instruction. Comparing records would not have caught it; composing
+       the text a model would be sent does.
+    4. Every locator the index cites still resolves against the spec text stored
+       beside it, and returns the stored quote byte for byte.
 
-And one guard, because the third claim rests on it: the spec-version rows are
-insert-only, so nothing can move text a stored locator points at.
+Two conventions meet in the fourth, and conflating them makes a check that fails
+on correct data. A panel passage carries citation_quote() applied to the
+normalised text passages() yields; a ledger citation carries the raw span, and a
+locator with no span means the whole section rather than nothing. Each is checked
+through the code that produced it.
 """
 
 import hashlib
@@ -43,8 +44,6 @@ import cite            # noqa: E402
 import index_store     # noqa: E402
 from store import Store, StoreError   # noqa: E402
 
-PAYLOAD = ROOT / "site" / "spec-reader" / "data" / "behaviours-v5-reader.json"
-DOCUMENTS = ROOT / "site" / "spec-reader" / "data" / "documents.json"
 RECORD = HERE / "published-artefacts.sha256.json"
 
 
@@ -79,48 +78,10 @@ def build(script, args, out):
     result = subprocess.run([sys.executable, str(script), *args, f"--out={out}"],
                             capture_output=True, text=True)
     if result.returncode != 0:
-        report(False, f"{Path(script).name} --from-supabase",
+        report(False, f"{Path(script).name} rebuild",
                (result.stderr or result.stdout).strip().splitlines()[-1:] or ["no output"])
         return False
     return True
-
-
-def check_behaviour_payload(scratch):
-    # --out= writes into the site data directory by name, not to an arbitrary
-    # path: that guard is deliberate and this verifier does not go around it.
-    name = "verify-supabase.json"
-    written = ROOT / "site" / "spec-reader" / "data" / name
-    ok = build(HERE / "panel" / "build_site_data.py",
-               ["--from-supabase", "--threshold=4", "--solid-threshold=6",
-                "--run-date=2026-08-17"], name)
-    if not ok:
-        return
-    try:
-        same = written.read_bytes() == PAYLOAD.read_bytes()
-        report(same, "behaviours-v5-reader.json rebuilt from Supabase",
-               "byte-identical" if same else
-               f"{written.stat().st_size} bytes against {PAYLOAD.stat().st_size}")
-    finally:
-        written.unlink(missing_ok=True)
-        (ROOT / "site" / "spec-reader" / "data" / "manifest.json").unlink(missing_ok=True)
-
-
-def check_documents_payload(scratch):
-    out = scratch / "documents.json"
-    if not build(ROOT / "engine" / "build-spec-reader-data.py", ["--from-supabase"], out):
-        return
-    rebuilt = json.loads(out.read_text())
-    committed = json.loads(DOCUMENTS.read_text())
-
-    generated = rebuilt.pop("generatedFrom")
-    committed.pop("generatedFrom")
-    dump = lambda payload: json.dumps(payload, ensure_ascii=False,
-                                      separators=(",", ":")).encode("utf-8")
-    same = dump(rebuilt) == dump(committed)
-    report(same, "documents.json rebuilt from Supabase",
-           "byte-identical apart from generatedFrom" if same else "differs")
-    report(all(source.startswith("supabase:") for source in generated),
-           "the rebuilt payload names the database as its source", ", ".join(generated))
 
 
 def load_module(name, path):
@@ -130,13 +91,57 @@ def load_module(name, path):
     return module
 
 
+def check_the_rebuilt_payloads_carry_their_digests(scratch):
+    """Rebuild both payloads from the database and hold them to the record.
+
+    This is the check the committed files used to answer. They are gone; the
+    digest asks the same question of a few lines: does the database still
+    produce the artifact that was verified?
+    """
+    want = recorded()
+
+    payload = scratch / "payload.json"
+    if build(HERE / "panel" / "build_site_data.py",
+             ["--threshold=4", "--solid-threshold=6", "--run-date=2026-08-17"], payload):
+        got = digest(payload.read_bytes())
+        report(got == want["payload"]["sha256"],
+               "the behaviour payload rebuilds to its recorded digest",
+               "unchanged" if got == want["payload"]["sha256"]
+               else f"{got[:16]} against {want['payload']['sha256'][:16]}")
+        # The builder's adjacent flag and the reader's computed band must agree.
+        # That invariant used to be checked against a committed payload; it is
+        # checked here against the one the database produces.
+        labels = subprocess.run(
+            ["node", str(HERE / "panel" / "test_reader_v5_labels.js"), str(payload)],
+            capture_output=True, text=True)
+        report(labels.returncode == 0,
+               "every passage's adjacent flag agrees with the band the reader computes",
+               (labels.stdout or labels.stderr).strip().splitlines()[-1:][0]
+               if (labels.stdout or labels.stderr).strip() else "")
+
+    documents = scratch / "documents.json"
+    if build(ROOT / "engine" / "build-spec-reader-data.py", [], documents):
+        got = digest(documents.read_bytes())
+        report(got == want["documents"]["sha256"],
+               "the documents payload rebuilds to its recorded digest",
+               "unchanged" if got == want["documents"]["sha256"]
+               else f"{got[:16]} against {want['documents']['sha256'][:16]}")
+
+
 def check_panel_passages_still_resolve(store):
     """A panel passage is the normalised text passages() yields for its locator.
     Re-deriving them from the stored markdown must reproduce every quote."""
     index_store.install_registry(store)
     h = load_module("h", HERE / "panel" / "harness.py")
     builder = load_module("build_site_data", HERE / "panel" / "build_site_data.py")
-    payload = json.loads(PAYLOAD.read_text())
+    # What the routes serve, from the publication row. The committed copy this
+    # used to read is gone.
+    publication = index_store.current_publication(store)
+    if publication is None:
+        report(False, "every published passage re-derives from the stored spec text",
+               "nothing is published")
+        return
+    payload = publication["payload"]
     text, checked, missing, mismatched = {}, 0, 0, 0
     for spec_name in sorted({row["id"] for row in store.select("aci_specs")}):
         for locator, _section, passage in h.passages(spec_name):
@@ -202,80 +207,63 @@ def check_the_published_artefacts_still_carry_their_digests(store):
                else f"{got[:16]} against {want[name]['sha256'][:16]}")
 
 
-def check_publication_carries_both_payloads(store):
-    """The routes stream these two columns and rebuild nothing, so what is
-    stored must be what the builders produce. Checked against the committed
-    files, which is the same oracle the two rebuild checks above use."""
-    publication = index_store.current_publication(store)
-    if publication is None:
-        report(False, "the publication carries both payloads", "no publication")
-        return
-
-    same_payload = publication["payload"] == json.loads(PAYLOAD.read_text())
-    report(same_payload, "the stored behaviour payload is the committed one",
-           "equal" if same_payload else "differs")
-
-    stored = dict(publication["documents"])
-    committed = json.loads(DOCUMENTS.read_text())
-    generated = stored.pop("generatedFrom")
-    committed.pop("generatedFrom")
-    dump = lambda payload: json.dumps(payload, ensure_ascii=False,
-                                      separators=(",", ":")).encode("utf-8")
-    same_documents = dump(stored) == dump(committed)
-    report(same_documents, "the stored documents payload is the committed one",
-           "equal apart from generatedFrom, which names "
-           + ", ".join(generated) if same_documents else "differs")
-
-
 def check_behaviours_carry_the_judging_entry(store):
     """The judging registry is the half that reached the database late."""
-    judging = json.loads((HERE / "panel" / "behaviours.json").read_text())
-    rows = {row["slug"]: row for row in store.select("aci_behaviours")}
-    wrong = [slug for slug, entry in judging.items()
-             if rows.get(slug, {}).get("judging") != entry]
-    report(not wrong, "every judging entry reached the database",
-           f"{len(judging)} entries" if not wrong else f"differs: {wrong}")
+    rows = store.select("aci_behaviours")
+    defined = [r for r in rows if (r["judging"] or {}).get("query")]
+    with_boundary = [r for r in defined if r["judging"].get("boundary")]
+    report(len(with_boundary) == len(defined) and defined,
+           "every defined behaviour carries a boundary",
+           f"{len(defined)} defined of {len(rows)}, all with a boundary"
+           if len(with_boundary) == len(defined)
+           else f"{len(defined) - len(with_boundary)} without")
 
 
-def check_the_prompt_composes_the_same_from_either_source(store):
-    """The check that would have caught the omission.
+def check_every_defined_behaviour_reaches_the_panel_with_its_scope(store):
+    """A behaviour that carries a boundary must compose a prompt that shows it.
 
-    The other two compare records. This one composes the behaviour block of the
-    judge prompt from the database and from the file, and compares the text a
-    model would actually be sent. A missing boundary shows up here as a scope
-    slot reading "the user left this field blank", and nowhere else.
+    This check exists because the boundary once failed to migrate, and nothing
+    noticed: the prompt simply read "Scope (optional): none provided" and the
+    panel judged against a weaker instruction. Comparing records would not have
+    caught it. Composing the text a model would be sent does.
     """
     h = load_module("h", HERE / "panel" / "harness.py")
-    from_file = h.load_registry()
-    from_db = {row["slug"]: row["judging"]
-               for row in store.select("aci_behaviours") if row["judging"]}
-
-    missing = sorted(set(from_file) - set(from_db))
-    differing = [slug for slug in sorted(set(from_file) & set(from_db))
-                 if h.compose_query(slug, "v3", from_file)
-                 != h.compose_query(slug, "v3", from_db)]
-    report(not missing and not differing,
-           "the judge prompt composes the same from the database as from the file",
-           f"{len(from_file)} behaviours" if not (missing or differing)
-           else f"missing {missing}, differing {differing}")
+    registry = index_store.judging_registry(store)
+    blank, checked = [], 0
+    for slug, entry in sorted(registry.items()):
+        if not entry.get("boundary"):
+            continue
+        checked += 1
+        composed = h.compose_query(slug, "v3", registry)
+        # The Scope line specifically. Looking for the blank marker anywhere in
+        # the prompt catches the clarifications field, which is legitimately
+        # blank for every shipped behaviour, and calls a correct prompt broken.
+        scope = next((line for line in composed.splitlines()
+                      if line.lower().startswith("scope")), "")
+        if h.FIELD_NONE in scope:
+            blank.append(slug)
+    report(checked > 0 and not blank,
+           "every behaviour with a boundary reaches the panel carrying it",
+           f"{checked} behaviours" if not blank else f"blank scope for {blank}")
 
 
 def check_the_run_snapshot_says_what_it_judged_against(store):
-    judging = json.loads((HERE / "panel" / "behaviours.json").read_text())
+    """A run froze what it was told, and must still agree with the registry it
+    was told it from."""
+    rows = {r["slug"]: r for r in store.select("aci_behaviours")}
     runs = store.select("aci_runs")
     if not runs:
         report(False, "the run snapshot names the judging definitions", "no runs")
         return
     snapshot = runs[0]["behaviours"]
     wrong = [slug for slug, entry in snapshot.items()
-             if slug in judging and entry.get("judging") != judging[slug]]
+             if entry.get("judging") != rows.get(slug, {}).get("judging")]
     # The one behaviour the current rubric judges on a different definition than
     # the one it displays; if the snapshot lost that, it lost the point.
-    v2 = snapshot.get("animal-welfare-impacts", {}).get("judging", {})
+    v2 = (snapshot.get("animal-welfare-impacts") or {}).get("judging") or {}
     report(not wrong and "query_v2" in v2,
            "the run snapshot names the definitions the run was given",
-           f"{len(snapshot)} behaviours" if not wrong
-           else f"differs: {wrong}")
+           f"{len(snapshot)} behaviours" if not wrong else f"differs: {wrong}")
 
 
 def check_spec_versions_are_insert_only(store):
@@ -298,12 +286,10 @@ def main():
     store = Store.from_env()
     with tempfile.TemporaryDirectory() as scratch:
         scratch = Path(scratch)
-        check_behaviour_payload(scratch)
-        check_documents_payload(scratch)
+        check_the_rebuilt_payloads_carry_their_digests(scratch)
     check_the_published_artefacts_still_carry_their_digests(store)
-    check_publication_carries_both_payloads(store)
     check_behaviours_carry_the_judging_entry(store)
-    check_the_prompt_composes_the_same_from_either_source(store)
+    check_every_defined_behaviour_reaches_the_panel_with_its_scope(store)
     check_the_run_snapshot_says_what_it_judged_against(store)
     check_panel_passages_still_resolve(store)
     check_ledger_citations_still_resolve(store)

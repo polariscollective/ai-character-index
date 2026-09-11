@@ -9,14 +9,21 @@
  * three accepted ragged exceptions enumerated in KNOWN_EXCEPTIONS (they score
  * 4/6 on two judges: core on their own scale, adjacent under the flat cut).
  * Any other exception fails. Exits 0 when every label holds, 1 otherwise.
- * Run:  node engine/panel/test_reader_v5_labels.js
+ * Run:  node engine/panel/test_reader_v5_labels.js <payload.json>
  * (driven from tests/test_reader_v5_payload.py::BandLabelsHarnessTest) */
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..", "..");
 const APP_JS = path.join(ROOT, "site", "spec-reader", "app.js");
-const PAYLOAD = path.join(ROOT, "site", "spec-reader", "data", "behaviours-v5-reader.json");
+/* The payload is given, not found: it lives in the database now, and the
+ * committed copy this used to read is gone. verify_supabase_provenance.py hands
+ * over what the current publication actually serves. */
+const PAYLOAD = process.argv[2];
+if (!PAYLOAD) {
+  console.error("usage: node engine/panel/test_reader_v5_labels.js <payload.json>");
+  process.exit(2);
+}
 
 const src = fs.readFileSync(APP_JS, "utf8");
 const lines = src.split("\n");

@@ -19,11 +19,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** The id the current publication answers to, so a pin can be exercised. */
 export const CURRENT_PUBLICATION = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
-/* A second publication, carrying the band-filtered keep-set. Named payload files
- * are gone with ?data=, but the test they served is not: the keep-set is the
- * only committed payload on the 9-point scale, and pinning it is how the band
- * maths gets exercised end to end. */
-export const KEEP_SET_PUBLICATION = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
 
 /**
  * Answers /api/reader/documents and /api/reader/payload, or returns false so
@@ -38,7 +33,7 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
 
   const pinned = url.searchParams.get("publication");
   const which = url.pathname.slice("/api/reader/".length);
-  const name = pinned === KEEP_SET_PUBLICATION ? "behaviours-v5-reader" : payloadName;
+  const name = payloadName;
   const file = which === "documents" ? "documents.json"
     : which === "payload" ? `${name}.json`
     : null;
@@ -54,7 +49,7 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
     response.end(JSON.stringify({ error: "publication must be a uuid" }));
     return true;
   }
-  if (pin !== null && pin !== CURRENT_PUBLICATION && pin !== KEEP_SET_PUBLICATION) {
+  if (pin !== null && pin !== CURRENT_PUBLICATION) {
     response.writeHead(404, { "content-type": "application/json" });
     response.end(JSON.stringify({ error: "no such publication" }));
     return true;

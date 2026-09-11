@@ -57,7 +57,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -72,27 +72,6 @@ MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwe
 SLUGS_EXTRA = {"animal-welfare-impacts": ["general-welfare-impacts-strict"]}   # one run feeds both general-guidelines rows
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-DATA_DIR = ROOT / "site" / "spec-reader" / "data"
-MANIFEST_NAME = "manifest.json"
-FALLBACK_NAME = "behaviours.json"
-# Committed payloads with a documented rebuild path; the byte-identity tests
-# (engine/panel/test_verify_panel_provenance.py, tests/test_custom_spec_
-# decoupling.py, tests/test_reader_v5_payload.py) are the guard against a
-# careless overwrite.
-REBUILDABLE_NAMES = {
-    FALLBACK_NAME,
-    "behaviours-v4a.json", "behaviours-v4a-ds.json",
-    "behaviours-v5.json", "behaviours-v5-1.json",
-    "behaviours-v5-reader.json",
-}
-# The same character set app.js admits for ?data= -- a run name doubles as a URL param.
-# re.ASCII: JavaScript's \w is ASCII [A-Za-z0-9_], but Python's \w is Unicode by
-# default and would admit accented/non-Latin names the page's DATA_NAME rejects.
-SAFE_NAME = re.compile(r"^[\w.-]+$", re.ASCII)
-
-
-# Why the shipped frontier run needed substitutes -- provider failures no runlog records.
-# Keyed to the panel it describes; a panel with no entry emits no substitution claim.
 SUBSTITUTION_NOTES = {
     "frontier": "opus (claude-opus-4-8) replaces fable on harm-to-third-parties x "
                 "model-spec (fable output content-filtered, 3 attempts); kimi-k2 "
@@ -100,153 +79,6 @@ SUBSTITUTION_NOTES = {
                 "exhausted a 65k output budget on reasoning without emitting verdicts, "
                 "finish_reason length)",
 }
-
-def run_timestamp(dt, seq=0):
-    """Run-file timestamp: hyphen-separated so it is URL-safe, and lexicographically
-    sortable = chronological. A same-second rerun takes a sequence suffix (seq >= 2, zero-padded to two digits,
-    e.g. …T17-26-20-02) that still sorts after the bare stamp and before the next
-    second, so lexical == chronological survives collisions."""
-    ts = dt.strftime("%Y-%m-%dT%H-%M-%S")
-    return f"{ts}-{seq:02d}" if seq else ts
-
-
-def next_run_name(data_dir, dt):
-    """(filename, timestamp) for a new run: behaviours-<ts>.json, or the first free
-    behaviours-<ts>-N.json (N = 2, 3, ...) when that second already has a run file --
-    a provenance ledger must never silently overwrite a run."""
-    ts = run_timestamp(dt)
-    name = f"behaviours-{ts}.json"
-    seq = 2
-    while (Path(data_dir) / name).exists():
-        ts = run_timestamp(dt, seq)
-        name = f"behaviours-{ts}.json"
-        seq += 1
-    return name, ts
-
-
-def update_manifest(manifest, entry):
-    """Pure: the manifest that results from inserting `entry` (replacing any entry with
-    the same filename). Runs stay newest-first and `latest` names the newest one.
-    Same-second runs carry run_timestamp() sequence suffixes, so the timestamp sort
-    alone keeps them in build order."""
-    runs = [r for r in manifest.get("runs", []) if r.get("filename") != entry["filename"]]
-    runs.append(entry)
-    runs.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
-    return {"latest": runs[0]["filename"], "runs": runs}
-
-
-def read_manifest(path):
-    """The manifest at `path`; a fresh clone (none yet) is an empty one. A file that
-    parses to something other than a dict (a JSON null or array) is treated exactly
-    like an absent one -- the page tolerates an odd manifest by falling through its
-    fetch/parse guards, so the builder/CLI must degrade to the empty default too,
-    never crash on .get(). A `runs` value that is not a list of dicts is normalized
-    the same way (dropped to [] / non-dict entries filtered), so a half-written or
-    hand-edited ledger degrades instead of tracebacking update_manifest/select_run."""
-    try:
-        doc = json.loads(Path(path).read_text())
-    except (OSError, ValueError):
-        return {"latest": None, "runs": []}
-    if not isinstance(doc, dict):
-        return {"latest": None, "runs": []}
-    runs = doc.get("runs")
-    doc["runs"] = [r for r in runs if isinstance(r, dict)] if isinstance(runs, list) else []
-    return doc
-
-
-def _loadable(path):
-    """True when the file exists and parses as JSON -- how the page consumes it."""
-    try:
-        json.loads(Path(path).read_text())
-        return True
-    except (OSError, ValueError):
-        return False
-
-
-def as_json_name(name):
-    """Normalize a pin/latest entry to its .json filename."""
-    return name[:-5] + ".json" if name.endswith(".json") else name + ".json"
-
-
-def _payload_name(name):
-    """Whether `name` may resolve as a payload in the pin/latest chain. It must pass
-    the SAFE_NAME charset AND be a behaviours payload -- never the manifest. Pinning
-    (or pointing `latest` at) manifest.json would render the run ledger as if it were
-    a behaviour set, so the chain refuses it; only behaviours*.json files are payloads
-    here. A non-string (malformed manifest latest) is refused too -- that subsumes the
-    old isinstance guard / app.js's `typeof latest === "string"` check. Mirrors
-    payloadName() in site/spec-reader/app.js."""
-    if not isinstance(name, str) or not name:
-        return False
-    if not SAFE_NAME.match(name):
-        return False
-    fname = as_json_name(name)
-    if fname == MANIFEST_NAME:
-        return False
-    return fname.startswith("behaviours")
-
-
-def resolve_data_name(data_dir, pin=None, manifest=None):
-    """The resolution chain site/spec-reader/app.js implements, for CLI tooling:
-    pin (?data= / --pin) -> manifest latest -> shipped behaviours.json.
-    Returns (filename, source) with source one of pin/latest/fallback; a name that
-    fails _payload_name (charset, the manifest itself, a non-behaviours file, or a
-    non-string) or a file that is absent or unparseable falls through to the next
-    source. (None, None) when nothing would load."""
-    data_dir = Path(data_dir)
-
-    if _payload_name(pin):
-        fname = as_json_name(pin)
-        if _loadable(data_dir / fname):
-            return fname, "pin"
-    latest = (manifest or {}).get("latest")
-    if _payload_name(latest):
-        fname = as_json_name(latest)
-        if _loadable(data_dir / fname):
-            return fname, "latest"
-    if _loadable(data_dir / FALLBACK_NAME):
-        return FALLBACK_NAME, "fallback"
-    return None, None
-
-
-def check_out_name(name):
-    """Loud-fail an --out= name that could write outside the site data dir: the same
-    SAFE_NAME charset ?data= admits (so no path separators), no .. traversal, and
-    never the manifest itself (case-insensitively -- on a case-insensitive
-    filesystem Manifest.JSON would clobber it too) -- a build must not overwrite
-    the provenance ledger."""
-    if name.casefold() == MANIFEST_NAME:
-        sys.exit(f"error: --out={name!r} would overwrite the manifest/ledger -- "
-                 "pick any other name; only the builder maintains the manifest")
-    if not SAFE_NAME.match(name) or ".." in name or name.startswith("."):
-        sys.exit(f"error: --out={name!r} is not a safe name for the site data dir -- "
-                 "use a plain filename (word chars, dots, hyphens; no paths or ..)")
-    # The data dir also holds committed calibration payloads (behaviours-v5.json and
-    # friends). They match the gitignore pattern for run outputs, so git would not
-    # flag an overwrite -- only this check stands between --out= and a tracked file.
-    # Committed payloads with a documented rebuild path are exempt (the
-    # byte-identity tests are the guard against a careless overwrite): the
-    # shipped fallback, the calibration/full-bench variants, and the keep-set
-    # payload.
-    if name not in REBUILDABLE_NAMES:
-        try:
-            tracked = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", str(DATA_DIR / name)],
-                cwd=ROOT, capture_output=True, timeout=10).returncode == 0
-        except (OSError, subprocess.SubprocessError):
-            tracked = False          # no git, or no repo: fall through
-        if tracked:
-            sys.exit(f"error: --out={name!r} is tracked in git -- a build must not "
-                     "overwrite a committed payload; pick another name")
-
-
-def _shown(path):
-    """Repo-relative for display when inside the repo, absolute otherwise (tests run
-    the builder against a temp data dir)."""
-    try:
-        return path.relative_to(ROOT)
-    except ValueError:
-        return path
 
 
 def resolve_panel(config, name):
@@ -363,18 +195,11 @@ def main(argv=None):
     # top-level config["rubric"] matches it since the v5 prompt port (whole_doc.py
     # stamps v5 by default; the v3 prompts remain behind --rubric=).
     rubric = DISPLAY.get("rubric", config["rubric"])
-    out_name = None
+    out_name = None   # required: this writes where it is told and nowhere else
     registry_path = ROOT / "data" / "behaviours.json"
     run_date = str(date.today())
-    from_supabase = False
     for a in argv:
-        if a == "--from-supabase":
-            # The index out of its tables rather than out of committed files:
-            # the registry, the judgements behind the current publication, the
-            # curated cells, and -- through cite.py's document source -- the
-            # spec text every locator resolves against. Nothing below changes.
-            from_supabase = True
-        elif a.startswith("--runlog="):
+        if a.startswith("--runlog="):
             runlog = Path(a.split("=", 1)[1])
         elif a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
@@ -388,9 +213,8 @@ def main(argv=None):
             run_date = a.split("=", 1)[1]
             if not DATE_RE.match(run_date):
                 sys.exit(f"--run-date must be YYYY-MM-DD, got '{run_date}'")
-        elif a.startswith("--out="):            # alternate FILENAME in site data dir (iteration builds)
+        elif a.startswith("--out="):            # where to write the payload
             out_name = a.split("=", 1)[1]
-            check_out_name(out_name)            # loud error before any build work
         elif a.startswith("--threshold="):      # score cut override (derived payloads; config untouched)
             raw = a.split("=", 1)[1]
             try:
@@ -413,21 +237,19 @@ def main(argv=None):
             # payload + manifest. Asking for help must not mutate the repo.
             sys.exit(f"unknown argument {a!r} -- valid: --runlog= --rubric= --panel= "
                      "--behaviours= --registry= --run-date= --out= "
-                     "--threshold= --solid-threshold= --from-supabase")
+                     "--threshold= --solid-threshold=")
+    if out_name is None:
+        sys.exit("--out=PATH is required: this writes the payload where it is told")
     panel = resolve_panel(config, DISPLAY["panel"])
-    store = None
-    if from_supabase:
-        sys.path.insert(0, str(ROOT / "engine"))
-        import index_store            # noqa: E402
-        from store import Store       # noqa: E402
-        store = Store.from_env()
-        index_store.install_registry(store)
-        registry = index_store.behaviours(store)
-        registry_path = "supabase aci_behaviours"
-        log_rows = index_store.published_runlog_rows(store)
-    else:
-        registry = json.loads(registry_path.read_text())
-        log_rows = (json.loads(line) for line in runlog.read_text().splitlines())
+    # The index, out of its tables. There is nowhere else it lives.
+    sys.path.insert(0, str(ROOT / "engine"))
+    import index_store            # noqa: E402
+    from store import Store       # noqa: E402
+    store = Store.from_env()
+    index_store.install_registry(store)
+    registry = index_store.behaviours(store)
+    registry_path = "supabase aci_behaviours"
+    log_rows = index_store.published_runlog_rows(store)
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()
@@ -460,8 +282,7 @@ def main(argv=None):
         for loc, sec, t in h.passages(s):
             text[loc] = t
 
-    src = ({"cells": index_store.cell_curation(store)} if from_supabase
-           else json.loads((ROOT / "data" / "panel-cell-curation.json").read_text()))
+    src = {"cells": index_store.cell_curation(store)}
     keep = DISPLAY["behaviours"]
     behaviours = display_behaviours(keep, registry, registry_path)
     # curated per-lab cell rows, keyed (slug, lab)
@@ -566,24 +387,12 @@ def main(argv=None):
         sys.exit("error: " + summary.strip()
                  + zero_citation_reason(rubric, runlog_rubrics, runlog_models, panel))
     payload = json.dumps(out, indent=1, ensure_ascii=False)
-    if out_name:
-        # Explicit destination: iteration builds, or --out=behaviours.json to rebuild
-        # the shipped fallback. Written exactly there; the manifest is left alone.
-        dest = DATA_DIR / out_name
-        dest.write_text(payload)
-        print(f"{_shown(dest)}: {summary}")
-        return
-    out_name, ts = next_run_name(DATA_DIR, datetime.now())
-    dest = DATA_DIR / out_name
-    dest.write_text(payload)
-    entry = {"filename": out_name, "timestamp": ts, "rubric": rubric,
-             "panel": DISPLAY["panel"], "judges": seats, "behaviours": keep,
-             "runlog": runlog.name, "citations": n}
-    manifest_path = DATA_DIR / MANIFEST_NAME
-    manifest = update_manifest(read_manifest(manifest_path), entry)
-    manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
-    print(f"{_shown(dest)}: {summary}")
-    print(f"{_shown(manifest_path)}: latest = {out_name} ({len(manifest['runs'])} runs)")
+    # One destination, named by the caller. There used to be two, plus a ledger:
+    # a build emitted a timestamped run file and promoted it to manifest.json's
+    # `latest`, which is how a local run got pinned by ?data=. The reader
+    # resolves a publication now, and a build feeds one.
+    Path(out_name).write_text(payload)
+    print(f"{out_name}: {summary}")
 
 
 if __name__ == "__main__":

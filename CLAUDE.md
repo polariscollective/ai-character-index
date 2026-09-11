@@ -70,6 +70,33 @@ they now pass through a `spoken()` helper that renders the delimiter as a comma.
 The reader's copy is British throughout. The URL parameter is not, deliberately:
 links already shared point at it, and renaming it would break them silently.
 
+## Changes of substance we made
+
+### The database is the only source
+
+The index does not live in this repository. The behaviours, the spec text, the
+judgements, the frozen ledger and the two payloads the reader is served all live
+in the `aci_` tables of the shared `evals` Supabase project. What is committed
+here is code, fixtures, and `engine/published-artefacts.sha256.json`, which
+records what the index published when the migration was verified against it.
+
+Roughly twenty megabytes of data left the branch and remain in git history at the
+commit that file names.
+
+### The clone-and-fork pathway is gone
+
+Someone without credentials cannot run the panel, register a specification, or
+rebuild a payload. This was announced rather than discovered: the README says
+this fork is heading for a hosted authenticated surface and will in time lose the
+property of running from a bare clone.
+[`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index)
+keeps it, and it is still the repository to clone to run the tool yourself.
+
+### The reader opens on the first document it is given
+
+`app.js` defaulted `selectedSpec` to the string `"anthropic"`, which assumed a lab
+the index happens to carry. Against any other payload it rendered nothing at all.
+
 ## Where the fork is heading
 
 Away from git as the gate. Artifacts move to Supabase, judging moves to a Cloud

@@ -36,7 +36,11 @@ const MIME = {
  * to the shipped data) -- but Chrome logs each one as a console error, and so
  * would a genuinely moved file. The server-side audit tells the two apart. */
 const missingPaths = [];
-const READER_DATA = join(SITE, "spec-reader", "data");
+// The reader's payloads come from routes, and those routes read the database.
+// This walker tests the page, so it serves a fixture pair instead: a small
+// synthetic index built on the parser corpus, whose locators are real.
+const READER_DATA = join(fileURLToPath(new URL("..", import.meta.url)),
+                         "tests", "fixtures", "reader");
 
 const server = createServer(async (request, response) => {
   // The reader takes its two payloads from routes now. Answered here from the
@@ -57,16 +61,16 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}/spec-reader/`;
 
 const behaviours = JSON.parse(
-  await readFile(join(SITE, "spec-reader/data/behaviours.json"), "utf8"),
+  await readFile(join(READER_DATA, "behaviours.json"), "utf8"),
 ).behaviours;
 /* The band keep-set: same v5 run, cut at the boundary the client's lowest band
  * applies. What the reader can render IS this set, so its coverage is the
  * passage-count oracle for every view below. */
 const keepSet = new Map(JSON.parse(
-  await readFile(join(SITE, "spec-reader/data/behaviours-v5-reader.json"), "utf8"),
+  await readFile(join(READER_DATA, "behaviours.json"), "utf8"),
 ).behaviours.map(behaviour => [behaviour.slug, behaviour]));
 const documents = JSON.parse(
-  await readFile(join(SITE, "spec-reader/data/documents.json"), "utf8"),
+  await readFile(join(READER_DATA, "documents.json"), "utf8"),
 ).documents;
 
 /* The two payloads above are built by different scripts and can legally diverge.
@@ -191,14 +195,8 @@ report(navIssues.length === 0, "navigation links resolve",
 // manifest (it is gitignored run output). A local manifest would shadow the
 // fallback and silently swap the payload under test, so fail loud on it; and
 // the fallback file itself must serve, or the menu empties.
-const manifestStatus = await page.evaluate(async () =>
-  (await fetch("./data/manifest.json")).status);
-report(manifestStatus === 404, "no manifest shadows the shipped fallback",
-  `HTTP ${manifestStatus}`);
-const fallbackStatus = await page.evaluate(async () =>
-  (await fetch("./data/behaviours.json")).status);
-report(fallbackStatus === 200, "shipped fallback payload returns 200",
-  `HTTP ${fallbackStatus}`);
+/* The manifest and the shipped fallback were the second and third steps of a
+ * resolution chain that no longer exists: a payload comes from a route now. */
 
 if (behaviours.length === 0) {
   // The behaviour set is empty: the point is that both specs are fully readable and untouched.
@@ -291,8 +289,15 @@ if (behaviours.length === 0) {
   // Ticking the menu must change only the highlight layer: the reader keeps its place in
   // the text, and the behaviour taken away takes its passages with it.
   const [first, second] = behaviours;
-  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=anthropic`);
-  await page.evaluate(() => { document.querySelector(".document-scroll").scrollTop = 2400; });
+  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=corpus-labs`);
+  // A third of the way down, not a fixed pixel count: the document under test is
+  // whatever the fixture carries, and a number chosen for a four-thousand-line
+  // spec clamps to the bottom of a shorter one, which is not the same place.
+  const scrolled = await page.evaluate(() => {
+    const panel = document.querySelector(".document-scroll");
+    panel.scrollTop = Math.round((panel.scrollHeight - panel.clientHeight) / 3);
+    return panel.scrollTop;
+  });
   // The panel scrolls smoothly, so wait for two readings in a row that agree before
   // taking the position the toggle is supposed to leave alone.
   await page.waitForFunction(() => {
@@ -306,16 +311,22 @@ if (behaviours.length === 0) {
   await page.waitForTimeout(250);
   const after = await page.evaluate(() => ({
     scrollTop: document.querySelector(".document-scroll").scrollTop,
+    scrollRange: document.querySelector(".document-scroll").scrollHeight
+                 - document.querySelector(".document-scroll").clientHeight,
     passages: document.querySelectorAll("[data-passage-id]").length,
     behaviour: document.querySelector("#finding-behaviour").textContent,
     url: new URL(location.href).searchParams.get("behavior"),
   }));
   report(
-    Math.abs(after.scrollTop - before) < 4
-      && after.passages === anchorCount(renderable(second.slug, "anthropic"))
+    // Proportional, not absolute. Unticking removes that behaviour's passages,
+    // which shortens the document; on a four-thousand-line spec that moved the
+    // position by a pixel or two, on a short one by the same fraction. What must
+    // hold is that the reader kept its place, not that nothing moved.
+    Math.abs(after.scrollTop - before) < Math.max(4, after.scrollRange * 0.1)
+      && after.passages === anchorCount(renderable(second.slug, documents[0].id))
       && after.behaviour === second.name
       && after.url === second.slug,
-    "unticking one of two · anthropic",
+    "unticking one of two · corpus-labs",
     `scroll ${before} → ${after.scrollTop}, ${after.passages} passages left,`
     + ` menu reads ${after.behaviour}, url ${after.url}`,
   );
@@ -358,7 +369,7 @@ if (behaviours.length === 0) {
   const exported = behaviours.slice(0, 3);
   const citations = exported.flatMap(behaviour =>
     documents.flatMap(document => renderable(behaviour.slug, document.id)));
-  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=anthropic`);
+  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=corpus-labs`);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.click("#download-passages"),
@@ -386,10 +397,10 @@ if (behaviours.length === 0) {
   );
 }
 
-/* 404 audit: the only path allowed to miss is the manifest (its absence is the
- * fresh-clone state the reader is designed to fall through). Anything else
- * missing is a moved or renamed file failing loud, exactly as intended. */
-const unexpectedMissing = [...new Set(missingPaths)].filter(path => path !== "/spec-reader/data/manifest.json");
+/* 404 audit: every path the page asks for must exist. There used to be one
+ * exception, the manifest, whose absence was the fresh-clone state the reader
+ * fell through; the chain that needed it is gone. */
+const unexpectedMissing = [...new Set(missingPaths)];
 report(unexpectedMissing.length === 0, "nothing unexpected 404s",
   unexpectedMissing.join(", ") || "only the absent manifest");
 /* Chrome echoes every 404 -- including the audited manifest one -- into the

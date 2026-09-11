@@ -35,8 +35,9 @@ METRICS = HERE / "metrics.jsonl"   # per-call latency + token usage (for cost/ti
 # never values). The old hardcoded tables are gone; edit the config, not this file.
 # Loaded lazily at USE time -- importing this module reads no PANEL config so it
 # can be injected (pass a parsed dict, or load_config() an alternate path).
-# Note: this module imports cite.py, which reads specs/user/specs.json at import
-# time WHEN THAT MANIFEST EXISTS (absent = bundled-only state, no read).
+# Note: this module imports cite.py, which registers nothing at import time. A
+# caller that resolves a locator must install a registry first; see
+# engine/index_store.py::install_registry.
 DEFAULT_CONFIG_PATH = HERE / "panel-config.json"
 
 
@@ -255,7 +256,6 @@ def passages(spec):
     return out
 
 
-DEFAULT_REGISTRY_PATH = HERE / "behaviours.json"
 REGISTRY_SOURCE = {}   # id(parsed dict) -> path it came from, for error messages
 
 
@@ -282,7 +282,8 @@ def _panel_shape(slug, entry):
 
 def load_registry(path=None):
     """{slug: raw entry} from a behaviour registry, EITHER shape. Default: the
-    panel's own behaviours.json. Non-dict values (file-level notes) are dropped,
+    database, which is the only place the index lives. A path is still accepted,
+    for fixtures and for a fork judging a registry of its own. Non-dict values (file-level notes) are dropped,
     matching run_rollout.py's filter.
 
     Entries are NOT adapted here -- load_entry adapts the one you ask for. That
@@ -290,7 +291,14 @@ def load_registry(path=None):
     ten of the shipped rows are unpublished index behaviours with an empty
     definition. Adapting eagerly made the documented instruction produce a
     registry that always failed, naming a slug the user never mentioned."""
-    src = Path(path or DEFAULT_REGISTRY_PATH)
+    if path is None:
+        sys.path.insert(0, str(HERE.parent))
+        import index_store            # noqa: E402
+        from store import Store       # noqa: E402
+        kept = index_store.judging_registry(Store.from_env())
+        REGISTRY_SOURCE[id(kept)] = "supabase aci_behaviours"
+        return kept
+    src = Path(path)
     try:
         raw = json.loads(src.read_text())
     except FileNotFoundError:

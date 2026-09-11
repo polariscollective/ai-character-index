@@ -1,3 +1,10 @@
+> **What these tests read.** The index lives in Supabase and CI knows no
+> secret, so everything here runs against fixtures: `parser-corpus.md`, a
+> document carrying every construction `cite.py` recognises; `index.py`, two
+> behaviours, one defined and one not; and `reader/`, the two payloads the
+> reader's routes serve. A fixture is a test input, never a second copy of
+> the index. The published data is verified by `.github/workflows/provenance.yml`.
+
 # tests/
 
 Regression tests for the spec-coverage tooling.

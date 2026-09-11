@@ -13,7 +13,7 @@ The root holds the project's two entry documents (`PLAN.md`, `README.md`) and th
 | `package.json` | Root package `ai-character-index` (private); `packageManager: pnpm@11.26.0`; `engines.node >= 22`; scripts: `dev`/`build`/`start` for Next, `test:routes`, and the `predev`/`prebuild` pair that copies `site/` into the gitignored `public/`; deps: `next`, `react`, `react-dom`; devDep: `playwright-core ^1.61.1` |
 | `pnpm-workspace.yaml` | Declares no packages; only `allowBuilds` (esbuild, sharp, workerd) — the pnpm ≥10 allowlist for transitive deps that run postinstall builds |
 | `pnpm-lock.yaml` | Lockfile v9; exactly one importer (`.` = root) |
-| `.gitignore` | Standard entries (node_modules, dist, .env, logs, .DS_Store), `.claude/` local settings, local panel run outputs (timestamped payloads + `manifest.json`; runlogs/metrics via `engine/panel/.gitignore`), user-registered specs (`specs/user/`), builder smoke scratch, plus two repo-specific private paths: `research/sources/Founding an AI Charter organisation.pdf` and `outreach/` |
+| `.gitignore` | Standard entries (node_modules, dist, .env, logs, .DS_Store), `.claude/` local settings, `public/` (a build-time copy of `site/`), `.next/`, local panel runlogs and metrics via `engine/panel/.gitignore`, plus two repo-specific private paths: `research/sources/Founding an AI Charter organisation.pdf` and `outreach/` |
 
 ## Relationships
 - The site is a Next.js application, deployed to Vercel. `site/` remains the reader's source and is copied into `public/` by `predev`/`prebuild`; `public/` is gitignored, so the tracked tree has one copy of the reader and not two.
@@ -37,6 +37,7 @@ graph LR
 ## As-is observations
 - The "pnpm workspace" is the root package alone: `pnpm-workspace.yaml` has no `packages:` key and `pnpm-lock.yaml` has a single importer.
 - PLAN.md §8's repo map lists `outreach/` as a repo folder, but `.gitignore` excludes `outreach/` — it can only exist in local clones, never on main.
+- PLAN.md and the older overviews describe a `data/` directory of canonical JSON. It is gone: the index lives in Supabase, and `engine/published-artefacts.sha256.json` is what stands in the repository for what it published.
 - PLAN.md §5's CI/CD table promises `ci.yml`, `notion-sync.yml`, `spec-watch.yml` alongside a deploy workflow; only `ci.yml` exists now — deployment is Vercel's, fired by a push rather than by a workflow here (see `.github/OVERVIEW.md`).
 - `engines`/`scripts` nothing calls: none — `playwright-core` is used by the two `engine/verify-*.mjs`, in CI's browser job and locally.
 - `engines.node` is `>=22.13 <25`: the floor is the one pnpm actually needs, and the ceiling stops the runtime following every new Node major on its own — a deploy warned about exactly that. It was `>=22`, which admitted Node 22.0–22.12, versions the pinned packageManager will not run on.

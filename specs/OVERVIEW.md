@@ -1,3 +1,9 @@
+> **The spec texts are no longer here.** They live in `aci_spec_versions`,
+> insert-only and keyed by content digest, which is what makes the byte-exact
+> citation guarantee structural. What remains in this directory is the locator
+> grammar (`CITATION.md`) and each mirror's provenance note — documents about
+> the data rather than the data.
+
 # specs/ — version-pinned mirrors of the lab specs every citation resolves against
 > As-is snapshot of origin/main @ 72e2e6b (2026-08-18); the documentation set itself is added by this PR. Describes what exists now, not what should exist.
 

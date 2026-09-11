@@ -41,6 +41,14 @@ Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is
 vol. 2, cf. the note above. The span arithmetic must count four sentences here
 and not eleven.
 
+A full stop ends a sentence. So does a question mark, does it not? And an
+exclamation mark does! A semicolon does not; Polaris writes them
+often, and a splitter that treated one as a terminator would split this sentence
+in two. The capital after the semicolon is deliberate: the splitter only breaks
+where the next character could open a sentence, so a semicolon followed by a
+lower-case word would not exercise the rule at all. A colon
+does not either: it introduces.
+
 ## Blocks {#blocks}
 
 A blank line ends a block. This paragraph is one block.

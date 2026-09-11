@@ -62,20 +62,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-BUNDLED_SPECS = {
-    ("constitution", "2026-01-20"): "specs/claude-constitution/20260120-constitution.md",
-    ("model-spec", "2025-12-18"): "specs/openai-model-spec/model_spec.md",
-}
-BUNDLED_DEFAULT_VERSION = {"constitution": "2026-01-20", "model-spec": "2025-12-18"}
-
-USER_MANIFEST_PATH = REPO_ROOT / "specs" / "user" / "specs.json"
-MANIFEST_ENV_VAR = "SPEC_CITE_USER_SPECS"
-
 SPEC_NAME_RE = re.compile(r"^[a-z-]+$")
 VERSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-# Effective registry: bundled specs merged with the user manifest (if any).
-# Rebuilt by load_user_manifest(); never edit these by hand at runtime.
+# The registry, empty until use_registry() installs one. It used to be built at
+# import time from a hardcoded pair of paths merged with a user manifest; the
+# index lives in Supabase now, and a module that silently falls back to files
+# that are not there is the failure this arrangement exists to remove.
 SPECS = {}
 DEFAULT_VERSION = {}
 # Rendering metadata from the manifest, keyed (name, version): a subset of
@@ -105,10 +98,10 @@ def use_registry(entries, defaults, meta, document_source):
 
 
 def reset_registry():
-    """Back to bundled specs plus the user manifest, reading from disk."""
-    global DOCUMENT_SOURCE
-    DOCUMENT_SOURCE = None
-    load_user_manifest()
+    """Forget the installed registry. Mostly for tests, which install their own
+    and must not leak it into the next one."""
+    global SPECS, DEFAULT_VERSION, USER_SPEC_META, DOCUMENT_SOURCE
+    SPECS, DEFAULT_VERSION, USER_SPEC_META, DOCUMENT_SOURCE = {}, {}, {}, None
 
 
 def _read_document(spec, version, key):
@@ -118,112 +111,6 @@ def _read_document(spec, version, key):
         return (REPO_ROOT / key).read_text(encoding="utf-8")
     except OSError as e:
         sys.exit(f"cannot read spec document '{key}' for {spec}@{version}: {e}")
-
-
-def load_user_manifest(manifest_path=None):
-    """Rebuild SPECS / DEFAULT_VERSION / USER_SPEC_META as bundled specs +
-    user manifest.
-
-    Idempotent: always restarts from the bundled registry, so calling it
-    again after the manifest changed picks up the new state. An absent
-    manifest is the normal bundled-only state, not an error; a present but
-    malformed one fails loudly BEFORE anything is merged, leaving the
-    registry as it was. manifest_path overrides the location (as
-    SPEC_CITE_USER_SPECS does for the whole process).
-    """
-    global SPECS, DEFAULT_VERSION, USER_SPEC_META
-    merged = dict(BUNDLED_SPECS)
-    defaults = dict(BUNDLED_DEFAULT_VERSION)
-    meta = {}
-    if manifest_path is None:
-        manifest_path = os.environ.get(MANIFEST_ENV_VAR) or USER_MANIFEST_PATH
-    path = Path(manifest_path)
-    if path.is_file():
-        try:
-            manifest = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as e:
-            sys.exit(f"user-spec manifest {path} is not readable JSON: {e}")
-        if not isinstance(manifest, dict):
-            sys.exit(f"user-spec manifest {path}: top level must be a JSON object")
-        for name, versions in manifest.items():
-            if name in BUNDLED_DEFAULT_VERSION:
-                sys.exit(
-                    f"user-spec manifest {path} defines '{name}', a bundled "
-                    "spec; user specs cannot shadow bundled specs -- pick "
-                    "another name"
-                )
-            if not SPEC_NAME_RE.match(name):
-                sys.exit(
-                    f"user-spec manifest {path}: bad spec name '{name}' "
-                    "(must match [a-z-]+, the locator grammar's spec identifiers)"
-                )
-            if not isinstance(versions, dict) or not versions:
-                sys.exit(
-                    f"user-spec manifest {path}: spec '{name}' must map at "
-                    "least one version to an entry"
-                )
-            explicit_defaults = []
-            for version, entry in versions.items():
-                if not VERSION_RE.match(version):
-                    sys.exit(
-                        f"user-spec manifest {path}: bad version '{version}' "
-                        f"for '{name}' (must be an ISO date YYYY-MM-DD)"
-                    )
-                if not isinstance(entry, dict):
-                    sys.exit(
-                        f"user-spec manifest {path}: entry for "
-                        f"'{name}@{version}' must be an object"
-                    )
-                unknown = sorted(set(entry) - {"path", "default", "title", "sourceUrl"})
-                if unknown:
-                    sys.exit(
-                        f"user-spec manifest {path}: unknown key(s) {unknown} "
-                        f"in '{name}@{version}' "
-                        "(allowed: path, default, title, sourceUrl)"
-                    )
-                spec_path = entry.get("path")
-                if not isinstance(spec_path, str) or not spec_path:
-                    sys.exit(
-                        f"user-spec manifest {path}: entry for "
-                        f"'{name}@{version}' needs a non-empty \"path\" string"
-                    )
-                default = entry.get("default", False)
-                if not isinstance(default, bool):
-                    sys.exit(
-                        f"user-spec manifest {path}: 'default' for "
-                        f"'{name}@{version}' must be a boolean"
-                    )
-                entry_meta = {}
-                for key in ("title", "sourceUrl"):
-                    if key in entry:
-                        value = entry[key]
-                        if not isinstance(value, str) or not value:
-                            sys.exit(
-                                f"user-spec manifest {path}: '{key}' for "
-                                f"'{name}@{version}' must be a non-empty string"
-                            )
-                        entry_meta[key] = value
-                merged[(name, version)] = spec_path
-                meta[(name, version)] = entry_meta
-                if default:
-                    explicit_defaults.append(version)
-            if len(explicit_defaults) > 1:
-                sys.exit(
-                    f"user-spec manifest {path}: '{name}' marks multiple "
-                    f"versions default: {sorted(explicit_defaults)}"
-                )
-            if explicit_defaults:
-                defaults[name] = explicit_defaults[0]
-            elif len(versions) == 1:
-                defaults[name] = next(iter(versions))
-            # several versions and none marked default: load_spec(name, None)
-            # reports the choice instead of guessing
-    SPECS = merged
-    DEFAULT_VERSION = defaults
-    USER_SPEC_META = meta
-
-
-load_user_manifest()
 
 
 HEADING_RE = re.compile(
@@ -392,8 +279,13 @@ def split_sentences(text):
 
 
 def resolve_spec(spec, version):
-    """(version, path) for a registered spec, applying the default-version
-    rule. Loud failure shared by load_spec and spec_meta."""
+    """(version, key) for a registered spec, applying the default-version rule.
+    The key is whatever the installed document source understands. Loud failure
+    shared by load_spec and spec_meta."""
+    if not SPECS:
+        sys.exit("no spec registry is installed: call cite.use_registry() first "
+                 "(engine/index_store.py::install_registry does it from the "
+                 "database, tests/fixtures/index.py from the fixture)")
     version = version or DEFAULT_VERSION.get(spec)
     path = SPECS.get((spec, version))
     if not path:
@@ -440,18 +332,6 @@ def spec_meta(spec, version=None):
     entry = USER_SPEC_META.get((spec, version), {})
     title = entry.get("title") or first_heading_title(path, spec, version)
     return {"title": title, "sourceUrl": entry.get("sourceUrl")}
-
-
-def user_specs():
-    """The user-manifest specs only (never bundled): {name: [versions...]},
-    versions sorted. Lets a caller enumerate registered user specs, e.g. to
-    fold them into the spec reader's document list."""
-    out = {}
-    for name, ver in SPECS:
-        if name in BUNDLED_DEFAULT_VERSION:
-            continue
-        out.setdefault(name, []).append(ver)
-    return {name: sorted(vers) for name, vers in sorted(out.items())}
 
 
 def find_section(sections, ref):
@@ -627,7 +507,39 @@ def cmd_find(args):
         )
 
 
+DOCUMENT_ENV_VAR = "SPEC_CITE_DOCUMENT"
+
+
+def install_cli_registry():
+    """Give the command line a registry to resolve against.
+
+    Two sources, and the second exists so the golden dumper can run offline:
+
+      SPEC_CITE_DOCUMENT=name@version:path   one markdown file, registered alone
+      otherwise                              the index, from the database
+
+    A human running `cite.py resolve` wants the real documents. A test wants a
+    document it controls, and must not need credentials to have one.
+    """
+    pinned = os.environ.get(DOCUMENT_ENV_VAR)
+    if pinned:
+        try:
+            pin, path = pinned.split(":", 1)
+            name, version = pin.split("@", 1)
+        except ValueError:
+            sys.exit(f"{DOCUMENT_ENV_VAR} must read name@version:path, got {pinned!r}")
+        text = Path(path).read_text(encoding="utf-8")
+        use_registry({(name, version): path}, {name: version},
+                     {(name, version): {"title": name}}, lambda key: text)
+        return
+    sys.path.insert(0, str(REPO_ROOT / "engine"))
+    import index_store            # noqa: E402
+    from store import Store       # noqa: E402
+    index_store.install_registry(Store.from_env())
+
+
 def main():
+    install_cli_registry()
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(1)

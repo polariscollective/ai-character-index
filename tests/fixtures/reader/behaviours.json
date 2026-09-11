@@ -1,0 +1,166 @@
+{
+ "generatedFrom": [
+  "tests/fixtures/reader (synthetic)"
+ ],
+ "provenance": {
+  "method": "fixture",
+  "rubric": "v5",
+  "panel_config": "fixture",
+  "panel": [
+   "a",
+   "b",
+   "c"
+  ],
+  "judges_seen_in_data": [
+   "a",
+   "b",
+   "c"
+  ],
+  "runDate": "2026-01-01",
+  "scoring": "per passage: sum over judges of defining=3/core=2/related=1/neither=0"
+ },
+ "behaviours": [
+  {
+   "id": 1,
+   "slug": "defined-behaviour",
+   "name": "Defined behaviour",
+   "definition": "The document should say what it means.",
+   "category": "Behaviours under test",
+   "coverage": {
+    "corpus-labs": {
+     "verdict": "covered",
+     "depth": 3,
+     "note": "",
+     "verifiedDate": "2026-01-01",
+     "passages": [
+      {
+       "id": "corpus-labs-defined-behaviour-1",
+       "locator": "corpus@2026-01-01 > Parser corpus > Headings and anchors > A section reached by path > ¶1",
+       "quote": "This one has no anchor, so it is named by the path of its ancestors' titles. Both locator styles must resolve, because the index has one document of each kind.",
+       "role": "Model determined relevance (score 2/2):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2
+       },
+       "score": 2
+      },
+      {
+       "id": "corpus-labs-defined-behaviour-2",
+       "locator": "corpus@2026-01-01 > #sentences > ¶1",
+       "quote": "A locator may name a span of sentences, so the splitter has to agree with a reader about where a sentence ends. This paragraph has three. The second one ends here. And the third mentions e.g. an abbreviation, i.e. a token that ends in a full stop without ending a sentence, such as etc. or vs. or approx. and the U.S. and the U.K.",
+       "role": "Model determined relevance (score 1/2):\n✓ a — core",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 1
+       },
+       "score": 1
+      }
+     ]
+    },
+    "second-labs": {
+     "verdict": "covered",
+     "depth": 3,
+     "note": "",
+     "verifiedDate": "2026-01-01",
+     "passages": [
+      {
+       "id": "second-labs-defined-behaviour-1",
+       "locator": "second@2026-02-01 > #overview > ¶1",
+       "quote": "A second document, so the reader's compare view has two panes to put side by side. It is deliberately short: what it must do is exist, parse, and carry a handful of citable blocks.",
+       "role": "Model determined relevance (score 4/4):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2
+       },
+       "score": 4
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": 2,
+   "slug": "undefined-behaviour",
+   "name": "Undefined behaviour",
+   "definition": "Tracked, and defined nowhere.",
+   "category": "Behaviours under test",
+   "coverage": {
+    "corpus-labs": {
+     "verdict": "covered",
+     "depth": 3,
+     "note": "",
+     "verifiedDate": "2026-01-01",
+     "passages": [
+      {
+       "id": "corpus-labs-undefined-behaviour-1",
+       "locator": "corpus@2026-01-01 > #sentences > ¶2",
+       "quote": "Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is vol. 2, cf. the note above. The span arithmetic must count four sentences here and not eleven.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "corpus-labs-undefined-behaviour-2",
+       "locator": "corpus@2026-01-01 > #blocks > ¶2",
+       "quote": "This is a second block, and it runs across two source lines, which the parser joins into one block because the second line continues the first.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "corpus-labs-undefined-behaviour-3",
+       "locator": "corpus@2026-01-01 > #inline > ¶3",
+       "quote": "Whitespace collapses, including across lines, so a quote reads as one line however the source was wrapped.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    },
+    "second-labs": {
+     "verdict": "covered",
+     "depth": 3,
+     "note": "",
+     "verifiedDate": "2026-01-01",
+     "passages": [
+      {
+       "id": "second-labs-undefined-behaviour-1",
+       "locator": "second@2026-02-01 > #section-a > ¶1",
+       "quote": "A paragraph long enough to be worth citing, with two sentences so a span can name part of it. This is the second sentence.",
+       "role": "Model determined relevance (score 3/4):\n✓ a — core",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 1
+       },
+       "score": 3
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

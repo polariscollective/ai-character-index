@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,32 +37,37 @@ GOLDEN = Path(__file__).resolve().parent / "golden"
 sys.path.insert(0, str(CITE.parent))
 import cite  # noqa: E402
 
-SPECS = ("constitution", "model-spec")
+# The corpus is dumped from a document written for it, not from the lab specs:
+# those left the repository when the index moved to Supabase. See
+# tests/fixtures/parser-corpus.md, whose coverage tests/test_parser_corpus.py
+# asserts construction by construction.
+CORPUS_DOC = ROOT / "tests" / "fixtures" / "parser-corpus.md"
+CORPUS_PIN = "corpus@2026-01-01"
+SPECS = ("corpus",)
 
 # (spec, query) pairs for the find golden. Queries use straight ASCII
 # quotes/dashes on purpose: a hit proves the folding maps them onto the
 # specs' typographic characters.
 FIND_QUERIES = [
-    # straight apostrophe must fold onto the constitution's curly ones
-    ("constitution", "Claude's three types of principals"),
-    # "--" must fold onto an em-dash in the spec text
-    ("constitution", "a calculated bet on our part--if powerful AI is coming"),
-    # straight double quotes must fold onto curly ones
-    ("constitution", 'viewing lower priorities as "tie-breakers"'),
-    # a needle crossing a sentence boundary: must report an s<lo>-<hi> range
-    # and join both sentences in the excerpt (the cmd_find span arithmetic)
-    ("constitution", "bear on a given interaction. In practice, the vast majority"),
-    # a multi-hit single-sentence query across specs
-    ("model-spec", "chain of command"),
+    # a plain hit
+    ("corpus", "Each top-level list item is its own block"),
+    # a needle crossing a sentence boundary: must report an s<lo>-<hi> range and
+    # join both sentences in the excerpt (the cmd_find span arithmetic)
+    ("corpus", "This paragraph has three. The second one ends here."),
+    # a multi-hit query
+    ("corpus", "block"),
     # a known miss: pins the not-found exit path and message
-    ("constitution", "this-is-not-in-the-spec-at-all"),
+    ("corpus", "this-is-not-in-the-corpus-at-all"),
 ]
 
 
 def cli(*args: str, check: bool = True) -> str:
+    # The corpus document travels to the subprocess by environment variable, so
+    # the dump needs no credentials and no network. See cite.install_cli_registry.
+    env = dict(os.environ, SPEC_CITE_DOCUMENT=f"{CORPUS_PIN}:{CORPUS_DOC}")
     result = subprocess.run(
         [sys.executable, str(CITE), *args],
-        capture_output=True, text=True, encoding="utf-8",
+        capture_output=True, text=True, encoding="utf-8", env=env,
     )
     if result.returncode != 0:
         if check:
@@ -73,9 +79,19 @@ def cli(*args: str, check: bool = True) -> str:
 
 
 def section_ref(spec: str, section: "cite.Section") -> str:
-    if spec == "model-spec" and section.anchor:
+    """Anchor where there is one, path otherwise -- both styles in one document,
+    which is what the two lab specs used to give between them."""
+    if section.anchor:
         return f"#{section.anchor}"
     return section.path_str
+
+
+def install() -> None:
+    """The same registry the subprocesses get, for the in-process calls."""
+    text = CORPUS_DOC.read_text(encoding="utf-8")
+    name, version = CORPUS_PIN.split("@", 1)
+    cite.use_registry({(name, version): str(CORPUS_DOC)}, {name: version},
+                      {(name, version): {"title": name}}, lambda key: text)
 
 
 def dump_spec(spec: str) -> str:
@@ -109,6 +125,7 @@ def main() -> None:
         sys.exit("usage: dump_goldens.py --write [corpus|find] [--bless]"
                  "   (regenerates tests/golden/; --bless also accepts a changed"
                  " corpus digest as the new baseline)")
+    install()
     GOLDEN.mkdir(parents=True, exist_ok=True)
     if only in (None, "corpus"):
         # The corpus text is NOT committed (it was ~800 KB whose only job was to
