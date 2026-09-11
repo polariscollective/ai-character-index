@@ -44,6 +44,11 @@ This is the second of three documents.
    behaviour, compose a run, and publish a result. Its own document, and it
    waits on this one: a button that judges needs something that judges.
 
+A fourth, later and much smaller than it first looked: the public submission
+button on the "Use the tool" page is a file into a bucket and a message into
+Slack. No queue, no moderation model, no table. Someone reads the message and
+registers it through the admin surface, or does not.
+
 This document assumes the tables of the first exist. It stops at the point where
 a run and its calls are rows: what puts them there is a small CLI here, and the
 admin surface later. Nothing here renders anything.
