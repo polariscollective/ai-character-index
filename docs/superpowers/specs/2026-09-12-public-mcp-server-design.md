@@ -271,8 +271,8 @@ cell that could not have reached 9.
 
 ## Comparability
 
-A response that covers more than one specification carries `comparability`, in
-plain words:
+A **request** that names more than one specification carries `comparability` on
+every page, in plain words:
 
 > Passage counts are not comparable between these documents. Four behaviours
 > were swept by more judges against Claude's Constitution than against the
@@ -280,9 +280,11 @@ plain words:
 > them. The bands each passage carries are sound; the totals are not a
 > like-for-like measure of coverage.
 
-A single-specification response does not carry it. Nothing in such a response
+A single-specification request does not carry it. Nothing in such an answer
 invites the comparison, and a caveat repeated on every call is a caveat an
-agent learns to skip.
+agent learns to skip. The request rather than the page is what decides, because
+a two-specification walk whose first page happens to hold one cell is still a
+comparison being assembled.
 
 The same sentence appears in the `retrieve_passages` description and on the MCP
 page. When the nine missing calls on the model spec are filled, this field and
@@ -318,22 +320,26 @@ correctness assumption: a cold instance reads Supabase and answers correctly.
 MCP client ──POST /api/mcp──► app/api/mcp/route.js
                                     │  mcp-handler + @modelcontextprotocol/sdk
                                     ▼
-                              app/lib/mcp-tools.mjs      the three answers
+                              app/lib/index-snapshot.mjs  one row, memoised
+                                    │
+                              app/lib/mcp-tools.mjs       the three answers
                                     │
                                     ├──► app/lib/bands.mjs        band arithmetic
-                                    ├──► app/lib/publications.mjs payload, documents
+                                    ├──► app/lib/supabase.mjs     the one PostgREST caller
                                     └──► app/lib/behaviours.mjs   registry notes
 ```
 
 | file | what it holds |
 |---|---|
 | `app/api/mcp/route.js` | the handshake, the three tool registrations and their schemas |
-| `app/lib/mcp-tools.mjs` | the three answers, pure functions of payload, documents, notes and arguments |
+| `app/lib/mcp-tools.mjs` | the three answers, pure functions of a snapshot and arguments |
+| `app/lib/index-snapshot.mjs` | the publication row and the registry notes, read once and memoised |
 | `app/lib/bands.mjs` | the band cuts, lifted out of the reader |
 | `site/mcp.html` | the page |
 
-Two dependencies: `mcp-handler` (Vercel's framework-agnostic adapter, 2.1.1)
-and `@modelcontextprotocol/sdk` (1.30.0). This repository avoids client
+Three dependencies: `mcp-handler` (Vercel's framework-agnostic adapter, 2.1.1,
+entry point `createMcpHandler`), its peer `@modelcontextprotocol/server`
+(2.0.0), and `zod` (4.x) for the tool schemas. This repository avoids client
 libraries for what it controls — PostgREST is plain `fetch`, and stays plain
 `fetch`. The MCP wire protocol is not that. It is a moving external
 specification with many clients, and the value of a public server is that an
@@ -359,8 +365,10 @@ different things, which is worse than either being wrong alone.
 
 ## The MCP page
 
-A new page at `site/mcp.html`, and a nav entry `MCP` after `Use the tool` in
-`site/index.html`, `site/methodology.html` and `site/spec-reader/index.html`.
+A new page at `site/mcp.html`, and a nav entry `MCP` directly after `Use the
+tool` in `site/methodology.html`, `site/propose.html` and
+`site/spec-reader/index.html`. `site/index.html` is a redirect stub with no
+navigation and is left alone.
 
 It reuses `methodology.html`'s shell: the same header, footer, palette pair and
 Polaris framework tokens.
@@ -400,8 +408,8 @@ case, British spelling, no em-dashes in the page copy.
   `app.js`, over the achievable score space.
 - One end-to-end check against the running route: `initialize`, `tools/list`
   returning three tools, and one `tools/call` that comes back with a passage.
-- `package.json` gains a script that runs the `node --test` files together;
-  `test:routes` stays as it is.
+- No new script: `test:routes` already globs `app/lib/__tests__/*.test.mjs`, so
+  the new files join it by being written there.
 
 ## What this does not fix
 
