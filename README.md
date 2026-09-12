@@ -92,11 +92,17 @@ the document covers.
 list of model tags. `--behaviour` takes either registry shape; a boundary is
 optional and worth writing, because without one each judge draws its own line.
 
+A document is any markdown file and a behaviour is a small JSON file. Neither is
+registered anywhere and neither needs to be: you point at them, and they are
+judged by the same panel, the same prompt and the same parser the deployed index
+runs on. The only thing a local run does not give you is the published index —
+the shared coverage map, its frozen ledger of citations, and the reader.
+
 **The tool that stands alone is
 [`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index).**
-It needs no infrastructure at all and is the one to clone if running the panel is
-what you came for. This repository carries the hosted index as well, which is why
-everything below it needs credentials.
+It carries no infrastructure at all and is the lighter clone if running the panel
+is what you came for. This repository was built to host and publish as well, which
+is what everything below needs credentials for.
 
 ## Running the whole thing locally
 

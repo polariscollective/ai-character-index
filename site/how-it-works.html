@@ -254,7 +254,6 @@
   <nav aria-label="Primary navigation">
     <a href="/spec-reader/">Spec reader</a>
     <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
-    <a href="/mcp">MCP</a>
     <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
   </nav>
 </header>
@@ -439,7 +438,14 @@
   </section>
 
   <section class="m">
-    <h2>Clone it and run it yourself</h2>
+    <h2>Run it yourself</h2>
+    <p class="lead">Everything this does, you can do on your own machine: add a document,
+    describe a behaviour, judge one against the other, read every verdict. No account, no
+    database, nothing of ours. What the infrastructure behind this site adds is the
+    <i>published</i> index &mdash; the shared coverage map, its ledger of citations, and the
+    reader you are looking at. The work itself is local.</p>
+
+    <h3>The original</h3>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
@@ -449,22 +455,27 @@ python3 -m http.server 8080 --directory site</code></pre>
     of wording the same behaviour, between one panel of readers and another. Rewrite a paragraph
     of a spec, run it again, and the diff is the answer to &ldquo;did that paragraph actually
     change what the document covers?&rdquo;</p>
-    <p>You can also point it at a document of your own: your organisation&rsquo;s policy, a draft
-    nobody has published, a competitor&rsquo;s. It never leaves your machine.</p>
+    <p>Point it at a document of your own: your organisation&rsquo;s policy, a draft nobody has
+    published, a competitor&rsquo;s. It never leaves your machine.</p>
 
-    <h3>Or clone ours</h3>
+    <h3>Or ours</h3>
     <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
     rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
-    this site. It is <i>less portable</i>, deliberately: the published index lives in a hosted
-    database, the judging runs on our infrastructure, and a clone without our credentials cannot
-    reach either. What it can do is judge locally, with one API key and no account at all:</p>
+    this site. It was built to carry infrastructure &mdash; a hosted database, judging that runs
+    on our machines, a portal that publishes &mdash; which makes it the heavier clone of the two.
+    It judges locally all the same, with one API key and no account:</p>
     <pre><code>python3 engine/local_run.py \
     --document=my-spec@2026-09-12:path/to/spec.md \
     --behaviour=path/to/behaviour.json \
     --panel=frontier_fast</code></pre>
-    <p>The results land in <code>artefacts/</code> as raw files: every reply exactly as it came
-    back, every verdict with its locator and the text it judged, and what each call cost. Same
-    diffing, no database. The README says what the JSON file holds.</p>
+    <p><b>A document is any markdown file and a behaviour is a small JSON file.</b> Neither is
+    registered anywhere and neither needs to be: you point at them, and they are judged by the
+    same panel, the same prompt and the same parser this site runs on.</p>
+    <p>The results land in <code>artefacts/</code> as raw files &mdash; every reply exactly as it
+    came back, every verdict with its locator and the text it judged, and what each call cost.
+    Same diffing, no database. The README says what each file holds.</p>
+    <p>The one thing a local run does not give you is this site: a published index, with its
+    citations frozen and its coverage map in the reader, is what the hosted half exists for.</p>
   </section>
   </div>
 
