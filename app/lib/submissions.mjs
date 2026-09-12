@@ -135,30 +135,71 @@ export async function record({ kind, proposal, document, submitter, hash },
   return row;
 }
 
+/* Slack reads a few sequences out of message text, and one of them is a way to
+ * ping everyone in the channel. This form is open to the internet, so a proposal
+ * could carry <!channel> and would otherwise send it. Escaping the three
+ * characters Slack asks for is also what stops that being parsed at all. */
+function forSlack(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* Long enough to judge a proposal from the message, short enough to read. */
+const IN_SLACK = 700;
+
+const FIELDS = {
+  behaviour: [["name", "Called"], ["query", "What it requires"],
+              ["boundary", "Where it stops"], ["why", "Why it matters"]],
+  specification: [["organisation", "Published by"], ["name", "Called"],
+                  ["version", "Version"], ["source_url", "Source"],
+                  ["why", "Why it belongs"]],
+};
+
 /**
  * Tell Slack. Returns what went wrong, or null; never throws.
  *
  * The proposal is already recorded by the time this runs, so a failure here is a
- * message nobody got rather than work nobody has.
+ * message nobody got rather than work nobody has. That is why the caller records
+ * first and announces second, and why this swallows everything.
+ *
+ * `SLACK_WEBHOOK_URL` is an incoming webhook, the same shape the organisation's
+ * other notifications use. Without it the proposal is still recorded and the log
+ * says who was not told.
  */
-export async function announce(row, fetchImpl = fetch) {
+export async function announce(row, fetchImpl = fetch, site = "") {
   const hook = process.env.SLACK_WEBHOOK_URL?.trim();
   if (!hook) return "SLACK_WEBHOOK_URL is not set";
+
+  const proposal = row.proposal || {};
   const title = row.kind === "behaviour"
-    ? `New behaviour proposed: ${row.proposal.name}`
-    : `New specification proposed: ${row.proposal.organisation} — ${row.proposal.name}`;
-  const lines = Object.entries(row.proposal)
-    .filter(([, value]) => value)
-    .map(([key, value]) => `*${key}*: ${String(value).slice(0, 500)}`);
+    ? `New behaviour proposed: ${proposal.name || "untitled"}`
+    : `New document proposed: ${proposal.organisation || "unknown"}, `
+      + `${proposal.name || "untitled"}`;
+
+  const lines = (FIELDS[row.kind] || [])
+    .filter(([key]) => proposal[key])
+    .map(([key, label]) => {
+      const value = String(proposal[key]);
+      const shown = value.length > IN_SLACK ? `${value.slice(0, IN_SLACK)}...` : value;
+      return `*${label}:* ${forSlack(shown)}`;
+    });
+
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: forSlack(title).slice(0, 150) } },
+    { type: "section", text: { type: "mrkdwn", text: lines.join("\n") || "_no fields_" } },
+    { type: "context", elements: [{ type: "mrkdwn",
+      text: `From ${forSlack(row.submitter || "no address given")}`
+          + (row.document ? " | a document is attached, readable in the portal" : "")
+          + ` | <${site}/admin/submissions|read it in the portal>` }] },
+  ];
+
   try {
     const response = await fetchImpl(hook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: [title, ...lines,
-               row.submitter ? `*from*: ${row.submitter}` : "*from*: no address given",
-               "Read it in the portal: /admin/submissions"].join("\n"),
-      }),
+      // `text` is the notification and the fallback for clients that do not
+      // render blocks. Sending blocks without it makes a silent push.
+      body: JSON.stringify({ text: forSlack(title), blocks }),
     });
     return response.ok ? null : `slack returned ${response.status}`;
   } catch (error) {

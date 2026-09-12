@@ -124,7 +124,7 @@ export default async function Runs({ searchParams }) {
             <select name="panel" defaultValue="frontier_fast">
               {panelRows.map(panel => (
                 <option key={panel.name} value={panel.name}>
-                  {panel.name} — {panel.seats.join(", ")}
+                  {panel.name}: {panel.seats.join(", ")}
                 </option>
               ))}
             </select>

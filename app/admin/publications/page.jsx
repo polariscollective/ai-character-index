@@ -77,10 +77,10 @@ export default async function Publications({ searchParams }) {
         <h2>Build a publication</h2>
         <p className="why">
           Every cell must have been judged by exactly the models named below, all of
-          them done, in one run. That is the claim the index sells — that a verdict
-          on one lab&apos;s document and a verdict on another&apos;s were reached the
-          same way — and it is refused here and again by the database. The build is
-          written as a draft; making it public is the next decision.
+          them done, in one run. That is the claim the index sells: a verdict on one
+          lab&apos;s document and a verdict on another&apos;s were reached the same way.
+          It is refused here and again by the database. The build is written as a
+          draft, and making it public is the next decision.
         </p>
         <form className="panel" method="post" action="/api/admin/publications">
           <input type="hidden" name="verb" value="build" />

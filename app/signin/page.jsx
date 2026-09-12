@@ -26,7 +26,7 @@ export default async function SignIn({ searchParams }) {
       <h1>AI Character Index</h1>
       <p>
         The operating surface of the index: the registry, the runs, and what the
-        public reader shows. Reading the index needs none of this — the reader is
+        public reader shows. Reading the index needs none of this. The reader is
         open at <a href="/spec-reader/">/spec-reader/</a>.
       </p>
 

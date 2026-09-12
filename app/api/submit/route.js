@@ -97,7 +97,7 @@ export async function POST(request) {
     });
   }
 
-  const silent = await announce(row);
+  const silent = await announce(row, fetch, new URL(request.url).origin);
   if (silent) console.error(`submit: proposal ${row.id} recorded, not announced: ${silent}`);
 
   return back(request, {

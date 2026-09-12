@@ -9,7 +9,7 @@ export function State({ value }) {
 /** A timestamp, to the minute. The reader's dates are days; an operator watching
  *  a run needs the time, and nobody needs the seconds. */
 export function When({ at }) {
-  if (!at) return <span className="empty">—</span>;
+  if (!at) return <span className="empty">not yet</span>;
   const stamp = new Date(at);
   return (
     <time dateTime={at} className="mono">
@@ -82,7 +82,7 @@ export function Jobs({ rows }) {
                   ? <a href={`/admin/runs#${job.run_id}`}>run</a>
                   : job.publication_id
                     ? <a href="/admin/publications">publication</a>
-                    : <span className="empty">—</span>}
+                    : <span className="empty">nothing yet</span>}
             </td>
           </tr>
         ))}

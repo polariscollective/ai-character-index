@@ -118,6 +118,15 @@ That serves the real index out of Supabase: the reader at
 [/spec-reader/](http://localhost:3000/spec-reader/), and the admin portal at
 [/admin](http://localhost:3000/admin).
 
+**Signing in to the portal locally.** Put your own address in `ALLOWED_EMAILS`
+and set the three `AUTH_` variables to the same Google client the deployment
+uses, then sign in with Google exactly as you would in production. The client
+already accepts `http://localhost:3000/api/auth/callback/google`.
+
+To skip sign-in entirely on a development machine, set `ACI_DEV_OPERATOR` to the
+address you want to be. It is ignored when `NODE_ENV` is production, so it
+cannot open a deployment.
+
 **Signing in locally.** The portal's door is Google sign-in against an
 allow-list, which needs an OAuth client. To skip that on a development machine,
 set `ACI_DEV_OPERATOR` to the address you want to be. It is ignored when

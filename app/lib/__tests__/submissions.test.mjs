@@ -152,15 +152,62 @@ test("an unreachable webhook is reported, not thrown", async () => {
   delete process.env.SLACK_WEBHOOK_URL;
 });
 
-test("the message names what arrived and where to read it", async () => {
+/* What was posted, for a message this shape. */
+async function posted(row, site = "https://index.example") {
   process.env.SLACK_WEBHOOK_URL = "https://hooks.example/x";
-  let sent;
-  const said = await announce(
-    { kind: "specification", proposal: GOOD_SPEC, submitter: "a@b.c" },
-    async (url, init) => { sent = JSON.parse(init.body).text; return { ok: true }; });
-  assert.equal(said, null);
-  assert.match(sent, /New specification proposed: OpenAI/);
-  assert.match(sent, /a@b\.c/);
-  assert.match(sent, /\/admin\/submissions/);
+  let body;
+  const said = await announce(row, async (url, init) => {
+    body = JSON.parse(init.body);
+    return { ok: true };
+  }, site);
   delete process.env.SLACK_WEBHOOK_URL;
+  assert.equal(said, null);
+  return body;
+}
+
+test("the message names what arrived, who sent it, and where to read it", async () => {
+  const body = await posted({ kind: "specification", proposal: GOOD_SPEC,
+                              submitter: "a@b.c", document: "2026-09-12/x.md" });
+  const text = JSON.stringify(body);
+  assert.match(body.blocks[0].text.text, /New document proposed: OpenAI/);
+  assert.match(text, /a@b\.c/);
+  assert.match(text, /https:\/\/index\.example\/admin\/submissions/);
+  assert.match(text, /a document is attached/);
+  // The fallback carries the notification; blocks alone push silently.
+  assert.match(body.text, /New document proposed/);
+});
+
+test("a behaviour's own fields are what the message shows", async () => {
+  const body = await posted({ kind: "behaviour", proposal: GOOD_BEHAVIOUR, submitter: "" });
+  const shown = body.blocks[1].text.text;
+  assert.match(shown, /\*Called:\* Bribery resistance/);
+  assert.match(shown, /\*What it requires:\*/);
+  assert.match(shown, /\*Where it stops:\*/);
+  assert.match(JSON.stringify(body), /no address given/);
+  assert.doesNotMatch(JSON.stringify(body), /attached/);
+});
+
+test("a proposal cannot make the message ping the channel", async () => {
+  // The form is open to the internet. Slack parses <!channel> out of message
+  // text, so an unescaped proposal is a way for a stranger to notify everyone.
+  const body = await posted({
+    kind: "behaviour",
+    proposal: { ...GOOD_BEHAVIOUR, name: "<!channel> & <!here>" },
+    submitter: "<https://evil.example|click me>",
+  });
+  const text = JSON.stringify(body);
+  assert.doesNotMatch(text, /<!channel>/);
+  assert.doesNotMatch(text, /<!here>/);
+  assert.match(text, /&lt;!channel&gt;/);
+  assert.match(text, /&amp;/);
+  // The one angle bracket left is the portal link this file wrote itself.
+  assert.equal((text.match(/<[^<]*\|/g) || []).length, 1);
+});
+
+test("a very long field is cut rather than posted whole", async () => {
+  const body = await posted({ kind: "behaviour",
+                              proposal: { ...GOOD_BEHAVIOUR, why: "x".repeat(5000) } });
+  const shown = body.blocks[1].text.text;
+  assert.ok(shown.length < 3000, `the message was ${shown.length} characters`);
+  assert.match(shown, /x\.\.\./);
 });
