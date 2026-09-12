@@ -34,8 +34,13 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          # The same two names every Polaris application deploys under, and
+          # repository variables rather than secrets: neither is one. A provider
+          # path and a service account address are public facts about the project,
+          # and what actually authorises this workflow is the identity binding in
+          # polaris-tf naming this repository.
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
