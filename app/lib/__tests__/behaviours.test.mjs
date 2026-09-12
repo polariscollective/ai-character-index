@@ -15,7 +15,7 @@ function stub(registry, calls) {
   const fetchImpl = async (url, init) => {
     urls.push(url);
     const rows = url.includes("aci_judge_calls") ? calls : registry;
-    return { ok: true, status: 200, json: async () => rows, init };
+    return { ok: true, status: 200, json: async () => rows, text: async () => "", init };
   };
   return { urls, fetchImpl };
 }
@@ -74,7 +74,7 @@ test("the key travels in both headers", async () => {
   let seen;
   await behaviourNotes(async (url, init) => {
     seen = init;
-    return { ok: true, json: async () => [] };
+    return { ok: true, status: 200, json: async () => [], text: async () => "" };
   });
   assert.equal(seen.headers.apikey, "KEY");
   assert.equal(seen.headers.Authorization, "Bearer KEY");
@@ -82,7 +82,9 @@ test("the key travels in both headers", async () => {
 
 test("a table that will not answer is an error, not an empty note set", async () => {
   await assert.rejects(
-    () => behaviourNotes(async () => ({ ok: false, status: 503, json: async () => [] })),
-    /aci_\w+ -> 503/,
+    () => behaviourNotes(async () => ({
+      ok: false, status: 503, json: async () => [], text: async () => "unavailable",
+    })),
+    /GET aci_\w+\?.* -> 503/,
   );
 });

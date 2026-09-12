@@ -16,7 +16,8 @@ function stub(rows, status = 200) {
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url, init });
-    return { ok: status < 300, status, json: async () => rows };
+    return { ok: status < 300, status, json: async () => rows,
+             text: async () => (status < 300 ? "" : "permission denied") };
   };
   return { calls, fetchImpl };
 }
@@ -36,6 +37,7 @@ test("no pin asks for the newest publication", async () => {
   assert.deepEqual(got, { ok: 1 });
   assert.match(calls[0].url, /order=published_at\.desc/);
   assert.match(calls[0].url, /limit=1/);
+  assert.match(calls[0].url, /is_public=is\.true/, "a draft is not what the reader serves");
 });
 
 test("a pin asks for that publication", async () => {
@@ -43,6 +45,9 @@ test("a pin asks for that publication", async () => {
   await publicationColumn("documents", ID, fetchImpl);
   assert.match(calls[0].url, new RegExp(`id=eq\\.${ID}`));
   assert.doesNotMatch(calls[0].url, /order=/);
+  // A pin reaches a draft: previewing what is about to be published is the
+  // whole point of having a draft at all.
+  assert.doesNotMatch(calls[0].url, /is_public/);
 });
 
 test("the key travels in both headers and never in the body", async () => {
@@ -85,5 +90,5 @@ test("the current publication is revalidated instead", async () => {
 test("a refused query is loud rather than empty", async () => {
   const { fetchImpl } = stub([], 403);
   await assert.rejects(() => publicationColumn("payload", null, fetchImpl),
-                       /aci_publications -> 403/);
+                       /GET aci_publications\?.* -> 403: permission denied/);
 });

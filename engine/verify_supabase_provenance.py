@@ -206,6 +206,26 @@ def check_the_published_artefacts_still_carry_their_digests(store):
                "unchanged" if got == want[name]["sha256"]
                else f"{got[:16]} against {want[name]['sha256'][:16]}")
 
+    # And the digest describes THESE bytes, which is the claim that makes it worth
+    # anything. Each builder serialises its payload its own way, so each column is
+    # re-serialised the way the builder that wrote it does; a digest that matched
+    # the record while the column said something else would be a digest of a file
+    # nobody serves.
+    #
+    # This is also what `json` rather than `jsonb` is for. jsonb reorders keys on
+    # the way in, which breaks this equality permanently and silently -- it did,
+    # once, and the tables were recreated.
+    for name, column, dump in (
+            ("payload", "payload_sha256",
+             lambda value: json.dumps(value, indent=1, ensure_ascii=False)),
+            ("documents", "documents_sha256",
+             lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":")))):
+        got = hashlib.sha256(dump(publication[name]).encode()).hexdigest()
+        report(got == publication[column],
+               f"the stored {name} is the bytes its digest describes",
+               "re-serialises to its digest" if got == publication[column]
+               else f"{got[:16]} against the stored {publication[column][:16]}")
+
 
 def check_behaviours_carry_the_judging_entry(store):
     """The judging registry is the half that reached the database late."""

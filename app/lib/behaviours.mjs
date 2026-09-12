@@ -9,26 +9,9 @@
  * is registry state, and registry state can be read as it stands.
  */
 
+import { select } from "./supabase.mjs";
+
 const SELECT = "slug,name,set_name,numeric_id,group_name,definition,judging";
-
-function credentials() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
-  }
-  return { url: url.replace(/\/$/, ""), key };
-}
-
-async function rows(table, query, fetchImpl) {
-  const { url, key } = credentials();
-  const response = await fetchImpl(`${url}/rest/v1/${table}?${query}`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`${table} -> ${response.status}`);
-  return response.json();
-}
 
 /**
  * One entry per behaviour in the registry, keyed by slug.
@@ -48,8 +31,8 @@ async function rows(table, query, fetchImpl) {
  */
 export async function behaviourNotes(fetchImpl = fetch) {
   const [registry, calls] = await Promise.all([
-    rows("aci_behaviours", `select=${SELECT}`, fetchImpl),
-    rows("aci_judge_calls", "select=behaviour_slug&status=eq.done", fetchImpl),
+    select("aci_behaviours", `select=${SELECT}`, fetchImpl),
+    select("aci_judge_calls", "select=behaviour_slug&status=eq.done", fetchImpl),
   ]);
   const judged = new Set(calls.map(call => call.behaviour_slug));
 

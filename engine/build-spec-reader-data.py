@@ -3,10 +3,18 @@
 
     python3 engine/build-spec-reader-data.py              # write the default output
     python3 engine/build-spec-reader-data.py --out=PATH   # write somewhere else
+    python3 engine/build-spec-reader-data.py --cells=PATH # build for a selection
 
 The payload carries the spec text of every version the current publication used,
 and the frozen coverage ledger resolved into the shape the reader renders. Both
 come from the index tables; there is nowhere else they live.
+
+--cells names a JSON file of the cells a publication is ABOUT to carry. A
+publication holds its payloads as columns and is insert-only, so they have to be
+built before the row exists; the publish job chooses its cells, points both
+builders at them, and inserts the result in one go. Without the flag this builds
+for the publication the reader currently serves, which is what the provenance
+verifier asks for.
 
 The output is materialised onto the publication row at publication time and
 served from there by /api/reader/documents, so this runs when a publication is
@@ -39,12 +47,15 @@ def empty_coverage():
 
 def main(argv=None) -> None:
     out = OUTPUT
+    cells = None
     for arg in (sys.argv[1:] if argv is None else argv):
         if arg.startswith("--out="):
             out = Path(arg.split("=", 1)[1])
+        elif arg.startswith("--cells="):
+            cells = json.loads(Path(arg.split("=", 1)[1]).read_text())
         else:
             raise SystemExit(
-                f"unknown argument {arg!r} (supported: --out=PATH)"
+                f"unknown argument {arg!r} (supported: --out=PATH --cells=PATH)"
             )
 
     # The index, out of its tables. There is nowhere else it lives.
@@ -56,7 +67,7 @@ def main(argv=None) -> None:
     records = index_store.coverage(store)
     behaviour_set = index_store.index_behaviours(store)
     bundled = index_store.documents(
-        store, index_store.published_spec_version_ids(store))
+        store, index_store.published_spec_version_ids(store, cells=cells))
     user_docs = []
     documents = bundled
     generated_from = ["supabase: aci_spec_versions", "supabase: aci_coverage"]

@@ -149,26 +149,40 @@ def runlog_rows(store, run_id):
 
 
 def current_publication(store):
-    """The publication the reader serves: the newest one. A publication is
-    insert-only, so newest and current are the same thing."""
-    publications = _rows(store, "aci_publications")
+    """The publication the reader serves: the newest PUBLIC one.
+
+    A publication is insert-only, so it never changes after it is built -- but it
+    is built before anyone has read it, and `is_public` is how an operator says
+    they have. Newest alone would put a payload in front of the public in the
+    same motion that produced it.
+    """
+    publications = [row for row in _rows(store, "aci_publications")
+                    if row.get("is_public")]
     if not publications:
         return None
     return max(publications, key=lambda row: row["published_at"])
 
 
-def published_runlog_rows(store, publication=None):
+def published_runlog_rows(store, publication=None, cells=None):
     """The judgement rows behind a publication, in the JSONL shape.
 
     A publication selects a run per cell, so this is the union over the runs it
     names, restricted to the cells it actually published. A run may hold cells
     an older publication used and this one did not.
+
+    `cells` answers for a publication that does not exist yet. A publication
+    carries its payloads as columns and is insert-only, so the payloads have to
+    be built BEFORE the row: there is no insert-then-fill. A publish job
+    therefore chooses its cells, builds from them, and inserts the result in one
+    go. Passing them here is how the builders see a selection no publication
+    names yet.
     """
-    publication = publication or current_publication(store)
-    if publication is None:
-        return []
-    cells = [c for c in _rows(store, "aci_publication_cells")
-             if c["publication_id"] == publication["id"]]
+    if cells is None:
+        publication = publication or current_publication(store)
+        if publication is None:
+            return []
+        cells = [c for c in _rows(store, "aci_publication_cells")
+                 if c["publication_id"] == publication["id"]]
     wanted = {(c["behaviour_slug"], c["spec_version_id"]) for c in cells}
     spec_of_version = {v["id"]: v["spec_id"]
                        for v in _rows(store, "aci_spec_versions")}
@@ -184,7 +198,9 @@ def published_runlog_rows(store, publication=None):
             if (row["behaviour"], spec_names.get(row["spec"])) in wanted]
 
 
-def published_spec_version_ids(store, publication=None):
+def published_spec_version_ids(store, publication=None, cells=None):
+    if cells is not None:
+        return sorted({c["spec_version_id"] for c in cells})
     publication = publication or current_publication(store)
     if publication is None:
         # Nothing published yet: the newest version of each spec, which is what

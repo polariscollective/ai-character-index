@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Build site/spec-reader/data/behaviours.json from panel verdicts.
+"""Build the reader's behaviour payload from the panel's verdicts.
+
+    python3 build_site_data.py --out=PATH [--rubric=v5] [--panel=frontier_fast]
+    python3 build_site_data.py --out=PATH --cells=PATH     # for a selection
+
+Reads the judgements of the publication the reader currently serves, or -- with
+--cells -- of the selection a publication is about to carry. A publication holds
+its payloads as columns and is insert-only, so they are built before the row.
 
 Implements the MVP display rules from panel-config.json `display`:
   - only the listed behaviours appear in the sidebar;
@@ -17,32 +24,13 @@ Implements the MVP display rules from panel-config.json `display`:
     (--solid-threshold= overrides it for derived payloads);
   - the citation `role` (shown when the reader clicks "?") lists each model's decision.
 
-Behaviour identity (name/definition/category) comes from the behaviour
-registry (data/behaviours.json), the source of truth for behaviour identity.
-For the bundled reader-test set the registry matches the shipped reader-test data
-field-for-field (pinned by tests/test_behaviour_registry.py), so sourcing from
-the registry is byte-identical for the shipped data; the registry additionally
-lets set:user behaviours (the clone/fork seam) flow into the payload --
-display them with --behaviours=<slug>, judge them under their slug as the
-runlog behaviour key. data/panel-cell-curation.json supplies the curated
-per-lab verdict/depth/verifiedDate cell rows, carried through untouched.
+Behaviour identity -- name, definition, group, numeric id -- comes from
+aci_behaviours, the only registry there is. The curated per-lab verdict/depth
+cells come from aci_cell_curation and are carried through untouched.
 
-  python3 build_site_data.py --runlog=<runlog> --rubric=v5 --panel=frontier_fast
-  (the shipped data: --runlog=runlog-v5.jsonl committed in engine/panel/, rubric v5,
-  the 9-point scale: three 0-3 judges per passage)
-
-Output: by DEFAULT each run emits its own timestamped file
-  site/spec-reader/data/behaviours-<YYYY-MM-DDTHH-MM-SS>.json
-(hyphen-separated: lexicographically sortable = chronological, URL-safe) and updates
-  site/spec-reader/data/manifest.json
-({"latest": <filename>, "runs": [newest-first]}), which the page reads to pick what to
-show. A second build in the same second takes a numeric sequence suffix
-(behaviours-<ts>-02.json, then -03, ... -- zero-padded) so a run is never silently
-overwritten.
---out=<name> writes that exact file instead and leaves the manifest alone --
---out=behaviours.json rebuilds the shipped fallback a fresh clone loads. The name is
-validated (SAFE_NAME chars, no path separators or .. traversal), so it cannot write
-outside the data dir.
+--out is required and is where the payload goes. There is no timestamped file and
+no manifest: a local build was how a run got pinned by ?data=, and a publication
+is what pins one now.
   --registry=PATH      read the behaviour registry from PATH (default data/behaviours.json)
   --run-date=YYYY-MM-DD  pin provenance.runDate (default: today) so a rebuild can
                          reproduce a committed payload byte-for-byte.
@@ -190,31 +178,31 @@ def main(argv=None):
     sp.loader.exec_module(h)
     config = h.load_config()
     DISPLAY = config["display"]
-    runlog = HERE / "runlog-v5.jsonl"   # the committed canonical log behind the shipped payload
     # display.rubric is the rubric the SHIPPED payload builds from (v5, 9-point);
     # top-level config["rubric"] matches it since the v5 prompt port (whole_doc.py
     # stamps v5 by default; the v3 prompts remain behind --rubric=).
     rubric = DISPLAY.get("rubric", config["rubric"])
     out_name = None   # required: this writes where it is told and nowhere else
-    registry_path = ROOT / "data" / "behaviours.json"
+    # The cells a publication is ABOUT to carry, for a publication that does not
+    # exist yet: its payloads are columns and it is insert-only, so they are built
+    # before the row. Without it, the publication the reader serves.
+    cells = None
     run_date = str(date.today())
     for a in argv:
-        if a.startswith("--runlog="):
-            runlog = Path(a.split("=", 1)[1])
-        elif a.startswith("--rubric="):
+        if a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
         elif a.startswith("--panel="):
             DISPLAY["panel"] = a.split("=", 1)[1]
         elif a.startswith("--behaviours="):     # site slugs, comma-separated; overrides display list
             DISPLAY["behaviours"] = a.split("=", 1)[1].split(",")
-        elif a.startswith("--registry="):       # behaviour registry override (tests / user forks)
-            registry_path = Path(a.split("=", 1)[1])
         elif a.startswith("--run-date="):       # pin provenance.runDate for reproducible rebuilds
             run_date = a.split("=", 1)[1]
             if not DATE_RE.match(run_date):
                 sys.exit(f"--run-date must be YYYY-MM-DD, got '{run_date}'")
         elif a.startswith("--out="):            # where to write the payload
             out_name = a.split("=", 1)[1]
+        elif a.startswith("--cells="):          # build for a selection, not the current publication
+            cells = json.loads(Path(a.split("=", 1)[1]).read_text())
         elif a.startswith("--threshold="):      # score cut override (derived payloads; config untouched)
             raw = a.split("=", 1)[1]
             try:
@@ -235,8 +223,8 @@ def main(argv=None):
         else:
             # Unknown args were ignored, so `--help` ran a full build and wrote a
             # payload + manifest. Asking for help must not mutate the repo.
-            sys.exit(f"unknown argument {a!r} -- valid: --runlog= --rubric= --panel= "
-                     "--behaviours= --registry= --run-date= --out= "
+            sys.exit(f"unknown argument {a!r} -- valid: --rubric= --panel= "
+                     "--behaviours= --run-date= --out= --cells= "
                      "--threshold= --solid-threshold=")
     if out_name is None:
         sys.exit("--out=PATH is required: this writes the payload where it is told")
@@ -248,8 +236,8 @@ def main(argv=None):
     store = Store.from_env()
     index_store.install_registry(store)
     registry = index_store.behaviours(store)
-    registry_path = "supabase aci_behaviours"
-    log_rows = index_store.published_runlog_rows(store)
+    registry_path = "supabase aci_behaviours"   # for the message an unknown slug raises
+    log_rows = index_store.published_runlog_rows(store, cells=cells)
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()

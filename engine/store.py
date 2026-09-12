@@ -89,12 +89,24 @@ class Store:
                 return rows
             offset += self.PAGE
 
-    def insert(self, table, rows, chunk=1000):
+    def insert(self, table, rows, chunk=1000, returning=False):
         """Rows in batches. A whole runlog is thirty thousand rows, and one
-        request carrying all of them is several megabytes of JSON."""
+        request carrying all of them is several megabytes of JSON.
+
+        `returning` asks for the rows as written, which is how a caller learns the
+        id and the defaults the database filled in. It is not the default: the
+        bulk inserts here write tens of thousands of rows, and asking for all of
+        them back doubles the traffic to no purpose.
+        """
+        written = []
         for start in range(0, len(rows), chunk):
-            self._request("POST", table, body=rows[start:start + chunk],
-                          extra_headers={"Prefer": "return=minimal"})
+            payload = self._request(
+                "POST", table, body=rows[start:start + chunk],
+                extra_headers={"Prefer": "return=representation" if returning
+                               else "return=minimal"})
+            if returning:
+                written.extend(json.loads(payload or b"[]"))
+        return written if returning else None
 
     def update(self, table, match, patch):
         query = {column: f"eq.{value}" for column, value in match.items()}
