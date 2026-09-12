@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP, AI Character Index</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Polaris design framework v1.1. Shares the reader's two surfaces:
+     daylight (default) and umber, which is the framework's olive-deep ground. */
+  :root {
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+    --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body[data-palette="daylight"] {
+    --bg:#F1EFE3; --lift:#E9E6D7;
+    --hair:#C6C4B0; --hair2:#5C6B3C;
+    --ink:#23281B; --ink2:#5C6B3C; --ink3:#676C58;
+    --spec:#333D22; --energy:#B7C94B; --weak:#C9A227; --gap:#A0522D;
+    --on-accent:#F1EFE3;
+  }
+  body[data-palette="umber"] {
+    --bg:#333D22; --lift:#2A331C;
+    --hair:#4A552F; --hair2:#C4CBA8;
+    --ink:#F1EFE3; --ink2:#C4CBA8; --ink3:#A2AA88;
+    --spec:#C7D69A; --energy:#B7C94B; --weak:#D9B93F; --gap:#C97A4D;
+    --on-accent:#23281B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--ui);
+         font-size: 17px; line-height: 1.6; min-height: 100vh; }
+
+  /* ---------- header (as on the reader) ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between;
+           padding: 16px 40px; border-bottom: 1px solid var(--hair); }
+  /* The mark and the name take one pair of tones and move together, as they do
+     in the bar of evals-playground: olive at rest, olive-deep under the
+     pointer, ink while pressed. On the umber surface there is nothing darker
+     than the ground to move to, so the pair brightens to paper instead. */
+  .site-brand { display: flex; align-items: baseline; gap: 10px;
+                --brand-rest: var(--ink2); --brand-lit: var(--spec); --brand-pressed: var(--ink); }
+  body[data-palette="umber"] .site-brand { --brand-lit: var(--ink); --brand-pressed: var(--ink); }
+  /* The broken orbit, carrying the accent while the wordmark keeps the ink. */
+  /* Olive rather than the framework's olive-deep: at 20px the deep tone reads
+     as a smudge beside its name, and the darkening is spent on hover instead. */
+  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--brand-rest);
+                  transition: color .15s ease; }
+  /* The mark leaves for polariscollective.org, the same place its name leaves
+     for. Second link to one destination, so it stays out of the reading order
+     and out of the tab order. */
+  .mark-link { display: flex; flex: none; align-self: center; }
+  .collective { color: var(--brand-rest); text-decoration: none; transition: color .15s ease;
+                font-family: var(--display); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  /* Mark and name are one target and answer as one: whichever half the pointer
+     is over, both darken. The chartreuse highlight this page gives a link in
+     prose is turned off for the pair: it would fill a block behind the name
+     that the mark beside it cannot take, and the bar would move under the
+     pointer instead of the name darkening in it. */
+  .mark-link:hover,
+  .collective:hover { background: none; }
+  .mark-link:hover .polaris-mark,
+  .site-brand:has(.collective:hover) .polaris-mark,
+  .mark-link:hover + .collective,
+  .collective:hover { color: var(--brand-lit); }
+  .mark-link:active .polaris-mark,
+  .site-brand:has(.collective:active) .polaris-mark,
+  .mark-link:active + .collective,
+  .collective:active { color: var(--brand-pressed); }
+  .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair); }
+  .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .wordmark a { color: inherit; text-decoration: none; }
+  nav { display: flex; align-items: center; gap: 24px; }
+  nav a { font-size: 14px; color: var(--ink2); text-decoration: none; }
+  nav a[href]:hover { background: var(--energy); color: var(--ink); }
+  nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .mode { background: none; border: none; padding: 4px 6px;
+          font: inherit; font-size: 16px; line-height: 1; color: var(--ink2); cursor: pointer;
+          transition: background-color .15s ease, color .15s ease; }
+  .mode:hover { background: var(--energy); color: var(--ink); }
+
+  /* ---------- the column ----------
+     One column, sections told apart by a rule and by whitespace. The bordered
+     sheet this replaced was a card, and the framework draws structure with
+     neither cards nor shadows. */
+  .sheet { max-width: 720px; margin: 0 auto; padding: 0 40px; }
+  .m-head { padding: 64px 0 48px; }
+  .m-title { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.16; }
+  .m-sub { font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 66ch; margin-top: 16px; }
+
+  /* Primary button: olive-deep ground, paper text, pill, chartreuse on hover. */
+  .repo-btn { display: inline-block; margin-top: 24px; padding: 10px 22px;
+              border: 1px solid transparent; border-radius: 999px;
+              background: var(--spec); color: var(--on-accent);
+              font-size: 15px; font-weight: 600; text-decoration: none;
+              transition: background-color .15s ease, color .15s ease; }
+  .repo-btn:hover { background: var(--energy); color: var(--ink); }
+
+  section.m { padding: 48px 0; border-top: 1px solid var(--hair); }
+  /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
+  h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
+       margin-bottom: 16px; padding-top: 19px;
+       background: linear-gradient(var(--energy), var(--energy)) 0 0 / 56px 3px no-repeat; }
+  section.m p { font-size: 17px; line-height: 1.6; color: var(--ink); max-width: 66ch; margin-bottom: 16px; }
+  section.m p:last-child { margin-bottom: 0; }
+  section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
+  section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
+  /* Bullets are 6px chartreuse circles. */
+  section.m li::before { content: ""; position: absolute; top: .78em; left: 4px;
+                         width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+  section.m li b { font-weight: 600; }
+  code { font-family: var(--mono); font-size: 13px; color: var(--ink2);
+         background: var(--lift); border: 1px solid var(--hair); padding: 0 4px; border-radius: 4px; }
+  pre { max-width: 66ch; margin: 16px 0; padding: 16px; overflow-x: auto;
+        background: var(--lift); border: 1px solid var(--hair); border-radius: 4px; }
+  pre code { display: block; border: none; background: none; padding: 0;
+             font-size: 13px; line-height: 1.7; color: var(--ink); }
+  /* The framework's link: ink text over a 2px chartreuse underline; hover fills
+     the highlight behind it. */
+  a { color: var(--ink); text-decoration: none; box-shadow: inset 0 -2px 0 var(--energy);
+      transition: background-color .15s ease; }
+  a:hover { background: var(--energy); }
+  header a, footer a, .repo-btn { box-shadow: none; }
+
+  footer { max-width: 720px; margin: 0 auto; padding: 32px 40px 64px;
+           border-top: 1px solid var(--hair);
+           display: flex; flex-direction: column; gap: 8px;
+           font-size: 14px; color: var(--ink3); }
+  .f-row { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+  .proto-flag { margin-left: auto; }
+  footer a { color: var(--ink2); }
+  footer a:hover { background: var(--energy); color: var(--ink); }
+
+  :focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    header { padding: 14px 22px; flex-wrap: wrap; gap: 6px 18px; }
+    /* Two names and a menu do not fit. The mark carries the collective alone,
+       and its name is still a link in the footer. */
+    .collective, .brand-divider { display: none; }
+    .sheet, footer { padding-left: 22px; padding-right: 22px; }
+    .m-title { font-size: 32px; }
+  }
+
+  /* ---------- the proposal forms ---------- */
+  .choice { display: flex; gap: 0; margin: 8px 0 32px; border: 1px solid var(--hair); width: fit-content; }
+  .choice a { padding: 9px 20px; font-size: 15px; color: var(--ink2); text-decoration: none;
+              box-shadow: none; }
+  .choice a:hover { background: var(--energy); color: var(--ink); }
+  .choice a[aria-current="page"] { background: var(--spec); color: var(--on-accent); }
+  form.propose { margin: 0 0 24px; }
+  form.propose label { display: block; margin-bottom: 20px; }
+  form.propose label > span { display: block; font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
+  form.propose .hint { display: block; margin-top: 6px; font-size: 14px; color: var(--ink3); }
+  form.propose input[type="text"],
+  form.propose input[type="email"],
+  form.propose input[type="url"],
+  form.propose textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--hair); border-radius: 4px;
+    background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 16px;
+    line-height: 1.5;
+  }
+  form.propose textarea { min-height: 110px; resize: vertical; }
+  form.propose input:focus-visible, form.propose textarea:focus-visible,
+  form.propose input[type="file"]:focus-visible {
+    outline: 2px solid var(--energy); outline-offset: 1px; border-color: var(--hair2);
+  }
+  form.propose input[type="file"] { font-family: var(--ui); font-size: 15px; color: var(--ink2); }
+  form.propose button { margin-top: 4px; padding: 11px 26px; border: 1px solid var(--spec);
+    border-radius: 999px; background: var(--spec); color: var(--on-accent);
+    font-family: var(--ui); font-size: 16px; font-weight: 500; cursor: pointer; }
+  form.propose button:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  /* Hidden from people, visible to the machinery that fills in every field it
+     finds. Not display:none, which some of it knows to skip. */
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .said { margin: 0 0 28px; padding: 14px 18px; border-left: 3px solid var(--energy);
+          background: var(--lift); font-size: 16px; }
+  .said.bad { border-left-color: var(--gap); }
+  .said p { margin: 0 0 6px; }
+  .said p:last-child { margin: 0; }
+
+  /* ---------- the header, identical to the reader's ---------- */
+  /* Same height, same rule, same background. Two surfaces differing by a few
+     pixels read as two sites when you move between them, and moving between them
+     is what a nav is for. */
+  .site-header {
+    height: 54px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--hair);
+    background: var(--lift);
+  }
+  .site-header .site-brand { display: flex; align-items: baseline; gap: 10px; }
+  .site-header nav { display: flex; align-items: center; gap: 24px; }
+  .site-header nav a { color: var(--ink2); text-decoration: none; font-size: 14px;
+                       box-shadow: none; }
+  .site-header nav a:hover { background: var(--energy); color: var(--ink); }
+  .site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .site-header .wordmark { font-family: var(--display); font-size: 16px; font-weight: 600;
+                           color: var(--ink); text-decoration: none; box-shadow: none; }
+  .site-header .wordmark:hover { background: none; color: var(--ink); }
+  .site-header .mode { align-self: center; }
+  @media (max-width: 700px) {
+    .site-header { padding: 0 16px; gap: 12px; }
+    .site-header .collective, .site-header .brand-divider { display: none; }
+    .site-header nav { gap: 14px; }
+  }
+
+</style>
+</head>
+<body data-palette="daylight">
+
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a href="/spec-reader/">Spec reader</a>
+    <a href="/how-it-works">How it works and contribute</a>
+    <a class="active" href="/mcp" aria-current="page">MCP</a>
+    <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
+  </nav>
+</header>
+
+<div class="sheet">
+
+  <div class="m-head">
+    <div class="m-title">MCP</div>
+    <p class="m-sub">The index answers over the Model Context Protocol, so an agent can ask it
+    where a model specification addresses a behaviour instead of reading the whole document.
+    Three read-only tools, no account and no key.</p>
+  </div>
+
+  <section class="m">
+    <h2>How to connect</h2>
+    <p>One endpoint, streamable HTTP, and nothing to authenticate:</p>
+    <pre><code data-origin>/api/mcp</code></pre>
+    <p>In Claude Code:</p>
+    <pre><code data-origin>claude mcp add --transport http ai-character-index /api/mcp</code></pre>
+    <p>In a client that takes a configuration file:</p>
+    <pre><code data-origin>{
+  "mcpServers": {
+    "ai-character-index": {
+      "type": "http",
+      "url": "/api/mcp"
+    }
+  }
+}</code></pre>
+    <p>Everything it serves is the published index, the same data the spec reader is built from,
+    so a call reads what the site shows and nothing else.</p>
+  </section>
+
+  <section class="m">
+    <h2>Tools</h2>
+    <p><b>list_model_specs.</b> Every specification the current publication carries: laboratory,
+    title, version, source URL, how many behaviours were judged against it and how many passages
+    it holds. No arguments. It does not return the specification text, which runs to hundreds of
+    kilobytes; the source URL is in the answer.</p>
+    <p><b>list_behaviours.</b> Every behaviour the publication shows, with the brief the judge
+    panel was given, the boundary of the construct and where the definition came from. Each one
+    also carries, per specification, how many passages it has and the strongest band any of them
+    reaches. No arguments. The slugs it returns are what the next tool takes.</p>
+    <p><b>retrieve_passages.</b> The passages of a specification that bear on a behaviour, quoted
+    verbatim and located. Each one comes back with its locator, its quote, the band it sits in and
+    the verdict every judge gave it.</p>
+    <ul>
+      <li><b>behaviours.</b> Required, at least one slug. It is what bounds the size of the
+          answer.</li>
+      <li><b>model_spec_ids.</b> Optional, every specification by default. Passage counts are not
+          comparable between laboratories: some behaviours were swept by more judges against one
+          document than against the other, so any answer spanning more than one specification
+          says so in the response.</li>
+      <li><b>strength.</b> Optional. <code>defining</code> is the document&rsquo;s fullest
+          statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
+          bears on it without establishing it. Each means that band and stronger.
+          <code>core</code> by default, which is what the spec reader shows before you touch a
+          toggle.</li>
+      <li><b>limit.</b> Optional, 40 by default. It is a page budget in passages: an answer holds
+          whole behaviour and specification pairs, never split, strongest passage first.</li>
+      <li><b>cursor.</b> Optional, the <code>next_cursor</code> of the previous page. It names the
+          publication it was issued against, so a walk that spans a new publication stops rather
+          than drifting across two indexes.</li>
+    </ul>
+    <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
+    of the index, not a hole in it.</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="f-row">
+    <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by
+      <a href="https://github.com/AndresCotton">Andres Cotton</a></span>
+  </div>
+  <div class="f-row">
+    <span>The standalone original is
+      <a href="https://ai-character-index.pages.dev" target="_blank"
+      rel="noopener">ai-character-index.pages.dev</a>, from
+      <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+      rel="noopener">github.com/AndresCotton/ai-character-index</a></span>
+    <span class="proto-flag">Apache 2.0 code, CC BY 4.0 writing and data</span>
+  </div>
+</footer>
+
+<script>
+/* surface toggle, shared state with the reader */
+const SURFACES = ["daylight", "umber"];
+const modeBtn = document.getElementById("mode");
+function setPalette(p) {
+  if (!SURFACES.includes(p)) p = "daylight";
+  document.body.dataset.palette = p;
+  try { localStorage.setItem("aci-palette", p); } catch (e) {}
+  const night = p === "umber";
+  modeBtn.textContent = night ? "☼" : "☾";
+  modeBtn.title = night ? "Back to daylight" : "Switch to umber";
+  modeBtn.setAttribute("aria-label", night ? "Switch to the daylight surface" : "Switch to the umber night surface");
+}
+modeBtn.addEventListener("click", () =>
+  setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber"));
+const qp = new URLSearchParams(location.search).get("palette");
+let saved = null; try { saved = localStorage.getItem("aci-palette"); } catch (e) {}
+setPalette(qp || saved || "daylight");
+
+/* The endpoint is written relative in the markup, so a reader without
+   JavaScript still sees something true, and absolute here so the blocks above
+   can be copied straight into a client. Taken from location.origin rather than
+   hard-coded, so a preview deployment documents itself. */
+document.querySelectorAll("[data-origin]").forEach(node => {
+  node.textContent = node.textContent.replaceAll("/api/mcp", `${location.origin}/api/mcp`);
+});
+</script>
+
+</body>
+</html>
