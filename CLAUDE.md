@@ -154,6 +154,21 @@ walker turns focus off explicitly where it measures that the reader keeps your
 place, because in focus mode unticking a behaviour removes text rather than only
 its highlights.
 
+### A publication's menu is the selection, not the configuration
+
+Found by building one. The payload builder takes its behaviour list from
+`display.behaviours` in `panel-config.json`, so the first publication built
+through the portal asked for five behaviours and rendered ten — the other five
+with no passages at all. A reader reads an empty behaviour as "this specification
+says nothing about this", which is the one claim the index must never make by
+accident.
+
+`publish.py` passes the selection explicitly now. A consequence worth stating:
+`general-welfare-impacts-strict` cannot be published this way, because it has no
+cell any panel answered for — its coverage is a re-reading of other behaviours'
+judgements. It is in the inherited publication's menu and will not be in the next
+one until somebody judges it.
+
 ### A publication is built before it is shown
 
 `aci_publications` gained `is_public`, and the reader serves the newest

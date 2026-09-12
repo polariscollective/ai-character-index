@@ -112,14 +112,23 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     return cells
 
 
-def build(name, cells, run_date=None):
-    """One payload, as its builder writes it, with its digest."""
+def build(name, cells, behaviours, run_date=None):
+    """One payload, as its builder writes it, with its digest.
+
+    The behaviour list is passed explicitly, and that is not a detail. Without it
+    the payload builder takes its menu from `display.behaviours` in the panel
+    configuration, so a publication of five behaviours renders ten, five of them
+    with no passages -- which a reader reads as "this specification says nothing
+    about this", the one claim the index must never make by accident.
+    """
     script, args = BUILDERS[name]
     with tempfile.TemporaryDirectory() as scratch:
         cells_file = Path(scratch) / "cells.json"
         cells_file.write_text(json.dumps(cells))
         out = Path(scratch) / f"{name}.json"
         extra = [f"--run-date={run_date}"] if run_date and name == "payload" else []
+        if name == "payload":
+            extra.append("--behaviours=" + ",".join(sorted(behaviours)))
         result = subprocess.run(
             [sys.executable, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],
@@ -141,8 +150,8 @@ def publish(store, behaviours, specs, panel, rubric, published_by, notes="",
     versions = list(newest_version_per_spec(store, specs).values())
     cells = choose_cells(store, behaviours, versions, panel, rubric)
 
-    payload, payload_sha256 = build("payload", cells, run_date)
-    documents, documents_sha256 = build("documents", cells)
+    payload, payload_sha256 = build("payload", cells, behaviours, run_date)
+    documents, documents_sha256 = build("documents", cells, behaviours)
 
     publication = {
         "published_by": published_by,
