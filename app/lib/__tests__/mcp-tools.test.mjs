@@ -217,3 +217,97 @@ test("an unknown strength is refused", () => {
     () => retrievePassages(snapshot(), { behaviours: BOTH, strength: "strong" }),
     error => error instanceof ToolError && /defining, core, related/.test(error.message));
 });
+
+test("everything fits in one page when the budget is large", () => {
+  const answer = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
+  assert.equal(answer.results.length, 4);
+  assert.equal(answer.next_cursor, null);
+  assert.deepEqual(answer.remaining, { cells: 0, passages: 0 });
+});
+
+test("a page stops on a whole cell and names the next one", () => {
+  const answer = retrievePassages(snapshot(), {
+    behaviours: BOTH, strength: "related", limit: 2,
+  });
+  // corpus-labs holds two passages and fills the budget exactly; second-labs
+  // would take it to three, so it starts the next page.
+  assert.deepEqual(answer.results.map(cell => cell.model_spec_id), ["corpus-labs"]);
+  assert.deepEqual(answer.next_cursor, {
+    publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
+    behaviour: "defined-behaviour", model_spec_id: "second-labs",
+  });
+  assert.deepEqual(answer.remaining, { cells: 3, passages: 5 });
+});
+
+test("no cell is ever split", () => {
+  const answer = retrievePassages(snapshot(), {
+    behaviours: ["undefined-behaviour"], model_spec_ids: ["corpus-labs"],
+    strength: "related", limit: 1,
+  });
+  assert.equal(answer.results.length, 1);
+  assert.equal(answer.results[0].passages.length, 3,
+               "a cell over the budget comes back whole, alone");
+  assert.equal(answer.next_cursor, null);
+});
+
+test("walking the cursor yields every passage exactly once", () => {
+  const seen = [];
+  let cursor;
+  let pages = 0;
+  do {
+    const answer = retrievePassages(snapshot(), {
+      behaviours: BOTH, strength: "related", limit: 1, cursor,
+    });
+    for (const cell of answer.results) {
+      for (const passage of cell.passages) seen.push(passage.locator);
+    }
+    cursor = answer.next_cursor ?? undefined;
+    pages += 1;
+    assert.ok(pages < 10, "the walk is not terminating");
+  } while (cursor);
+
+  const whole = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
+  const expected = whole.results.flatMap(cell => cell.passages.map(p => p.locator));
+  assert.deepEqual(seen, expected);
+  assert.equal(new Set(seen).size, seen.length, "no passage is served twice");
+});
+
+test("an empty cell rides along instead of starting a page of its own", () => {
+  const answer = retrievePassages(snapshot(), {
+    behaviours: ["undefined-behaviour"], strength: "core", limit: 3,
+  });
+  // corpus-labs holds three, second-labs holds none: the empty one costs
+  // nothing and its note stays with the page that reached it.
+  assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
+                   ["corpus-labs", "second-labs"]);
+  assert.equal(answer.next_cursor, null);
+});
+
+test("a cursor from another publication is refused rather than followed", () => {
+  assert.throws(
+    () => retrievePassages(snapshot(), {
+      behaviours: BOTH,
+      cursor: { publication: "00000000-0000-0000-0000-000000000000",
+                behaviour: "defined-behaviour", model_spec_id: "second-labs" },
+    }),
+    error => error instanceof ToolError && /issued against publication/.test(error.message));
+});
+
+test("a cursor naming a cell outside the request is refused", () => {
+  assert.throws(
+    () => retrievePassages(snapshot(), {
+      behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+      cursor: { publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
+                behaviour: "undefined-behaviour", model_spec_id: "second-labs" },
+    }),
+    error => error instanceof ToolError && /does not name a cell of this request/.test(error.message));
+});
+
+test("the comparability note is on every page of a two specification walk", () => {
+  const first = retrievePassages(snapshot(), {
+    behaviours: BOTH, strength: "related", limit: 1 });
+  const second = retrievePassages(snapshot(), {
+    behaviours: BOTH, strength: "related", limit: 1, cursor: first.next_cursor });
+  assert.match(first.comparability, /not comparable/);
+  assert.match(second.comparability, /not comparable/);
+});

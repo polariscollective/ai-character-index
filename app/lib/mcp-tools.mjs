@@ -184,6 +184,11 @@ export function retrievePassages({ publication, payload, documents }, args = {})
     throw new ToolError(`strength must be one of: ${TIERS.join(", ")}`);
   }
 
+  const limit = args.limit ?? 40;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+    throw new ToolError("limit must be a whole number between 1 and 200");
+  }
+
   const cells = [];
   for (const slug of wanted) {
     for (const modelSpecId of modelSpecIds) {
@@ -195,6 +200,37 @@ export function retrievePassages({ publication, payload, documents }, args = {})
       });
     }
   }
+
+  let from = 0;
+  if (args.cursor) {
+    if (args.cursor.publication !== publication.id) {
+      throw new ToolError(
+        `this cursor was issued against publication ${args.cursor.publication}, `
+        + `and the current publication is ${publication.id}. Start again without `
+        + "a cursor.");
+    }
+    from = cells.findIndex(cell => cell.slug === args.cursor.behaviour
+                                && cell.modelSpecId === args.cursor.model_spec_id);
+    if (from < 0) {
+      throw new ToolError("this cursor does not name a cell of this request");
+    }
+  }
+
+  // Whole cells until the budget is met, and never fewer than one: half a cell
+  // is worse than a big one, so a cell over the budget comes back alone. An
+  // empty cell costs nothing and always rides along, which keeps its
+  // no-coverage note with the walk that reached it.
+  const page = [];
+  let taken = 0;
+  let next = from;
+  while (next < cells.length) {
+    const cell = cells[next];
+    if (page.length && cell.passages.length && taken + cell.passages.length > limit) break;
+    page.push(cell);
+    taken += cell.passages.length;
+    next += 1;
+  }
+  const rest = cells.slice(next);
 
   return {
     publication,
@@ -212,11 +248,20 @@ export function retrievePassages({ publication, payload, documents }, args = {})
     // page happens to hold one cell is still a comparison being assembled.
     ...(modelSpecIds.length > 1 ? { comparability: COMPARABILITY } : {}),
     panel: panelOf(payload.provenance),
-    results: cells.map(cell => ({
+    results: page.map(cell => ({
       behaviour: cell.slug,
       model_spec_id: cell.modelSpecId,
       passages: cell.passages.map(shapePassage),
       ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
     })),
+    next_cursor: rest.length
+      ? { publication: publication.id,
+          behaviour: cells[next].slug,
+          model_spec_id: cells[next].modelSpecId }
+      : null,
+    remaining: {
+      cells: rest.length,
+      passages: rest.reduce((total, cell) => total + cell.passages.length, 0),
+    },
   };
 }
