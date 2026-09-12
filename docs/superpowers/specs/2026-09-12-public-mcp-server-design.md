@@ -274,11 +274,18 @@ cell that could not have reached 9.
 A **request** that names more than one specification carries `comparability` on
 every page, in plain words:
 
-> Passage counts are not comparable between these documents. Four behaviours
-> were swept by more judges against Claude's Constitution than against the
-> OpenAI Model Spec, so the constitution surfaced more candidate passages for
-> them. The bands each passage carries are sound; the totals are not a
-> like-for-like measure of coverage.
+> Passage counts are not comparable between these documents. Some behaviours
+> were swept by more judges against one document than against another, so that
+> document surfaced more candidate passages for them. The bands each passage
+> carries are sound; the totals are not a like-for-like measure of coverage.
+
+Generic about which documents, deliberately, and that was a correction. The
+sentence first named Claude's Constitution and the OpenAI Model Spec, which is
+true of the publication the index carries today and false the moment a third
+specification is registered: the field fires whenever a request names more than
+one, so a caller asking about two others would have been handed a confident,
+specific, wrong claim. The route's `instructions` says the same thing in the
+same generic terms.
 
 A single-specification request does not carry it. Nothing in such an answer
 invites the comparison, and a caveat repeated on every call is a caveat an
@@ -373,21 +380,27 @@ navigation and is left alone.
 It reuses `methodology.html`'s shell: the same header, footer, palette pair and
 Polaris framework tokens.
 
-Sections:
+Two sections, and the reason there are two is that the page is documentation
+for someone connecting a server, not a second copy of this document.
 
-1. **What it is.** Two sentences, and who it is for.
-2. **The URL.** In mono, written from `location.origin` at load so it is
-   correct on production and on any preview deployment.
-3. **Connect it.** A `claude mcp add --transport http` line, and a JSON block
-   for clients that take one.
-4. **One section per tool.** What it answers, its arguments, and a real
-   abridged response.
-5. **What the numbers mean.** The bands, the judge vocabulary, and the
-   comparability caveat stated once.
-6. **Order and paging.** That a page holds whole behaviour and specification
-   pairs, that passages come strongest first, and how `next_cursor` is walked.
-7. **No account needed.** That it is public, that it serves the published
-   index, and that there is no rate limit to plan around today.
+1. **How to connect.** The endpoint, written relative in the markup and made
+   absolute from `location.origin` at load so a preview deployment documents
+   its own address. A `claude mcp add --transport http` line, a JSON block for
+   clients that take one, and one sentence saying that it serves the published
+   index and authenticates nobody.
+2. **Tools.** A paragraph for each of the three, and the arguments of
+   `retrieve_passages` as a list.
+
+What would have been four further sections lives inside the arguments it
+describes, which is where a reader meets the question rather than several
+screens away: the bands under `strength`, the paging rule and the cursor's
+publication under `limit` and `cursor`, and the comparability caveat under
+`model_spec_ids`, which is the argument that invites the comparison in the
+first place. Nothing in the list above was dropped; it was moved to where it
+bites.
+
+There is no contents rail. `how-it-works.html` has one because it has eight
+headings to follow. Two headings do not need a column of their own.
 
 Framework rules apply as everywhere: 56px chartreuse rule above each section
 heading, 6px chartreuse bullets, mono for URLs, identifiers and JSON, sentence
