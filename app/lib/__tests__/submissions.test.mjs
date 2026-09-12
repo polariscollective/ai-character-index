@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  MAX_DOCUMENT_BYTES, announce, asMarkdown, behaviourProblems, callerAddress,
+  MAX_DOCUMENT_BYTES, MAX_REQUEST_BYTES, announce, asMarkdown, behaviourProblems, callerAddress,
   record, recentFrom, sourceHash, specificationProblems,
 } from "../submissions.mjs";
 
@@ -77,10 +77,20 @@ test("the address is hashed with a salt, so the hash is not the address", () => 
   process.env.SUPABASE_SERVICE_ROLE_KEY = key;
 });
 
-test("the caller is the first address in the forwarded chain", () => {
-  assert.equal(callerAddress(headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" })),
-               "203.0.113.7");
+test("a client cannot choose the address it is rate-limited by", () => {
+  // The failure this guards: a client sends its own x-forwarded-for, the usual
+  // leftmost-is-the-client reading takes it, and one source looks like a
+  // thousand. The platform's own header wins, and the chain is read from the
+  // right, where a proxy appends, not the left, where a client can prepend.
+  const forged = headers({
+    "x-forwarded-for": "1.1.1.1, 203.0.113.7",
+    "x-vercel-forwarded-for": "203.0.113.7",
+  });
+  assert.equal(callerAddress(forged), "203.0.113.7");
+  assert.equal(callerAddress(headers({ "x-forwarded-for": "1.1.1.1, 203.0.113.7" })),
+               "203.0.113.7", "the leftmost entry is the forgeable one");
   assert.equal(callerAddress(headers({ "x-real-ip": "203.0.113.9" })), "203.0.113.9");
+  assert.equal(callerAddress(headers({ "x-forwarded-for": "203.0.113.7" })), "203.0.113.7");
   assert.equal(callerAddress(headers({})), "unknown");
 });
 
@@ -210,4 +220,14 @@ test("a very long field is cut rather than posted whole", async () => {
   const shown = body.blocks[1].text.text;
   assert.ok(shown.length < 3000, `the message was ${shown.length} characters`);
   assert.match(shown, /x\.\.\./);
+});
+
+test("a request may not weigh more than its largest honest document plus a little", () => {
+  // Checked from Content-Length before the body is read, because parsing a form
+  // buffers all of it and a check that runs after has already paid for the
+  // request it refuses.
+  assert.ok(MAX_REQUEST_BYTES > MAX_DOCUMENT_BYTES,
+            "the envelope must admit the largest document it carries");
+  assert.ok(MAX_REQUEST_BYTES < 2 * MAX_DOCUMENT_BYTES,
+            "and not admit two of them");
 });

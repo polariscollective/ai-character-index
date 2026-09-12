@@ -22,6 +22,12 @@ export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
  * a sitting, and not enough to fill a table. */
 export const PER_HOUR = 10;
 
+/* What a whole request may weigh, read from its Content-Length before a byte of
+ * it is buffered. The document cap is 2 MB and the rest of the form is a few
+ * kilobytes; the slack is for multipart framing. The platform caps a request
+ * body too, but a limit we enforce ourselves is one we can reason about. */
+export const MAX_REQUEST_BYTES = 3 * 1024 * 1024;
+
 /* Fields long enough for the longest honest answer, and bounded, because an
  * unbounded text field on an open route is a way to fill a database. */
 const LIMITS = { name: 200, version: 100, url: 500, prose: 5000, email: 200 };
@@ -39,10 +45,24 @@ export function sourceHash(address) {
     .digest("hex");
 }
 
-/** The caller's address, as the platform reports it. */
+/**
+ * The caller's address, from the most trustworthy header that carries it.
+ *
+ * Order matters and this is the whole of the rate limit's integrity. A client
+ * can send its own `x-forwarded-for`, and the usual "leftmost entry is the
+ * client" reading then takes whatever the client put there, which lets one
+ * source look like a thousand. The platform's own headers cannot be forged
+ * that way, so they are asked first; `x-forwarded-for` is read from the RIGHT,
+ * where a proxy appends, rather than the left, where a client can prepend.
+ */
 export function callerAddress(headers) {
-  const forwarded = headers.get("x-forwarded-for") || "";
-  return forwarded.split(",")[0].trim() || headers.get("x-real-ip") || "unknown";
+  for (const name of ["x-vercel-forwarded-for", "x-real-ip"]) {
+    const value = (headers.get(name) || "").trim();
+    if (value) return value;
+  }
+  const chain = (headers.get("x-forwarded-for") || "")
+    .split(",").map(entry => entry.trim()).filter(Boolean);
+  return chain.length ? chain[chain.length - 1] : "unknown";
 }
 
 function tooLong(value, limit, what) {

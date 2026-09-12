@@ -7,8 +7,9 @@
  * Answers a plain form post with a redirect, so the page needs no JavaScript to
  * submit and the outcome survives a reload. */
 import {
-  PER_HOUR, announce, asMarkdown, behaviourProblems, callerAddress, record,
-  recentFrom, sourceHash, specificationProblems,
+  MAX_DOCUMENT_BYTES, MAX_REQUEST_BYTES, PER_HOUR, announce, asMarkdown,
+  behaviourProblems, callerAddress, record, recentFrom, sourceHash,
+  specificationProblems,
 } from "../../lib/submissions.mjs";
 
 const PAGE = "/how-it-works";
@@ -26,6 +27,30 @@ const text = (fields, name) => {
 };
 
 export async function POST(request) {
+  // Everything that can be judged from the headers is judged before a byte of
+  // the body is read. Parsing a form buffers the whole of it, so a check that
+  // runs afterwards has already paid for the request it means to refuse.
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (declared > MAX_REQUEST_BYTES) {
+    return back(request, {
+      problem: `That is larger than this form takes. A document may be up to `
+             + `${MAX_DOCUMENT_BYTES / 1024 / 1024} MB.`,
+    });
+  }
+
+  const hash = sourceHash(callerAddress(request.headers));
+  try {
+    if (await recentFrom(hash) >= PER_HOUR) {
+      return back(request, {
+        problem: `That is ${PER_HOUR} proposals within the hour from here, which is as `
+               + "many as this form takes. The ones already sent are safe; try again later.",
+      });
+    }
+  } catch (error) {
+    // The rate-limit read failing must not refuse an honest proposal.
+    console.error(`submit: counting recent proposals failed: ${error.message}`);
+  }
+
   let fields;
   try {
     fields = await request.formData();
@@ -43,19 +68,6 @@ export async function POST(request) {
   const kind = text(fields, "kind");
   if (kind !== "behaviour" && kind !== "specification") {
     return back(request, { problem: "say whether this is a behaviour or a specification" });
-  }
-
-  const hash = sourceHash(callerAddress(request.headers));
-  try {
-    if (await recentFrom(hash) >= PER_HOUR) {
-      return back(request, {
-        problem: `That is ${PER_HOUR} proposals within the hour from here, which is as `
-               + "many as this form takes. The ones already sent are safe; try again later.",
-      });
-    }
-  } catch (error) {
-    // The rate-limit read failing must not refuse an honest proposal.
-    console.error(`submit: counting recent proposals failed: ${error.message}`);
   }
 
   const email = text(fields, "email");
