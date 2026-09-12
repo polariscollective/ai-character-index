@@ -342,7 +342,11 @@ def compose_query(behaviour, rubric, registry=None):
             sys.exit(f"--v2: no boundary clause for {behaviour}")
         return f"Behaviour:\n{beh.get('query_v2', query)}\n\nScope: {beh['boundary']}"
     return BEHAVIOUR_TEMPLATE_V3.format(
-        title=beh.get("title", beh["label"]),
+        # Not beh.get("title", beh["label"]): a dict's default is evaluated
+        # whether or not it is needed, so an entry carrying a title and no label
+        # raised KeyError on the label it never needed. Every entry the index
+        # carries has both, which is why it took a hand-written one to find.
+        title=beh.get("title") or beh.get("label") or behaviour,
         definition=beh.get("query_v2", query),
         clarifications=beh.get("clarifications") or FIELD_NONE,
         scope=beh.get("boundary") or FIELD_NONE)

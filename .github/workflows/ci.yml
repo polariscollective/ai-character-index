@@ -49,6 +49,7 @@ jobs:
           python3 engine/panel/test_compose_run.py
           python3 engine/test_job.py
           python3 engine/test_publish.py
+          python3 engine/test_local_run.py
 
       - name: Store and index suites
         run: |

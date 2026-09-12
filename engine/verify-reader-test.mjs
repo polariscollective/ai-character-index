@@ -166,7 +166,7 @@ async function expectView(url, expected, label) {
 // Navigation: the expected links must be present and every one must resolve
 // (any #fragment to a real id in its target).
 await readView(base);
-const expectedNav = ["./", "../methodology.html"];
+const expectedNav = ["./", "../how-it-works.html"];
 const navHrefs = await page.evaluate(
   () => [...document.querySelectorAll('nav[aria-label="Primary navigation"] a')].map(a => a.getAttribute("href")),
 );

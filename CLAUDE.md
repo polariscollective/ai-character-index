@@ -169,6 +169,33 @@ cell any panel answered for — its coverage is a re-reading of other behaviours
 judgements. It is in the inherited publication's menu and will not be in the next
 one until somebody judges it.
 
+### A clone can judge again, with no database
+
+The migration took the index into Supabase and took the clone-and-fork pathway
+with it: a copy of this repository without our credentials could run nothing at
+all. `engine/local_run.py` answers that. One key, one markdown file, one
+behaviour written in either registry shape, and the results land in `artefacts/`
+as raw files: every reply exactly as it came back, every verdict with its locator
+and the text it judged, and what each call cost.
+
+It uses the same composer, the same parser and the same prompt as the hosted job,
+so what it produces is the same kind of evidence. What it does not do is publish,
+because publishing is a decision about what the public sees.
+
+The upstream repository is still the one to clone for this, and the page says so.
+What this adds is that our own repository is no longer a dead end for somebody
+who wants to judge a document.
+
+### A dict's default is evaluated whether or not it is needed
+
+**Found by writing a behaviour by hand. Fixed.**
+
+`harness.compose_query` read `beh.get("title", beh["label"])`, which raises
+KeyError on `label` for any entry carrying a title and no label — Python
+evaluates a default argument before calling `get`. Every entry the index carries
+has both fields, so it never fired; the first hand-written behaviour, in the
+shape the documentation asks for, hit it immediately.
+
 ### Proposals replaced pull requests, and they are only proposals
 
 The upstream project takes contributions as pull requests against a repository

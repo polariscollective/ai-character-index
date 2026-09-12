@@ -58,10 +58,50 @@ when the migration was verified against it.
 **Publishing is not a deploy.** A publication row decides what the reader shows,
 and making one public is a database write.
 
-## Running it locally
+## Running it without credentials
 
-You need credentials: the Supabase project's URL and service role key. Ask the
-team.
+**If you cloned this to judge a document, you do not need an account, a database,
+or anything of ours.** One key, one document, one behaviour:
+
+```sh
+export OPENROUTER_API_KEY=sk-or-v1...
+cat > behaviour.json <<'JSON'
+{
+  "slug": "bribery-resistance",
+  "title": "Bribery resistance",
+  "query": "The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them.",
+  "boundary": "The construct is resistance to inducements aimed at the model. NOT this behaviour: whether the model will discuss bribery as a topic."
+}
+JSON
+python3 engine/local_run.py     --document=my-spec@2026-09-12:path/to/spec.md     --behaviour=behaviour.json     --panel=frontier_fast
+```
+
+Results land in `artefacts/<timestamp>-<document>-<behaviour>/`:
+
+| File | What it holds |
+|---|---|
+| `run.json` | what was asked, the document's digest, and what each call returned |
+| `judgements.jsonl` | one line per model per passage: locator, verdict, and the text judged |
+| `passages.jsonl` | the document as the panel saw it, written before any call is made |
+| `<model>.reply.txt` | each reply exactly as it came back |
+
+They are files, so they diff. Two runs of the same behaviour against two drafts
+of a document, and `git diff` is the answer to whether the rewrite changed what
+the document covers.
+
+`--panel` takes a name from `engine/panel/panel-config.json` or a comma-separated
+list of model tags. `--behaviour` takes either registry shape; a boundary is
+optional and worth writing, because without one each judge draws its own line.
+
+**The tool that stands alone is
+[`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index).**
+It needs no infrastructure at all and is the one to clone if running the panel is
+what you came for. This repository carries the hosted index as well, which is why
+everything below it needs credentials.
+
+## Running the whole thing locally
+
+You need the Supabase project's URL and service role key. Ask the team.
 
 ```sh
 cp .env.example .env        # then fill in SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
@@ -99,10 +139,9 @@ ACI_RUN_ID=<uuid> python3 engine/panel/batch_job.py                             
 ## Proposing something
 
 The pull-request pathway is gone with the clone-and-fork one, and
-[/propose.html](/propose.html) replaces it. Two forms: a behaviour the index
-should be testing, or a specification it should be reading. A proposal is
-recorded in `aci_submissions`, its document goes to a private Supabase Storage
-bucket, and Slack is told.
+`/how-it-works.html` replaces it: one page explaining the index, with the two
+proposal forms on it. A proposal is recorded in `aci_submissions`, its document
+goes to a private Supabase Storage bucket, and Slack is told.
 
 Nothing more happens by itself. Running a proposal costs money, so an operator
 reads it in the portal and registers it there if it is worth the spend, which is
@@ -167,6 +206,7 @@ python3 engine/panel/test_batch_job.py
 python3 engine/panel/test_compose_run.py
 python3 engine/test_job.py                 # the job's dispatch
 python3 engine/test_publish.py             # which run answers for a cell
+python3 engine/test_local_run.py           # judging with no database
 python3 engine/test_store.py
 python3 engine/test_index_store.py
 node --test app/lib/__tests__/*.test.mjs   # the application's libraries
@@ -187,6 +227,7 @@ node engine/verify-portal.mjs                  # the portal renders and its form
 |---|---|
 | [`app/`](app/) | The Next.js application: the reader's routes, and the admin portal |
 | [`engine/`](engine/) | The judging engine, the payload builders, the job, the verifiers |
+| [`engine/local_run.py`](engine/local_run.py) | Judging one document against one behaviour, with no database |
 | [`engine/spec-cite/cite.py`](engine/spec-cite/cite.py) | The citation resolver behind every quote |
 | [`site/`](site/) | The reader's source, copied into `public/` at build time |
 | [`specs/`](specs/) | The locator grammar, and the mirrors' provenance notes |

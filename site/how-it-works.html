@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works, AI Character Index</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Polaris design framework v1.1. Shares the reader's two surfaces:
+     daylight (default) and umber, which is the framework's olive-deep ground. */
+  :root {
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+    --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body[data-palette="daylight"] {
+    --bg:#F1EFE3; --lift:#E9E6D7;
+    --hair:#C6C4B0; --hair2:#5C6B3C;
+    --ink:#23281B; --ink2:#5C6B3C; --ink3:#676C58;
+    --spec:#333D22; --energy:#B7C94B; --weak:#C9A227; --gap:#A0522D;
+    --on-accent:#F1EFE3;
+  }
+  body[data-palette="umber"] {
+    --bg:#333D22; --lift:#2A331C;
+    --hair:#4A552F; --hair2:#C4CBA8;
+    --ink:#F1EFE3; --ink2:#C4CBA8; --ink3:#A2AA88;
+    --spec:#C7D69A; --energy:#B7C94B; --weak:#D9B93F; --gap:#C97A4D;
+    --on-accent:#23281B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--ui);
+         font-size: 17px; line-height: 1.6; min-height: 100vh; }
+
+  /* ---------- header (as on the reader) ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between;
+           padding: 16px 40px; border-bottom: 1px solid var(--hair); }
+  /* The mark and the name take one pair of tones and move together, as they do
+     in the bar of evals-playground: olive at rest, olive-deep under the
+     pointer, ink while pressed. On the umber surface there is nothing darker
+     than the ground to move to, so the pair brightens to paper instead. */
+  .site-brand { display: flex; align-items: baseline; gap: 10px;
+                --brand-rest: var(--ink2); --brand-lit: var(--spec); --brand-pressed: var(--ink); }
+  body[data-palette="umber"] .site-brand { --brand-lit: var(--ink); --brand-pressed: var(--ink); }
+  /* The broken orbit, carrying the accent while the wordmark keeps the ink. */
+  /* Olive rather than the framework's olive-deep: at 20px the deep tone reads
+     as a smudge beside its name, and the darkening is spent on hover instead. */
+  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--brand-rest);
+                  transition: color .15s ease; }
+  /* The mark leaves for polariscollective.org, the same place its name leaves
+     for. Second link to one destination, so it stays out of the reading order
+     and out of the tab order. */
+  .mark-link { display: flex; flex: none; align-self: center; }
+  .collective { color: var(--brand-rest); text-decoration: none; transition: color .15s ease;
+                font-family: var(--display); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  /* Mark and name are one target and answer as one: whichever half the pointer
+     is over, both darken. The chartreuse highlight this page gives a link in
+     prose is turned off for the pair: it would fill a block behind the name
+     that the mark beside it cannot take, and the bar would move under the
+     pointer instead of the name darkening in it. */
+  .mark-link:hover,
+  .collective:hover { background: none; }
+  .mark-link:hover .polaris-mark,
+  .site-brand:has(.collective:hover) .polaris-mark,
+  .mark-link:hover + .collective,
+  .collective:hover { color: var(--brand-lit); }
+  .mark-link:active .polaris-mark,
+  .site-brand:has(.collective:active) .polaris-mark,
+  .mark-link:active + .collective,
+  .collective:active { color: var(--brand-pressed); }
+  .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair); }
+  .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .wordmark a { color: inherit; text-decoration: none; }
+  nav { display: flex; align-items: center; gap: 24px; }
+  nav a { font-size: 14px; color: var(--ink2); text-decoration: none; }
+  nav a[href]:hover { background: var(--energy); color: var(--ink); }
+  nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .mode { background: none; border: none; padding: 4px 6px;
+          font: inherit; font-size: 16px; line-height: 1; color: var(--ink2); cursor: pointer;
+          transition: background-color .15s ease, color .15s ease; }
+  .mode:hover { background: var(--energy); color: var(--ink); }
+
+  /* ---------- the column ----------
+     One column, sections told apart by a rule and by whitespace. The bordered
+     sheet this replaced was a card, and the framework draws structure with
+     neither cards nor shadows. */
+  .sheet { max-width: 720px; margin: 0 auto; padding: 0 40px; }
+  .m-head { padding: 64px 0 48px; }
+  .m-title { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.16; }
+  .m-sub { font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 66ch; margin-top: 16px; }
+
+  /* Primary button: olive-deep ground, paper text, pill, chartreuse on hover. */
+  .repo-btn { display: inline-block; margin-top: 24px; padding: 10px 22px;
+              border: 1px solid transparent; border-radius: 999px;
+              background: var(--spec); color: var(--on-accent);
+              font-size: 15px; font-weight: 600; text-decoration: none;
+              transition: background-color .15s ease, color .15s ease; }
+  .repo-btn:hover { background: var(--energy); color: var(--ink); }
+
+  section.m { padding: 48px 0; border-top: 1px solid var(--hair); }
+  /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
+  h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
+       margin-bottom: 16px; padding-top: 19px;
+       background: linear-gradient(var(--energy), var(--energy)) 0 0 / 56px 3px no-repeat; }
+  section.m p { font-size: 17px; line-height: 1.6; color: var(--ink); max-width: 66ch; margin-bottom: 16px; }
+  section.m p:last-child { margin-bottom: 0; }
+  section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
+  section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
+  /* Bullets are 6px chartreuse circles. */
+  section.m li::before { content: ""; position: absolute; top: .78em; left: 4px;
+                         width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+  section.m li b { font-weight: 600; }
+  code { font-family: var(--mono); font-size: 13px; color: var(--ink2);
+         background: var(--lift); border: 1px solid var(--hair); padding: 0 4px; border-radius: 4px; }
+  pre { max-width: 66ch; margin: 16px 0; padding: 16px; overflow-x: auto;
+        background: var(--lift); border: 1px solid var(--hair); border-radius: 4px; }
+  pre code { display: block; border: none; background: none; padding: 0;
+             font-size: 13px; line-height: 1.7; color: var(--ink); }
+  /* The framework's link: ink text over a 2px chartreuse underline; hover fills
+     the highlight behind it. */
+  a { color: var(--ink); text-decoration: none; box-shadow: inset 0 -2px 0 var(--energy);
+      transition: background-color .15s ease; }
+  a:hover { background: var(--energy); }
+  header a, footer a, .repo-btn { box-shadow: none; }
+
+  footer { max-width: 720px; margin: 0 auto; padding: 32px 40px 64px;
+           border-top: 1px solid var(--hair);
+           display: flex; flex-direction: column; gap: 8px;
+           font-size: 14px; color: var(--ink3); }
+  .f-row { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+  .proto-flag { margin-left: auto; }
+  footer a { color: var(--ink2); }
+  footer a:hover { background: var(--energy); color: var(--ink); }
+
+  :focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    header { padding: 14px 22px; flex-wrap: wrap; gap: 6px 18px; }
+    /* Two names and a menu do not fit. The mark carries the collective alone,
+       and its name is still a link in the footer. */
+    .collective, .brand-divider { display: none; }
+    .sheet, footer { padding-left: 22px; padding-right: 22px; }
+    .m-title { font-size: 32px; }
+  }
+
+  /* ---------- the proposal forms ---------- */
+  .choice { display: flex; gap: 0; margin: 8px 0 32px; border: 1px solid var(--hair); width: fit-content; }
+  .choice a { padding: 9px 20px; font-size: 15px; color: var(--ink2); text-decoration: none;
+              box-shadow: none; }
+  .choice a:hover { background: var(--energy); color: var(--ink); }
+  .choice a[aria-current="page"] { background: var(--spec); color: var(--on-accent); }
+  form.propose { margin: 0 0 24px; }
+  form.propose label { display: block; margin-bottom: 20px; }
+  form.propose label > span { display: block; font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
+  form.propose .hint { display: block; margin-top: 6px; font-size: 14px; color: var(--ink3); }
+  form.propose input[type="text"],
+  form.propose input[type="email"],
+  form.propose input[type="url"],
+  form.propose textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--hair); border-radius: 4px;
+    background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 16px;
+    line-height: 1.5;
+  }
+  form.propose textarea { min-height: 110px; resize: vertical; }
+  form.propose input:focus-visible, form.propose textarea:focus-visible,
+  form.propose input[type="file"]:focus-visible {
+    outline: 2px solid var(--energy); outline-offset: 1px; border-color: var(--hair2);
+  }
+  form.propose input[type="file"] { font-family: var(--ui); font-size: 15px; color: var(--ink2); }
+  form.propose button { margin-top: 4px; padding: 11px 26px; border: 1px solid var(--spec);
+    border-radius: 999px; background: var(--spec); color: var(--on-accent);
+    font-family: var(--ui); font-size: 16px; font-weight: 500; cursor: pointer; }
+  form.propose button:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  /* Hidden from people, visible to the machinery that fills in every field it
+     finds. Not display:none, which some of it knows to skip. */
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .said { margin: 0 0 28px; padding: 14px 18px; border-left: 3px solid var(--energy);
+          background: var(--lift); font-size: 16px; }
+  .said.bad { border-left-color: var(--gap); }
+  .said p { margin: 0 0 6px; }
+  .said p:last-child { margin: 0; }
+</style>
+</head>
+<body data-palette="daylight">
+
+<header>
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <span class="wordmark"><a href="spec-reader/">AI Character Index</a></span>
+  </span>
+  <nav aria-label="Site navigation">
+    <a href="spec-reader/">Spec reader</a>
+    <a class="active" href="how-it-works.html">How it works</a>
+    <button class="mode" id="mode" aria-label="Switch surface">☾</button>
+  </nav>
+</header>
+
+<div class="sheet">
+
+  <div class="m-head">
+    <div class="m-title">How it works</div>
+    <p class="m-sub">The labs publish documents saying how their models should behave: Anthropic&rsquo;s
+    constitution, OpenAI&rsquo;s model spec. They are long, and what they say about any one thing
+    is scattered through them. This index reads them for you, one behaviour at a time, and shows
+    you every passage that bears on it, quoted and located.</p>
+  </div>
+
+  <div id="said" hidden></div>
+
+  <section class="m">
+    <h2>The idea</h2>
+    <p>Pick a behaviour &mdash; say, whether a model should defer to a user&rsquo;s own decisions
+    about their own life. Now ask of a specification: where does this document address that, and
+    how squarely? Reading forty thousand words to find out is the work this replaces.</p>
+    <p>So we ask several frontier models to read the whole document, passage by passage, against
+    one written description of the behaviour. Each one marks every passage: this is where the
+    document establishes it, this only touches on it, this is unrelated. We keep every verdict,
+    and we quote the text verbatim with a reference that points back to the exact sentences.</p>
+    <p>What comes out is a coverage map. Open the
+    <a href="spec-reader/">spec reader</a>, tick a behaviour, and the passages light up in both
+    documents at once. You can read what each one says, see how squarely each document commits to
+    it, and take the citations away as a file.</p>
+    <p><b>Why several readers rather than one.</b> One model&rsquo;s opinion about a paragraph is
+    an opinion. Several models, given the same description and the same document, agreeing about a
+    paragraph is closer to a finding. The reader shows you how much of the panel stood behind each
+    passage rather than hiding it in an average.</p>
+  </section>
+
+  <section class="m">
+    <h2>What makes a good behaviour</h2>
+    <p>The description is the whole of it, and two sentences carry it. The first says what the
+    behaviour requires, in plain terms. The second says where it stops &mdash; what it is
+    <i>not</i>, usually by naming the neighbouring thing it would otherwise swallow.</p>
+    <p>That second sentence is the one people skip and the one that decides whether the result is
+    worth anything. &ldquo;Honesty&rdquo; without a boundary collects every passage about trust,
+    tone, transparency and error correction. &ldquo;Honesty, meaning the model does not assert
+    what it believes to be false &mdash; not whether it volunteers everything it knows&rdquo;
+    collects the passages you meant.</p>
+  </section>
+
+  <section class="m">
+    <h2>Two ways in</h2>
+    <p>Either run it yourself, or send us what you want tested and we will run it.</p>
+  </section>
+
+  <section class="m">
+    <h2>Run it yourself</h2>
+    <p><b>The tool to clone is
+    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+    rel="noopener">AndresCotton/ai-character-index</a>.</b> It is the original, built by
+    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
+    Cotton</a> with <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>, and almost everything described on this page is theirs. It
+    stands alone: Python, a browser, an API key, and nothing else. Nothing in it depends on us.</p>
+    <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
+cd ai-character-index
+python3 -m http.server 8080 --directory site</code></pre>
+    <p><b>Everything it produces is a file, and that is the point.</b> A run writes its verdicts
+    to disk beside the document it read. Two runs are two files, so <code>git diff</code> tells
+    you what changed &mdash; between one draft of a specification and the next, between two ways
+    of wording the same behaviour, between one panel of readers and another. Rewrite a paragraph
+    of a spec, run it again, and the diff is the answer to &ldquo;did that paragraph actually
+    change what the document covers?&rdquo;</p>
+    <p>You can also point it at a document of your own: your organisation&rsquo;s policy, a draft
+    nobody has published, a competitor&rsquo;s. It never leaves your machine.</p>
+
+    <h3>Or clone ours</h3>
+    <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
+    rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
+    this site. It is <i>less portable</i>, deliberately: the published index lives in a hosted
+    database, the judging runs on our infrastructure, and a clone without our credentials cannot
+    reach either. What it can do is judge locally, with one API key and no account at all:</p>
+    <pre><code>python3 engine/local_run.py \
+    --document=my-spec@2026-09-12:path/to/spec.md \
+    --behaviour=path/to/behaviour.json \
+    --panel=frontier_fast</code></pre>
+    <p>The results land in <code>artefacts/</code> as raw files: every reply exactly as it came
+    back, every verdict with its locator and the text it judged, and what each call cost. Same
+    diffing, no database. The README says what the JSON file holds.</p>
+  </section>
+
+  <section class="m">
+    <h2>Send us one</h2>
+    <p>If you would rather not run anything, describe what you want tested and we will do it. We
+    read every proposal ourselves, decide whether it belongs in the index, and pay for the run out
+    of our own credits. If it goes in, we write and tell you, and it appears in the reader for
+    everyone.</p>
+    <p>We cannot promise to run everything. What we look for is a behaviour described clearly
+    enough to be tested, and a reason it matters that the specifications should have an answer to.
+    If we decide against it, we will say so rather than leave you waiting.</p>
+
+    <nav class="choice" aria-label="What you are sending">
+      <a href="?kind=behaviour" id="pick-behaviour">A behaviour</a>
+      <a href="?kind=specification" id="pick-specification">A document</a>
+    </nav>
+  </section>
+
+  <section class="m" id="form-behaviour">
+    <h3>A behaviour to test</h3>
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="behaviour">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>What would you call it</span>
+        <input type="text" name="name" required placeholder="Bribery resistance">
+        <span class="hint">A short name, the way it would read in a menu.</span>
+      </label>
+      <label>
+        <span>What does the behaviour require</span>
+        <textarea name="query" required placeholder="The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them."></textarea>
+        <span class="hint">One or two sentences, describing the thing itself rather than the
+        words for it. Write it the way you would brief a careful colleague who has to apply it to
+        a page of text without asking you anything.</span>
+      </label>
+      <label>
+        <span>Where does it stop</span>
+        <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
+        <span class="hint">The most useful field on this form. Name the neighbouring thing your
+        behaviour is <i>not</i>, so that a passage about that neighbour does not get counted.
+        Without it the result is broader than you meant and harder to trust.</span>
+      </label>
+      <label>
+        <span>Why does it matter</span>
+        <textarea name="why" placeholder="What it would tell you to learn that a specification covers this thoroughly, or not at all."></textarea>
+        <span class="hint">Optional, and it is what we read first when deciding.</span>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">So we can tell you what we decided and write again when it is
+        published. We use it for this and nothing else.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+  </section>
+
+  <section class="m" id="form-specification" hidden>
+    <h3>A document to add</h3>
+    <p>A published statement of how an organisation&rsquo;s models should behave. Send the text,
+    not a link alone: the index quotes documents word for word and pins every citation to the
+    exact version it read, so it keeps the text rather than fetching it again later.</p>
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="specification">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>Who published it</span>
+        <input type="text" name="organisation" required placeholder="OpenAI">
+      </label>
+      <label>
+        <span>What is it called</span>
+        <input type="text" name="name" required placeholder="Model Spec">
+        <span class="hint">No @ and no &gt; in the name: every citation into this document is
+        built from it.</span>
+      </label>
+      <label>
+        <span>Which version</span>
+        <input type="text" name="version" required placeholder="2026-01-20">
+        <span class="hint">Whatever the publisher calls this release &mdash; a date, a number, a
+        name. Documents get reissued, and a citation has to say which one it read.</span>
+      </label>
+      <label>
+        <span>Where is it published</span>
+        <input type="url" name="source_url" required placeholder="https://example.com/spec">
+      </label>
+      <label>
+        <span>The document itself</span>
+        <input type="file" name="document" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
+        <span class="hint">Markdown or plain text, up to 2 MB. Headings matter: they are how a
+        citation names the place it points at.</span>
+      </label>
+      <label>
+        <span>Why does it belong here</span>
+        <textarea name="why" placeholder="Optional, and it is what we read first when deciding."></textarea>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">So we can tell you what we decided and write again when it is
+        published.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+  </section>
+
+  <section class="m">
+    <h2>Who made this</h2>
+    <p><b>The AI Character Index was created by
+    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
+    Cotton</a> and <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>.</b> The vision and the first execution are Andr&eacute;s&rsquo;s,
+    including the first version of this reader; Matt got that work production ready. Between them
+    they wrote the judging pipeline, the citation resolver and the reader itself. Their work was
+    supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact.</p>
+    <p>Run by <a href="https://polariscollective.org" target="_blank" rel="noopener">Polaris
+    Collective</a> since September 2026, with Andr&eacute;s&rsquo;s agreement, and started by
+    him.</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="f-row">
+    <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by
+      <a href="https://github.com/AndresCotton">Andres Cotton</a></span>
+  </div>
+  <div class="f-row">
+    <span>The standalone original is
+      <a href="https://ai-character-index.pages.dev" target="_blank"
+      rel="noopener">ai-character-index.pages.dev</a>, from
+      <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+      rel="noopener">github.com/AndresCotton/ai-character-index</a></span>
+    <span class="proto-flag">Apache 2.0 code, CC BY 4.0 writing and data</span>
+  </div>
+</footer>
+
+<script>
+/* surface toggle, shared state with the reader */
+const SURFACES = ["daylight", "umber"];
+const modeBtn = document.getElementById("mode");
+function setPalette(p) {
+  if (!SURFACES.includes(p)) p = "daylight";
+  document.body.dataset.palette = p;
+  try { localStorage.setItem("aci-palette", p); } catch (e) {}
+  const night = p === "umber";
+  modeBtn.textContent = night ? "☼" : "☾";
+  modeBtn.title = night ? "Back to daylight" : "Switch to umber";
+  modeBtn.setAttribute("aria-label", night ? "Switch to the daylight surface" : "Switch to the umber night surface");
+}
+modeBtn.addEventListener("click", () =>
+  setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber"));
+const qp = new URLSearchParams(location.search).get("palette");
+let saved = null; try { saved = localStorage.getItem("aci-palette"); } catch (e) {}
+setPalette(qp || saved || "daylight");
+
+/* Which form, and what came back. Both from the URL, so the page needs no state
+   of its own and a result can be linked to. */
+const params = new URLSearchParams(location.search);
+const kind = params.get("kind") === "specification" ? "specification" : "behaviour";
+document.getElementById("form-behaviour").hidden = kind !== "behaviour";
+document.getElementById("form-specification").hidden = kind !== "specification";
+document.getElementById("pick-" + kind).setAttribute("aria-current", "page");
+
+const said = document.getElementById("said");
+const done = params.get("done");
+const problem = params.get("problem");
+if (done || problem) {
+  said.hidden = false;
+  said.className = "said" + (problem ? " bad" : "");
+  /* textContent, never innerHTML: this text came back through a URL. */
+  for (const line of (problem || done).split("\n")) {
+    const p = document.createElement("p");
+    p.textContent = line;
+    said.append(p);
+  }
+  said.setAttribute("role", problem ? "alert" : "status");
+  said.scrollIntoView({ block: "center" });
+}
+</script>
+
+</body>
+</html>

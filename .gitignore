@@ -54,3 +54,6 @@ tests/golden/cite-corpus-*.txt
 # is the source and the only one tracked.
 .next/
 public/
+
+# Results of a local run. They are somebody's working output, not the index.
+artefacts/
