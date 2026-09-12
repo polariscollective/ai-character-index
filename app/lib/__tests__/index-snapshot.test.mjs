@@ -56,6 +56,7 @@ test("a second read inside the window asks the database nothing", async () => {
   let clock = 1_000;
   await indexSnapshot(fetchImpl, () => clock);
   const asked = urls.length;
+  assert.ok(asked > 0, "the first read queried the database");
 
   clock += 59_000;
   await indexSnapshot(fetchImpl, () => clock);
