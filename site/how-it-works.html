@@ -279,19 +279,25 @@
 
   <section class="m">
     <h2>The idea</h2>
-    <p>Pick a behaviour &mdash; say, whether a model should defer to a user&rsquo;s own decisions
-    about their own life. Now ask of a specification: where does this document address that, and
-    how squarely? Reading forty thousand words to find out is the work this replaces.</p>
-    <p>Several frontier models read the whole document against one written description of the
-    behaviour, and mark every passage: this is where the document establishes it, this only
-    touches on it, this is unrelated. One model&rsquo;s opinion about a paragraph is an opinion;
-    several models agreeing, given the same description, is closer to a finding.</p>
-    <p>What comes out is a coverage map. In the <a href="/spec-reader/">spec reader</a>, tick a
+    <p>A specification is a document a lab publishes saying how its models should behave.
+    Anthropic&rsquo;s constitution and OpenAI&rsquo;s model spec are the two this index reads.
+    They run to tens of thousands of words, and what either says about any one subject is spread
+    across them.</p>
+    <p>A behaviour is one thing such a document might commit a model to, written down so that it
+    can be looked for. Deferring to a user&rsquo;s own decisions about their own life is a
+    behaviour. So is refusing to assert what the model believes to be false.</p>
+    <p>The index puts the two together. Several frontier models read a whole document against one
+    written description of a behaviour, and mark every passage in it: this is where the document
+    establishes the behaviour, this only touches on it, this is unrelated. One model&rsquo;s
+    opinion about a paragraph is an opinion. Several models agreeing, given the same description
+    and the same document, is closer to a finding, and the reader shows you how many stood behind
+    each passage rather than averaging them away.</p>
+    <p>What comes out is a coverage map. In the <a href="/spec-reader/">spec reader</a> you tick a
     behaviour and every passage that bears on it lights up in both documents at once, shaded by
-    how squarely the document commits to it. Click one to see each reader&rsquo;s verdict on that
-    exact passage, and the quote itself. Beside every behaviour there is an <b>i</b> telling you
-    what it was defined as, because a verdict means nothing without the question that produced
-    it. The export takes the passages you ticked away as a file.</p>
+    how squarely the document commits to it. Click a passage to see each reader&rsquo;s verdict on
+    it and the quote itself. Beside every behaviour there is an <b>i</b> giving the description it
+    was judged against, because a verdict means little without the question that produced it. The
+    export takes the passages you ticked away as a file.</p>
   </section>
 
   <section class="m" id="propose">
@@ -301,12 +307,12 @@
     for the run out of our own credits. If it goes in, we write and tell you, and it appears in
     the reader for everyone.</p>
     <p><b>Describing the behaviour is the whole of it, and two sentences carry it.</b> The first
-    says what the behaviour requires, in plain terms. The second says where it stops &mdash; what
-    it is <i>not</i>, usually by naming the neighbouring thing it would otherwise swallow.</p>
-    <p>That second sentence is the one people skip and the one that decides whether the answer is
-    worth anything. &ldquo;Honesty&rdquo; without a boundary collects every passage about trust,
-    tone, transparency and error correction. &ldquo;Honesty, meaning the model does not assert
-    what it believes to be false &mdash; not whether it volunteers everything it knows&rdquo;
+    says what the behaviour requires, in plain terms. The second says where it stops, usually by
+    naming the neighbouring thing it would otherwise swallow.</p>
+    <p>That second sentence is the one people skip, and it is the one that decides whether the
+    answer is worth anything. &ldquo;Honesty&rdquo; with no boundary collects every passage about
+    trust, tone, transparency and error correction. &ldquo;Honesty, meaning the model does not
+    assert what it believes to be false, not whether it volunteers everything it knows&rdquo;
     collects the passages you meant.</p>
     <p>We cannot promise to run everything. If we decide against it, we will say so rather than
     leave you waiting.</p>
@@ -383,8 +389,8 @@
       <label>
         <span>Which version</span>
         <input type="text" name="version" required placeholder="2026-01-20">
-        <span class="hint">Whatever the publisher calls this release &mdash; a date, a number, a
-        name. Documents get reissued, and a citation has to say which one it read.</span>
+        <span class="hint">Whatever the publisher calls this release: a date, a number, a name.
+        Documents get reissued, and a citation has to say which one it read.</span>
       </label>
       <label>
         <span>Where is it published</span>
@@ -412,11 +418,30 @@
 
   <section class="m">
     <h2>What it does not tell you</h2>
-    <p>It reports what a document <i>says</i>, not what a model <i>does</i>. A specification
-    covering a behaviour thoroughly is not evidence that the model follows it; that is a different
+    <p>It reports what a document says, not what a model does. A specification covering a
+    behaviour thoroughly is not evidence that the model follows it. That is a different
     measurement, and the citations here are meant to feed it.</p>
     <p>It is also not a scoreboard. Two documents addressing a behaviour differently is usually
     two organisations having made different choices, not one of them failing.</p>
+  </section>
+
+  <section class="m">
+    <h2>Citing what you find</h2>
+    <p>Every passage carries a locator, and the locator is the point of the whole exercise:</p>
+    <pre><code>constitution@2026-01-20 &gt; Being honest &gt; &para;18 s1-4
+model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
+    <p>It names the document, the version it was read at, the section, and the sentences. Because
+    the version is part of it, a locator keeps pointing at the same words after the lab reissues
+    the document. Anyone can resolve one back to the text, including us: a scheduled job
+    re-resolves every published citation against the stored document and fails loudly if a single
+    quote has moved.</p>
+    <p>The reader&rsquo;s export writes the quote and its locator together, so what you paste into
+    an article is the sentence and where it came from.</p>
+    <p><b>Cite the specification to its publisher, not to us.</b> The documents are Anthropic&rsquo;s
+    and OpenAI&rsquo;s, released under CC0. If you are citing the index itself, the coverage data
+    or the method, the repository carries a
+    <a href="https://github.com/polariscollective/ai-character-index/blob/main/CITATION.cff"
+    target="_blank" rel="noopener">CITATION.cff</a> that GitHub renders as BibTeX and APA.</p>
   </section>
 
   <section class="m">
@@ -425,57 +450,54 @@
     <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
     Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
     rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
-    judging pipeline, the citation resolver and the first version of this reader are all from
-    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and
-    BlueDot Impact.</p>
-    <p><b>It stands alone, and it is the one to clone:
-    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
-    rel="noopener">AndresCotton/ai-character-index</a>.</b> Python, a browser, an API key, and
-    nothing else. Nothing in it depends on us, and it is published at
-    <a href="https://ai-character-index.pages.dev" target="_blank"
+    judging pipeline, the citation resolver and the first version of this reader all come from
+    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and BlueDot
+    Impact. It is published at <a href="https://ai-character-index.pages.dev" target="_blank"
     rel="noopener">ai-character-index.pages.dev</a>.</p>
-    <p>Polaris Collective has run the project since September 2026, with Andr&eacute;s&rsquo;s
-    agreement, and started by him.</p>
+    <p><b>It is built around git, and that is its best idea.</b> The index is a set of files in
+    the repository: the behaviours, the specifications, the verdicts. Running a panel writes
+    files. Adding a behaviour edits a file. So a change to the index is a commit, reviewing one is
+    reading a diff, and contributing is a pull request. Two runs of the same behaviour against two
+    drafts of a document differ by exactly the lines that changed, which is the question you
+    usually want answered.</p>
+    <p>It needs nothing but Python, a browser and an API key, and nothing in it depends on us. If
+    running the panel is what you came for, it is the one to clone.</p>
   </section>
 
   <section class="m">
     <h2>Run it yourself</h2>
-    <p class="lead">Everything this does, you can do on your own machine: add a document,
-    describe a behaviour, judge one against the other, read every verdict. No account, no
-    database, nothing of ours. What the infrastructure behind this site adds is the
-    <i>published</i> index &mdash; the shared coverage map, its ledger of citations, and the
-    reader you are looking at. The work itself is local.</p>
+    <p class="lead">Everything this does, you can do on your own machine. Add a document, describe
+    a behaviour, judge one against the other, read every verdict. No account, no database, nothing
+    of ours.</p>
 
     <h3>The original</h3>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
-    <p><b>Everything it produces is a file, and that is the point.</b> A run writes its verdicts
-    to disk beside the document it read. Two runs are two files, so <code>git diff</code> tells
-    you what changed &mdash; between one draft of a specification and the next, between two ways
-    of wording the same behaviour, between one panel of readers and another. Rewrite a paragraph
-    of a spec, run it again, and the diff is the answer to &ldquo;did that paragraph actually
-    change what the document covers?&rdquo;</p>
     <p>Point it at a document of your own: your organisation&rsquo;s policy, a draft nobody has
     published, a competitor&rsquo;s. It never leaves your machine.</p>
 
     <h3>Or ours</h3>
     <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
     rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
-    this site. It was built to carry infrastructure &mdash; a hosted database, judging that runs
-    on our machines, a portal that publishes &mdash; which makes it the heavier clone of the two.
-    It judges locally all the same, with one API key and no account:</p>
+    this site. The code has moved on since the fork, but the difference that matters is what it
+    was built for. This one carries infrastructure: a hosted database holding the index, judging
+    that runs on our machines, and a portal that publishes. It is the heavier clone of the two,
+    and it is heavier on purpose.</p>
+    <p>It still runs locally, with one API key and no account:</p>
     <pre><code>python3 engine/local_run.py \
     --document=my-spec@2026-09-12:path/to/spec.md \
     --behaviour=path/to/behaviour.json \
     --panel=frontier_fast</code></pre>
-    <p><b>A document is any markdown file and a behaviour is a small JSON file.</b> Neither is
-    registered anywhere and neither needs to be: you point at them, and they are judged by the
-    same panel, the same prompt and the same parser this site runs on.</p>
-    <p>The results land in <code>artefacts/</code> as raw files &mdash; every reply exactly as it
-    came back, every verdict with its locator and the text it judged, and what each call cost.
-    Same diffing, no database. The README says what each file holds.</p>
-    <p>The one thing a local run does not give you is this site: a published index, with its
+    <p><b>A new document and a new behaviour are both local.</b> A document is any markdown file.
+    A behaviour is a small JSON file holding its name, what it requires and where it stops.
+    Neither is registered anywhere and neither needs to be. You point at them, and they are judged
+    by the same panel, the same prompt and the same parser this site runs on.</p>
+    <p>The results land in <code>artefacts/</code> as files: every reply exactly as it came back,
+    every verdict with its locator and the text it judged, the document as the panel saw it, and
+    what each call cost. They diff like the original&rsquo;s do. The README says what each file
+    holds.</p>
+    <p>The one thing a local run does not give you is this site. A published index, with its
     citations frozen and its coverage map in the reader, is what the hosted half exists for.</p>
   </section>
   </div>
@@ -493,6 +515,7 @@ python3 -m http.server 8080 --directory site</code></pre>
       rel="noopener">ai-character-index.pages.dev</a>, from
       <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
       rel="noopener">github.com/AndresCotton/ai-character-index</a></span>
+    <span><a href="/admin">Admin</a></span>
     <span class="proto-flag">Apache 2.0 code, CC BY 4.0 writing and data</span>
   </div>
 </footer>
