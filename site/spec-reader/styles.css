@@ -534,6 +534,48 @@ body.resizing-columns {
 .behaviour-option .name { flex: 1; font-size: 12px; line-height: 1.35; }
 .behaviour-option.checked .name { color: var(--ink); }
 
+/* The information control beside a behaviour. It sits outside the label, because
+   the label is the tick target and a click inside it would tick the row. */
+.behaviour-option-row {
+  display: flex;
+  align-items: center;
+}
+.behaviour-why {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--faint);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.behaviour-why:hover,
+.behaviour-why:focus-visible {
+  border-color: transparent;
+  background: var(--energy);
+  color: var(--ink);
+}
+
+/* The first line of a behaviour note: defined or not, judged or not. Those are
+   independent states and the note says both, because the menu shows every
+   behaviour alike and gives a reader no way to tell them apart. */
+.behaviour-note-state {
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-light);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* The export sits at the foot of the menu rather than in the toolbar at its head: it acts on
    the ticked set, so it reads as the end of the list it takes away and not as a third control
    beside All and None. The line under it counts what would come out, so the reader knows what

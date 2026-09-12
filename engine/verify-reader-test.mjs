@@ -290,6 +290,18 @@ if (behaviours.length === 0) {
   // the text, and the behaviour taken away takes its passages with it.
   const [first, second] = behaviours;
   await readView(`${base}?behavior=${first.slug},${second.slug}&spec=corpus-labs`);
+  // Read the whole document, not the focused extract. Focus mode hides every section
+  // that carries no highlight, so unticking a behaviour there removes text rather than
+  // only its highlights -- on this fixture, most of what was on screen. Keeping one's
+  // place is a promise about the reading mode where the text stays put, and that is the
+  // mode this check measures; the focused view's own arithmetic is checked above, where
+  // hidden blocks and collapsed sections are counted.
+  const unfocused = await page.evaluate(() => {
+    const panel = document.querySelector('.document-panel[data-document-id="corpus-labs"]');
+    panel.querySelector(".document-focus-toggle").click();
+    return panel.querySelectorAll(".section-collapsed").length;
+  });
+  await page.waitForTimeout(100);
   // A third of the way down, not a fixed pixel count: the document under test is
   // whatever the fixture carries, and a number chosen for a four-thousand-line
   // spec clamps to the bottom of a shorter one, which is not the same place.
@@ -323,12 +335,13 @@ if (behaviours.length === 0) {
     // position by a pixel or two, on a short one by the same fraction. What must
     // hold is that the reader kept its place, not that nothing moved.
     Math.abs(after.scrollTop - before) < Math.max(4, after.scrollRange * 0.1)
+      && unfocused === 0
       && after.passages === anchorCount(renderable(second.slug, documents[0].id))
       && after.behaviour === second.name
       && after.url === second.slug,
     "unticking one of two · corpus-labs",
     `scroll ${before} → ${after.scrollTop}, ${after.passages} passages left,`
-    + ` menu reads ${after.behaviour}, url ${after.url}`,
+    + ` ${unfocused} sections collapsed, menu reads ${after.behaviour}, url ${after.url}`,
   );
 
   // And with the last behaviour unticked, the specification is readable in full again.

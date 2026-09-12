@@ -28,6 +28,12 @@ const DOCUMENTS_URL = "/api/reader/documents";
  * shipped fallback existed for a fresh clone, and neither has anything left to
  * protect now that the payload comes from a route. */
 const PAYLOAD_URL = "/api/reader/payload";
+/* What a behaviour IS, as opposed to what a run found: its definition, the
+ * frontier of its construct, where that definition came from, and whether
+ * anyone has written either. Read from the registry rather than carried in the
+ * payload, because a payload is materialised at publication time and this
+ * changes when someone edits a behaviour. */
+const BEHAVIOUR_NOTES_URL = "/api/reader/behaviours";
 const PUBLICATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* Whether a ?publication= pin may be asked for. The route validates it too; this
@@ -63,6 +69,73 @@ async function loadBehaviours() {
   const payload = await loadJSON(payloadUrl(null));
   state.payloadSource = { origin: "current", name: "current publication", requested };
   return payload;
+}
+
+/* Loaded once, beside the payload. A behaviour the registry does not describe
+ * still gets a note saying so, because "nobody has written what this means" is
+ * an answer and an empty popover is not. */
+let behaviourNotes = null;
+
+async function loadBehaviourNotes() {
+  try {
+    behaviourNotes = await loadJSON(BEHAVIOUR_NOTES_URL);
+  } catch (error) {
+    console.warn(`Behaviour notes unavailable (${error.message}).`);
+    behaviourNotes = {};
+  }
+}
+
+/* The note a reader opens beside a behaviour. It answers the question an
+ * unexpected label raises -- where does this behaviour stop -- which the reader
+ * could not answer at all: the passage popover says what the judges decided,
+ * and nothing said what they were asked. */
+function openBehaviourNote(button) {
+  const note = elements.keyNote;
+  if (!note || typeof note.showPopover !== "function") return;
+  const slug = button.dataset.behaviourNote;
+  const entry = (behaviourNotes || {})[slug];
+  if (!entry) return;
+
+  elements.keyNoteTitle.textContent = entry.name;
+  const body = document.createElement("div");
+
+  /* Four states, not two. Written-for-a-panel and judged are independent, and
+   * the combination that reads like a contradiction is the one that exists: this
+   * index carries a behaviour a panel answered for without the brief it was
+   * given being recorded beside it. Saying "nobody has written what this means"
+   * there would be half a truth; saying nothing would be none. What is NOT
+   * claimed here is anything about the panel's composition -- whether the same
+   * models answered for every specification is a property of a publication, not
+   * of the registry this note reads. */
+  const line = document.createElement("p");
+  line.className = "behaviour-note-state";
+  line.textContent = entry.defined
+    ? (entry.judged ? "Written for a panel, and judged."
+                    : "Written for a panel, not yet judged.")
+    : (entry.judged ? "Judged, but the brief the panel was given was not recorded with the behaviour."
+                    : "Tracked, written for no panel, and not yet judged.");
+  body.append(line);
+
+  const section = (heading, text) => {
+    if (!text) return;
+    const h = document.createElement("h3");
+    h.textContent = heading;
+    const p = document.createElement("p");
+    p.textContent = text;          // never innerHTML: this is registry prose
+    body.append(h, p);
+  };
+  section("What the judges are asked", entry.query);
+  // A separate heading, because it is a separate sentence. One behaviour here is
+  // described by the index and was never written for a panel, and printing its
+  // description as the brief would claim a judge had read it.
+  section("How the index describes it", entry.described);
+  section("Where the construct stops", entry.boundary);
+  section("Where the definition comes from", entry.source);
+
+  elements.keyNoteBody.replaceChildren(...body.childNodes);
+  if (note.matches(":popover-open")) note.hidePopover();
+  note.showPopover();
+  placeKeyNote(button);
 }
 
 /* Shown for a document when no behaviour is under test. */
@@ -661,7 +734,7 @@ function renderBehaviourList() {
           const checked = selected.has(behaviour.slug);
           const texture = behaviourTexture(behaviour);
           return `
-          <li>
+          <li class="behaviour-option-row">
             <label class="behaviour-option${checked ? " checked" : ""} texture-${texture}" style="--bh: ${behaviourHue(behaviour)}">
               <input
                 class="behaviour-check"
@@ -673,6 +746,13 @@ function renderBehaviourList() {
               <span class="number">${String(behaviour.id).padStart(2, "0")}</span>
               <span class="name">${escapeHTML(behaviour.name)}</span>
             </label>
+            <button
+              type="button"
+              class="behaviour-why"
+              data-behaviour-note="${escapeHTML(behaviour.slug)}"
+              aria-label="What ${escapeHTML(behaviour.name)} means"
+              title="What this behaviour means"
+            >i</button>
           </li>
         `;}).join("")}
       </ul>
@@ -680,6 +760,13 @@ function renderBehaviourList() {
   `).join("");
   elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
     input.addEventListener("change", () => toggleBehaviour(input.dataset.behaviour, input.checked));
+  });
+  elements.behaviourList.querySelectorAll("[data-behaviour-note]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();          // the row is a label: a click would tick it
+      openBehaviourNote(button);
+    });
   });
   updateBehaviourCount();
 }
@@ -2235,6 +2322,9 @@ async function initialize() {
       loadJSON(DOCUMENTS_URL),
       loadBehaviours(),
     ]);
+    // Beside the payload, not before it: a note that fails to load must not stop
+    // the reader rendering, so it is awaited and its failure swallowed.
+    await loadBehaviourNotes();
     state.rawBehaviours = behaviours.behaviours || [];
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();
@@ -2244,7 +2334,8 @@ async function initialize() {
     };
     renderRunProvenance();
     const loaded = state.payload.behaviours;
-    state.documentFocus = { anthropic: loaded.length > 0, openai: loaded.length > 0 };
+    state.documentFocus = Object.fromEntries(
+      state.payload.documents.map(document => [document.id, loaded.length > 0]));
     const params = initialParams;
     // ?behavior= takes one slug or a comma-separated list; with none given the reader
     // opens on the first behaviour of the set, as the single-choice menu used to.

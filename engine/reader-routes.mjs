@@ -33,6 +33,27 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
 
   const pinned = url.searchParams.get("publication");
   const which = url.pathname.slice("/api/reader/".length);
+  if (which === "behaviours") {
+    // What a behaviour is, read from the registry rather than the payload. The
+    // fixture's two carry the states that matter: one defined with a boundary,
+    // one defined nowhere.
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({
+      "defined-behaviour": {
+        name: "Defined behaviour", group: "Behaviours under test", set: "reader-test",
+        query: "The document should say what it means.", described: null,
+        boundary: "The construct is whether the text states its own meaning. "
+                  + "NOT this behaviour: whether the meaning is a good one.",
+        source: "tests/fixtures (synthetic)", defined: true, judged: true,
+      },
+      "undefined-behaviour": {
+        name: "Undefined behaviour", group: "Behaviours under test", set: "reader-test",
+        query: null, described: "Tracked, and written for no panel.",
+        boundary: null, source: null, defined: false, judged: false,
+      },
+    }));
+    return true;
+  }
   const name = payloadName;
   const file = which === "documents" ? "documents.json"
     : which === "payload" ? `${name}.json`

@@ -55,6 +55,21 @@ on `harm-avoidance-to-third-parties` against the model spec. That is true of
 whose `rubric` is `v5`, so a reader naturally applies it to the shipped payload,
 where it describes nothing.
 
+### One behaviour was judged without the brief its panel was given
+
+**Not fixed. Reported to the reader rather than hidden.**
+
+`general-welfare-impacts-strict` carries judge calls that reached `done` and no
+judging entry: no query, no boundary, no provenance. It is the strict re-reading
+variant, and what the panel was actually asked for it survives only in the calls
+themselves. Every other behaviour of the reader set carries its brief.
+
+This was invisible until the behaviour note had to print it. The note now says
+so in those words rather than claiming nobody has written what the behaviour
+means, which is what a two-state reading of the registry made it say first --
+defined and judged are independent, and this row is the combination that reads
+like a contradiction.
+
 ## Changes of substance we made
 
 ### The reader's data attributes stay machine-readable, its prose does not
@@ -69,8 +84,6 @@ they now pass through a `spoken()` helper that renders the delimiter as a comma.
 
 The reader's copy is British throughout. The URL parameter is not, deliberately:
 links already shared point at it, and renaming it would break them silently.
-
-## Changes of substance we made
 
 ### The database is the only source
 
@@ -96,6 +109,15 @@ keeps it, and it is still the repository to clone to run the tool yourself.
 
 `app.js` defaulted `selectedSpec` to the string `"anthropic"`, which assumed a lab
 the index happens to carry. Against any other payload it rendered nothing at all.
+
+The same assumption sat in the focused-reading state, keyed `{ anthropic, openai }`.
+Against the test fixture, whose documents are named otherwise, focus mode was
+therefore off where production had it on -- so the browser walker had been
+checking the unfocused reader all along while the published site served the
+focused one. Both are now keyed by the documents the payload carries, and the
+walker turns focus off explicitly where it measures that the reader keeps your
+place, because in focus mode unticking a behaviour removes text rather than only
+its highlights.
 
 ## Where the fork is heading
 
