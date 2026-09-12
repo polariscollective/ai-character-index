@@ -40,11 +40,11 @@ What changed of substance, and what we found in what we inherited, is recorded i
 ## How it fits together
 
 ```
-Vercel: Next.js — the reader's two routes, and the admin portal
+Vercel: Next.js — the reader's routes, the proposal form, the admin portal
    │
-   ├── reads  ─────────────►  Supabase: the aci_ tables
+   ├── reads and writes ───►  Supabase: the aci_ tables and one bucket
    │                             behaviours · specifications · runs ·
-   │                             judgements · publications
+   │                             judgements · publications · proposals
    └── starts ─────────────►  polaris-batch-trigger  ──►  Cloud Run job
                                                             compose · judge · publish
 ```
@@ -96,6 +96,18 @@ python3 engine/panel/compose_run.py --behaviours=helpfulness --specs=constitutio
 ACI_RUN_ID=<uuid> python3 engine/panel/batch_job.py                                 # spends money
 ```
 
+## Proposing something
+
+The pull-request pathway is gone with the clone-and-fork one, and
+[/propose.html](/propose.html) replaces it. Two forms: a behaviour the index
+should be testing, or a specification it should be reading. A proposal is
+recorded in `aci_submissions`, its document goes to a private Supabase Storage
+bucket, and Slack is told.
+
+Nothing more happens by itself. Running a proposal costs money, so an operator
+reads it in the portal and registers it there if it is worth the spend, which is
+the only place either decision is taken.
+
 ## The admin portal
 
 `/admin`, behind Google sign-in and an allow-list (`ALLOWED_EMAILS`,
@@ -108,6 +120,7 @@ ACI_RUN_ID=<uuid> python3 engine/panel/batch_job.py                             
 | Specifications | Each document, its versions and their digests; register a version |
 | Runs | Compose a run and read its price, launch it, watch it, cancel it |
 | Publications | Build a publication, read it before anyone else, make it public |
+| Proposals | What arrived through the public form, and what you did about it |
 
 Composing and launching are separate on purpose: composing writes the calls and
 prices them and spends nothing, so the number read before launching is the number
@@ -156,7 +169,7 @@ python3 engine/test_job.py                 # the job's dispatch
 python3 engine/test_publish.py             # which run answers for a cell
 python3 engine/test_store.py
 python3 engine/test_index_store.py
-pnpm test:routes                           # the application's libraries
+node --test app/lib/__tests__/*.test.mjs   # the application's libraries
 node engine/verify-reader-test.mjs         # the reader, in a browser
 node engine/verify-reader-features.mjs
 ```

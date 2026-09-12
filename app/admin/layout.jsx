@@ -16,6 +16,7 @@ const PAGES = [
   ["/admin/specifications", "Specifications"],
   ["/admin/runs", "Runs"],
   ["/admin/publications", "Publications"],
+  ["/admin/submissions", "Proposals"],
 ];
 
 export default async function AdminLayout({ children }) {

@@ -84,7 +84,12 @@ graph TB
    `public/`, and the reader takes its two payloads from routes. Publishing is
    not a deploy: what the public sees changes with a database write, and the
    write is `is_public` on a publication that already exists.
-7. **Operating** — every write to the index goes through `app/admin/`, behind
+7. **Proposing** — `site/propose.html` and `/api/submit` are the one door open to
+   the internet that writes. A proposal lands in `aci_submissions`, its document
+   in the private `aci-submissions` bucket, and a Slack message says so. It
+   registers nothing and judges nothing: acting on it costs money, so an operator
+   reads it and retypes what they accept into the registration form.
+8. **Operating** — every write to the index goes through `app/admin/`, behind
    Google sign-in and an allow-list. The three operations that are Python —
    pricing a run, judging it, building a publication — are launched as modes of
    one Cloud Run job through `polaris-batch-trigger`, or as a local subprocess

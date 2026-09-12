@@ -81,3 +81,53 @@ export async function update(table, query, patch, fetchImpl = fetch) {
   });
   return response.json();
 }
+
+/**
+ * Put an object in a Storage bucket, and get back the path it landed at.
+ *
+ * The same service key, the same host, a different API. A proposal's document
+ * lives beside the row that describes it rather than in another provider's
+ * bucket, which would have meant a second identity for a deployment that has
+ * none.
+ */
+export async function upload(bucket, path, body, contentType, fetchImpl = fetch) {
+  const { url, key } = credentials();
+  const response = await fetchImpl(`${url}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": contentType,
+      // Never overwrite. Every path here is minted fresh, so a collision would
+      // mean something is wrong rather than something is repeated.
+      "x-upsert": "false",
+    },
+    body,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`upload ${bucket}/${path} -> ${response.status}${detail ? `: ${detail}` : ""}`);
+  }
+  return path;
+}
+
+/**
+ * A link to a private object that expires.
+ *
+ * The bucket is private, so this is how a person reads what was uploaded. The
+ * link is minted when a page is rendered and lives as long as the reading does;
+ * a permanent link to a private object is a public object with extra steps.
+ */
+export async function signedLink(bucket, path, seconds = 3600, fetchImpl = fetch) {
+  const { url, key } = credentials();
+  const response = await fetchImpl(`${url}/storage/v1/object/sign/${bucket}/${path}`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: seconds }),
+    cache: "no-store",
+  });
+  if (!response.ok) return null;      // a missing object is not worth a broken page
+  const { signedURL } = await response.json();
+  return signedURL ? `${url}/storage/v1${signedURL.replace(/^\/object/, "/object")}` : null;
+}

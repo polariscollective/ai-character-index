@@ -169,6 +169,25 @@ cell any panel answered for — its coverage is a re-reading of other behaviours
 judgements. It is in the inherited publication's menu and will not be in the next
 one until somebody judges it.
 
+### Proposals replaced pull requests, and they are only proposals
+
+The upstream project takes contributions as pull requests against a repository
+anyone can clone. This fork cannot: the artifacts are in Supabase, judging costs
+money, and nobody outside has credentials. `site/propose.html` is what replaced
+it — two forms writing to `aci_submissions`, a private bucket and a Slack
+webhook.
+
+What it deliberately does not do is act. A public route that could start a run
+would be a public route that spends money, so a proposal is recorded and read,
+and an operator retypes what they accept into the portal's registration form.
+That retyping is the moment a stranger's words become the index's, and it is a
+person's.
+
+`source_hash` is a salted hash of the caller's address and the salt is the
+service key, without which a hash of an address is an address: the space is small
+enough to enumerate. It exists to refuse the tenth proposal in an hour from one
+place, and nothing else reads it.
+
 ### A publication is built before it is shown
 
 `aci_publications` gained `is_public`, and the reader serves the newest
@@ -201,9 +220,8 @@ judging runs as a Cloud Run job, the site is a Next.js application on Vercel, an
 the index is operated from a portal rather than a terminal. Upstream keeps the
 property this fork gave up, which is running from a bare clone.
 
-What is left: the public submission button, which is a bucket upload and a Slack
-message; and the twelve calls that would equalise the ragged bench, until which no
-new publication can pass the homogeneity check.
+What is left: the twelve calls that would equalise the ragged bench, until which
+no new publication can carry the four behaviours whose panels are unequal.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

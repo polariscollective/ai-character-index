@@ -57,6 +57,17 @@ export default async function Overview() {
         )}
       </section>
 
+      {index.unread > 0 && (
+        <section>
+          <h2>Waiting to be read</h2>
+          <p className="why">
+            {index.unread} proposal{index.unread === 1 ? "" : "s"} arrived through the
+            public form and nobody has acted on {index.unread === 1 ? "it" : "them"}.{" "}
+            <a href="/admin/submissions">Read {index.unread === 1 ? "it" : "them"}</a>.
+          </p>
+        </section>
+      )}
+
       <section>
         <h2>The registry</h2>
         <table>

@@ -51,6 +51,7 @@ const PAGES = [
   ["/admin/specifications", "Specifications", ["Documents", "Register a version"]],
   ["/admin/runs", "Runs", ["Runs", "Compose a run", "Jobs"]],
   ["/admin/publications", "Publications", ["Publications", "Build a publication"]],
+  ["/admin/submissions", "Proposals", ["Proposals"]],
 ];
 
 for (const [path, name, headings] of PAGES) {
@@ -118,6 +119,33 @@ check(verbs.length > 0 && verbs.every(method => method === "post"),
       "nothing that changes the index is a link",
       `${verbs.length} forms, methods: ${[...new Set(verbs)].join(", ")}`);
 
+// The public form is the one door open to the internet that writes, so it is
+// walked too: both forms present, both posting to the route, and the honeypot
+// where a person will not find it but a machine will.
+await open("/propose.html");
+const forms = await page.$$eval("form.propose", nodes => nodes.map(form => ({
+  kind: form.querySelector("[name=kind]")?.value,
+  action: form.getAttribute("action"),
+  method: (form.getAttribute("method") || "get").toLowerCase(),
+  encoding: form.getAttribute("enctype"),
+  trap: Boolean(form.querySelector(".trap [name=website]")),
+  names: [...form.elements].map(el => el.name).filter(Boolean),
+})));
+const byKind = Object.fromEntries(forms.map(form => [form.kind, form]));
+check(forms.length === 2
+        && forms.every(form => form.action === "/api/submit" && form.method === "post"
+                               && form.encoding === "multipart/form-data" && form.trap)
+        && ["name", "query", "boundary"].every(n => byKind.behaviour?.names.includes(n))
+        && ["organisation", "name", "version", "source_url", "document"]
+             .every(n => byKind.specification?.names.includes(n)),
+      "the public form posts what /api/submit reads",
+      forms.map(form => `${form.kind}: ${form.names.length} fields`).join(", "));
+
+// A proposal must never be a link: a crawler follows links.
+check(forms.every(form => form.method === "post"),
+      "nothing on the public form changes anything by being visited",
+      `${forms.length} forms, all post`);
+
 // The routes answer the browser, not just the page: a POST with no session is
 // refused. Checked through the API rather than the UI, because that is the door
 // a page does not guard.
@@ -134,6 +162,15 @@ const unsigned = await page.request.post(`${base}/api/admin/behaviours`, {
 check([303, 401].includes(unsigned.status()),
       "a post without a page still meets the guard",
       `${unsigned.status()}`);
+
+// And the public route refuses an empty proposal rather than recording one.
+const empty = await page.request.post(`${base}/api/submit`, {
+  form: { kind: "behaviour" }, maxRedirects: 0,
+});
+check(empty.status() === 303
+        && (empty.headers().location || "").includes("problem="),
+      "the public route refuses an empty proposal",
+      `${empty.status()} ${(empty.headers().location || "").split("?")[1] || ""}`.slice(0, 80));
 
 await browser.close();
 console.log(failures ? `${failures} failures` : "The portal answers for itself.");

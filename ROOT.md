@@ -3,9 +3,9 @@
 > Current-state doc: describes what exists now, not what should exist. Brought current when the admin portal landed and the application gained its first rendered pages.
 
 ## Purpose
-The root holds the project's two entry documents (`PLAN.md`, `README.md`) and the Next.js application: `app/` for the reader's three routes and the admin portal, `next.config.mjs`, and a pnpm setup carrying Next, React and Auth.js (plus `playwright-core` for the engine's browser checks).
+The root holds the project's two entry documents (`PLAN.md`, `README.md`) and the Next.js application: `app/` for the reader's three routes, the public proposal route and the admin portal, `next.config.mjs`, and a pnpm setup carrying Next, React and Auth.js (plus `playwright-core` for the engine's browser checks).
 
-`app/` has two halves that share `app/lib/`. The reader's routes serve payloads to a static reader and are open; the portal is rendered React behind a Google door and an allow-list, and holds every write to the index. The public reader stays plain files served from `public/` — it is a document reader and must keep working as one — while the portal is an application with a session, which is why it is the framework's.
+`app/` has three parts sharing `app/lib/`. The reader's routes serve payloads to a static reader and are open. `/api/submit` is open too and writes, which is why its library is mostly about what it refuses. The portal is rendered React behind a Google door and an allow-list, and holds every write that changes what the index says. The public pages stay plain files served from `public/` — a document reader and a form must keep working as plain files — while the portal is an application with a session, which is why it is the framework's.
 
 ## Contents
 | File | Role |

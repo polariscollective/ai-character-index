@@ -9,8 +9,8 @@
  * -- tens of runs, thousands of calls -- and one query whose shape is obvious
  * beats four whose aggregation lives in a query string.
  */
-import panelConfig from "../../engine/panel/panel-config.json";
-import { select } from "./supabase.mjs";
+import panelConfig from "../../engine/panel/panel-config.json" with { type: "json" };
+import { select, signedLink } from "./supabase.mjs";
 
 const byStatus = (rows) => rows.reduce((counts, row) => {
   counts[row.status] = (counts[row.status] || 0) + 1;
@@ -81,6 +81,20 @@ export async function publications(fetchImpl = fetch) {
   }));
 }
 
+/** Proposals from outside, newest first, each with a link to its document.
+ *
+ * The link is minted here and expires, because the bucket is private and a
+ * permanent link to a private object is a public object with extra steps. */
+export async function submissions(limit = 50, fetchImpl = fetch) {
+  const rows = await select("aci_submissions",
+                            `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
+  return Promise.all(rows.map(async row => ({
+    ...row,
+    link: row.document ? await signedLink("aci-submissions", row.document, 3600, fetchImpl)
+                       : null,
+  })));
+}
+
 /** The most recent job launches, newest first. */
 export async function jobs(limit = 12, fetchImpl = fetch) {
   return select("aci_jobs", `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
@@ -88,10 +102,11 @@ export async function jobs(limit = 12, fetchImpl = fetch) {
 
 /** What the front page says, in one read. */
 export async function overview(fetchImpl = fetch) {
-  const [behaviourRows, specRows, runRows, publicationRows, jobRows] = await Promise.all([
-    behaviours(fetchImpl), specifications(fetchImpl), runs(6, fetchImpl),
-    publications(fetchImpl), jobs(6, fetchImpl),
-  ]);
+  const [behaviourRows, specRows, runRows, publicationRows, jobRows, submissionRows] =
+    await Promise.all([
+      behaviours(fetchImpl), specifications(fetchImpl), runs(6, fetchImpl),
+      publications(fetchImpl), jobs(6, fetchImpl), submissions(50, fetchImpl),
+    ]);
   const live = publicationRows.find(row => row.is_public) || null;
   return {
     live,
@@ -105,6 +120,7 @@ export async function overview(fetchImpl = fetch) {
     versions: specRows.reduce((n, spec) => n + spec.versions.length, 0),
     runs: runRows,
     jobs: jobRows,
+    unread: submissionRows.filter(row => row.status === "new").length,
   };
 }
 
