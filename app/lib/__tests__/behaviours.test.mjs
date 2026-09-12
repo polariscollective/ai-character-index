@@ -9,12 +9,23 @@ import { behaviourNotes } from "../behaviours.mjs";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
 
-/* Two tables, answered by which one the URL names. */
-function stub(registry, calls) {
+const PUBLICATION = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
+
+/* Four tables, answered by which one the URL names. `shown` is the set of slugs
+ * the publication carries; null means nothing is published. */
+function stub(registry, calls, shown = ["judged-one", "described-only",
+                                        "in-the-reader-set"]) {
   const urls = [];
   const fetchImpl = async (url, init) => {
     urls.push(url);
-    const rows = url.includes("aci_judge_calls") ? calls : registry;
+    const rows =
+      url.includes("aci_judge_calls") ? calls
+      : url.includes("aci_publications")
+        ? (shown === null ? []
+           : url.includes("select=payload")
+             ? [{ payload: { behaviours: shown.map(slug => ({ slug })) } }]
+             : [{ id: PUBLICATION, build_params: { behaviours: shown } }])
+      : registry;
     return { ok: true, status: 200, json: async () => rows, text: async () => "", init };
   };
   return { urls, fetchImpl };
@@ -68,6 +79,52 @@ test("no set is named: every set comes back, keyed by slug", async () => {
   assert.deepEqual(Object.keys(notes).sort(), ["in-the-reader-set", "judged-one"]);
   assert.equal(notes["in-the-reader-set"].set, "reader-test");
   assert.doesNotMatch(urls[0], /set_name=/, "selected, never filtered on");
+});
+
+test("a behaviour the publication does not carry is not described", async () => {
+  const { fetchImpl } = stub([judged, described], [], ["judged-one"]);
+  const notes = await behaviourNotes(fetchImpl);
+  assert.deepEqual(Object.keys(notes), ["judged-one"],
+                   "a registered but unpublished behaviour reached a public route");
+});
+
+test("nothing published is nothing to describe", async () => {
+  const { fetchImpl } = stub([judged, described], [], null);
+  assert.deepEqual(await behaviourNotes(fetchImpl), {});
+});
+
+test("a publication that did not record its menu is read from its payload", async () => {
+  // The one the migration wrote records only its thresholds, and the table is
+  // insert-only, so this path cannot be retired by fixing a row.
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    const rows =
+      url.includes("aci_judge_calls") ? []
+      : url.includes("select=payload")
+        ? [{ payload: { behaviours: [{ slug: "judged-one" }] } }]
+      : url.includes("aci_publications")
+        ? [{ id: PUBLICATION, build_params: { threshold: 4 } }]
+      : [judged, described];
+    return { ok: true, status: 200, json: async () => rows, text: async () => "" };
+  };
+  const notes = await behaviourNotes(fetchImpl);
+  assert.deepEqual(Object.keys(notes), ["judged-one"]);
+  assert.ok(urls.some(url => url.includes("select=payload")));
+});
+
+test("a pin describes that publication rather than the public one", async () => {
+  const { urls, fetchImpl } = stub([judged], []);
+  await behaviourNotes(fetchImpl, PUBLICATION);
+  const asked = urls.find(url => url.includes("aci_publications?"));
+  assert.match(asked, new RegExp(`id=eq\\.${PUBLICATION}`));
+  assert.doesNotMatch(asked, /is_public/);
+});
+
+test("with no pin, only a public publication answers", async () => {
+  const { urls, fetchImpl } = stub([judged], []);
+  await behaviourNotes(fetchImpl);
+  assert.match(urls.find(url => url.includes("aci_publications?")), /is_public=is\.true/);
 });
 
 test("the key travels in both headers", async () => {

@@ -78,7 +78,12 @@ let behaviourNotes = null;
 
 async function loadBehaviourNotes() {
   try {
-    behaviourNotes = await loadJSON(BEHAVIOUR_NOTES_URL);
+    // The same publication the payload came from, so a pinned draft's notes
+    // describe that draft rather than what the public is being shown.
+    const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+    behaviourNotes = await loadJSON(
+      pinned ? `${BEHAVIOUR_NOTES_URL}?publication=${encodeURIComponent(pinned)}`
+             : BEHAVIOUR_NOTES_URL);
   } catch (error) {
     console.warn(`Behaviour notes unavailable (${error.message}).`);
     behaviourNotes = {};

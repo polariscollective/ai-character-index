@@ -14,12 +14,39 @@ import { select } from "./supabase.mjs";
 const SELECT = "slug,name,set_name,numeric_id,group_name,definition,judging";
 
 /**
- * One entry per behaviour in the registry, keyed by slug.
+ * The behaviours a publication shows, which is not the same as the cells it
+ * judged: the reader's menu carries a behaviour whose coverage is a re-reading
+ * of other behaviours' judgements, and no cell answers for it.
  *
- * Every set is returned and none is named here. The slug is the primary key of
- * `aci_behaviours`, so it identifies a behaviour across sets, and which
- * behaviours a reader shows is the payload's business — naming a set in this
- * file would put that decision in two places.
+ * `build_params` records the list, so this is one small request. The publication
+ * the migration wrote predates that and records only its thresholds, so its
+ * payload is read for the list instead -- once, and then cached with the
+ * response. There is no third case: the table is insert-only, so what is missing
+ * from that one row cannot be added to it.
+ */
+async function publishedSlugs(publicationId, fetchImpl) {
+  const query = publicationId
+    ? `select=id,build_params&id=eq.${publicationId}`
+    : "select=id,build_params&is_public=is.true&order=published_at.desc&limit=1";
+  const [publication] = await select("aci_publications", query, fetchImpl);
+  if (!publication) return null;
+
+  const recorded = publication.build_params?.behaviours;
+  if (Array.isArray(recorded)) return new Set(recorded);
+
+  const [{ payload }] = await select(
+    "aci_publications", `select=payload&id=eq.${publication.id}`, fetchImpl);
+  return new Set((payload?.behaviours || []).map(behaviour => behaviour.slug));
+}
+
+/**
+ * One entry per behaviour the reader shows, keyed by slug.
+ *
+ * Scoped to the publication rather than to the registry, and no set is named
+ * here: the slug is the primary key of `aci_behaviours`, and which behaviours a
+ * reader shows is the publication's decision. That scoping is also what keeps a
+ * behaviour registered but not yet published out of a public response -- this
+ * route would otherwise describe work nobody has decided to show.
  *
  * The judges' brief and the index's own description are reported separately,
  * because they are not the same sentence and one behaviour has the second
@@ -29,15 +56,19 @@ const SELECT = "slug,name,set_name,numeric_id,group_name,definition,judging";
  * defined once someone has written its construct for a panel, and judged once a
  * call for it reaches `done`.
  */
-export async function behaviourNotes(fetchImpl = fetch) {
-  const [registry, calls] = await Promise.all([
+export async function behaviourNotes(fetchImpl = fetch, publicationId = null) {
+  const [registry, calls, shown] = await Promise.all([
     select("aci_behaviours", `select=${SELECT}`, fetchImpl),
     select("aci_judge_calls", "select=behaviour_slug&status=eq.done", fetchImpl),
+    publishedSlugs(publicationId, fetchImpl),
   ]);
   const judged = new Set(calls.map(call => call.behaviour_slug));
 
   const notes = {};
   for (const row of registry) {
+    // Nothing published means nothing to describe. An empty answer is right
+    // here: the reader has no sidebar to open a note beside.
+    if (shown === null || !shown.has(row.slug)) continue;
     const judging = row.judging || {};
     const query = judging.query || null;
     const described = row.definition || null;
