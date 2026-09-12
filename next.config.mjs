@@ -19,6 +19,9 @@ const nextConfig = {
       // The prose pages. Each is a file on disk and that is an implementation
       // detail; its address is a name.
       { source: "/how-it-works", destination: "/how-it-works.html" },
+      { source: "/how-it-works/", destination: "/how-it-works.html" },
+      { source: "/mcp", destination: "/mcp.html" },
+      { source: "/mcp/", destination: "/mcp.html" },
     ];
   },
 };

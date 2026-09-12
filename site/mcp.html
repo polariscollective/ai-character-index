@@ -36,8 +36,6 @@
          font-size: 17px; line-height: 1.6; min-height: 100vh; }
 
   /* ---------- header (as on the reader) ---------- */
-  header { display: flex; align-items: baseline; justify-content: space-between;
-           padding: 16px 40px; border-bottom: 1px solid var(--hair); }
   /* The mark and the name take one pair of tones and move together, as they do
      in the bar of evals-playground: olive at rest, olive-deep under the
      pointer, ink while pressed. On the umber surface there is nothing darker
@@ -92,14 +90,6 @@
   .m-title { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.16; }
   .m-sub { font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 66ch; margin-top: 16px; }
 
-  /* Primary button: olive-deep ground, paper text, pill, chartreuse on hover. */
-  .repo-btn { display: inline-block; margin-top: 24px; padding: 10px 22px;
-              border: 1px solid transparent; border-radius: 999px;
-              background: var(--spec); color: var(--on-accent);
-              font-size: 15px; font-weight: 600; text-decoration: none;
-              transition: background-color .15s ease, color .15s ease; }
-  .repo-btn:hover { background: var(--energy); color: var(--ink); }
-
   section.m { padding: 48px 0; border-top: 1px solid var(--hair); }
   /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
   h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
@@ -124,7 +114,7 @@
   a { color: var(--ink); text-decoration: none; box-shadow: inset 0 -2px 0 var(--energy);
       transition: background-color .15s ease; }
   a:hover { background: var(--energy); }
-  header a, footer a, .repo-btn { box-shadow: none; }
+  header a, footer a { box-shadow: none; }
 
   footer { max-width: 720px; margin: 0 auto; padding: 32px 40px 64px;
            border-top: 1px solid var(--hair);
@@ -149,43 +139,6 @@
     .sheet, footer { padding-left: 22px; padding-right: 22px; }
     .m-title { font-size: 32px; }
   }
-
-  /* ---------- the proposal forms ---------- */
-  .choice { display: flex; gap: 0; margin: 8px 0 32px; border: 1px solid var(--hair); width: fit-content; }
-  .choice a { padding: 9px 20px; font-size: 15px; color: var(--ink2); text-decoration: none;
-              box-shadow: none; }
-  .choice a:hover { background: var(--energy); color: var(--ink); }
-  .choice a[aria-current="page"] { background: var(--spec); color: var(--on-accent); }
-  form.propose { margin: 0 0 24px; }
-  form.propose label { display: block; margin-bottom: 20px; }
-  form.propose label > span { display: block; font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
-  form.propose .hint { display: block; margin-top: 6px; font-size: 14px; color: var(--ink3); }
-  form.propose input[type="text"],
-  form.propose input[type="email"],
-  form.propose input[type="url"],
-  form.propose textarea {
-    width: 100%; padding: 9px 11px; border: 1px solid var(--hair); border-radius: 4px;
-    background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 16px;
-    line-height: 1.5;
-  }
-  form.propose textarea { min-height: 110px; resize: vertical; }
-  form.propose input:focus-visible, form.propose textarea:focus-visible,
-  form.propose input[type="file"]:focus-visible {
-    outline: 2px solid var(--energy); outline-offset: 1px; border-color: var(--hair2);
-  }
-  form.propose input[type="file"] { font-family: var(--ui); font-size: 15px; color: var(--ink2); }
-  form.propose button { margin-top: 4px; padding: 11px 26px; border: 1px solid var(--spec);
-    border-radius: 999px; background: var(--spec); color: var(--on-accent);
-    font-family: var(--ui); font-size: 16px; font-weight: 500; cursor: pointer; }
-  form.propose button:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
-  /* Hidden from people, visible to the machinery that fills in every field it
-     finds. Not display:none, which some of it knows to skip. */
-  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .said { margin: 0 0 28px; padding: 14px 18px; border-left: 3px solid var(--energy);
-          background: var(--lift); font-size: 16px; }
-  .said.bad { border-left-color: var(--gap); }
-  .said p { margin: 0 0 6px; }
-  .said p:last-child { margin: 0; }
 
   /* ---------- the header, identical to the reader's ---------- */
   /* Same height, same rule, same background. Two surfaces differing by a few
@@ -287,9 +240,11 @@
           statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
           bears on it without establishing it. Each means that band and stronger.
           <code>core</code> by default, which is what the spec reader shows before you touch a
-          toggle.</li>
-      <li><b>limit.</b> Optional, 40 by default. It is a page budget in passages: an answer holds
-          whole behaviour and specification pairs, never split, strongest passage first.</li>
+          toggle. A judge&rsquo;s own verdict of <code>adjacent</code> is the band named
+          <code>related</code> here.</li>
+      <li><b>limit.</b> Optional, 40 by default, 200 at most. It is a page budget in passages: an
+          answer holds whole behaviour and specification pairs, never split, strongest passage
+          first.</li>
       <li><b>cursor.</b> Optional, the <code>next_cursor</code> of the previous page. It names the
           publication it was issued against, so a walk that spans a new publication stops rather
           than drifting across two indexes.</li>

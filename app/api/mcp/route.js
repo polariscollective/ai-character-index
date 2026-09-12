@@ -41,7 +41,7 @@ Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 async function answer(work) {
   try {
     return {
-      content: [{ type: "text", text: JSON.stringify(await work(await indexSnapshot()), null, 1) }],
+      content: [{ type: "text", text: JSON.stringify(await work(await indexSnapshot()), null, 2) }],
     };
   } catch (error) {
     // A ToolError is the caller's; anything else is ours, and its message may
@@ -58,7 +58,8 @@ const STRENGTH =
   "The weakest band to return, meaning that band and stronger. defining is the "
   + "document's fullest statement of the behaviour, core establishes it there, "
   + "related bears on it without establishing it. Defaults to core, which is "
-  + "what the spec reader shows before any toggle is touched.";
+  + "what the spec reader shows before any toggle is touched. A judge's own "
+  + "verdict of adjacent is the band named related here.";
 
 const handler = createMcpHandler(
   server => {

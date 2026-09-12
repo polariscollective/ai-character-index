@@ -21,6 +21,17 @@ function passagesOf(behaviour, modelSpecId) {
   return bandCell(behaviour.coverage?.[modelSpecId]?.passages || []);
 }
 
+/** The fields that identify a specification, without its text. */
+function specSummary(document) {
+  return {
+    id: document.id,
+    lab: document.lab,
+    title: document.title,
+    version: document.version,
+    source_url: document.sourceUrl,
+  };
+}
+
 /**
  * Every specification the publication carries, with what the index holds
  * against each.
@@ -35,11 +46,7 @@ export function listModelSpecs({ publication, payload, documents }) {
   return {
     publication,
     model_specs: (documents.documents || []).map(document => ({
-      id: document.id,
-      lab: document.lab,
-      title: document.title,
-      version: document.version,
-      source_url: document.sourceUrl,
+      ...specSummary(document),
       behaviours_judged: behaviours.filter(
         behaviour => behaviour.coverage?.[document.id]).length,
       passages: behaviours.reduce(
@@ -101,17 +108,19 @@ const NO_COVERAGE =
  * The reader's band maths scores every cell against its own maximum, so a cell
  * swept by six judges and one swept by three both render on a full scale. An
  * agent handed two lists and left to count does not have that protection. This
- * sentence describes the publication the index carries today; when the missing
- * calls on the model spec are filled, the design document for that work owns
- * removing it from here, from the tool description in app/api/mcp/route.js and
- * from site/mcp.html.
+ * sentence names no document: it is attached to any request naming more than
+ * one specification, whichever those are, and the index does not know here
+ * which ones a future registration will add. When the missing calls on the
+ * model spec are filled, the design document for that work owns removing it
+ * from here, from the tool description in app/api/mcp/route.js and from
+ * site/mcp.html.
  */
 const COMPARABILITY =
-  "Passage counts are not comparable between these documents. Four behaviours "
-  + "were swept by more judges against Claude's Constitution than against the "
-  + "OpenAI Model Spec, so the constitution surfaced more candidate passages "
-  + "for them. The bands each passage carries are sound; the totals are not a "
-  + "like-for-like measure of coverage.";
+  "Passage counts are not comparable between these documents. Some behaviours "
+  + "were swept by more judges against one document than against another, so "
+  + "that document surfaced more candidate passages for them. The bands each "
+  + "passage carries are sound; the totals are not a like-for-like measure of "
+  + "coverage.";
 
 /** Four fields, and the judges in the rubric's own vocabulary. */
 function shapePassage(passage) {
@@ -156,7 +165,7 @@ export function retrievePassages({ publication, payload, documents }, args = {})
   const behaviourBySlug = new Map(
     (payload.behaviours || []).map(behaviour => [behaviour.slug, behaviour]));
 
-  const wanted = args.behaviours || [];
+  const wanted = [...new Set(args.behaviours || [])];
   if (!wanted.length) {
     throw new ToolError(
       "behaviours must name at least one behaviour. This publication carries: "
@@ -170,7 +179,7 @@ export function retrievePassages({ publication, payload, documents }, args = {})
   }
 
   const modelSpecIds = args.model_spec_ids?.length
-    ? args.model_spec_ids
+    ? [...new Set(args.model_spec_ids)]
     : specifications.map(document => document.id);
   const unknownSpecs = modelSpecIds.filter(id => !specById.has(id));
   if (unknownSpecs.length) {
@@ -234,16 +243,7 @@ export function retrievePassages({ publication, payload, documents }, args = {})
 
   return {
     publication,
-    model_specs_read: modelSpecIds.map(id => {
-      const document = specById.get(id);
-      return {
-        id: document.id,
-        lab: document.lab,
-        title: document.title,
-        version: document.version,
-        source_url: document.sourceUrl,
-      };
-    }),
+    model_specs_read: modelSpecIds.map(id => specSummary(specById.get(id))),
     // The request decides, not the page: a two specification walk whose first
     // page happens to hold one cell is still a comparison being assembled.
     ...(modelSpecIds.length > 1 ? { comparability: COMPARABILITY } : {}),

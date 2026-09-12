@@ -272,6 +272,45 @@ test("walking the cursor yields every passage exactly once", () => {
   assert.equal(new Set(seen).size, seen.length, "no passage is served twice");
 });
 
+test("a repeated behaviour slug answers as the unrepeated request does", () => {
+  const repeated = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour", "defined-behaviour"], model_spec_ids: ["corpus-labs"],
+  });
+  const once = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+  });
+  assert.deepEqual(repeated.results, once.results);
+  assert.equal(repeated.comparability, undefined,
+               "one specification repeated is still one specification, not a comparison");
+});
+
+test("a repeated specification id answers as the unrepeated request does", () => {
+  const repeated = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs", "corpus-labs"],
+  });
+  const once = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+  });
+  assert.deepEqual(repeated.results, once.results);
+  assert.deepEqual(repeated.model_specs_read, once.model_specs_read);
+  assert.equal(repeated.comparability, undefined,
+               "one specification repeated is still one specification, not a comparison");
+});
+
+test("a walk over a repeated specification id terminates", () => {
+  let cursor;
+  let pages = 0;
+  do {
+    const answer = retrievePassages(snapshot(), {
+      behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs", "corpus-labs"],
+      strength: "related", limit: 1, cursor,
+    });
+    cursor = answer.next_cursor ?? undefined;
+    pages += 1;
+    assert.ok(pages < 10, "the walk is not terminating");
+  } while (cursor);
+});
+
 test("an empty cell rides along instead of starting a page of its own", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour"], strength: "core", limit: 3,

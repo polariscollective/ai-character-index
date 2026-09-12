@@ -47,7 +47,7 @@ test("TIERS is ordered strongest first", () => {
 });
 
 test("the band cuts agree with the reader over every achievable score", () => {
-  const shapes = [[1, 2], [2, 4], [3, 6], [4, 8], [1, 3], [2, 6], [3, 9], [6, 18]];
+  const shapes = [[1, 2], [2, 4], [3, 6], [4, 8], [1, 3], [2, 6], [3, 9], [5, 10], [5, 15], [6, 18]];
   let checked = 0;
   for (const [judges, maxCell] of shapes) {
     for (const related of [1, 0.5, 0.25, 0]) {
