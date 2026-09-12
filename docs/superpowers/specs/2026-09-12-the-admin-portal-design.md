@@ -180,9 +180,12 @@ insists on the judging half, because a behaviour registered without it reaches a
 panel with `Scope (optional): none provided` — the defect this migration already
 found once, and the reason the popup now has four states rather than two.
 
-`engine/panel/new_behaviour.py` is rewritten to write the row instead of a file
-under `data/`, and the route and the CLI call the same function. It is the last
-file in the repository that still believed in the JSON registry.
+`engine/panel/new_behaviour.py` is deleted rather than rewritten. Registering a
+behaviour is a row, not a computation: a slug, a name, the next free number within
+its set, and the two halves of what it means. There is nothing for Python to do
+that the route does not do in ten lines, and a second entry point would be a
+second place for the validation to drift. It was the last file in the repository
+that still believed in the JSON registry.
 
 ### A specification version
 

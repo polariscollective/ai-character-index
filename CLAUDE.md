@@ -70,6 +70,41 @@ means, which is what a two-state reading of the registry made it say first --
 defined and judged are independent, and this row is the combination that reads
 like a contradiction.
 
+### The behaviour registrar wrote to a directory that no longer existed
+
+**Fixed by deleting it.**
+
+`engine/panel/new_behaviour.py` registered a behaviour by writing
+`data/behaviours.json`. That directory left the branch with the migration, so the
+CLI could only ever have created it fresh and written a registry nothing reads.
+Its tests passed throughout, because they wrote to a temporary file. Registering a
+behaviour is the admin portal's now, and writes `aci_behaviours`.
+
+### The payload builder accepted two flags it silently ignored
+
+**Fixed.**
+
+`build_site_data.py` took `--runlog=` and `--registry=` and overwrote both before
+using them: the runlog file is gone and the registry is the database. A flag that
+is accepted and ignored is worse than one that is refused, because the operator
+believes it worked. Its docstring described timestamped payloads and a manifest
+that no longer exist either.
+
+### Nothing held a published payload to its own digest
+
+**Fixed, by a new check.**
+
+`verify_supabase_provenance.py` compared the stored digest with the recorded one,
+and the rebuilt file with the recorded one. Neither asks whether the digest
+describes the bytes the reader is served. It does now: each column is
+re-serialised the way the builder that wrote it does — `indent=1` for the
+behaviour payload, compact for the documents payload — and held to the digest
+stored beside it.
+
+This is also what `json` rather than `jsonb` was for. jsonb reorders keys on the
+way in, which breaks that equality permanently and silently. It did, once, and the
+tables were recreated.
+
 ## Changes of substance we made
 
 ### The reader's data attributes stay machine-readable, its prose does not
@@ -119,11 +154,41 @@ walker turns focus off explicitly where it measures that the reader keeps your
 place, because in focus mode unticking a behaviour removes text rather than only
 its highlights.
 
+### A publication is built before it is shown
+
+`aci_publications` gained `is_public`, and the reader serves the newest
+publication carrying it rather than the newest publication. Building one and
+showing it were the same act while only a migration could build one; as soon as a
+button can, they must be two, or the first thing the public sees is a build nobody
+has read.
+
+The default is false, so a publish that forgets the flag stays invisible. The
+grant is column-level: `aci_publications` holds select and insert only, because a
+publication's bytes are what a digest was recorded against, and granting update on
+the table would have given that away to buy one boolean. A pin, `?publication=`,
+still reaches any publication, which is how a draft is previewed and how an old
+one is checked.
+
+### Every launch of the container is a row
+
+`aci_jobs` records each run of the judging image: its mode, its arguments, where
+it ran, and what it produced. Two of the three modes produce no run — composing
+prices one, publishing builds payloads — so a table of runs could not answer
+"what happened when I pressed that". The `origin` column is the lesson
+evals-playground already learned: the local subprocess and the deployed job write
+into the same database, and without a marker a throwaway trial looks like
+production work.
+
 ## Where the fork is heading
 
-Away from git as the gate. Artifacts move to Supabase, judging moves to a Cloud
-Run job, and the site moves from Cloudflare Pages to Vercel. Upstream keeps the
-property this fork gives up, which is running from a bare clone.
+Away from git as the gate, and it has arrived. The artifacts are in Supabase,
+judging runs as a Cloud Run job, the site is a Next.js application on Vercel, and
+the index is operated from a portal rather than a terminal. Upstream keeps the
+property this fork gave up, which is running from a bare clone.
+
+What is left: the public submission button, which is a bucket upload and a Slack
+message; and the twelve calls that would equalise the ragged bench, until which no
+new publication can pass the homogeneity check.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

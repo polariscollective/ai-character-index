@@ -45,6 +45,9 @@ def run_compose(store, params):
     would diverge on is money.
     """
     import compose_run
+    # plan() resolves passages through cite.py, which registers nothing at import
+    # time: a caller installs the registry or gets a loud error naming this line.
+    index_store.install_registry(store)
     run, calls = compose_run.plan(
         store, params["behaviours"], params["specs"],
         params.get("panel", "frontier_fast"), params.get("rubric", "v5"))

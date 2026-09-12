@@ -1,16 +1,18 @@
 # Repo root — plan, front-door README, and the Next.js application that serves the site
 
-> Current-state doc: describes what exists now, not what should exist. Brought current when the site moved from Cloudflare Pages to a Next.js application on Vercel.
+> Current-state doc: describes what exists now, not what should exist. Brought current when the admin portal landed and the application gained its first rendered pages.
 
 ## Purpose
-The root holds the project's two entry documents (`PLAN.md`, `README.md`) and the Next.js application that serves the site: `app/` for its two reader routes, `next.config.mjs`, and a pnpm setup carrying Next and React (plus `playwright-core` for the engine's reader checks).
+The root holds the project's two entry documents (`PLAN.md`, `README.md`) and the Next.js application: `app/` for the reader's three routes and the admin portal, `next.config.mjs`, and a pnpm setup carrying Next, React and Auth.js (plus `playwright-core` for the engine's browser checks).
+
+`app/` has two halves that share `app/lib/`. The reader's routes serve payloads to a static reader and are open; the portal is rendered React behind a Google door and an allow-list, and holds every write to the index. The public reader stays plain files served from `public/` — it is a document reader and must keep working as one — while the portal is an application with a session, which is why it is the framework's.
 
 ## Contents
 | File | Role |
 |---|---|
 | `PLAN.md` | Build plan & system design (written 2026-07-10): three-layer architecture, data model, page map, CI/CD table (§5), build phases (§6), repo map (§8). The source of the "what should exist" claims cross-checked in this doc set |
 | `README.md` | Front door: positioning paragraph, short how-it-works, repo-map table, Contributing points to the Issues-page contact link |
-| `package.json` | Root package `ai-character-index` (private); `packageManager: pnpm@11.26.0`; `engines.node >= 22`; scripts: `dev`/`build`/`start` for Next, `test:routes`, and the `predev`/`prebuild` pair that copies `site/` into the gitignored `public/`; deps: `next`, `react`, `react-dom`; devDep: `playwright-core ^1.61.1` |
+| `package.json` | Root package `ai-character-index` (private); `packageManager: pnpm@11.26.0`; `engines.node >=22.13 <25`; scripts: `dev`/`build`/`start` for Next, `test:routes` (every suite under `app/lib/__tests__/`), and the `predev`/`prebuild` pair that copies `site/` into the gitignored `public/`; deps: `next`, `react`, `react-dom`, `next-auth` (v5 beta, the version Auth.js ships for the App Router); devDep: `playwright-core ^1.61.1` |
 | `pnpm-workspace.yaml` | Declares no packages; only `allowBuilds` (esbuild, sharp, workerd) — the pnpm ≥10 allowlist for transitive deps that run postinstall builds |
 | `pnpm-lock.yaml` | Lockfile v9; exactly one importer (`.` = root) |
 | `.gitignore` | Standard entries (node_modules, dist, .env, logs, .DS_Store), `.claude/` local settings, `public/` (a build-time copy of `site/`), `.next/`, local panel runlogs and metrics via `engine/panel/.gitignore`, plus two repo-specific private paths: `research/sources/Founding an AI Charter organisation.pdf` and `outreach/` |

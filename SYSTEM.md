@@ -6,7 +6,7 @@
 
 ## What the system is
 
-An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase.
+An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase, and operated from an admin portal in the same application.
 
 **The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables, and a publication row decides what the reader shows. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
 
@@ -16,7 +16,10 @@ Two consequences follow, both deliberate. The clone-and-fork pathway is gone: so
 
 ```mermaid
 graph TB
-  labs["lab spec repos (OpenAI, Anthropic)"] -->|"registered through the admin surface"| sb
+  admin["app/admin/ (the portal, behind a Google door)"] -->|"registers"| sb
+  admin -->|"{ job, env }"| trig["polaris-batch-trigger"] --> job["engine/job.py<br/>compose · judge · publish"]
+  job --> sb
+  labs["lab spec repos (OpenAI, Anthropic)"] -->|"registered through the portal"| sb
   sb["Supabase aci_ tables<br/>specs · versions · behaviours · runs · calls · judgements · publications"]
   panel["engine/panel/ (LLM judge APIs)"] -->|"judgements"| sb
   sb -->|"registry + spec text"| cite["engine/spec-cite/cite.py"]
@@ -35,7 +38,8 @@ graph TB
 | Directory | One-line role | Detail |
 |---|---|---|
 | `.claude/skills/` | Retired procedure layer: no live skills; index files record the retirement (root `AGENTS.md` points here) | [.claude/skills/OVERVIEW.md](.claude/skills/OVERVIEW.md) |
-| `engine/` | Automation: citation resolution, LLM panel judging, payload builders, E2E + feature-harness verifiers | [engine/OVERVIEW.md](engine/OVERVIEW.md) |
+| `engine/` | Automation: citation resolution, LLM panel judging, payload builders, the job the container runs, E2E + feature-harness verifiers | [engine/OVERVIEW.md](engine/OVERVIEW.md) |
+| `app/` | The Next.js application: the reader's three routes, the admin portal, and the libraries both share | [ROOT.md](ROOT.md) |
 | `specs/` | The locator grammar and the mirrors' provenance notes; the texts themselves are in the database | [specs/OVERVIEW.md](specs/OVERVIEW.md) |
 | `research/` | Canonical behaviour list | [research/OVERVIEW.md](research/OVERVIEW.md) |
 | `archive/` | Preserved analytical artifact: the cross-spec strict-reading judgment (self-describing README inside) | — |
@@ -55,8 +59,8 @@ graph TB
    from a fixture. Forgetting is a loud error naming the fix, which is the point
    — a silent fall back to files that are no longer there is the failure this
    arrangement exists to remove.
-2. **Behaviour identity** — the slug is the global key, and `aci_behaviours` is
-   the only registry. Each row carries the display half (name, set, numeric id,
+2. **Behaviour identity** — the slug is the primary key of `aci_behaviours`, the
+   only registry. Each row carries the display half (name, set, numeric id,
    group, definition) and, where one exists, the judging half whole, in
    `judging`: the definition the panel is given, the boundary of the construct,
    the provenance, and for one behaviour a definition the current rubric prefers.
@@ -78,7 +82,15 @@ graph TB
    commit it names. `verify_supabase_provenance.py` holds the database to it.
 6. **Serving** — Vercel builds on a push, `prebuild` copies `site/` into
    `public/`, and the reader takes its two payloads from routes. Publishing is
-   not a deploy: what the public sees changes with a database write.
+   not a deploy: what the public sees changes with a database write, and the
+   write is `is_public` on a publication that already exists.
+7. **Operating** — every write to the index goes through `app/admin/`, behind
+   Google sign-in and an allow-list. The three operations that are Python —
+   pricing a run, judging it, building a publication — are launched as modes of
+   one Cloud Run job through `polaris-batch-trigger`, or as a local subprocess
+   when `ACI_PYTHON` names an interpreter and the environment is not production.
+   Each launch is a row in `aci_jobs` carrying where it ran, so a trial on a
+   laptop is never mistaken for production work.
 
 ## Cross-cutting as-is risks
 
@@ -93,9 +105,14 @@ graph TB
    request. That is the price of keeping CI offline and secretless.
 3. **The judging CLIs lost their smoke tests.** `whole_doc.py` and
    `run_rollout.py` were exercised end to end against a staged file tree, which
-   cannot exist now that they read the database. The Cloud Run job supersedes
-   them; until it lands they are less covered than they were.
-4. **One publication is exempt** from the homogeneity check, because the bench
+   cannot exist now that they read the database. `engine/job.py` supersedes them
+   and is tested against a fake store; the two CLIs remain less covered than they
+   were, and are no longer the path anything uses.
+4. **The portal's checks need credentials.** Its pages read the index on every
+   request, so `verify-portal.mjs` cannot run in a secretless CI. It runs where
+   the provenance verifier runs. What CI does cover is every library behind the
+   pages, with an injected `fetch`.
+5. **One publication is exempt** from the homogeneity check, because the bench
    it carries was judged by unequal panels across labs on four behaviours. See
    CLAUDE.md; filling the nine missing calls is dated work, not a side effect.
 

@@ -35,13 +35,11 @@ jobs:
         with:
           node-version: "22"
 
-      # The python side is stdlib-only by design (validate_data.py falls
-      # back to its built-in schema checker when jsonschema is absent), so
-      # the runner's preinstalled python3 is all it needs.
+      # The python side is stdlib-only by design, so the runner's preinstalled
+      # python3 is all it needs.
       - name: Panel and citation suites
         run: |
           python3 engine/panel/test_panel.py
-          python3 engine/panel/test_new_behaviour.py
           python3 -m unittest discover -s tests
 
       - name: Judging job suites
@@ -49,14 +47,18 @@ jobs:
           python3 engine/panel/test_judge_call.py
           python3 engine/panel/test_batch_job.py
           python3 engine/panel/test_compose_run.py
+          python3 engine/test_job.py
+          python3 engine/test_publish.py
 
       - name: Store and index suites
         run: |
           python3 engine/test_store.py
           python3 engine/test_index_store.py
 
-      - name: Reader route suite
-        run: node --test app/lib/__tests__/publications.test.mjs
+      # node directly, not pnpm: these suites import nothing outside the standard
+      # library, so this job needs no install at all.
+      - name: Application library suites
+        run: node --test app/lib/__tests__/*.test.mjs
 
       - name: app.js resolution harnesses
         run: |

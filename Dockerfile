@@ -1,8 +1,13 @@
 # The Cloud Run Job's image: the judging engine, and nothing else.
 #
 # No site, no reader, no Next: those are served from Vercel. This container
-# receives an ACI_RUN_ID through an environment variable, executes that run's
-# pending judge calls, and writes each judgement to Supabase as it lands.
+# receives an ACI_JOB_ID and an ACI_JOB_MODE through environment variables --
+# Cloud Run Jobs substitute variables, not arguments -- reads that job's row for
+# what to do, and writes what it did back onto the same row.
+#
+# Three modes, one image: compose prices a run and writes its calls, judge
+# executes them, publish builds the two payloads the reader serves. A mode is a
+# string rather than a deployment.
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -20,4 +25,4 @@ ENV PYTHONPATH=/app/engine
 # rather than an economy: harness.resolve prefers a native route whenever that
 # provider's key is present, so a stray ANTHROPIC_API_KEY here would silently
 # send the Anthropic seat direct.
-CMD ["python", "-m", "panel.batch_job"]
+CMD ["python", "engine/job.py"]

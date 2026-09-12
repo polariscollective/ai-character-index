@@ -11,9 +11,9 @@ template -- one OpenRouter key suffices, native keys optional).
 - `harness.py` -- shared library: config load, prompt builders (rubrics v1 binary /
   v2 ternary+scope / v3 ternary+form-fields, frozen for provenance), verdict
   parsing, run-log resume conventions. Not a CLI.
-- `new_behaviour.py` -- registers a user behaviour (registry row; `--scope` adds
-  the judge-prompt entry here) and prints the judge/build/view commands;
-  `test_new_behaviour.py` covers it.
+- Registering a behaviour is the admin portal's, and writes `aci_behaviours`.
+  `new_behaviour.py` did it by writing `data/behaviours.json`, a file under a
+  directory that no longer exists; it went with the directory.
 - `whole_doc.py` -- whole-document judging (entire spec in one prompt, all verdicts
   in one response). Runs the v5 rubric by default -- the shipped bench's prompt,
   `prompts/v5.txt` -- with the legacy v3 prompts behind `--rubric=v3w`/`v3s`; rows

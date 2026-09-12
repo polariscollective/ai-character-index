@@ -1,0 +1,178 @@
+/* The portal's surface. Polaris design framework v1.1, the same six core tokens
+   the reader uses, written straight in rather than through the reader's palette
+   switch: an operator's screen has one appearance, and a second palette here
+   would be a second thing to keep true.
+
+   No drop shadows. Structure is 1px rules and whitespace. Chartreuse is never a
+   text colour -- it takes the energy roles: focus, active states, rules. */
+:root {
+  --paper: #F1EFE3;
+  --chrome: #E9E6D7;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --accent-soft: #E6EAC8;
+  --on-accent: #F1EFE3;
+  --gold: #C9A227;
+  --fail: #A0522D;
+
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { background: var(--energy); color: var(--ink); text-decoration: none; }
+
+/* ---- the bar ---- */
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.bar h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.bar nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.bar nav a { font-size: 13px; text-decoration: none; color: var(--muted); }
+.bar nav a[aria-current="page"] { color: var(--ink); border-bottom: 2px solid var(--energy); }
+.bar .who { margin-left: auto; font-size: 12px; color: var(--faint); font-family: var(--mono); }
+
+main { max-width: 1100px; padding: 24px; }
+main > section { margin-bottom: 36px; }
+
+h2 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+}
+h2 + .why { margin: 0 0 16px; color: var(--faint); font-size: 13px; max-width: 62ch; }
+h3 { margin: 24px 0 8px; font-family: var(--display); font-size: 14px; }
+
+/* ---- tables ---- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  text-align: left;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+tbody td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line-light); vertical-align: top; }
+tbody tr:hover { background: var(--accent-soft); }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code, .mono { font-family: var(--mono); font-size: 12px; }
+
+/* ---- states ---- */
+.state { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.state.done { color: var(--muted); }
+.state.running { color: var(--accent); border-bottom: 2px solid var(--energy); }
+.state.pending { color: var(--faint); }
+.state.error, .state.cancelled { color: var(--fail); }
+.flag { font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.flag.public { color: var(--accent); }
+.flag.draft { color: var(--gold); }
+
+/* ---- forms ---- */
+form.panel { border: 1px solid var(--line); padding: 18px; max-width: 720px; background: var(--chrome); }
+form.panel label { display: block; margin-bottom: 14px; font-size: 13px; }
+form.panel label > span { display: block; margin-bottom: 4px; color: var(--muted); }
+form.panel label .hint { display: block; margin-top: 3px; color: var(--faint); font-size: 12px; }
+input[type="text"], input[type="url"], textarea, select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 13px;
+}
+textarea { min-height: 120px; font-family: var(--mono); font-size: 12px; line-height: 1.5; }
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--energy);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+fieldset { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); }
+fieldset legend { padding: 0 4px; color: var(--muted); font-size: 12px; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2px 14px; }
+.checks label { display: flex; gap: 7px; align-items: baseline; margin: 0; font-size: 13px; }
+/* The form's labels stack their caption above the field; a checkbox's caption
+   sits beside it, so the block display has to be undone here. */
+.checks label > span { display: inline; margin: 0; color: var(--ink); }
+.checks input { margin: 0; flex: none; accent-color: var(--accent); }
+
+button {
+  padding: 7px 15px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+button:hover { background: var(--energy); color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* A control inside a table is a verb in a row of data, not a call to action:
+   no filled box, no border, just a word that behaves like one. */
+button.quiet {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+button.quiet:hover { background: var(--energy); color: var(--ink); text-decoration: none; }
+button:disabled { border-color: var(--line); background: var(--line-light); color: var(--faint); cursor: default; }
+
+/* ---- notices ---- */
+.notice { padding: 10px 14px; border-left: 3px solid var(--energy); background: var(--accent-soft); font-size: 13px; }
+.notice.bad { border-left-color: var(--fail); background: #F6E8E0; }
+.notice p { margin: 0 0 4px; }
+.notice p:last-child { margin: 0; }
+.notice ul { margin: 4px 0 0; padding-left: 20px; }
+.empty { color: var(--faint); font-size: 13px; font-style: italic; }
+
+/* ---- the sign-in card ---- */
+.door { max-width: 420px; margin: 14vh auto; padding: 0 24px; }
+.door h1 { font-family: var(--display); font-size: 22px; margin: 0 0 8px; }
+.door p { color: var(--faint); font-size: 13px; }
+.door form { margin-top: 20px; }
+.door button { width: 100%; padding: 10px; }
+
+@media (max-width: 620px) {
+  .bar { flex-wrap: wrap; gap: 10px; }
+  .bar .who { margin-left: 0; width: 100%; }
+  main { padding: 18px 16px; }
+  table { display: block; overflow-x: auto; }
+}
