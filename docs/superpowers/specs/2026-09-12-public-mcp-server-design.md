@@ -153,14 +153,18 @@ Plural, because it returns many.
 | `behaviours` | yes, at least one slug | — |
 | `model_spec_ids` | no | every specification |
 | `strength` | no | `core` |
-| `limit` | no | 40, maximum 200 |
+| `limit` | no | 40 passages per page, maximum 200 |
+| `cursor` | no | the first cell |
 
-`behaviours` is required and non-empty. It is the only thing bounding the
-response, so it is not optional.
+`behaviours` is required and non-empty. Everything else has a default that
+answers something useful.
 
 `strength` means *this band and stronger*: `defining`, then `core`, then
 `related`. The default, `core`, returns defining and core passages, which is
 what the reader shows before anyone touches a toggle.
+
+`limit` and `cursor` are the paging pair, and *Order and paging* below says
+what they do.
 
 ```json
 {
@@ -187,13 +191,54 @@ what the reader shows before anyone touches a toggle.
       "passages": [],
       "note": "No passages at this strength. Absence of coverage is an index finding, not missing data." }
   ],
-  "truncated": null
+  "next_cursor": { "publication": "3114dd65-…",
+                   "behaviour": "animal-welfare-impacts", "model_spec_id": "anthropic" },
+  "remaining": { "cells": 7, "passages": 31 }
 }
 ```
+
+`next_cursor` is `null` on the last page, and `remaining` is then zero on both
+counts.
 
 An unknown slug or specification id is an error naming what is available, not
 an empty result: an agent that asked for `helpfulnes` should be told, not
 handed silence that reads like a finding.
+
+## Order and paging
+
+A **cell** is one behaviour against one specification. It is the unit of this
+tool: cells are never split across pages, and a passage is never separated from
+the cell that gives it meaning.
+
+**The order of cells** is the caller's own: behaviours in the order they were
+listed, and within each behaviour the specifications in the order they were
+listed, or the index's order when `model_spec_ids` was omitted. Predictable
+without being arbitrary, and stable across pages because it depends only on the
+arguments.
+
+**The order of passages inside a cell is strongest first**, which is the order
+the payload already holds: all twenty cells of the published payload are sorted
+by score descending, verified in the session that wrote this document.
+
+Not document reading order, and that is a decision rather than an oversight.
+Recovering reading order server-side would mean resolving every locator against
+the specification's own structure: the quotes are normalised, so half of them
+cannot be found in the markdown by literal search, and the locator's section
+path would have to be walked against the document outline. That is the citation
+resolver's job, it is real work, and strongest-first is the better order for a
+caller who is going to stop reading partway down.
+
+**Paging.** `limit` is a budget in passages, not a hard cut. Cells are added to
+a page whole until the budget is reached. A cell larger than the budget comes
+back alone on its own page, because half a cell is worse than a big one: the
+biggest cell in the published index holds 47 passages, roughly 25 KB, and that
+is the real ceiling on one response.
+
+`next_cursor` names the next cell to start from, and is passed back as
+`cursor`. It is legible rather than opaque, which means a caller can see where
+they are, and it carries the publication id it was issued against. A cursor
+from a publication that is no longer current is an error saying so, not a
+silent walk across two different indexes.
 
 ## What a passage is at the boundary
 
@@ -246,14 +291,21 @@ removal.
 
 ## Size and cost
 
-Worst case at the default bands is 103 passages, roughly 74 KB in the shape
-above. That is too much for one tool result, so:
+Measured over the published payload, in the passage shape above:
 
-- `behaviours` is required, which bounds a typical call to one cell pair,
-  roughly 3.5 KB.
-- `limit` caps the total, 40 by default. When it bites, `truncated` names what
-  was dropped and from which cells, so the caller can narrow rather than
-  wonder.
+| `strength` | passages | bytes | biggest cell |
+|---|---|---|---|
+| `defining` | 43 | 24 KB | 12 passages, 5 KB |
+| `core`, the default | 103 | 57 KB | 18 passages, 7 KB |
+| `related` | 363 | 214 KB | 47 passages, 25 KB |
+
+So the whole index at the default strength fits in one answer, and only a
+sweep at `related` genuinely needs paging. The numbers also set the ceiling: a
+single response can never exceed the biggest cell, 25 KB today, because that is
+the only case where a page overshoots its budget.
+
+`behaviours` being required keeps a typical call to one cell pair, a few
+kilobytes. `limit` and the cell-whole paging rule keep the worst one bounded.
 
 The payload and documents columns are read once and held in module scope for 60
 seconds, the same window as the reader route's `s-maxage`. Vercel gives no
@@ -324,7 +376,9 @@ Sections:
    abridged response.
 5. **What the numbers mean.** The bands, the judge vocabulary, and the
    comparability caveat stated once.
-6. **No account needed.** That it is public, that it serves the published
+6. **Order and paging.** That a page holds whole behaviour and specification
+   pairs, that passages come strongest first, and how `next_cursor` is walked.
+7. **No account needed.** That it is public, that it serves the published
    index, and that there is no rate limit to plan around today.
 
 Framework rules apply as everywhere: 56px chartreuse rule above each section
@@ -336,9 +390,12 @@ case, British spelling, no em-dashes in the page copy.
 - `app/lib/__tests__/mcp-tools.test.mjs`, under `node --test`: the three
   answers against `tests/fixtures/reader/`. Covers behaviour filtering, an
   unknown slug erroring rather than emptying, specification filtering, each
-  `strength` cut, `limit` and its `truncated` report, `comparability` present
-  on multi-specification answers and absent on single ones, the empty-cell
-  note, and the briefless behaviour's note.
+  `strength` cut, `comparability` present on multi-specification answers and
+  absent on single ones, the empty-cell note, and the briefless behaviour's
+  note. Paging gets its own group: cell order follows the arguments, passages
+  within a cell are strongest first, no cell is ever split, an oversized cell
+  comes back alone, walking `next_cursor` to exhaustion yields every passage
+  exactly once, and a cursor from another publication is refused.
 - `app/lib/__tests__/bands.test.mjs`: agreement with `tierBand` extracted from
   `app.js`, over the achievable score space.
 - One end-to-end check against the running route: `initialize`, `tools/list`
