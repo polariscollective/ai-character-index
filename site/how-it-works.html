@@ -88,7 +88,7 @@
      sheet this replaced was a card, and the framework draws structure with
      neither cards nor shadows. */
   .sheet { max-width: 720px; margin: 0 auto; padding: 0 40px; }
-  .m-head { padding: 64px 0 48px; }
+  .m-head { padding: 56px 0 32px; }
   .m-title { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.16; }
   .m-sub { font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 66ch; margin-top: 16px; }
 
@@ -100,12 +100,14 @@
               transition: background-color .15s ease, color .15s ease; }
   .repo-btn:hover { background: var(--energy); color: var(--ink); }
 
-  section.m { padding: 48px 0; border-top: 1px solid var(--hair); }
+  section.m { padding: 32px 0; border-top: 1px solid var(--hair); }
   /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
   h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
        margin-bottom: 16px; padding-top: 19px;
        background: linear-gradient(var(--energy), var(--energy)) 0 0 / 56px 3px no-repeat; }
-  section.m p { font-size: 17px; line-height: 1.6; color: var(--ink); max-width: 66ch; margin-bottom: 16px; }
+  section.m p { font-size: 16px; line-height: 1.55; color: var(--ink); max-width: 66ch; margin-bottom: 14px; }
+  /* The sentence that says what this section is for. */
+  section.m p.lead { font-size: 17px; line-height: 1.6; }
   section.m p:last-child { margin-bottom: 0; }
   section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
   section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
@@ -252,7 +254,6 @@
   <nav aria-label="Primary navigation">
     <a href="/spec-reader/">Spec reader</a>
     <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
-    <a href="/mcp">MCP</a>
     <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
   </nav>
 </header>
@@ -280,111 +281,34 @@
     <p>Pick a behaviour &mdash; say, whether a model should defer to a user&rsquo;s own decisions
     about their own life. Now ask of a specification: where does this document address that, and
     how squarely? Reading forty thousand words to find out is the work this replaces.</p>
-    <p>So we ask several frontier models to read the whole document, passage by passage, against
-    one written description of the behaviour. Each one marks every passage: this is where the
-    document establishes it, this only touches on it, this is unrelated. We keep every verdict,
-    and we quote the text verbatim with a reference that points back to the exact sentences.</p>
-    <p>What comes out is a coverage map. Open the
-    <a href="spec-reader/">spec reader</a>, tick a behaviour, and the passages light up in both
-    documents at once. You can read what each one says, see how squarely each document commits to
-    it, and take the citations away as a file.</p>
-    <p><b>Why several readers rather than one.</b> One model&rsquo;s opinion about a paragraph is
-    an opinion. Several models, given the same description and the same document, agreeing about a
-    paragraph is closer to a finding. The reader shows you how much of the panel stood behind each
-    passage rather than hiding it in an average.</p>
+    <p>Several frontier models read the whole document against one written description of the
+    behaviour, and mark every passage: this is where the document establishes it, this only
+    touches on it, this is unrelated. One model&rsquo;s opinion about a paragraph is an opinion;
+    several models agreeing, given the same description, is closer to a finding.</p>
+    <p>What comes out is a coverage map. In the <a href="/spec-reader/">spec reader</a>, tick a
+    behaviour and every passage that bears on it lights up in both documents at once, shaded by
+    how squarely the document commits to it. Click one to see each reader&rsquo;s verdict on that
+    exact passage, and the quote itself. Beside every behaviour there is an <b>i</b> telling you
+    what it was defined as, because a verdict means nothing without the question that produced
+    it. The export takes the passages you ticked away as a file.</p>
   </section>
 
-  <section class="m">
-    <h2>What makes a good behaviour</h2>
-    <p>The description is the whole of it, and two sentences carry it. The first says what the
-    behaviour requires, in plain terms. The second says where it stops &mdash; what it is
-    <i>not</i>, usually by naming the neighbouring thing it would otherwise swallow.</p>
-    <p>That second sentence is the one people skip and the one that decides whether the result is
+  <section class="m" id="propose">
+    <h2>Propose one</h2>
+    <p class="lead">If there is a behaviour the index should be testing, or a document it should
+    be reading, send it here. We read every proposal ourselves, decide whether it belongs, and pay
+    for the run out of our own credits. If it goes in, we write and tell you, and it appears in
+    the reader for everyone.</p>
+    <p><b>Describing the behaviour is the whole of it, and two sentences carry it.</b> The first
+    says what the behaviour requires, in plain terms. The second says where it stops &mdash; what
+    it is <i>not</i>, usually by naming the neighbouring thing it would otherwise swallow.</p>
+    <p>That second sentence is the one people skip and the one that decides whether the answer is
     worth anything. &ldquo;Honesty&rdquo; without a boundary collects every passage about trust,
     tone, transparency and error correction. &ldquo;Honesty, meaning the model does not assert
     what it believes to be false &mdash; not whether it volunteers everything it knows&rdquo;
     collects the passages you meant.</p>
-  </section>
-
-  <section class="m">
-    <h2>What you get back</h2>
-    <p>A coverage map, in the <a href="spec-reader/">spec reader</a>. Tick a behaviour and every
-    passage that bears on it lights up in both documents at once, shaded by how squarely the
-    document commits to it. Click one and you see who said what: each reader&rsquo;s verdict on
-    that exact passage, and the quote itself.</p>
-    <p>Beside every behaviour there is an <b>i</b>. It tells you what that behaviour was defined
-    as &mdash; the description the readers were given, and where it stops &mdash; because a
-    verdict means nothing without knowing what question produced it.</p>
-    <p>Everything is quotable. The export writes the passages you have ticked, with their
-    citations, as a file you can take into your own work.</p>
-  </section>
-
-  <section class="m">
-    <h2>What it does not do</h2>
-    <p>It reports what a document <i>says</i>, not what a model <i>does</i>. A specification
-    covering a behaviour thoroughly is not evidence that the model follows it; that is a different
-    measurement, and the citations here are meant to feed it.</p>
-    <p>It is also not a scoreboard. Two documents addressing a behaviour differently is usually
-    two organisations having made different choices, not one of them failing.</p>
-  </section>
-
-  <section class="m">
-    <h2>Andr&eacute;s&rsquo;s original tool</h2>
-    <p><b>The AI Character Index was created by
-    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
-    Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
-    rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
-    judging pipeline, the citation resolver and the first version of this reader are all from
-    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and
-    BlueDot Impact.</p>
-    <p><b>It stands alone, and it is the one to clone:
-    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
-    rel="noopener">AndresCotton/ai-character-index</a>.</b> Python, a browser, an API key, and
-    nothing else. Nothing in it depends on us, and it is published at
-    <a href="https://ai-character-index.pages.dev" target="_blank"
-    rel="noopener">ai-character-index.pages.dev</a>.</p>
-    <p>Polaris Collective has run the project since September 2026, with Andr&eacute;s&rsquo;s
-    agreement, and started by him.</p>
-  </section>
-
-  <section class="m">
-    <h2>Clone it and run it yourself</h2>
-    <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
-cd ai-character-index
-python3 -m http.server 8080 --directory site</code></pre>
-    <p><b>Everything it produces is a file, and that is the point.</b> A run writes its verdicts
-    to disk beside the document it read. Two runs are two files, so <code>git diff</code> tells
-    you what changed &mdash; between one draft of a specification and the next, between two ways
-    of wording the same behaviour, between one panel of readers and another. Rewrite a paragraph
-    of a spec, run it again, and the diff is the answer to &ldquo;did that paragraph actually
-    change what the document covers?&rdquo;</p>
-    <p>You can also point it at a document of your own: your organisation&rsquo;s policy, a draft
-    nobody has published, a competitor&rsquo;s. It never leaves your machine.</p>
-
-    <h3>Or clone ours</h3>
-    <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
-    rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
-    this site. It is <i>less portable</i>, deliberately: the published index lives in a hosted
-    database, the judging runs on our infrastructure, and a clone without our credentials cannot
-    reach either. What it can do is judge locally, with one API key and no account at all:</p>
-    <pre><code>python3 engine/local_run.py \
-    --document=my-spec@2026-09-12:path/to/spec.md \
-    --behaviour=path/to/behaviour.json \
-    --panel=frontier_fast</code></pre>
-    <p>The results land in <code>artefacts/</code> as raw files: every reply exactly as it came
-    back, every verdict with its locator and the text it judged, and what each call cost. Same
-    diffing, no database. The README says what the JSON file holds.</p>
-  </section>
-
-  <section class="m">
-    <h2>Propose one</h2>
-    <p>If you would rather not run anything, describe what you want tested and we will do it. We
-    read every proposal ourselves, decide whether it belongs in the index, and pay for the run out
-    of our own credits. If it goes in, we write and tell you, and it appears in the reader for
-    everyone.</p>
-    <p>We cannot promise to run everything. What we look for is a behaviour described clearly
-    enough to be tested, and a reason it matters that the specifications should have an answer to.
-    If we decide against it, we will say so rather than leave you waiting.</p>
+    <p>We cannot promise to run everything. If we decide against it, we will say so rather than
+    leave you waiting.</p>
 
     <nav class="choice" aria-label="What you are sending">
       <a href="?kind=behaviour" id="pick-behaviour">A behaviour</a>
@@ -485,6 +409,62 @@ python3 -m http.server 8080 --directory site</code></pre>
     </form>
   </section>
 
+  <section class="m">
+    <h2>What it does not tell you</h2>
+    <p>It reports what a document <i>says</i>, not what a model <i>does</i>. A specification
+    covering a behaviour thoroughly is not evidence that the model follows it; that is a different
+    measurement, and the citations here are meant to feed it.</p>
+    <p>It is also not a scoreboard. Two documents addressing a behaviour differently is usually
+    two organisations having made different choices, not one of them failing.</p>
+  </section>
+
+  <section class="m">
+    <h2>Andr&eacute;s&rsquo;s original tool</h2>
+    <p><b>The AI Character Index was created by
+    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
+    Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
+    judging pipeline, the citation resolver and the first version of this reader are all from
+    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and
+    BlueDot Impact.</p>
+    <p><b>It stands alone, and it is the one to clone:
+    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+    rel="noopener">AndresCotton/ai-character-index</a>.</b> Python, a browser, an API key, and
+    nothing else. Nothing in it depends on us, and it is published at
+    <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">ai-character-index.pages.dev</a>.</p>
+    <p>Polaris Collective has run the project since September 2026, with Andr&eacute;s&rsquo;s
+    agreement, and started by him.</p>
+  </section>
+
+  <section class="m">
+    <h2>Clone it and run it yourself</h2>
+    <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
+cd ai-character-index
+python3 -m http.server 8080 --directory site</code></pre>
+    <p><b>Everything it produces is a file, and that is the point.</b> A run writes its verdicts
+    to disk beside the document it read. Two runs are two files, so <code>git diff</code> tells
+    you what changed &mdash; between one draft of a specification and the next, between two ways
+    of wording the same behaviour, between one panel of readers and another. Rewrite a paragraph
+    of a spec, run it again, and the diff is the answer to &ldquo;did that paragraph actually
+    change what the document covers?&rdquo;</p>
+    <p>You can also point it at a document of your own: your organisation&rsquo;s policy, a draft
+    nobody has published, a competitor&rsquo;s. It never leaves your machine.</p>
+
+    <h3>Or clone ours</h3>
+    <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
+    rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
+    this site. It is <i>less portable</i>, deliberately: the published index lives in a hosted
+    database, the judging runs on our infrastructure, and a clone without our credentials cannot
+    reach either. What it can do is judge locally, with one API key and no account at all:</p>
+    <pre><code>python3 engine/local_run.py \
+    --document=my-spec@2026-09-12:path/to/spec.md \
+    --behaviour=path/to/behaviour.json \
+    --panel=frontier_fast</code></pre>
+    <p>The results land in <code>artefacts/</code> as raw files: every reply exactly as it came
+    back, every verdict with its locator and the text it judged, and what each call cost. Same
+    diffing, no database. The README says what the JSON file holds.</p>
+  </section>
   </div>
 
 </div>
@@ -552,36 +532,57 @@ if (done || problem) {
 const rail = document.querySelector(".rail ol");
 if (rail) {
   const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const headings = [...document.querySelectorAll(".sheet h2")];
-  for (const heading of headings) {
-    if (!heading.id) heading.id = slug(heading.textContent);
+  const sections = [...document.querySelectorAll(".sheet section.m")]
+    .map(section => ({ section, heading: section.querySelector("h2") }))
+    .filter(entry => entry.heading);
+  const links = new Map();
+  for (const { section, heading } of sections) {
+    if (!section.id) section.id = slug(heading.textContent);
     const item = document.createElement("li");
     const link = document.createElement("a");
-    link.href = `#${heading.id}`;
+    link.href = `#${section.id}`;
     link.textContent = heading.textContent;
     item.append(link);
     rail.append(item);
+    links.set(section.id, link);
   }
-  /* Which section you are in. One observer, no scroll handler, and the page
-     works without it -- the links are anchors. */
-  const links = new Map([...rail.querySelectorAll("a")].map(a => [a.hash.slice(1), a]));
-  const seen = new Set();
+
+  /* Which section you are in.
+   *
+   * The sections are observed, not the headings, and that is the fix for a bug
+   * this had: headings are points, so a band narrow enough to mean "at the top
+   * of the screen" contains none of them most of the time, and the rail fell
+   * back to the first item on every scroll between headings. Sections tile the
+   * page, so one of them always covers the band. `current` is never reset to a
+   * default either -- when nothing intersects, which happens at the very bottom,
+   * the last answer stands. */
+  let current = sections[0].section.id;
+  const visible = new Set();
   const mark = () => {
-    const current = headings.find(h => seen.has(h.id)) || headings[0];
+    for (const { section } of sections) {
+      if (visible.has(section.id)) { current = section.id; break; }
+    }
     for (const [id, link] of links) {
-      if (id === current.id) link.setAttribute("aria-current", "true");
+      if (id === current) link.setAttribute("aria-current", "true");
       else link.removeAttribute("aria-current");
     }
   };
   const watch = new IntersectionObserver(entries => {
     for (const entry of entries) {
-      if (entry.isIntersecting) seen.add(entry.target.id);
-      else seen.delete(entry.target.id);
+      if (entry.isIntersecting) visible.add(entry.target.id);
+      else visible.delete(entry.target.id);
     }
     mark();
-  }, { rootMargin: "-10% 0px -70% 0px" });
-  headings.forEach(heading => watch.observe(heading));
+  }, { rootMargin: "-12% 0px -76% 0px" });
+  sections.forEach(({ section }) => watch.observe(section));
   mark();
+
+  /* A click marks its target at once rather than waiting for the scroll to
+     settle, which is what made the rail feel unresponsive. */
+  rail.addEventListener("click", event => {
+    const link = event.target.closest("a");
+    if (link) { current = link.hash.slice(1); visible.clear(); mark(); }
+  });
 }
 </script>
 
