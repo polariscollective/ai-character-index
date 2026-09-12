@@ -11,7 +11,7 @@ import {
   recentFrom, sourceHash, specificationProblems,
 } from "../../lib/submissions.mjs";
 
-const PAGE = "/how-it-works.html";
+const PAGE = "/how-it-works";
 
 function back(request, outcome) {
   const url = new URL(PAGE, request.url);

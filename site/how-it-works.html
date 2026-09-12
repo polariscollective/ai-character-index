@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works, AI Character Index</title>
+<title>How it works and contribute, AI Character Index</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,32 +186,90 @@
   .said.bad { border-left-color: var(--gap); }
   .said p { margin: 0 0 6px; }
   .said p:last-child { margin: 0; }
+
+  /* ---------- the header, identical to the reader's ---------- */
+  /* Same height, same rule, same background. Two surfaces differing by a few
+     pixels read as two sites when you move between them, and moving between them
+     is what a nav is for. */
+  .site-header {
+    height: 54px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--hair);
+    background: var(--lift);
+  }
+  .site-header .site-brand { display: flex; align-items: baseline; gap: 10px; }
+  .site-header nav { display: flex; align-items: center; gap: 24px; }
+  .site-header nav a { color: var(--ink2); text-decoration: none; font-size: 14px;
+                       box-shadow: none; }
+  .site-header nav a:hover { background: var(--energy); color: var(--ink); }
+  .site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .site-header .wordmark { font-family: var(--display); font-size: 16px; font-weight: 600;
+                           color: var(--ink); text-decoration: none; box-shadow: none; }
+  .site-header .wordmark:hover { background: none; color: var(--ink); }
+  .site-header .mode { align-self: center; }
+  @media (max-width: 700px) {
+    .site-header { padding: 0 16px; gap: 12px; }
+    .site-header .collective, .site-header .brand-divider { display: none; }
+    .site-header nav { gap: 14px; }
+  }
+
+  /* ---------- the contents rail ---------- */
+  /* One hairline down the side of the page's own headings, with a chartreuse
+     segment marking where you are. No label above it: a column of this page's
+     headings, beside this page, does not need to announce what it is. */
+  .with-rail { display: flex; align-items: flex-start; gap: 56px;
+               max-width: 1000px; margin: 0 auto; padding: 0 40px; }
+  .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
+  .rail { position: sticky; top: 22px; flex: 0 0 168px; padding-top: 92px; }
+  .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
+  .rail li { margin: 0; }
+  .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
+            border-left: 2px solid transparent; color: var(--ink3);
+            font-size: 13px; line-height: 1.35; text-decoration: none; box-shadow: none;
+            transition: color .15s ease, border-color .15s ease; }
+  .rail a:hover { background: none; color: var(--ink); }
+  .rail a[aria-current="true"] { color: var(--ink); border-left-color: var(--energy); }
+  .sheet [id] { scroll-margin-top: 24px; }
+  @media (max-width: 940px) {
+    .with-rail { display: block; padding: 0 22px; }
+    .with-rail .sheet { max-width: 66ch; margin: 0 auto; }
+    .rail { display: none; }
+  }
 </style>
 </head>
 <body data-palette="daylight">
 
-<header>
+<header class="site-header">
   <span class="site-brand">
     <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <span class="wordmark"><a href="spec-reader/">AI Character Index</a></span>
+    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
   </span>
-  <nav aria-label="Site navigation">
-    <a href="spec-reader/">Spec reader</a>
-    <a class="active" href="how-it-works.html">How it works</a>
-    <button class="mode" id="mode" aria-label="Switch surface">☾</button>
+  <nav aria-label="Primary navigation">
+    <a href="/spec-reader/">Spec reader</a>
+    <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
+    <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
   </nav>
 </header>
 
-<div class="sheet">
+<div class="with-rail">
+
+  <nav class="rail" aria-label="On this page">
+    <ol></ol>
+  </nav>
+
+  <div class="sheet">
 
   <div class="m-head">
     <div class="m-title">How it works</div>
-    <p class="m-sub">The labs publish documents saying how their models should behave: Anthropic&rsquo;s
-    constitution, OpenAI&rsquo;s model spec. They are long, and what they say about any one thing
-    is scattered through them. This index reads them for you, one behaviour at a time, and shows
-    you every passage that bears on it, quoted and located.</p>
+    <p class="m-sub">The labs publish documents saying how their models should behave:
+    Anthropic&rsquo;s constitution, OpenAI&rsquo;s model spec. They are long, and what they say
+    about any one thing is scattered through them. This index reads them for you, one behaviour at
+    a time, and shows you every passage that bears on it, quoted and located.</p>
   </div>
 
   <div id="said" hidden></div>
@@ -248,19 +306,48 @@
   </section>
 
   <section class="m">
-    <h2>Two ways in</h2>
-    <p>Either run it yourself, or send us what you want tested and we will run it.</p>
+    <h2>What you get back</h2>
+    <p>A coverage map, in the <a href="spec-reader/">spec reader</a>. Tick a behaviour and every
+    passage that bears on it lights up in both documents at once, shaded by how squarely the
+    document commits to it. Click one and you see who said what: each reader&rsquo;s verdict on
+    that exact passage, and the quote itself.</p>
+    <p>Beside every behaviour there is an <b>i</b>. It tells you what that behaviour was defined
+    as &mdash; the description the readers were given, and where it stops &mdash; because a
+    verdict means nothing without knowing what question produced it.</p>
+    <p>Everything is quotable. The export writes the passages you have ticked, with their
+    citations, as a file you can take into your own work.</p>
   </section>
 
   <section class="m">
-    <h2>Run it yourself</h2>
-    <p><b>The tool to clone is
-    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
-    rel="noopener">AndresCotton/ai-character-index</a>.</b> It is the original, built by
+    <h2>What it does not do</h2>
+    <p>It reports what a document <i>says</i>, not what a model <i>does</i>. A specification
+    covering a behaviour thoroughly is not evidence that the model follows it; that is a different
+    measurement, and the citations here are meant to feed it.</p>
+    <p>It is also not a scoreboard. Two documents addressing a behaviour differently is usually
+    two organisations having made different choices, not one of them failing.</p>
+  </section>
+
+  <section class="m">
+    <h2>Andr&eacute;s&rsquo;s original tool</h2>
+    <p><b>The AI Character Index was created by
     <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
-    Cotton</a> with <a href="https://github.com/MattStults" target="_blank"
-    rel="noopener">Matt Stults</a>, and almost everything described on this page is theirs. It
-    stands alone: Python, a browser, an API key, and nothing else. Nothing in it depends on us.</p>
+    Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
+    judging pipeline, the citation resolver and the first version of this reader are all from
+    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and
+    BlueDot Impact.</p>
+    <p><b>It stands alone, and it is the one to clone:
+    <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+    rel="noopener">AndresCotton/ai-character-index</a>.</b> Python, a browser, an API key, and
+    nothing else. Nothing in it depends on us, and it is published at
+    <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">ai-character-index.pages.dev</a>.</p>
+    <p>Polaris Collective has run the project since September 2026, with Andr&eacute;s&rsquo;s
+    agreement, and started by him.</p>
+  </section>
+
+  <section class="m">
+    <h2>Clone it and run it yourself</h2>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
@@ -289,7 +376,7 @@ python3 -m http.server 8080 --directory site</code></pre>
   </section>
 
   <section class="m">
-    <h2>Send us one</h2>
+    <h2>Propose one</h2>
     <p>If you would rather not run anything, describe what you want tested and we will do it. We
     read every proposal ourselves, decide whether it belongs in the index, and pay for the run out
     of our own credits. If it goes in, we write and tell you, and it appears in the reader for
@@ -397,19 +484,7 @@ python3 -m http.server 8080 --directory site</code></pre>
     </form>
   </section>
 
-  <section class="m">
-    <h2>Who made this</h2>
-    <p><b>The AI Character Index was created by
-    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
-    Cotton</a> and <a href="https://github.com/MattStults" target="_blank"
-    rel="noopener">Matt Stults</a>.</b> The vision and the first execution are Andr&eacute;s&rsquo;s,
-    including the first version of this reader; Matt got that work production ready. Between them
-    they wrote the judging pipeline, the citation resolver and the reader itself. Their work was
-    supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact.</p>
-    <p>Run by <a href="https://polariscollective.org" target="_blank" rel="noopener">Polaris
-    Collective</a> since September 2026, with Andr&eacute;s&rsquo;s agreement, and started by
-    him.</p>
-  </section>
+  </div>
 
 </div>
 
@@ -469,6 +544,43 @@ if (done || problem) {
   }
   said.setAttribute("role", problem ? "alert" : "status");
   said.scrollIntoView({ block: "center" });
+}
+
+/* The rail is built from the page's own headings, so it cannot fall out of step
+   with them. Each h2 gets an id from its text where it has none. */
+const rail = document.querySelector(".rail ol");
+if (rail) {
+  const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const headings = [...document.querySelectorAll(".sheet h2")];
+  for (const heading of headings) {
+    if (!heading.id) heading.id = slug(heading.textContent);
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = `#${heading.id}`;
+    link.textContent = heading.textContent;
+    item.append(link);
+    rail.append(item);
+  }
+  /* Which section you are in. One observer, no scroll handler, and the page
+     works without it -- the links are anchors. */
+  const links = new Map([...rail.querySelectorAll("a")].map(a => [a.hash.slice(1), a]));
+  const seen = new Set();
+  const mark = () => {
+    const current = headings.find(h => seen.has(h.id)) || headings[0];
+    for (const [id, link] of links) {
+      if (id === current.id) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  };
+  const watch = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) seen.add(entry.target.id);
+      else seen.delete(entry.target.id);
+    }
+    mark();
+  }, { rootMargin: "-10% 0px -70% 0px" });
+  headings.forEach(heading => watch.observe(heading));
+  mark();
 }
 </script>
 

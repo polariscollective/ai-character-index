@@ -48,6 +48,9 @@ const server = createServer(async (req, res) => {
   if (await serveReaderRoute(req, res, DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
+  // The same rewrite next.config.mjs carries: a prose page's address is a name,
+  // not the file it happens to be stored in.
+  if (!extname(path)) path += ".html";
   try {
     const body = await readFileAsync(join(SITE, path));
     res.writeHead(200, { "content-type": MIME[extname(path)] || "application/octet-stream" });

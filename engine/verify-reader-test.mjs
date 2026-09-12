@@ -48,6 +48,11 @@ const server = createServer(async (request, response) => {
   if (await serveReaderRoute(request, response, READER_DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(request.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
+  // The same rewrite next.config.mjs carries: a prose page's address is a name,
+  // not the file it happens to be stored in. Without it this server answers 404
+  // where the deployment answers 200, and the walker's nav check would be a
+  // check on the walker.
+  if (!extname(path)) path += ".html";
   try {
     const body = await readFile(join(SITE, path));
     response.writeHead(200, { "content-type": MIME[extname(path)] || "application/octet-stream" });
@@ -166,7 +171,7 @@ async function expectView(url, expected, label) {
 // Navigation: the expected links must be present and every one must resolve
 // (any #fragment to a real id in its target).
 await readView(base);
-const expectedNav = ["./", "../how-it-works.html"];
+const expectedNav = ["./", "/how-it-works"];
 const navHrefs = await page.evaluate(
   () => [...document.querySelectorAll('nav[aria-label="Primary navigation"] a')].map(a => a.getAttribute("href")),
 );
@@ -189,7 +194,7 @@ const navIssues = await page.evaluate(async expected => {
   return issues;
 }, navHrefs);
 report(navIssues.length === 0, "navigation links resolve",
-  navIssues.length ? navIssues.join("; ") : "self-link, methodology");
+  navIssues.length ? navIssues.join("; ") : navHrefs.join(", "));
 
 // The committed state resolves to the current publication: no ?publication= pin, and no
 // manifest (it is gitignored run output). A local manifest would shadow the

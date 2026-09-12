@@ -84,7 +84,7 @@ graph TB
    `public/`, and the reader takes its two payloads from routes. Publishing is
    not a deploy: what the public sees changes with a database write, and the
    write is `is_public` on a publication that already exists.
-7. **Proposing** — `site/how-it-works.html` and `/api/submit` are the one door open to
+7. **Proposing** — `/how-it-works` and `/api/submit` are the one door open to
    the internet that writes. A proposal lands in `aci_submissions`, its document
    in the private `aci-submissions` bucket, and a Slack message says so. It
    registers nothing and judges nothing: acting on it costs money, so an operator

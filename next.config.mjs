@@ -16,6 +16,9 @@ const nextConfig = {
       { source: "/", destination: "/index.html" },
       { source: "/spec-reader", destination: "/spec-reader/index.html" },
       { source: "/spec-reader/", destination: "/spec-reader/index.html" },
+      // The one prose page. It is a file on disk and that is an implementation
+      // detail; its address is a name.
+      { source: "/how-it-works", destination: "/how-it-works.html" },
     ];
   },
 };

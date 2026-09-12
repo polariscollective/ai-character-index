@@ -122,7 +122,7 @@ check(verbs.length > 0 && verbs.every(method => method === "post"),
 // The public form is the one door open to the internet that writes, so it is
 // walked too: both forms present, both posting to the route, and the honeypot
 // where a person will not find it but a machine will.
-await open("/how-it-works.html");
+await open("/how-it-works");
 const forms = await page.$$eval("form.propose", nodes => nodes.map(form => ({
   kind: form.querySelector("[name=kind]")?.value,
   action: form.getAttribute("action"),

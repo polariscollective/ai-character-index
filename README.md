@@ -20,11 +20,10 @@ below is needed to read it.
 ## Origins
 
 This repository is Polaris Collective's continuation of the AI Character Index,
-created by [Andrés Cotton](https://github.com/AndresCotton). The vision and the
-initial execution are his, including the first version of the spec reader; Matt
-Stults did the work of getting that production ready. The project passed to
-Polaris Collective in September 2026, with Andrés's agreement, to be carried
-further.
+created by [Andrés Cotton](https://github.com/AndresCotton) with the help of Matt
+Stults. The vision and the initial execution are his, including the first version
+of the spec reader. The project passed to Polaris Collective in September 2026,
+with Andrés's agreement, to be carried further.
 
 **[`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index)
 is the repository to clone if you want to run the tool yourself.** It stands
@@ -139,8 +138,8 @@ ACI_RUN_ID=<uuid> python3 engine/panel/batch_job.py                             
 ## Proposing something
 
 The pull-request pathway is gone with the clone-and-fork one, and
-`/how-it-works.html` replaces it: one page explaining the index, with the two
-proposal forms on it. A proposal is recorded in `aci_submissions`, its document
+`/how-it-works` replaces it: one page explaining the index, with the two proposal
+forms on it. A proposal is recorded in `aci_submissions`, its document
 goes to a private Supabase Storage bucket, and Slack is told.
 
 Nothing more happens by itself. Running a proposal costs money, so an operator
@@ -240,7 +239,7 @@ are the project's editorial records; none of them are needed to run it.
 
 - **[Andrés Cotton](https://github.com/AndresCotton)** -- creator. The vision and
   the initial execution, including the first version of the spec reader.
-- **Matt Stults** -- got that initial work production ready.
+- **Matt Stults** -- helped Andrés with that initial work.
 - **[Polaris Collective](https://polariscollective.org)** -- maintains the project
   from September 2026.
 
