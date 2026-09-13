@@ -240,6 +240,59 @@
     .with-rail .sheet { max-width: 66ch; margin: 0 auto; }
     .rail { display: none; }
   }
+
+  /* ---------- the proposal dialog ---------- */
+  /* The forms are long, and before this they sat open on the page whether or not
+     anyone wanted them, pushing everything after them out of reach. They open on
+     request now. Rendered with `open` in the markup so that without JavaScript
+     they are still on the page rather than unreachable; the script closes the
+     dialog on load and reopens it modally. */
+  .open-propose { padding: 11px 24px; border: 1px solid var(--spec); border-radius: 999px;
+                  background: var(--spec); color: var(--on-accent); font-family: var(--ui);
+                  font-size: 16px; font-weight: 500; cursor: pointer; }
+  .open-propose:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  .open-propose:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+  .propose-dialog {
+    margin: auto;                 /* the page's reset zeroes what centres a modal */
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 64px);
+    padding: 0;
+    border: 1px solid var(--hair2);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .propose-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+  .dialog-head { display: flex; align-items: baseline; justify-content: space-between;
+                 gap: 16px; padding: 20px 28px 16px; border-bottom: 1px solid var(--hair);
+                 background: var(--lift); }
+  /* The page draws its section rule as a gradient on every h2. The dialog's
+     title is not a section of the page, so it carries none. */
+  .dialog-head h2 { font-family: var(--display); font-size: 20px; font-weight: 600;
+                    margin: 0; padding-top: 0; background: none; }
+  .dialog-close { border: 0; background: none; padding: 4px 2px; color: var(--ink2);
+                  font-family: var(--ui); font-size: 14px; cursor: pointer; }
+  .dialog-close:hover { background: var(--energy); color: var(--ink); }
+  .dialog-close:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .dialog-body { padding: 20px 28px 28px; overflow-y: auto; max-height: calc(100vh - 150px); }
+  .dialog-body .choice { margin-top: 0; }
+  .dialog-body .form-panel p { font-size: 16px; line-height: 1.55; max-width: 62ch;
+                               margin-bottom: 14px; }
+  /* The switch is buttons now, not links: changing which form you are filling in
+     should not reload the page under you. */
+  .choice button { padding: 9px 20px; border: 0; background: none; color: var(--ink2);
+                   font-family: var(--ui); font-size: 15px; cursor: pointer; }
+  .choice button:hover { background: var(--energy); color: var(--ink); }
+  .choice button[aria-current="true"] { background: var(--spec); color: var(--on-accent); }
+  .choice button:focus-visible { outline: 2px solid var(--energy); outline-offset: -2px; }
+  /* Without JavaScript the dialog is an ordinary block on the page. */
+  .propose-dialog[open] { display: block; }
+  @media (max-width: 640px) {
+    .dialog-head { padding: 16px 18px 14px; }
+    .dialog-body { padding: 16px 18px 22px; }
+  }
 </style>
 </head>
 <body data-palette="daylight">
@@ -275,7 +328,7 @@
     a time, and shows you every passage that bears on it, quoted and located.</p>
   </div>
 
-  <div id="said" hidden></div>
+  <div id="said-page" hidden></div>
 
   <section class="m">
     <h2>The idea</h2>
@@ -317,103 +370,8 @@
     <p>We cannot promise to run everything. If we decide against it, we will say so rather than
     leave you waiting.</p>
 
-    <nav class="choice" aria-label="What you are sending">
-      <a href="?kind=behaviour" id="pick-behaviour">A behaviour</a>
-      <a href="?kind=specification" id="pick-specification">A document</a>
-    </nav>
-  </section>
-
-  <section class="m" id="form-behaviour">
-    <h3>A behaviour to test</h3>
-    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
-      <input type="hidden" name="kind" value="behaviour">
-      <label class="trap" aria-hidden="true">
-        <span>Leave this empty</span>
-        <input type="text" name="website" tabindex="-1" autocomplete="off">
-      </label>
-      <label>
-        <span>What would you call it</span>
-        <input type="text" name="name" required placeholder="Bribery resistance">
-        <span class="hint">A short name, the way it would read in a menu.</span>
-      </label>
-      <label>
-        <span>What does the behaviour require</span>
-        <textarea name="query" required placeholder="The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them."></textarea>
-        <span class="hint">One or two sentences, describing the thing itself rather than the
-        words for it. Write it the way you would brief a careful colleague who has to apply it to
-        a page of text without asking you anything.</span>
-      </label>
-      <label>
-        <span>Where does it stop</span>
-        <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
-        <span class="hint">The most useful field on this form. Name the neighbouring thing your
-        behaviour is <i>not</i>, so that a passage about that neighbour does not get counted.
-        Without it the result is broader than you meant and harder to trust.</span>
-      </label>
-      <label>
-        <span>Why does it matter</span>
-        <textarea name="why" placeholder="What it would tell you to learn that a specification covers this thoroughly, or not at all."></textarea>
-        <span class="hint">Optional, and it is what we read first when deciding.</span>
-      </label>
-      <label>
-        <span>Your email</span>
-        <input type="email" name="email" required placeholder="you@example.com">
-        <span class="hint">So we can tell you what we decided and write again when it is
-        published. We use it for this and nothing else.</span>
-      </label>
-      <button type="submit">Send it</button>
-    </form>
-  </section>
-
-  <section class="m" id="form-specification" hidden>
-    <h3>A document to add</h3>
-    <p>A published statement of how an organisation&rsquo;s models should behave. Send the text,
-    not a link alone: the index quotes documents word for word and pins every citation to the
-    exact version it read, so it keeps the text rather than fetching it again later.</p>
-    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
-      <input type="hidden" name="kind" value="specification">
-      <label class="trap" aria-hidden="true">
-        <span>Leave this empty</span>
-        <input type="text" name="website" tabindex="-1" autocomplete="off">
-      </label>
-      <label>
-        <span>Who published it</span>
-        <input type="text" name="organisation" required placeholder="OpenAI">
-      </label>
-      <label>
-        <span>What is it called</span>
-        <input type="text" name="name" required placeholder="Model Spec">
-        <span class="hint">No @ and no &gt; in the name: every citation into this document is
-        built from it.</span>
-      </label>
-      <label>
-        <span>Which version</span>
-        <input type="text" name="version" required placeholder="2026-01-20">
-        <span class="hint">Whatever the publisher calls this release: a date, a number, a name.
-        Documents get reissued, and a citation has to say which one it read.</span>
-      </label>
-      <label>
-        <span>Where is it published</span>
-        <input type="url" name="source_url" required placeholder="https://example.com/spec">
-      </label>
-      <label>
-        <span>The document itself</span>
-        <input type="file" name="document" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
-        <span class="hint">Markdown or plain text, up to 2 MB. Headings matter: they are how a
-        citation names the place it points at.</span>
-      </label>
-      <label>
-        <span>Why does it belong here</span>
-        <textarea name="why" placeholder="Optional, and it is what we read first when deciding."></textarea>
-      </label>
-      <label>
-        <span>Your email</span>
-        <input type="email" name="email" required placeholder="you@example.com">
-        <span class="hint">So we can tell you what we decided and write again when it is
-        published.</span>
-      </label>
-      <button type="submit">Send it</button>
-    </form>
+    <p><button type="button" class="open-propose" id="open-propose">Propose a behaviour
+    or a document</button></p>
   </section>
 
   <section class="m">
@@ -504,6 +462,117 @@ python3 -m http.server 8080 --directory site</code></pre>
 
 </div>
 
+  <dialog class="propose-dialog" id="propose-dialog" open
+          aria-labelledby="propose-dialog-title">
+    <div class="dialog-head">
+      <h2 id="propose-dialog-title">Propose one</h2>
+      <button type="button" class="dialog-close" id="propose-close"
+              aria-label="Close">Close</button>
+    </div>
+
+    <div class="dialog-body">
+      <div id="said" hidden></div>
+
+      <nav class="choice" aria-label="What you are sending">
+        <button type="button" id="pick-behaviour" data-kind="behaviour">A behaviour</button>
+        <button type="button" id="pick-specification" data-kind="specification">A document</button>
+      </nav>
+
+      <div class="form-panel" id="form-behaviour">
+    
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="behaviour">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>What would you call it</span>
+        <input type="text" name="name" required placeholder="Bribery resistance">
+        <span class="hint">A short name, the way it would read in a menu.</span>
+      </label>
+      <label>
+        <span>What does the behaviour require</span>
+        <textarea name="query" required placeholder="The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them."></textarea>
+        <span class="hint">One or two sentences, describing the thing itself rather than the
+        words for it. Write it the way you would brief a careful colleague who has to apply it to
+        a page of text without asking you anything.</span>
+      </label>
+      <label>
+        <span>Where does it stop</span>
+        <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
+        <span class="hint">The most useful field on this form. Name the neighbouring thing your
+        behaviour is <i>not</i>, so that a passage about that neighbour does not get counted.
+        Without it the result is broader than you meant and harder to trust.</span>
+      </label>
+      <label>
+        <span>Why does it matter</span>
+        <textarea name="why" placeholder="What it would tell you to learn that a specification covers this thoroughly, or not at all."></textarea>
+        <span class="hint">Optional, and it is what we read first when deciding.</span>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">So we can tell you what we decided and write again when it is
+        published. We use it for this and nothing else.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+      </div>
+
+      <div class="form-panel" id="form-specification">
+    
+    <p>A published statement of how an organisation&rsquo;s models should behave. Send the text,
+    not a link alone: the index quotes documents word for word and pins every citation to the
+    exact version it read, so it keeps the text rather than fetching it again later.</p>
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="specification">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>Who published it</span>
+        <input type="text" name="organisation" required placeholder="OpenAI">
+      </label>
+      <label>
+        <span>What is it called</span>
+        <input type="text" name="name" required placeholder="Model Spec">
+        <span class="hint">No @ and no &gt; in the name: every citation into this document is
+        built from it.</span>
+      </label>
+      <label>
+        <span>Which version</span>
+        <input type="text" name="version" required placeholder="2026-01-20">
+        <span class="hint">Whatever the publisher calls this release: a date, a number, a name.
+        Documents get reissued, and a citation has to say which one it read.</span>
+      </label>
+      <label>
+        <span>Where is it published</span>
+        <input type="url" name="source_url" required placeholder="https://example.com/spec">
+      </label>
+      <label>
+        <span>The document itself</span>
+        <input type="file" name="document" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
+        <span class="hint">Markdown or plain text, up to 2 MB. Headings matter: they are how a
+        citation names the place it points at.</span>
+      </label>
+      <label>
+        <span>Why does it belong here</span>
+        <textarea name="why" placeholder="Optional, and it is what we read first when deciding."></textarea>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">So we can tell you what we decided and write again when it is
+        published.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+      </div>
+    </div>
+  </dialog>
+
 <footer>
   <div class="f-row">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by
@@ -539,28 +608,83 @@ const qp = new URLSearchParams(location.search).get("palette");
 let saved = null; try { saved = localStorage.getItem("aci-palette"); } catch (e) {}
 setPalette(qp || saved || "daylight");
 
-/* Which form, and what came back. Both from the URL, so the page needs no state
-   of its own and a result can be linked to. */
+/* The proposal forms, behind a button.
+ *
+ * They are long, and on the page they pushed everything after them out of reach.
+ * The dialog is written `open`, so with no JavaScript the forms are still there;
+ * the first thing this does is close it. */
+const dialog = document.getElementById("propose-dialog");
+const panels = {
+  behaviour: document.getElementById("form-behaviour"),
+  specification: document.getElementById("form-specification"),
+};
+const picks = {
+  behaviour: document.getElementById("pick-behaviour"),
+  specification: document.getElementById("pick-specification"),
+};
 const params = new URLSearchParams(location.search);
-const kind = params.get("kind") === "specification" ? "specification" : "behaviour";
-document.getElementById("form-behaviour").hidden = kind !== "behaviour";
-document.getElementById("form-specification").hidden = kind !== "specification";
-document.getElementById("pick-" + kind).setAttribute("aria-current", "page");
 
-const said = document.getElementById("said");
-const done = params.get("done");
-const problem = params.get("problem");
-if (done || problem) {
-  said.hidden = false;
-  said.className = "said" + (problem ? " bad" : "");
-  /* textContent, never innerHTML: this text came back through a URL. */
-  for (const line of (problem || done).split("\n")) {
-    const p = document.createElement("p");
-    p.textContent = line;
-    said.append(p);
+/* Which form is showing. Read from the URL at first, then from whatever was last
+ * chosen: reopening the dialog should return you to the form you were filling
+ * in, not to the one the page was loaded with. */
+let current = params.get("kind") === "specification" ? "specification" : "behaviour";
+
+function show(kind) {
+  current = kind;
+  for (const [name, panel] of Object.entries(panels)) {
+    panel.hidden = name !== kind;
+    if (name === kind) picks[name].setAttribute("aria-current", "true");
+    else picks[name].removeAttribute("aria-current");
   }
-  said.setAttribute("role", problem ? "alert" : "status");
-  said.scrollIntoView({ block: "center" });
+}
+
+function open(kind) {
+  show(kind);
+  if (!dialog.open) dialog.showModal();
+  // The URL says which form is open, so the state can be linked to and the back
+  // button closes the dialog rather than leaving the page.
+  const url = new URL(location.href);
+  url.searchParams.set("kind", kind);
+  history.replaceState(null, "", url);
+}
+
+if (dialog) {
+  dialog.close();                       // it was open for the no-script case
+  show(current);
+
+  document.getElementById("open-propose").addEventListener("click", () => open(current));
+  document.getElementById("propose-close").addEventListener("click", () => dialog.close());
+  for (const [kind, button] of Object.entries(picks)) {
+    button.addEventListener("click", () => open(kind));
+  }
+  // A click on the backdrop lands on the dialog itself, never on its contents.
+  dialog.addEventListener("click", event => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  /* What came back from the route. A refusal belongs beside the form that was
+     refused, with the dialog open so it can be fixed; an acceptance belongs on
+     the page, because there is nothing left to fill in. */
+  const done = params.get("done");
+  const problem = params.get("problem");
+  const write = (into, text, bad) => {
+    into.hidden = false;
+    into.className = "said" + (bad ? " bad" : "");
+    into.replaceChildren();
+    for (const line of text.split("\n")) {
+      const p = document.createElement("p");
+      p.textContent = line;            /* never innerHTML: this came through a URL */
+      into.append(p);
+    }
+    into.setAttribute("role", bad ? "alert" : "status");
+  };
+  if (problem) {
+    write(document.getElementById("said"), problem, true);
+    open(current);
+  } else if (done) {
+    write(document.getElementById("said-page"), done, false);
+    document.getElementById("said-page").scrollIntoView({ block: "center" });
+  }
 }
 
 /* The rail is built from the page's own headings, so it cannot fall out of step
