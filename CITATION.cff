@@ -1,22 +1,39 @@
 cff-version: 1.2.0
 title: AI Character Index
 message: >-
-  If you use this project or its coverage data in academic work, please
-  cite it using the metadata below. The specifications under specs/ are
-  third-party works released under CC0 and should be cited to their own
-  publishers, not to this project.
+  If you use this project or its coverage data in academic work, please cite
+  it using the metadata below. The index is a dataset that changes, so cite
+  the publication you read: every build has an identifier and a date, and the
+  site offers a ready-made citation carrying both. The specifications the
+  index reads are third-party works released under CC0 and should be cited to
+  their own publishers, not to this project.
 type: dataset
+
+# The authors of the index and of the data. Polaris Collective maintains the
+# project and runs the deployment, and is deliberately not listed here: the
+# coverage this index publishes was produced by the runs below, and adding a
+# maintainer to the authors of a dataset it did not judge would misattribute
+# it. That changes when a publication carries runs of our own.
 authors:
   - given-names: Andrés
     family-names: Cotton
   - given-names: Matt
     family-names: Stults
+
+contact:
+  - name: Polaris Collective
+    website: 'https://polariscollective.org'
+
 abstract: >-
   A structured index of where published AI behaviour specifications
   address particular model behaviours, built by an LLM panel of judges
   that scores candidate passages from each specification and records
   every citation with a locator resolving to verbatim spec text.
-repository-code: 'https://github.com/AndresCotton/ai-character-index'
+
+# This fork, which is what the URL below serves. The original stands alone and
+# is the one to clone: https://github.com/AndresCotton/ai-character-index
+repository-code: 'https://github.com/polariscollective/ai-character-index'
+url: 'https://ai-character-index.vercel.app/spec-reader/'
 license:
   - Apache-2.0
   - CC-BY-4.0

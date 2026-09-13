@@ -293,6 +293,22 @@
     .dialog-head { padding: 16px 18px 14px; }
     .dialog-body { padding: 16px 18px 22px; }
   }
+
+  /* ---------- the citation block ---------- */
+  .cite-block { position: relative; margin: 0 0 16px; max-width: 66ch; }
+  .cite-block pre { margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
+                    border-radius: 4px; background: var(--lift); font-family: var(--mono);
+                    font-size: 13px; line-height: 1.6; white-space: pre-wrap;
+                    word-break: break-word; }
+  .cite-block button { position: absolute; top: 10px; right: 10px; padding: 5px 12px;
+                       border: 1px solid var(--hair2); border-radius: 999px;
+                       background: var(--bg); color: var(--ink2); font-family: var(--ui);
+                       font-size: 13px; cursor: pointer; }
+  .cite-block button:hover { background: var(--energy); color: var(--ink);
+                             border-color: var(--energy); }
+  .cite-block button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .cite-block button[data-said] { background: var(--spec); color: var(--on-accent);
+                                  border-color: var(--spec); }
 </style>
 </head>
 <body data-palette="daylight">
@@ -395,11 +411,26 @@ model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     quote has moved.</p>
     <p>The reader&rsquo;s export writes the quote and its locator together, so what you paste into
     an article is the sentence and where it came from.</p>
+
+    <h3>Citing the index itself</h3>
+    <p>The index is a dataset that changes, so a citation of it has to say which build it read.
+    This one names the publication on this site now, with the date it was published:</p>
+    <figure class="cite-block">
+      <pre id="cite-text">Loading the current publication...</pre>
+      <button type="button" id="cite-copy" data-copy="cite-text">Copy</button>
+    </figure>
+    <p>Change the style to whatever your venue asks for. The parts that matter are the authors,
+    the publication identifier and the date, because those are what let somebody else fetch the
+    same numbers you read.</p>
     <p><b>Cite the specification to its publisher, not to us.</b> The documents are Anthropic&rsquo;s
-    and OpenAI&rsquo;s, released under CC0. If you are citing the index itself, the coverage data
-    or the method, the repository carries a
+    and OpenAI&rsquo;s, released under CC0, and they should be cited to Anthropic and to OpenAI.
+    What is ours to be cited for is the coverage: which passages address which behaviour, and how
+    squarely.</p>
+    <p>The repository carries a
     <a href="https://github.com/polariscollective/ai-character-index/blob/main/CITATION.cff"
-    target="_blank" rel="noopener">CITATION.cff</a> that GitHub renders as BibTeX and APA.</p>
+    target="_blank" rel="noopener">CITATION.cff</a>, which GitHub turns into a &ldquo;Cite this
+    repository&rdquo; button with BibTeX and APA. Use it where you would cite the project rather
+    than a particular build.</p>
   </section>
 
   <section class="m">
@@ -685,6 +716,54 @@ if (dialog) {
     write(document.getElementById("said-page"), done, false);
     document.getElementById("said-page").scrollIntoView({ block: "center" });
   }
+}
+
+
+/* The citation for the build being read.
+ *
+ * The index is a dataset that changes, so a citation of it has to name the
+ * publication and its date. The page asks the route that knows, rather than
+ * carrying a date that would go stale the next time anyone publishes. */
+const citeText = document.getElementById("cite-text");
+if (citeText) {
+  const pinned = new URLSearchParams(location.search).get("publication");
+  fetch("/api/reader/publication" + (pinned ? `?publication=${encodeURIComponent(pinned)}` : ""))
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(publication => {
+      const published = publication.published_at.slice(0, 10);
+      citeText.textContent =
+        `Cotton, A., & Stults, M. (2026). AI Character Index [Data set]. `
+        + `Polaris Collective. Publication ${publication.id}, published ${published}. `
+        + `${location.origin}/spec-reader/?publication=${publication.id}`;
+    })
+    .catch(() => {
+      /* Say what is missing rather than leave a loading line that never resolves. */
+      citeText.textContent =
+        "Cotton, A., & Stults, M. (2026). AI Character Index [Data set]. "
+        + "Polaris Collective. " + location.origin + "/spec-reader/";
+    });
+}
+
+/* Copy, for every button that names what it copies. */
+for (const button of document.querySelectorAll("[data-copy]")) {
+  button.addEventListener("click", async () => {
+    const source = document.getElementById(button.dataset.copy);
+    try {
+      await navigator.clipboard.writeText(source.textContent.trim());
+      button.dataset.said = "yes";
+      button.textContent = "Copied";
+    } catch {
+      /* A refused clipboard is not a dead end: select the text so the usual
+         keyboard copy works. */
+      const range = document.createRange();
+      range.selectNodeContents(source);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      button.textContent = "Press copy";
+    }
+    setTimeout(() => { delete button.dataset.said; button.textContent = "Copy"; }, 2000);
+  });
 }
 
 /* The rail is built from the page's own headings, so it cannot fall out of step

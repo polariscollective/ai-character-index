@@ -61,3 +61,20 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
       : "public, s-maxage=60, stale-while-revalidate=300",
   };
 }
+
+/**
+ * Which publication is being served, without its payloads.
+ *
+ * The two payload columns are megabytes and nothing here wants them. What a
+ * citation needs is the identity: which build, published when, judged by whom,
+ * and the digests that say the bytes have not moved since.
+ */
+export async function publicationRow(id, fetchImpl = fetch) {
+  const columns = "id,published_at,published_by,notes,panel,rubric,grandfathered,"
+                + "payload_sha256,documents_sha256";
+  const query = id
+    ? `id=eq.${id}&select=${columns}`
+    : `select=${columns}&is_public=is.true&order=published_at.desc&limit=1`;
+  const rows = await select("aci_publications", query, fetchImpl);
+  return rows.length ? rows[0] : null;
+}

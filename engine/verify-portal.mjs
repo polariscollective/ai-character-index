@@ -171,6 +171,16 @@ check(forms.every(form => form.method === "post"),
       "nothing on the public form changes anything by being visited",
       `${forms.length} forms, all post`);
 
+// The citation a reader would paste into an article names the build it read.
+// A dataset that changes and cites itself without a version is a citation of
+// nothing in particular.
+await open("/how-it-works");
+await page.waitForTimeout(400);
+const citation = await page.textContent("#cite-text").catch(() => "");
+check(/Publication [0-9a-f-]{36}, published \d{4}-\d{2}-\d{2}/.test(citation),
+      "the citation names the publication it was read from",
+      citation.slice(0, 90));
+
 // The routes answer the browser, not just the page: a POST with no session is
 // refused. Checked through the API rather than the UI, because that is the door
 // a page does not guard.
