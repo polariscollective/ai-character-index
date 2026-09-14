@@ -73,7 +73,8 @@ def run_judge(store, params):
     report = batch_job.run(store, run_id)
     return {"run_id": run_id,
             "detail": f"{report['attempted']} attempted, {report['done']} done, "
-                      f"{report['failed']} failed"}
+                      f"{report['failed']} failed; depths {report['depths']['done']} done, "
+                      f"{report['depths']['failed']} failed"}
 
 
 def run_publish(store, params):
