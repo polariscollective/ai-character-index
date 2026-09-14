@@ -12,6 +12,7 @@ Run: python3 engine/test_publish.py
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -122,18 +123,61 @@ class ChooseCellsTest(unittest.TestCase):
         self.assertEqual(len(cells), 1)
 
 
-class NewestVersionTest(unittest.TestCase):
-    def test_the_newest_label_of_each_document(self):
-        s = store([], [], versions=(
-            V1, {"id": "v0", "spec_id": "constitution", "version": "2025-05-01"}, V2))
-        chosen = publish.newest_version_per_spec(s, ["constitution"])
-        self.assertEqual(chosen["constitution"]["id"], "v1")
+class DocumentVersionsTest(unittest.TestCase):
+    def test_the_versions_named_are_the_versions_published(self):
+        older = {"id": "v0", "spec_id": "constitution", "version": "2025-05-01"}
+        chosen = publish.document_versions(store([], [], versions=(V1, older, V2)), ["v0"])
+        self.assertEqual(chosen, [older])
 
-    def test_a_document_the_index_does_not_carry_is_named(self):
-        s = store([], [])
+    def test_a_version_the_index_does_not_carry_is_named(self):
         with self.assertRaises(SystemExit) as refused:
-            publish.newest_version_per_spec(s, ["constitution", "invented"])
+            publish.document_versions(store([], []), ["v1", "invented"])
         self.assertIn("invented", str(refused.exception))
+
+
+class PanelTest(unittest.TestCase):
+    def test_the_seats_of_a_configured_panel(self):
+        self.assertEqual(publish.panel_seats({"panels": {"p": ["sol", "deepseek"]}}, "p"),
+                         ["deepseek", "sol"])
+
+    def test_an_unknown_panel_is_refused(self):
+        with self.assertRaises(SystemExit):
+            publish.panel_seats({"panels": {}}, "nope")
+
+
+class DepthsTest(unittest.TestCase):
+    CELL = {"run_id": "r1", "behaviour_slug": "helpfulness", "spec_version_id": "v1"}
+
+    def store(self, depth_statuses):
+        return FakeStore(
+            aci_judge_calls=[{"id": f"c-{m}", **calls("r1", "helpfulness", "v1", [m])[0]}
+                             for m in PANEL],
+            aci_depths=[{"call_id": f"c-{m}", "status": s, "depth": 2, "rationale": ""}
+                        for m, s in zip(PANEL, depth_statuses)],
+            aci_spec_versions=[V1, V2])
+
+    def test_a_cell_with_every_depth_passes(self):
+        publish.require_depths(self.store(["done", "done", "done"]), [self.CELL])
+
+    def test_a_cell_missing_a_depth_is_refused_and_named(self):
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_depths(self.store(["done", "error", "done"]), [self.CELL])
+        self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+
+class BuildTest(unittest.TestCase):
+    def test_the_payload_is_built_for_the_publication_panel(self):
+        seen = {}
+
+        def fake_run(argv, capture_output, text):
+            seen["argv"] = argv
+            out = next(a.split("=", 1)[1] for a in argv if a.startswith("--out="))
+            Path(out).write_text("{}")
+            return type("Done", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+        with mock.patch.object(publish.subprocess, "run", fake_run):
+            publish.build("payload", [], ["helpfulness"], panel_name="frontier_fast")
+        self.assertIn("--panel=frontier_fast", seen["argv"])
 
 
 if __name__ == "__main__":

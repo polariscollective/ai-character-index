@@ -108,6 +108,17 @@ class JobDispatchTest(unittest.TestCase):
         self.assertEqual(self.run_job(store, mode="publish"), 0)
         self.assertEqual(job["publication_id"], "pub-3")
 
+    def test_publish_takes_documents_and_no_panel(self):
+        store = FakeStore(aci_specs=[], aci_spec_versions=[])
+        seen = {}
+        original = job_module.publish_mode
+        job_module.publish_mode = type("P", (), {"publish": staticmethod(
+            lambda *args: seen.update(args=args) or ({"id": "pub-1"}, []))})
+        self.addCleanup(lambda: setattr(job_module, "publish_mode", original))
+        job_module.run_publish(store, {"behaviours": ["b"], "documents": ["v-1"],
+                                       "created_by": "Polaris Collective"})
+        self.assertEqual(seen["args"][1:4], (["b"], ["v-1"], "v5"))
+
 
 class ComposeTest(unittest.TestCase):
     def stub(self, plan):

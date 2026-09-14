@@ -80,7 +80,7 @@ def run_judge(store, params):
 def run_publish(store, params):
     index_store.install_registry(store)
     row, cells = publish_mode.publish(
-        store, params["behaviours"], params["specs"], params["panel"],
+        store, params["behaviours"], params["documents"],
         params.get("rubric", "v5"), params.get("created_by", "admin portal"),
         params.get("notes", ""), params.get("run_date"))
     return {"publication_id": row["id"],

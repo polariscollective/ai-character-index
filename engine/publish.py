@@ -2,7 +2,7 @@
 """Building a publication: the decision about what the reader shows.
 
     ACI_JOB_ID=<uuid> python3 engine/job.py          # as the portal runs it
-    python3 engine/publish.py --behaviours=a,b --specs=x,y --panel=frontier_fast
+    python3 engine/publish.py --behaviours=a,b --documents=<version id>,<version id>
 
 A publication selects, cell by cell, which run answers, and carries the two
 payloads the reader's routes serve. Both are columns of the row, and the row is
@@ -17,6 +17,9 @@ judged by exactly the panel the publication names, all of them done, in one run.
 The check here exists to refuse before a row is written, because a publication is
 insert-only and a half-built one cannot be taken back; the trigger exists because
 a rule that lives in the code that happens to write the row is not a rule.
+
+The panel is the configuration's display panel, the one the index publishes, and
+every cell must also carry a depth from each of its run's judges.
 """
 
 import argparse
@@ -50,23 +53,37 @@ BUILDERS = {
 }
 
 
-def newest_version_per_spec(store, spec_ids):
-    """The version of each named document a publication would carry.
-
-    The newest by label, which is how the composer picks too: a lab's version
-    string sorts the way the lab means it to.
-    """
-    by_spec = {}
-    for version in store.select("aci_spec_versions"):
-        if version["spec_id"] not in spec_ids:
-            continue
-        current = by_spec.get(version["spec_id"])
-        if current is None or version["version"] > current["version"]:
-            by_spec[version["spec_id"]] = version
-    missing = sorted(set(spec_ids) - set(by_spec))
+def document_versions(store, document_ids):
+    """The versions a publication carries, as themselves. A document is a version:
+    naming an older one publishes the older one."""
+    rows = {v["id"]: v for v in store.select("aci_spec_versions")}
+    missing = sorted(set(document_ids) - set(rows))
     if missing:
-        raise SystemExit(f"not specifications this index carries: {missing}")
-    return by_spec
+        raise SystemExit(f"not document versions this index carries: {missing}")
+    return [rows[i] for i in sorted(set(document_ids))]
+
+
+def panel_seats(config, name):
+    seats = config.get("panels", {}).get(name)
+    if not isinstance(seats, list) or not seats:
+        raise SystemExit(f"no panel named {name!r} in the judging configuration")
+    return sorted(seats)
+
+
+def require_depths(store, cells):
+    """Refuse a publication any of whose cells lacks a depth from every judge of
+    its run, naming them all at once."""
+    given = index_store.cell_depths(store, cells)
+    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+    missing = sorted(
+        f"{c['behaviour_slug']} x {versions[c['spec_version_id']]['spec_id']}"
+        f"@{versions[c['spec_version_id']]['version']}"
+        for c in cells if (c["behaviour_slug"], c["spec_version_id"]) not in given)
+    if missing:
+        raise SystemExit(
+            "these cells have no depth from every judge of their run:\n  "
+            + "\n  ".join(missing)
+            + "\nRetry the run's failed calls, then build again.")
 
 
 def choose_cells(store, behaviours, spec_versions, panel, rubric):
@@ -112,7 +129,7 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     return cells
 
 
-def build(name, cells, behaviours, run_date=None):
+def build(name, cells, behaviours, run_date=None, panel_name=None):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -129,6 +146,8 @@ def build(name, cells, behaviours, run_date=None):
         extra = [f"--run-date={run_date}"] if run_date and name == "payload" else []
         if name == "payload":
             extra.append("--behaviours=" + ",".join(sorted(behaviours)))
+            if panel_name:
+                extra.append(f"--panel={panel_name}")
         result = subprocess.run(
             [sys.executable, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],
@@ -140,28 +159,32 @@ def build(name, cells, behaviours, run_date=None):
     return json.loads(raw), hashlib.sha256(raw).hexdigest()
 
 
-def publish(store, behaviours, specs, panel, rubric, published_by, notes="",
-            run_date=None):
+def publish(store, behaviours, document_ids, rubric, published_by, notes="",
+            run_date=None, config=None):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
     following `?publication=` can see it, and nobody else can.
     """
-    versions = list(newest_version_per_spec(store, specs).values())
+    config = config or json.loads((HERE / "panel" / "panel-config.json").read_text())
+    panel_name = config["display"]["panel"]
+    panel = panel_seats(config, panel_name)
+    versions = document_versions(store, document_ids)
     cells = choose_cells(store, behaviours, versions, panel, rubric)
+    require_depths(store, cells)
 
-    payload, payload_sha256 = build("payload", cells, behaviours, run_date)
+    payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)
     documents, documents_sha256 = build("documents", cells, behaviours)
 
     publication = {
         "published_by": published_by,
         "notes": notes,
-        "panel": sorted(panel),
+        "panel": panel,
         "rubric": rubric,
         "is_public": False,
-        "build_params": {"behaviours": sorted(behaviours), "specs": sorted(specs),
-                         "panel": sorted(panel), "rubric": rubric,
-                         "run_date": run_date},
+        "build_params": {"behaviours": sorted(behaviours),
+                         "documents": sorted(document_ids),
+                         "panel": panel_name, "rubric": rubric, "run_date": run_date},
         "payload": payload,
         "payload_sha256": payload_sha256,
         "documents": documents,
@@ -176,9 +199,8 @@ def publish(store, behaviours, specs, panel, rubric, published_by, notes="",
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--behaviours", required=True, help="comma-separated slugs")
-    parser.add_argument("--specs", required=True, help="comma-separated document ids")
-    parser.add_argument("--panel", required=True,
-                        help="comma-separated model tags, exactly the panel of every cell")
+    parser.add_argument("--documents", required=True,
+                        help="comma-separated aci_spec_versions ids")
     parser.add_argument("--rubric", default="v5")
     parser.add_argument("--notes", default="")
     parser.add_argument("--by", default=os.environ.get("USER", "publish.py"))
@@ -191,8 +213,7 @@ def main(argv=None):
     row, cells = publish(
         store,
         [s for s in args.behaviours.split(",") if s],
-        [s for s in args.specs.split(",") if s],
-        [s for s in args.panel.split(",") if s],
+        [s for s in args.documents.split(",") if s],
         args.rubric, args.by, args.notes, args.run_date)
     print(f"published {row['id']} (not public): {len(cells)} cells")
     print(f"  payload   {row['payload_sha256'][:16]}")
