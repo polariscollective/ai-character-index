@@ -585,6 +585,29 @@ body.resizing-columns {
   line-height: 1.5;
 }
 
+/* Each judge's depth, under the paragraph naming a document's mean: quieter than
+   the paragraph, marked the way a spec passage's own lists are marked, so the
+   note does not invent a second bullet system. */
+.behaviour-note-depth-judges {
+  margin: -6px 0 10px;
+  padding-left: 1.15em;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.behaviour-note-depth-judges li { position: relative; margin: .3em 0; }
+.behaviour-note-depth-judges li::before {
+  content: "";
+  position: absolute;
+  top: .55em;
+  left: -.95em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--energy);
+}
+
 /* The export sits at the foot of the menu rather than in the toolbar at its head: it acts on
    the ticked set, so it reads as the end of the list it takes away and not as a third control
    beside All and None. The line under it counts what would come out, so the reader knows what

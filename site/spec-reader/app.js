@@ -137,6 +137,37 @@ function openBehaviourNote(button) {
   section("Where the construct stops", entry.boundary);
   section("Where the definition comes from", entry.source);
 
+  /* The depth figure beside the behaviour's name lives in a hover title, which a
+   * keyboard user never reaches and a screen reader never hears: this section says
+   * the same thing in words, reusing depthSummaryLine so it is the same words as
+   * the figure's own tooltip, not a second copy of the formatting. The judges'
+   * individual depths and rationale live only here -- the figure has no room for
+   * them and the tooltip never carried them past a parenthesis. */
+  const behaviour = payloadBehaviours().find(b => b.slug === slug);
+  const shownDocuments = visibleDocuments().filter(Boolean);
+  if (shownDocuments.length) {
+    const depthHeading = document.createElement("h3");
+    depthHeading.textContent = "How deeply the documents on screen cover it";
+    body.append(depthHeading);
+    shownDocuments.forEach(doc => {
+      const depth = behaviour?.coverage?.[doc.id]?.depth ?? null;
+      const p = document.createElement("p");
+      p.textContent = depthSummaryLine(doc, depth);   // never innerHTML: rationale is model output
+      body.append(p);
+      if (depth) {
+        const judges = document.createElement("ul");
+        judges.className = "behaviour-note-depth-judges";
+        Object.entries(depth.judges || {}).forEach(([judge, given]) => {
+          const item = document.createElement("li");
+          const rationale = given.rationale ? ` ${given.rationale}` : "";
+          item.textContent = `${judge}: ${given.depth}.${rationale}`;
+          judges.append(item);
+        });
+        body.append(judges);
+      }
+    });
+  }
+
   elements.keyNoteBody.replaceChildren(...body.childNodes);
   if (note.matches(":popover-open")) note.hidePopover();
   note.showPopover();
@@ -745,6 +776,7 @@ function renderBehaviourList() {
                 class="behaviour-check"
                 type="checkbox"
                 data-behaviour="${escapeHTML(behaviour.slug)}"
+                aria-describedby="depth-description-${escapeHTML(behaviour.slug)}"
                 ${checked ? "checked" : ""}
               >
               <span class="behaviour-box" aria-hidden="true"></span>
@@ -752,6 +784,9 @@ function renderBehaviourList() {
               <span class="name">${escapeHTML(behaviour.name)}</span>
               <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}"></span>
             </label>
+            <!-- Outside the label, so it never joins the checkbox's accessible name; named
+                 by aria-describedby instead, which reads a hidden element's text aloud. -->
+            <span class="depth-description" id="depth-description-${escapeHTML(behaviour.slug)}" hidden></span>
             <button
               type="button"
               class="behaviour-why"
@@ -785,6 +820,16 @@ function renderBehaviourList() {
  * no depth shows a dash: zero is a finding, a dash is the absence of one. */
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
+/* One line naming a document's depth for a behaviour: the mean out of 4 and the
+ * rubric word, or that none was given. Shared by the figure's hover title, the
+ * hidden description a screen reader hears, and the note's own paragraph -- one
+ * text, not three copies of the same wording. */
+function depthSummaryLine(doc, depth) {
+  if (!depth) return `${doc.title} ${doc.version}: no depth given.`;
+  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} of 4, `
+    + `${DEPTH_WORDS[Math.round(depth.mean)]}.`;
+}
+
 function updateBehaviourDepths() {
   if (!state.payload) return;
   const shown = visibleDocuments().filter(Boolean);
@@ -792,14 +837,12 @@ function updateBehaviourDepths() {
     const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
     const depths = shown.map(doc => behaviour?.coverage?.[doc.id]?.depth ?? null);
     cell.textContent = depths.map(depth => (depth ? depth.mean.toFixed(1) : "–")).join(" / ");
-    cell.title = shown.map((doc, i) => {
-      const depth = depths[i];
-      if (!depth) return `${doc.title} ${doc.version}: no depth given`;
-      const judges = Object.entries(depth.judges || {})
-        .map(([judge, given]) => `${judge} ${given.depth}`).join(", ");
-      return `${doc.title} ${doc.version}: depth ${depth.mean.toFixed(1)} of 4, `
-        + `${DEPTH_WORDS[Math.round(depth.mean)]} (${judges})`;
-    }).join("\n");
+    const summary = shown.map((doc, i) => depthSummaryLine(doc, depths[i])).join("\n");
+    // Kept for mouse users; a keyboard, touch or screen-reader user reaches the same
+    // words through the checkbox's aria-describedby instead (see renderBehaviourList).
+    cell.title = summary;
+    const description = cell.closest(".behaviour-option-row")?.querySelector(".depth-description");
+    if (description) description.textContent = summary;
   });
 }
 

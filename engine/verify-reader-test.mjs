@@ -168,6 +168,45 @@ async function expectView(url, expected, label) {
     + (seen.behaviour !== expected.behaviour ? `  behaviour: ${seen.behaviour}` : ""));
 }
 
+// The depth beside a behaviour also has to reach keyboard, touch and screen-reader
+// users, none of whom can read a hover title. Opens the note the "i" button opens
+// (the same popover a mouse user never needs for this) and reads back its depth
+// section: a heading, one paragraph per document on screen, and, where a depth was
+// given, one list item per judge.
+const DEPTH_NOTE_HEADING = "How deeply the documents on screen cover it";
+
+async function readDepthNote(slug) {
+  await page.click(`[data-behaviour-note="${slug}"]`);
+  await page.waitForTimeout(150);
+  const note = await page.evaluate(() => {
+    const body = document.querySelector("#key-note-body");
+    return {
+      headings: [...body.querySelectorAll("h3")].map(h => h.textContent),
+      paragraphs: [...body.querySelectorAll("p")].map(p => p.textContent),
+      judgeItems: [...body.querySelectorAll("li")].map(li => li.textContent),
+    };
+  });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  return note;
+}
+
+// The checkbox's hidden description: what a screen reader hears when it lands on
+// the checkbox, which must be the same text as the figure's hover title (one text,
+// not two) and must name the document, or documents, on screen.
+async function readDepthDescription(slug) {
+  return page.$eval(`[data-behaviour="${slug}"]`, input => {
+    const id = input.getAttribute("aria-describedby");
+    const target = id ? document.getElementById(id) : null;
+    return {
+      id,
+      exists: Boolean(target),
+      text: target ? target.textContent : null,
+      title: input.closest(".behaviour-option").querySelector("[data-behaviour-depth]").title,
+    };
+  });
+}
+
 // Navigation: the expected links must be present and every one must resolve
 // (any #fragment to a real id in its target).
 await readView(base);
@@ -277,6 +316,31 @@ if (behaviours.length === 0) {
       const expected = depth ? depth.mean.toFixed(1) : "–";
       report(shown === expected, `${behaviour.slug} · ${document.id} · depth`,
              `${shown} (expected ${expected})`);
+
+      // The checkbox describes itself: the description exists, matches the
+      // figure's own hover title exactly, and names the document on screen.
+      const described = await readDepthDescription(behaviour.slug);
+      report(
+        Boolean(described.id) && described.exists
+          && described.text === described.title
+          && described.text.includes(document.title)
+          && described.text.includes(document.version),
+        `${behaviour.slug} · ${document.id} · depth description`,
+        described.text,
+      );
+
+      // Opening the note surfaces the same detail: the heading, a paragraph naming
+      // this document's mean (or that none was given), and every judge who scored it.
+      const note = await readDepthNote(behaviour.slug);
+      const expectedFigure = depth ? depth.mean.toFixed(1) : "no depth given";
+      const expectedJudges = depth ? Object.keys(depth.judges) : [];
+      report(
+        note.headings.includes(DEPTH_NOTE_HEADING)
+          && note.paragraphs.some(p => p.includes(document.title) && p.includes(expectedFigure))
+          && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(`${judge}:`))),
+        `${behaviour.slug} · ${document.id} · depth note`,
+        `headings: ${note.headings.join(" | ")}; judges: ${note.judgeItems.join(" | ")}`,
+      );
     }
   }
 
@@ -293,6 +357,31 @@ if (behaviours.length === 0) {
     }).join(" / ");
     report(shown === expected, `${behaviour.slug} · compare · depth`,
            `${shown} (expected ${expected})`);
+
+    // In compare mode the description and the note both name both documents on
+    // screen -- the same requirement as the single-document view, with two panes
+    // to satisfy instead of one.
+    const paneDocs = documents.slice(0, 2);
+    const described = await readDepthDescription(behaviour.slug);
+    report(
+      Boolean(described.id) && described.exists
+        && described.text === described.title
+        && paneDocs.every(document => described.text.includes(document.title)),
+      `${behaviour.slug} · compare · depth description`,
+      described.text,
+    );
+
+    const note = await readDepthNote(behaviour.slug);
+    report(
+      note.headings.includes(DEPTH_NOTE_HEADING)
+        && paneDocs.every(document => {
+          const depth = behaviour.coverage[document.id]?.depth;
+          const figure = depth ? depth.mean.toFixed(1) : "no depth given";
+          return note.paragraphs.some(p => p.includes(document.title) && p.includes(figure));
+        }),
+      `${behaviour.slug} · compare · depth note`,
+      `headings: ${note.headings.join(" | ")}; paragraphs: ${note.paragraphs.length}`,
+    );
   }
 
   // Several behaviours read over the same text. Each must still anchor exactly its own
