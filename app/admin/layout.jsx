@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";   // a session is not a cacheable thing
 
 const PAGES = [
   ["/admin", "Overview"],
+  ["/admin/readme", "Readme"],
   ["/admin/behaviours", "Behaviours"],
   ["/admin/specifications", "Specifications"],
   ["/admin/runs", "Runs"],

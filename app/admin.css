@@ -163,6 +163,34 @@ button:disabled { border-color: var(--line); background: var(--line-light); colo
 .notice ul { margin: 4px 0 0; padding-left: 20px; }
 .empty { color: var(--faint); font-size: 13px; font-style: italic; }
 
+/* ---- the readme ----
+   The one page of prose in the portal, so its paragraphs take the framework's
+   reading measure while its tables keep the width they need. */
+.guide section { scroll-margin-top: 16px; }
+.guide p, .guide li { max-width: 66ch; }
+.guide p { margin: 0 0 10px; }
+.guide ol, .guide ul { margin: 0 0 14px; padding-left: 22px; }
+.guide li { margin-bottom: 8px; }
+.guide li > ul { margin: 6px 0 8px; }
+.guide ol > li::marker { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.guide ul { list-style: none; padding-left: 18px; }
+.guide ul > li { position: relative; }
+.guide ul > li::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: .62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--energy);
+}
+.guide ol.contents { columns: 2 220px; column-gap: 24px; }
+.guide ol.contents li { margin-bottom: 4px; break-inside: avoid; }
+.guide table { margin: 4px 0 12px; max-width: 900px; }
+.guide .notice { margin: 4px 0 14px; max-width: 66ch; }
+.guide .caption { color: var(--muted); }
+
 /* ---- the sign-in card ---- */
 .door { max-width: 420px; margin: 14vh auto; padding: 0 24px; }
 .door h1 { font-family: var(--display); font-size: 22px; margin: 0 0 8px; }

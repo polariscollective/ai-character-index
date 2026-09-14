@@ -47,6 +47,9 @@ async function open(path) {
 
 const PAGES = [
   ["/admin", "Overview", ["What the public sees", "The registry", "Runs", "Jobs"]],
+  ["/admin/readme", "Readme",
+   ["Readme", "Add a new version of a specification", "Choose the judges", "What it costs",
+    "Make it public", "What the portal cannot do yet"]],
   ["/admin/behaviours", "Behaviours", ["Behaviours", "Register a behaviour"]],
   ["/admin/specifications", "Specifications", ["Documents", "Register a version"]],
   ["/admin/runs", "Runs", ["Runs", "Compose a run", "Jobs"]],

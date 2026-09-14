@@ -169,6 +169,7 @@ the only place either decision is taken.
 | Page | What it does |
 |---|---|
 | Overview | What the public sees, what is registered, what is in flight |
+| Readme | How to use the portal, step by step, for someone who has never used it |
 | Behaviours | The registry, and the form that adds to it |
 | Specifications | Each document, its versions and their digests; register a version |
 | Runs | Compose a run and read its price, launch it, watch it, cancel it |
