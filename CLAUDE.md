@@ -266,17 +266,35 @@ rows already carried, so `user`, the set a publication build accepts a new
 behaviour in, was not offered, and the default was `reader-test`, which a build
 refuses without a hand-written curation row per lab.
 
+Sets were removed later. See `The index was reshaped before it was judged again`.
+
 ### A publication shows the display panel, whatever panel it names
 
-**Not fixed. Found while checking the readme's advice.**
+**Found while checking the readme's advice. Fixed.**
 
-`publish.py` never passes `--panel` to `build_site_data.py`, which therefore
-filters verdicts to `display.panel`, `frontier_fast`. A dry build of `helpfulness`
-from the inherited run, whose constitution cell carries five judges, held verdicts
-from `deepseek`, `fable` and `sol` alone, on both documents. Two things follow. A
-publication naming any other panel shows none of its verdicts. And the homogeneity
-rule, which requires a cell's run to hold exactly the named judges, refuses cells
-whose displayed verdicts would already be homogeneous.
+`publish.py` never passed `--panel` to `build_site_data.py`, which therefore
+filtered verdicts to `display.panel`. It passes the publication's panel now, and
+the portal composes and publishes with that one panel only.
+
+### The index was reshaped before it was judged again
+
+Sets, human verdicts and the strict variant decide nothing any more: the payload
+builder shows every behaviour a publication selects and reads no curation, and
+`general-welfare-impacts-strict`, whose reader row was fed by
+`animal-welfare-impacts`, leaves the reader. A document is a version, named
+`<lab>--<document>@<version>`, which is also the head of every locator into it,
+so two versions of one lab's document are two documents. And each judge of the
+panel gives a 0 to 4 depth per cell, in a small call after the passages, on the
+rubric in `methodology/spec-coverage-depth-rubric.md`; the publication carries
+the mean.
+
+Found on the way, and fixed with it: `harness.passages` read a spec's newest
+version whatever version a call named, so judging an older version after
+registering a newer one would have judged the newer text.
+
+The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions-and-judged-depth-design.md`.
+The database only gained while `develop` was built; the cleanup migration it lists
+follows the merge.
 
 ## Where the fork is heading
 
@@ -285,10 +303,8 @@ judging runs as a Cloud Run job, the site is a Next.js application on Vercel, an
 the index is operated from a portal rather than a terminal. Upstream keeps the
 property this fork gave up, which is running from a bare clone.
 
-What is left: the calls that would equalise the ragged bench, fifteen with
-`frontier_fast` (the four behaviours on the constitution, and
-`proportionate-risk-mitigation` on the model spec). They can be composed now, with
-judge again ticked, and until they run no new publication can carry those four.
+What is left: the cleanup migration after `develop` is merged, and retiring the
+provenance record of the grandfathered publication with it.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

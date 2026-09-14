@@ -23,8 +23,8 @@ const TITLE = Object.fromEntries(CONTENTS);
 
 const PANEL_USE = {
   frontier_fast: "The panel the public index is judged with. Use it for anything you mean to publish.",
-  cheap: "Three inexpensive models. Its verdicts are stored, but a publication cannot show them yet.",
-  itest: "One cheap model, for checking that the pipeline runs. Never publish it.",
+  cheap: "Three inexpensive models. The portal does not offer it.",
+  itest: "One cheap model, for checking the pipeline from the command line. The portal does not offer it.",
   frontier: "Kept for older runs. Not needed for new work.",
   frontier_primary: "Kept for older runs. Not needed for new work.",
 };
@@ -73,12 +73,12 @@ export default function Readme() {
         <ol>
           <li><strong>Register</strong> the text of a specification (Specifications).</li>
           <li>
-            <strong>Compose a run</strong>: choose the behaviours, the specifications
-            and the judges, and read the price. Nothing is spent (Runs).
+            <strong>Compose a run</strong>: choose the behaviours and the documents,
+            and read the price. Nothing is spent (Runs).
           </li>
           <li>
-            <strong>Launch the run</strong>. The judges read the text and score it.
-            This spends money (Runs).
+            <strong>Launch the run</strong>. The judges read the text, score it and
+            give each behaviour a depth. This spends money (Runs).
           </li>
           <li>
             <strong>Build a publication</strong> from the results. It is a draft
@@ -93,9 +93,9 @@ export default function Readme() {
               <td>Specification</td>
               <td>
                 The rulebook a lab publishes for its models, such as the OpenAI Model
-                Spec or Claude&apos;s constitution. Also called a document. Its text is
-                stored as markdown, one row per version, and a stored version is never
-                edited.
+                Spec or Claude&apos;s constitution. Each version registered for it is a
+                document. Its text is stored as markdown, one row per version, and a
+                stored version is never edited.
               </td>
             </tr>
             <tr>
@@ -115,7 +115,7 @@ export default function Readme() {
             <tr>
               <td>Judge</td>
               <td>
-                An AI model that reads a whole specification and scores every passage
+                An AI model that reads a whole document and scores every passage
                 from 0 to 3 for one behaviour.
               </td>
             </tr>
@@ -129,13 +129,21 @@ export default function Readme() {
             </tr>
             <tr>
               <td>Cell</td>
-              <td>One behaviour on one specification. The public reader is made of cells.</td>
+              <td>One behaviour on one document. The public reader is made of cells.</td>
+            </tr>
+            <tr>
+              <td>Depth</td>
+              <td>
+                How deeply a document covers a behaviour, from 0 (absent) to 4 (rules
+                with worked examples). Each judge gives one after reading the passages
+                the panel found, and the reader shows their mean beside the behaviour.
+              </td>
             </tr>
             <tr>
               <td>Run</td>
               <td>
                 A batch of judge calls: every behaviour you chose, on every
-                specification you chose, by every judge on the panel. Composing a run
+                document you chose, by every judge on the panel. Composing a run
                 prices it; launching it spends the money.
               </td>
             </tr>
@@ -178,7 +186,7 @@ export default function Readme() {
             </tr>
             <tr>
               <td><a href="/admin/runs">Runs</a></td>
-              <td>Choose what to judge and by whom, read the price, launch.</td>
+              <td>Choose what to judge, read the price, launch.</td>
             </tr>
             <tr>
               <td><a href="/admin/publications">Publications</a></td>
@@ -233,27 +241,25 @@ export default function Readme() {
           <li>
             <strong>Specifications, Register a version.</strong>
             <ul>
+              <li>Lab: the lab that publishes it.</li>
               <li>
-                Document id: the one the index already uses, <code>model-spec</code>{" "}
-                or <code>constitution</code>.
+                Document name: <code>model-spec</code> or <code>constitution</code> for a
+                document the index carries, which adds a version to it.
               </li>
-              <li>Version label: the lab&apos;s date for the release, written <code>2026-08-18</code>.</li>
+              <li>Version: the release date, written <code>2026-08-18</code>.</li>
               <li>
                 Source url: where a reader should be sent, for example{" "}
                 <code>https://model-spec.openai.com/2026-08-18.html</code>.
               </li>
               <li>Markdown: the whole file.</li>
-              <li>Leave the box &ldquo;Only for a document the index has not seen&rdquo; empty.</li>
             </ul>
             Press <strong>Register</strong>. The public site does not change: a
             registered text is neither judged nor shown until you say so.
           </li>
           <li>
-            <strong>Runs, Compose a run.</strong> Tick the behaviours to judge, tick
-            only this specification, and keep the panel <code>frontier_fast</code>.
-            Press <strong>Compose and price</strong>. Nothing is spent. A run always
-            uses the newest version of each specification, which is now the one you
-            registered.
+            <strong>Runs, Compose a run.</strong> Tick the behaviours and the documents.
+            Each version is its own document: ticking both Model Spec versions judges both.
+            Press <strong>Compose and price</strong>. Nothing is spent.
           </li>
           <li>
             <strong>Reload after a few seconds.</strong> The run appears at the top of
@@ -262,14 +268,14 @@ export default function Readme() {
           </li>
           <li>
             <strong>Press launch.</strong> The judges start. Each call reads the whole
-            specification and takes from under a minute to several minutes, and
+            document and takes from under a minute to several minutes, and
             several run at once. Reload to follow the Done column.
           </li>
           <li>
-            <strong>If some calls failed, press retry failed calls.</strong> Only the
-            calls that are not done are tried again, in the same run, and they are
-            paid for again. The same run matters: a publication needs all of a
-            cell&apos;s judges in one run.
+            <strong>If some calls or depths failed, press retry calls and depths.</strong>{" "}
+            Only the calls and depths that are not done are tried again, in the same
+            run, and they are paid for again. The same run matters: a publication
+            needs all of a cell&apos;s judges and their depths in one run.
           </li>
           <li>
             <strong>Publish it</strong>, as described in{" "}
@@ -278,10 +284,10 @@ export default function Readme() {
         </ol>
         <div className="notice">
           <p>
-            Write the version label as a date, year first. The index finds the newest
-            version by sorting labels as text: <code>2026-08-18</code> comes after{" "}
-            <code>2025-12-18</code>, but a label such as <code>v3</code> would come
-            after every date.
+            Write the version as a date, year first. The index lists a document&apos;s
+            versions newest first by sorting them as text: <code>2026-08-18</code> comes
+            after <code>2025-12-18</code>, but a version such as <code>v3</code> would
+            come after every date.
           </p>
         </div>
       </Section>
@@ -301,16 +307,16 @@ export default function Readme() {
           </tbody>
         </table>
         <p>
-          As of September 2026, a publication shows the verdicts of <code>sol</code>,{" "}
-          <code>fable</code> and <code>deepseek</code> only, whichever judges it names.
-          Judge anything you mean to publish with <code>frontier_fast</code>.
+          The portal always uses <code>frontier_fast</code>: <code>sol</code>,{" "}
+          <code>fable</code> and <code>deepseek</code>. The other panels in the table stay
+          in the configuration for the command line.
         </p>
         <p>
           A combination no panel offers has to be added to{" "}
           <code>engine/panel/panel-config.json</code> in the repository and merged into{" "}
           <code>main</code>. The site and the judging job both redeploy from that
-          merge, and the new panel then appears in the Runs form. It is a code change,
-          not a button.
+          merge, and the portal composes and publishes with it once{" "}
+          <code>display.panel</code> names it. It is a code change, not a button.
         </p>
       </Section>
 
@@ -361,11 +367,8 @@ export default function Readme() {
         <ol>
           <li>
             <strong>Publications, Build a publication.</strong> Tick the behaviours.
-            Tick the specifications: both, if the reader should compare the two labs.
-            Tick exactly the judges of the panel you ran; for{" "}
-            <code>frontier_fast</code> that is <code>deepseek</code>,{" "}
-            <code>fable</code> and <code>sol</code>. Keep the rubric <code>v5</code>{" "}
-            and write a note saying what changed. Press{" "}
+            Tick the documents: both, if the reader should compare the two labs.
+            Keep the note saying what changed. Press{" "}
             <strong>Build as a draft</strong>.
           </li>
           <li>
@@ -388,11 +391,9 @@ export default function Readme() {
         </ol>
         <div className="notice">
           <p>
-            The rule a build checks: every behaviour on every specification you ticked
-            must have been judged by exactly the judges you ticked, all of them done,
-            in the same run. It uses the newest version of each specification, and for
-            each cell the newest run that meets the rule. The database refuses a build
-            that breaks it.
+            The rule a build checks: every behaviour on every document you ticked must
+            have been judged by the index&apos;s three judges, all of them done, in the
+            same run, with a depth from each. The database refuses a build that breaks it.
           </p>
         </div>
       </Section>
@@ -407,11 +408,7 @@ export default function Readme() {
             <ul>
               <li>Slug: lowercase words joined by hyphens, such as <code>user-autonomy</code>. Never reused.</li>
               <li>Name: as the reader should show it.</li>
-              <li>
-                Set: leave it on <code>user</code>. The other two are the sets the index
-                inherited, and a publication build refuses a new{" "}
-                <code>reader-test</code> behaviour.
-              </li>
+              <li>Credit this behaviour to: <code>Polaris Collective</code>, already filled in.</li>
               <li>Group: the heading it sits under in the reader&apos;s menu.</li>
               <li>
                 What the judges are asked: the brief, word for word. Every verdict is a
@@ -426,8 +423,8 @@ export default function Readme() {
             Press <strong>Register</strong>.
           </li>
           <li>
-            <strong>Runs, compose it on both specifications with{" "}
-            <code>frontier_fast</code>, and launch.</strong> Two specifications times
+            <strong>Runs, compose it on both documents with{" "}
+            <code>frontier_fast</code>, and launch.</strong> Two documents times
             three judges is six calls, about $2.
           </li>
           <li>
@@ -511,30 +508,8 @@ export default function Readme() {
         <ul>
           <li>
             <strong>A specification from a new lab.</strong> The form offers the
-            principal labs, and one missing from its list is added by a migration in{" "}
-            <code>polaris-supabase</code>. Parts of the publication builder still name
-            Anthropic and OpenAI in code, so a document from any other lab has never
-            been published, and its passages may not show.
-          </li>
-          <li>
-            <strong>Only three judges can be shown.</strong> A publication shows the
-            verdicts of <code>sol</code>, <code>fable</code> and <code>deepseek</code>,
-            whichever judges it names.
-          </li>
-          <li>
-            <strong>Four published behaviours need judging again first.</strong>{" "}
-            <code>helpfulness</code>, <code>how-to-approach-tradeoffs</code>,{" "}
-            <code>avoiding-over-and-under-caution</code> and{" "}
-            <code>proportionate-risk-mitigation</code> were judged by five or six models
-            on the constitution and by three on the Model Spec, in one run. A
-            publication needs exactly the judges it names, so they cannot enter a new
-            one as they stand; the publication public today carries them under a one-off
-            exemption. To bring them back, compose the four on the constitution with{" "}
-            <code>frontier_fast</code> and Judge them again ticked: twelve calls, about
-            $3. <code>proportionate-risk-mitigation</code> needs the same on the Model
-            Spec, three calls and about $1, unless you are judging a new version of it.{" "}
-            <code>general-welfare-impacts-strict</code> cannot be published through the
-            portal.
+            principal labs; one missing from its list is added by a migration in{" "}
+            <code>polaris-supabase</code>.
           </li>
           <li>
             <strong>Behaviours without a brief.</strong> The Runs form marks them{" "}
