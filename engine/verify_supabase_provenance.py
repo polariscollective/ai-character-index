@@ -157,10 +157,20 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
              "so its stored bytes, held to the record, are the oracle")
         return
     params = publication.get("build_params") or {}
+    # A pre-reshape build_params names its documents `specs` and its panel as the
+    # list of seats rather than the configured panel's name. Neither shape is one
+    # the current build() accepts, so say plainly why the rebuild is refused
+    # rather than let it run and fail on a bare digest mismatch.
+    if "specs" in params or not isinstance(params.get("panel"), str):
+        for name in ("payload", "documents"):
+            report(False, f"the {name} rebuilds from the publication's cells to its stored digest",
+                   "the publication was built by the pre-reshape builder and cannot be "
+                   "rebuilt by the current one")
+        return
     cells = cells_of(store, publication)
     run_date = (params.get("run_date")
                 or (publication["payload"].get("provenance") or {}).get("runDate"))
-    panel_name = params.get("panel") if isinstance(params.get("panel"), str) else None
+    panel_name = params.get("panel")
     for name in ("payload", "documents"):
         label = f"the {name} rebuilds from the publication's cells to its stored digest"
         try:
@@ -339,20 +349,23 @@ def check_the_run_snapshot_says_what_it_judged_against(store, publication):
            else f"differs: {wrong}" if wrong else f"animal-welfare-impacts lost query_v2 in {lost}")
 
 
+NIL_UUID = "00000000-0000-0000-0000-000000000000"
+
+
 def check_spec_versions_are_insert_only(store):
-    versions = store.select("aci_spec_versions", {"select": "id", "limit": "1"})
-    if not versions:
-        report(False, "spec versions are insert-only", "no rows to test against")
-        return
+    """The probe targets an id that cannot exist, not a real row: Postgres checks
+    the UPDATE privilege before it matches any row, so a revoked grant still
+    returns the permission error and the probe passes without tampering with
+    anything. A loosened grant matches nothing and writes nothing either -- there
+    is no row to match -- so that outcome is read from the absence of a refusal,
+    not from a changed row."""
     try:
-        store.update("aci_spec_versions", {"id": versions[0]["id"]},
-                     {"markdown": "tampered"})
+        store.update("aci_spec_versions", {"id": NIL_UUID}, {"markdown": "tampered"})
     except StoreError as refused:
         report("42501" in str(refused) or "permission denied" in str(refused),
                "spec versions are insert-only", "the update was refused by grants")
         return
-    report(False, "spec versions are insert-only",
-           "an update succeeded -- the citation guarantee is not enforced")
+    report(False, "spec versions are insert-only", "the update was not refused")
 
 
 def arguments(argv=None):

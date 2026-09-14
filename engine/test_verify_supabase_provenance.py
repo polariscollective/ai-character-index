@@ -28,8 +28,10 @@ import verify_supabase_provenance as verify   # noqa: E402
 class FakeStore:
     """PostgREST's `eq.` filter, which is all the verifier asks of a select."""
 
-    def __init__(self, **tables):
+    def __init__(self, update_error=None, **tables):
         self.tables = tables
+        self.update_error = update_error
+        self.updates = []
 
     def select(self, table, params=None):
         rows = self.tables.get(table, [])
@@ -37,6 +39,11 @@ class FakeStore:
             if isinstance(condition, str) and condition.startswith("eq."):
                 rows = [row for row in rows if str(row.get(column)) == condition[3:]]
         return rows
+
+    def update(self, table, match, patch):
+        self.updates.append((table, match, patch))
+        if self.update_error is not None:
+            raise self.update_error
 
 
 GRANDFATHERED_ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3"
@@ -156,6 +163,32 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(len(failed), 2, printed)
         self.assertIn("no cells", printed)
 
+    def test_a_pre_reshape_build_names_itself_instead_of_failing_blindly(self):
+        # d79570d3... and 1c0dc841... were written by the builder as it was before
+        # the reshape: a `specs` key, and `panel` a list rather than a string.
+        row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True,
+                          build_params={"behaviours": ["helpfulness"], "specs": ["v1"],
+                                       "panel": ["fable", "sol"], "rubric": "v5",
+                                       "run_date": None})
+        with mock.patch.object(verify.publish, "build",
+                               side_effect=AssertionError("a pre-reshape build is not rebuilt")):
+            printed, failed = run(verify.check_the_publication_rebuilds_to_its_digests,
+                                  self.store(row), row)
+        self.assertEqual(len(failed), 2, printed)
+        self.assertIn("pre-reshape", printed)
+
+    def test_a_non_string_panel_alone_is_also_read_as_pre_reshape(self):
+        row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True,
+                          build_params={"behaviours": ["helpfulness"], "documents": ["v1"],
+                                       "panel": ["fable", "sol"], "rubric": "v5",
+                                       "run_date": None})
+        with mock.patch.object(verify.publish, "build",
+                               side_effect=AssertionError("not rebuilt")):
+            printed, failed = run(verify.check_the_publication_rebuilds_to_its_digests,
+                                  self.store(row), row)
+        self.assertEqual(len(failed), 2, printed)
+        self.assertIn("pre-reshape", printed)
+
 
 class StoredDigestTest(unittest.TestCase):
     def record(self, row):
@@ -268,6 +301,33 @@ class RunSnapshotTest(unittest.TestCase):
         printed, failed = self.check(
             runs, [{"run_id": "published", "behaviour_slug": "animal-welfare-impacts",
                     "spec_version_id": "v1"}])
+        self.assertEqual(len(failed), 1, printed)
+
+
+class SpecVersionsInsertOnlyTest(unittest.TestCase):
+    """The probe targets an id that cannot exist, so a revoked grant is still
+    refused (Postgres checks the UPDATE privilege before it matches rows) and a
+    loosened grant matches nothing rather than tampering with a real row."""
+
+    def test_a_refused_update_against_an_id_that_cannot_exist_passes(self):
+        store = FakeStore(update_error=verify.StoreError(
+            "PATCH aci_spec_versions -> 403: permission denied for table "
+            "aci_spec_versions (42501)"))
+        printed, failed = run(verify.check_spec_versions_are_insert_only, store)
+        self.assertEqual(failed, [], printed)
+        self.assertEqual(store.updates,
+                         [("aci_spec_versions", {"id": verify.NIL_UUID}, {"markdown": "tampered"})])
+
+    def test_an_update_that_is_not_refused_is_a_failure(self):
+        store = FakeStore()
+        printed, failed = run(verify.check_spec_versions_are_insert_only, store)
+        self.assertEqual(len(failed), 1, printed)
+        self.assertIn("not refused", printed)
+
+    def test_a_refusal_for_some_other_reason_is_still_a_failure(self):
+        store = FakeStore(update_error=verify.StoreError(
+            "PATCH aci_spec_versions -> 500: internal error"))
+        printed, failed = run(verify.check_spec_versions_are_insert_only, store)
         self.assertEqual(len(failed), 1, printed)
 
 

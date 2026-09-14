@@ -429,8 +429,8 @@ export default function Readme() {
             <strong>Runs, compose it on every document with{" "}
             <code>frontier_fast</code>, and launch.</strong> A run is its behaviours
             times its documents times three judges, plus a depth call from each judge on
-            each document: on the constitution and the Model Spec, six calls and six
-            depth calls, about $2.
+            each behaviour and document: on the constitution and the Model Spec, six calls
+            and six depth calls, about $2.
           </li>
           <li>
             <strong>Publications, build a draft</strong> with the new behaviour and the
