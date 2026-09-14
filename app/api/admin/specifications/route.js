@@ -40,7 +40,12 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
 
   const id = specificationId(lab, name);
   const spec = specs.find(row => row.id === id);
+  const digest = createHash("sha256").update(markdown).digest("hex");
+  const versions = await select("aci_spec_versions",
+                                `select=spec_id,version,content_sha256&spec_id=eq.${id}`);
 
+  // Every refusal comes before the first write, so a refused registration leaves
+  // nothing behind, whatever the schema would or would not have caught.
   if (!spec) {
     // A new document needs everything a locator and a reader will ask of it.
     const missing = [];
@@ -48,15 +53,7 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
     if (!shortTitle) missing.push("short title is required");
     if (!STYLES.includes(style)) missing.push(`locator style must be ${STYLES.join(" or ")}`);
     if (missing.length) refuse(missing.join("\n"));
-    await insert("aci_specs", [{
-      id, lab_id: lab, title, short_title: shortTitle,
-      source_url: sourceUrl, locator_style: style,
-    }]);
   }
-
-  const digest = createHash("sha256").update(markdown).digest("hex");
-  const versions = await select("aci_spec_versions",
-                                `select=spec_id,version,content_sha256&spec_id=eq.${id}`);
   const taken = labelTaken(versions, id, version);
   if (taken) refuse(taken);
   const same = versions.find(row => row.content_sha256 === digest);
@@ -66,6 +63,12 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
            + "registered twice under two labels.");
   }
 
+  if (!spec) {
+    await insert("aci_specs", [{
+      id, lab_id: lab, title, short_title: shortTitle,
+      source_url: sourceUrl, locator_style: style,
+    }]);
+  }
   await insert("aci_spec_versions", [{
     spec_id: id, version, markdown, content_sha256: digest,
     source_url: sourceUrl, added_by: email,

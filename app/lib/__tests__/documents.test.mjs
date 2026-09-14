@@ -36,10 +36,20 @@ test("a version is the release date", () => {
   assert.match(versionProblem(""), /required/);
 });
 
-test("every version is its own document in a form", () => {
-  const specs = [{ title: "OpenAI Model Spec", versions: [
-    { id: "v-new", version: "2026-08-18" }, { id: "v-old", version: "2025-12-18" }] }];
-  assert.deepEqual(documentChoices(specs), [
+test("every version is its own document in a form, and only a row named by its lab is one", () => {
+  const specs = [
+    // The expand migration copied this row to anthropic--constitution and left it
+    // in place until cleanup. Offered, it would list the same document twice, and
+    // a run could be composed on an id outside the grammar.
+    { id: "constitution", lab_id: "anthropic", title: "Claude's Constitution", versions: [
+      { id: "v-legacy", version: "2026-01-21" }] },
+    { id: "openai--model-spec", lab_id: "openai", title: "OpenAI Model Spec", versions: [
+      { id: "v-new", version: "2026-08-18" }, { id: "v-old", version: "2025-12-18" }] },
+  ];
+  const choices = documentChoices(specs);
+  assert.ok(!choices.some(choice => choice.value === "v-legacy"),
+            "a row whose id is not <lab>--<name> is not offered");
+  assert.deepEqual(choices, [
     { value: "v-new", label: "OpenAI Model Spec 2026-08-18" },
     { value: "v-old", label: "OpenAI Model Spec 2025-12-18" },
   ]);

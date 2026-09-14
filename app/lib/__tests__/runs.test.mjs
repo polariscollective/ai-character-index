@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { launchRefusal, mergeCounts } from "../runs.mjs";
+import { depthTally, launchRefusal, mergeCounts } from "../runs.mjs";
 
 test("a pending run is launched", () => {
   assert.equal(launchRefusal({ status: "pending" }, { pending: 6 }), null);
@@ -41,4 +41,17 @@ test("a run's work is its passage calls and its depths, counted as one", () => {
 
 test("a done run whose depths are not all given can be launched again", () => {
   assert.equal(launchRefusal({ status: "done" }, mergeCounts({ done: 6 }, { error: 1, done: 5 })), null);
+});
+
+test("a call's depth is counted as an object, as an array, and not at all when missing", () => {
+  // Read through the foreign key, so a run of any size is one query. PostgREST
+  // embeds a one-to-one relation as an object or null; an array is taken too.
+  const calls = [
+    { id: "a", status: "done", aci_depths: { status: "done" } },
+    { id: "b", status: "done", aci_depths: null },
+    { id: "c", status: "error", aci_depths: [{ status: "error" }] },
+    { id: "d", status: "pending", aci_depths: [] },
+    { id: "e", status: "pending" },
+  ];
+  assert.deepEqual(depthTally(calls), { done: 1, error: 1 });
 });

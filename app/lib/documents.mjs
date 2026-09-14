@@ -43,9 +43,22 @@ export function labelTaken(versions, specId, version) {
     : null;
 }
 
-/** Every version as its own document, in the order the specifications list them. */
+/** Whether a specification is named `<lab>--<name>`: its own lab, then a name
+ * `nameProblem` accepts.
+ *
+ * The expand migration copied the two documents the index carried under such
+ * names and left the old rows until a cleanup migration. A row that fails this is
+ * one of those, and offering it would list its document twice. */
+function namedByLab(spec) {
+  const name = spec.id.slice(specificationId(spec.lab_id, "").length);
+  return Boolean(spec.lab_id) && specificationId(spec.lab_id, name) === spec.id
+    && nameProblem(name) === null;
+}
+
+/** Every version as its own document, in the order the specifications list them.
+ * Only specifications named by their lab are offered. */
 export function documentChoices(specs) {
-  return specs.flatMap(spec => spec.versions.map(version => ({
+  return specs.filter(namedByLab).flatMap(spec => spec.versions.map(version => ({
     value: version.id,
     label: `${spec.title} ${version.version}`,
   })));

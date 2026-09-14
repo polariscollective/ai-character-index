@@ -116,16 +116,23 @@ for (const [path, action, fields] of FORMS) {
 
 // What the forms no longer offer. The index publishes one panel, so no form
 // chooses judges; sets decide nothing, so none asks for one; and the judging job
-// composes v5 only.
-const offered = async (path, selector) => {
-  await open(path);
-  return page.$$eval(selector, nodes => nodes.length);
+// composes v5 only. A field is absent only from a form that rendered: counted on a
+// page that failed, it is absent too, and the check would pass. So the page must
+// answer 200 with its form before the field is counted.
+const absent = async (path, field) => {
+  const status = await open(path);
+  const forms = await page.$$eval("form.panel", nodes => nodes.length);
+  const fields = await page.$$eval(`form.panel [name=${field}]`, nodes => nodes.length);
+  return {
+    ok: status === 200 && forms > 0 && fields === 0,
+    detail: `${path} ${status}, ${forms ? "form present" : "no form"}, ${fields} ${field}`,
+  };
 };
-check(await offered("/admin/behaviours", "form.panel [name=set]") === 0,
-      "a behaviour is registered with no set", "");
-check(await offered("/admin/runs", "form.panel [name=panel]") === 0
-        && await offered("/admin/publications", "form.panel [name=panel]") === 0,
-      "no form offers a panel", "");
+const noSet = await absent("/admin/behaviours", "set");
+check(noSet.ok, "a behaviour is registered with no set", noSet.detail);
+const noPanel = [await absent("/admin/runs", "panel"), await absent("/admin/publications", "panel")];
+check(noPanel.every(result => result.ok), "no form offers a panel",
+      noPanel.map(result => result.detail).join("; "));
 await open("/admin/runs");
 const rubrics = await page.$$eval("form.panel [name=rubric]", nodes => nodes.map(node => node.value));
 check(rubrics.length > 0 && rubrics.every(rubric => rubric === "v5"),

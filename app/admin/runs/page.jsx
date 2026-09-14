@@ -5,8 +5,8 @@ import { launchRefusal, mergeCounts } from "../../lib/runs.mjs";
 import { Choices, Cost, Jobs, Outcome, State, When } from "../parts.jsx";
 
 /* What pressing launch does, named for the state the run is in. It is one act
-   underneath: the job takes every call of the run that is not done. */
-const LAUNCH = { pending: "launch", cancelled: "resume", done: "retry failed calls" };
+   underneath: the job takes every call and depth of the run that is not done. */
+const LAUNCH = { pending: "launch", cancelled: "resume", done: "retry calls and depths" };
 
 export default async function Runs({ searchParams }) {
   const params = await searchParams;
