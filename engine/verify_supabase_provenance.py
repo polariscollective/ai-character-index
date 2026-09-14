@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """Proof that the index the routes serve is the index that was verified.
 
-    python3 engine/verify_supabase_provenance.py
+    python3 engine/verify_supabase_provenance.py                        # what the reader serves
+    python3 engine/verify_supabase_provenance.py --publication=<uuid>   # any one, a draft included
 
-Everything here reads the database. The committed payloads this used to compare
-against are gone: they were the oracle, and their digests took over that job,
-recorded in engine/published-artefacts.sha256.json at the commit named there.
+Everything here reads the database. It verifies one publication: the newest
+public one, which is what the routes stream, unless --publication names another,
+so that a draft can be checked before it is made public.
 
-Four claims.
+The claims.
 
-    1. Both payloads, rebuilt from the database, still carry those digests. If
-       anything was lost or altered, the bytes say so without anyone having to
-       decide what "the same" means.
-    2. The publication row still holds them, which is what the routes stream.
+    1. The publication row holds the bytes its digests describe. The grandfathered
+       publication is also held to the digests recorded in
+       engine/published-artefacts.sha256.json, at the commit named there: it is
+       what the index published when the migration was verified, and the record
+       describes no other publication.
+    2. Any other publication rebuilds, from its own cells and with the builds
+       publish.py makes, to the digests it stores. The grandfathered publication
+       is reported as not rebuilt, and that is not a failure: the builders were
+       reshaped on purpose after it was published, so no current build reproduces
+       it, and its stored bytes, held to the record, are the oracle.
     3. Every behaviour that carries a boundary reaches the panel carrying it.
        This one exists because a boundary once failed to migrate and nothing
        noticed: the prompt read "none provided" and the panel judged against a
        weaker instruction. Comparing records would not have caught it; composing
        the text a model would be sent does.
-    4. Every locator the index cites still resolves against the spec text stored
-       beside it, and returns the stored quote byte for byte.
+    4. Every locator the publication cites still resolves against the stored text
+       of the version it names, and returns the stored quote byte for byte.
 
 Two conventions meet in the fourth, and conflating them makes a check that fails
 on correct data. A panel passage carries citation_quote() applied to the
@@ -28,9 +35,11 @@ locator with no span means the whole section rather than nothing. Each is checke
 through the code that produced it.
 """
 
+import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -42,28 +51,21 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
 import cite            # noqa: E402
 import index_store     # noqa: E402
+import publish         # noqa: E402
 from store import Store, StoreError   # noqa: E402
 
 RECORD = HERE / "published-artefacts.sha256.json"
+UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
 def recorded():
     """The digests of what the index published when the migration was verified.
 
-    These stand in for the committed payloads once those are deleted: the
-    question stops being "do the rebuilt bytes equal this file" and becomes "does
-    the database still produce the artifact that carried this digest", which
-    needs a few lines rather than twenty megabytes to ask.
+    These stand in for the committed payloads once those are deleted, and they
+    describe one publication: the grandfathered one.
     """
     return json.loads(RECORD.read_text())["published"]
 
-
-def digest(payload):
-    """The digest of a payload as its builder serialises it."""
-    if isinstance(payload, (bytes, bytearray)):
-        return hashlib.sha256(payload).hexdigest()
-    return hashlib.sha256(json.dumps(payload, ensure_ascii=False,
-                                     separators=(",", ":")).encode()).hexdigest()
 
 failures = []
 
@@ -74,14 +76,10 @@ def report(ok, label, detail=""):
         failures.append(label)
 
 
-def build(script, args, out):
-    result = subprocess.run([sys.executable, str(script), *args, f"--out={out}"],
-                            capture_output=True, text=True)
-    if result.returncode != 0:
-        report(False, f"{Path(script).name} rebuild",
-               (result.stderr or result.stdout).strip().splitlines()[-1:] or ["no output"])
-        return False
-    return True
+def note(label, detail):
+    """A check that does not apply to this publication, said plainly rather than
+    passed in silence or failed for the wrong reason."""
+    print(f"NOTE  {label} -- {detail}")
 
 
 def load_module(name, path):
@@ -91,66 +89,143 @@ def load_module(name, path):
     return module
 
 
-def check_the_rebuilt_payloads_carry_their_digests(scratch):
-    """Rebuild both payloads from the database and hold them to the record.
+def the_publication(store, publication_id=None):
+    """The publication to verify: the one named, a draft included, or else the one
+    the reader serves."""
+    if publication_id is None:
+        return index_store.current_publication(store)
+    rows = store.select("aci_publications", {"id": f"eq.{publication_id}"})
+    return rows[0] if rows else None
 
-    This is the check the committed files used to answer. They are gone; the
-    digest asks the same question of a few lines: does the database still
-    produce the artifact that was verified?
+
+def cells_of(store, publication):
+    """A publication's cells, in the shape and the order publish.py builds from."""
+    rows = store.select("aci_publication_cells",
+                        {"publication_id": f"eq.{publication['id']}"})
+    return sorted(({"behaviour_slug": row["behaviour_slug"],
+                    "spec_version_id": row["spec_version_id"],
+                    "run_id": row["run_id"]} for row in rows),
+                  key=lambda cell: (cell["behaviour_slug"], cell["spec_version_id"]))
+
+
+def check_the_published_artefacts_still_carry_their_digests(publication):
+    """The stored columns, held to their own digests; and the grandfathered
+    publication's, to the record as well."""
+    if publication.get("grandfathered"):
+        want = recorded()
+        for name, column in (("payload", "payload_sha256"),
+                             ("documents", "documents_sha256")):
+            got = publication[column]
+            report(got == want[name]["sha256"],
+                   f"the published {name} carries its recorded digest",
+                   "unchanged" if got == want[name]["sha256"]
+                   else f"{got[:16]} against {want[name]['sha256'][:16]}")
+    else:
+        note("the published artefacts are not held to the record",
+             "the record describes the grandfathered publication only; this one is "
+             "held to its own rebuild")
+
+    # And the digest describes THESE bytes, which is the claim that makes it worth
+    # anything. Each builder serialises its payload its own way, so each column is
+    # re-serialised the way the builder that wrote it does; a digest that matched
+    # while the column said something else would be a digest of a file nobody
+    # serves.
+    #
+    # This is also what `json` rather than `jsonb` is for. jsonb reorders keys on
+    # the way in, which breaks this equality permanently and silently -- it did,
+    # once, and the tables were recreated.
+    for name, column in (("payload", "payload_sha256"), ("documents", "documents_sha256")):
+        got = hashlib.sha256(
+            json.dumps(publication[name], **publish.FORMATS[name]).encode()).hexdigest()
+        report(got == publication[column],
+               f"the stored {name} is the bytes its digest describes",
+               "re-serialises to its digest" if got == publication[column]
+               else f"{got[:16]} against the stored {publication[column][:16]}")
+
+
+def check_the_publication_rebuilds_to_its_digests(store, publication):
+    """Rebuild a publication from its own cells and hold it to what it stores.
+
+    The build is publish.py's own, so what is checked is what a publication job
+    writes rather than a second copy of it. The run date is the one the stored
+    payload carries: a build that did not pin one took the day it ran, and a
+    rebuild on any other day must not.
     """
-    want = recorded()
+    if publication.get("grandfathered"):
+        note("the publication is not rebuilt",
+             "it is grandfathered: the builders were reshaped after it was published, "
+             "so its stored bytes, held to the record, are the oracle")
+        return
+    params = publication.get("build_params") or {}
+    cells = cells_of(store, publication)
+    run_date = (params.get("run_date")
+                or (publication["payload"].get("provenance") or {}).get("runDate"))
+    panel_name = params.get("panel") if isinstance(params.get("panel"), str) else None
+    for name in ("payload", "documents"):
+        label = f"the {name} rebuilds from the publication's cells to its stored digest"
+        try:
+            _built, got = publish.build(name, cells, params.get("behaviours") or [],
+                                        run_date, panel_name)
+        except SystemExit as refused:
+            report(False, label, (str(refused).strip().splitlines() or ["no output"])[-1])
+            continue
+        want = publication[f"{name}_sha256"]
+        report(got == want, label,
+               "unchanged" if got == want else f"{got[:16]} against {want[:16]}")
 
+
+def check_the_passage_flags_agree_with_the_reader(publication, scratch):
+    """The builder's adjacent flag and the band the reader computes must agree.
+
+    Its ragged exceptions are enumerated passage by passage in
+    test_reader_v5_labels.js, for the grandfathered payload it was written against.
+    Another payload does not carry them, and would fail on the list rather than on
+    its data; the reader recomputes the flag from the band it draws in any case.
+    """
+    if not publication.get("grandfathered"):
+        note("the passage flags are not held to the reader's bands",
+             "the harness enumerates the grandfathered payload's ragged passages, and "
+             "the reader recomputes the flag from the band it draws")
+        return
     payload = scratch / "payload.json"
-    if build(HERE / "panel" / "build_site_data.py",
-             ["--threshold=4", "--solid-threshold=6", "--run-date=2026-08-17"], payload):
-        got = digest(payload.read_bytes())
-        report(got == want["payload"]["sha256"],
-               "the behaviour payload rebuilds to its recorded digest",
-               "unchanged" if got == want["payload"]["sha256"]
-               else f"{got[:16]} against {want['payload']['sha256'][:16]}")
-        # The builder's adjacent flag and the reader's computed band must agree.
-        # That invariant used to be checked against a committed payload; it is
-        # checked here against the one the database produces.
-        labels = subprocess.run(
-            ["node", str(HERE / "panel" / "test_reader_v5_labels.js"), str(payload)],
-            capture_output=True, text=True)
-        report(labels.returncode == 0,
-               "every passage's adjacent flag agrees with the band the reader computes",
-               (labels.stdout or labels.stderr).strip().splitlines()[-1:][0]
-               if (labels.stdout or labels.stderr).strip() else "")
-
-    documents = scratch / "documents.json"
-    if build(ROOT / "engine" / "build-spec-reader-data.py", [], documents):
-        got = digest(documents.read_bytes())
-        report(got == want["documents"]["sha256"],
-               "the documents payload rebuilds to its recorded digest",
-               "unchanged" if got == want["documents"]["sha256"]
-               else f"{got[:16]} against {want['documents']['sha256'][:16]}")
+    payload.write_text(json.dumps(publication["payload"], **publish.FORMATS["payload"]))
+    labels = subprocess.run(
+        ["node", str(HERE / "panel" / "test_reader_v5_labels.js"), str(payload)],
+        capture_output=True, text=True)
+    output = (labels.stdout or labels.stderr).strip().splitlines()
+    report(labels.returncode == 0,
+           "every passage's adjacent flag agrees with the band the reader computes",
+           output[-1] if output else "")
 
 
-def check_panel_passages_still_resolve(store):
-    """A panel passage is the normalised text passages() yields for its locator.
-    Re-deriving them from the stored markdown must reproduce every quote."""
+def check_panel_passages_still_resolve(store, publication):
+    """A panel passage is the normalised text passages() yields for its locator, in
+    the version the locator names. Re-deriving them from the stored markdown must
+    reproduce every quote.
+
+    The version is the point. Without one, passages() reads a document's newest
+    version, and a publication carrying two versions of one document would read
+    every passage of the older as unresolved.
+    """
     index_store.install_registry(store)
     h = load_module("h", HERE / "panel" / "harness.py")
     builder = load_module("build_site_data", HERE / "panel" / "build_site_data.py")
-    # What the routes serve, from the publication row. The committed copy this
-    # used to read is gone.
-    publication = index_store.current_publication(store)
-    if publication is None:
-        report(False, "every published passage re-derives from the stored spec text",
-               "nothing is published")
-        return
-    payload = publication["payload"]
+    stored = {(row["spec_id"], row["version"])
+              for row in store.select("aci_spec_versions", {"select": "spec_id,version"})}
     text, checked, missing, mismatched = {}, 0, 0, 0
-    for spec_name in sorted({row["id"] for row in store.select("aci_specs")}):
-        for locator, _section, passage in h.passages(spec_name):
-            text[locator] = passage
-    for behaviour in payload["behaviours"]:
+    for behaviour in publication["payload"]["behaviours"]:
         for coverage in behaviour["coverage"].values():
             for passage in coverage["passages"]:
                 checked += 1
-                raw = text.get(passage["locator"])
+                document = passage["locator"].split(" > ", 1)[0]
+                spec, _, version = document.rpartition("@")
+                if (spec, version) not in stored:
+                    missing += 1
+                    continue
+                if document not in text:
+                    text[document] = {locator: raw for locator, _section, raw
+                                      in h.passages(spec, version)}
+                raw = text[document].get(passage["locator"])
                 if raw is None:
                     missing += 1
                     continue
@@ -187,44 +262,6 @@ def check_ledger_citations_still_resolve(store):
                 mismatched += 1
     report(mismatched == 0, "every ledger citation re-resolves against the stored text",
            f"{checked} citations, {mismatched} mismatched")
-
-
-def check_the_published_artefacts_still_carry_their_digests(store):
-    """The oracle, once the committed payloads are gone. It asks the database
-    what it publishes and holds it to what was verified."""
-    publication = index_store.current_publication(store)
-    if publication is None:
-        report(False, "the published artefacts carry their recorded digests",
-               "nothing is published")
-        return
-    want = recorded()
-    for name, column in (("payload", "payload_sha256"),
-                         ("documents", "documents_sha256")):
-        got = publication[column]
-        report(got == want[name]["sha256"],
-               f"the published {name} carries its recorded digest",
-               "unchanged" if got == want[name]["sha256"]
-               else f"{got[:16]} against {want[name]['sha256'][:16]}")
-
-    # And the digest describes THESE bytes, which is the claim that makes it worth
-    # anything. Each builder serialises its payload its own way, so each column is
-    # re-serialised the way the builder that wrote it does; a digest that matched
-    # the record while the column said something else would be a digest of a file
-    # nobody serves.
-    #
-    # This is also what `json` rather than `jsonb` is for. jsonb reorders keys on
-    # the way in, which breaks this equality permanently and silently -- it did,
-    # once, and the tables were recreated.
-    for name, column, dump in (
-            ("payload", "payload_sha256",
-             lambda value: json.dumps(value, indent=1, ensure_ascii=False)),
-            ("documents", "documents_sha256",
-             lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":")))):
-        got = hashlib.sha256(dump(publication[name]).encode()).hexdigest()
-        report(got == publication[column],
-               f"the stored {name} is the bytes its digest describes",
-               "re-serialises to its digest" if got == publication[column]
-               else f"{got[:16]} against the stored {publication[column][:16]}")
 
 
 def check_behaviours_carry_the_judging_entry(store):
@@ -267,23 +304,39 @@ def check_every_defined_behaviour_reaches_the_panel_with_its_scope(store):
            f"{checked} behaviours" if not blank else f"blank scope for {blank}")
 
 
-def check_the_run_snapshot_says_what_it_judged_against(store):
-    """A run froze what it was told, and must still agree with the registry it
-    was told it from."""
+def check_the_run_snapshot_says_what_it_judged_against(store, publication):
+    """Each run a publication names froze what it was told, and must still agree
+    with the registry it was told it from.
+
+    The runs read are the publication's own. A select has no order, and this
+    used to read whichever run the table returned first: the day a second run, of
+    one other behaviour, was composed, a correct publication failed.
+    """
+    label = "the run snapshot names the definitions the run was given"
     rows = {r["slug"]: r for r in store.select("aci_behaviours")}
-    runs = store.select("aci_runs")
-    if not runs:
-        report(False, "the run snapshot names the judging definitions", "no runs")
+    cells = cells_of(store, publication)
+    runs = {run["id"]: run for run in store.select("aci_runs")
+            if run["id"] in {cell["run_id"] for cell in cells}}
+    absent = sorted({cell["run_id"] for cell in cells} - set(runs))
+    if not runs or absent:
+        report(False, label, f"runs the publication names are not held: {absent}"
+               if absent else "the publication names no run")
         return
-    snapshot = runs[0]["behaviours"]
-    wrong = [slug for slug, entry in snapshot.items()
-             if entry.get("judging") != rows.get(slug, {}).get("judging")]
+    wrong = sorted(f"{slug} in run {run_id[:8]}"
+                   for run_id, run in runs.items()
+                   for slug, entry in (run["behaviours"] or {}).items()
+                   if entry.get("judging") != rows.get(slug, {}).get("judging"))
     # The one behaviour the current rubric judges on a different definition than
-    # the one it displays; if the snapshot lost that, it lost the point.
-    v2 = (snapshot.get("animal-welfare-impacts") or {}).get("judging") or {}
-    report(not wrong and "query_v2" in v2,
-           "the run snapshot names the definitions the run was given",
-           f"{len(snapshot)} behaviours" if not wrong else f"differs: {wrong}")
+    # the one it displays; a run that shows it and lost that, lost the point.
+    lost = sorted({cell["run_id"][:8] for cell in cells
+                   if cell["behaviour_slug"] == "animal-welfare-impacts"
+                   and "query_v2" not in (((runs[cell["run_id"]]["behaviours"] or {})
+                                           .get("animal-welfare-impacts") or {})
+                                          .get("judging") or {})})
+    snapshotted = {slug for run in runs.values() for slug in (run["behaviours"] or {})}
+    report(not wrong and not lost, label,
+           f"{len(runs)} run(s), {len(snapshotted)} behaviours" if not wrong and not lost
+           else f"differs: {wrong}" if wrong else f"animal-welfare-impacts lost query_v2 in {lost}")
 
 
 def check_spec_versions_are_insert_only(store):
@@ -302,22 +355,44 @@ def check_spec_versions_are_insert_only(store):
            "an update succeeded -- the citation guarantee is not enforced")
 
 
-def main():
+def arguments(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--publication", default=None,
+                        help="the id of the publication to verify, a draft included; "
+                             "the one the reader serves by default")
+    args = parser.parse_args(argv)
+    if args.publication is not None and not UUID.match(args.publication):
+        parser.error(f"--publication must be a uuid, got {args.publication!r}")
+    return args
+
+
+def main(argv=None):
+    args = arguments(argv)
     store = Store.from_env()
+    publication = the_publication(store, args.publication)
+    if publication is None:
+        report(False, "there is a publication to verify",
+               f"no publication {args.publication}" if args.publication
+               else "nothing is published")
+        return 1
+    print(f"Publication {publication['id']}, published {publication['published_at']}, "
+          f"{'public' if publication.get('is_public') else 'a draft'}"
+          f"{', grandfathered' if publication.get('grandfathered') else ''}.\n")
+
+    check_the_published_artefacts_still_carry_their_digests(publication)
+    check_the_publication_rebuilds_to_its_digests(store, publication)
     with tempfile.TemporaryDirectory() as scratch:
-        scratch = Path(scratch)
-        check_the_rebuilt_payloads_carry_their_digests(scratch)
-    check_the_published_artefacts_still_carry_their_digests(store)
+        check_the_passage_flags_agree_with_the_reader(publication, Path(scratch))
     check_behaviours_carry_the_judging_entry(store)
     check_every_defined_behaviour_reaches_the_panel_with_its_scope(store)
-    check_the_run_snapshot_says_what_it_judged_against(store)
-    check_panel_passages_still_resolve(store)
+    check_the_run_snapshot_says_what_it_judged_against(store, publication)
+    check_panel_passages_still_resolve(store, publication)
     check_ledger_citations_still_resolve(store)
     check_spec_versions_are_insert_only(store)
     if failures:
         print(f"\n{len(failures)} failure(s): {', '.join(failures)}")
         return 1
-    print("\nThe index in Supabase is the index that was in git.")
+    print("\nThe publication in Supabase is the publication that was verified.")
     return 0
 
 

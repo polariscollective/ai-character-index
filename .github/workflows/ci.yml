@@ -60,6 +60,7 @@ jobs:
           python3 engine/test_store.py
           python3 engine/test_index_store.py
           python3 engine/test_build_spec_reader_data.py
+          python3 engine/test_verify_supabase_provenance.py
 
       # node directly, not pnpm: these suites import nothing outside the standard
       # library, so this job needs no install at all.
