@@ -280,6 +280,21 @@ if (behaviours.length === 0) {
     }
   }
 
+  // Comparing, each document on screen gives its figure, in pane order, joined by " / ".
+  // One behaviour of the fixture has a depth on one document and none on the other,
+  // so this also holds the dash beside a figure.
+  for (const behaviour of behaviours) {
+    await readView(`${base}?behavior=${behaviour.slug}&compare=1`);
+    const shown = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`,
+                                   cell => cell.textContent);
+    const expected = documents.slice(0, 2).map(document => {
+      const depth = behaviour.coverage[document.id]?.depth;
+      return depth ? depth.mean.toFixed(1) : "–";
+    }).join(" / ");
+    report(shown === expected, `${behaviour.slug} · compare · depth`,
+           `${shown} (expected ${expected})`);
+  }
+
   // Several behaviours read over the same text. Each must still anchor exactly its own
   // published passages; where two of them cite one passage it is highlighted once and
   // marked as shared, rather than counted twice or overwritten by the last one drawn.
