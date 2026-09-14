@@ -40,6 +40,7 @@ jobs:
       - name: Panel and citation suites
         run: |
           python3 engine/panel/test_panel.py
+          python3 engine/panel/test_build_site_data.py
           python3 -m unittest discover -s tests
 
       - name: Judging job suites
