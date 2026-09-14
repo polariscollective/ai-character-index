@@ -266,6 +266,20 @@ if (behaviours.length === 0) {
     );
   }
 
+  // Depth beside each behaviour: the panel's mean for the document on screen, a
+  // dash where no depth was given. A dash and a zero are different claims.
+  for (const behaviour of behaviours) {
+    for (const document of documents) {
+      await readView(`${base}?behavior=${behaviour.slug}&spec=${encodeURIComponent(document.id)}`);
+      const shown = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`,
+                                     cell => cell.textContent);
+      const depth = behaviour.coverage[document.id]?.depth;
+      const expected = depth ? depth.mean.toFixed(1) : "–";
+      report(shown === expected, `${behaviour.slug} · ${document.id} · depth`,
+             `${shown} (expected ${expected})`);
+    }
+  }
+
   // Several behaviours read over the same text. Each must still anchor exactly its own
   // published passages; where two of them cite one passage it is highlighted once and
   // marked as shared, rather than counted twice or overwritten by the last one drawn.

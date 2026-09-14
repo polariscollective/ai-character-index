@@ -750,6 +750,7 @@ function renderBehaviourList() {
               <span class="behaviour-box" aria-hidden="true"></span>
               <span class="number">${String(behaviour.id).padStart(2, "0")}</span>
               <span class="name">${escapeHTML(behaviour.name)}</span>
+              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}"></span>
             </label>
             <button
               type="button"
@@ -774,6 +775,32 @@ function renderBehaviourList() {
     });
   });
   updateBehaviourCount();
+  updateBehaviourDepths();
+}
+
+/* How deeply each document on screen covers each behaviour, beside its name.
+ *
+ * The mean of the panel's depths on the 0 to 4 scale, one figure per document on
+ * screen, so comparing two documents puts two figures side by side. A cell with
+ * no depth shows a dash: zero is a finding, a dash is the absence of one. */
+const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
+
+function updateBehaviourDepths() {
+  if (!state.payload) return;
+  const shown = visibleDocuments().filter(Boolean);
+  elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(cell => {
+    const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
+    const depths = shown.map(doc => behaviour?.coverage?.[doc.id]?.depth ?? null);
+    cell.textContent = depths.map(depth => (depth ? depth.mean.toFixed(1) : "–")).join(" / ");
+    cell.title = shown.map((doc, i) => {
+      const depth = depths[i];
+      if (!depth) return `${doc.title} ${doc.version}: no depth given`;
+      const judges = Object.entries(depth.judges || {})
+        .map(([judge, given]) => `${judge} ${given.depth}`).join(", ");
+      return `${doc.title} ${doc.version}: depth ${depth.mean.toFixed(1)} of 4, `
+        + `${DEPTH_WORDS[Math.round(depth.mean)]} (${judges})`;
+    }).join("\n");
+  });
 }
 
 function updateBehaviourCount() {
@@ -2006,6 +2033,7 @@ function rebuildReader() {
   }
 
   applyHighlights();
+  updateBehaviourDepths();
   requestAnimationFrame(revealHashTarget);
 }
 
