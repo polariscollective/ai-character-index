@@ -5,11 +5,9 @@ downstream keep working on the shape they already know. The seam is deliberate:
 the builders' logic is the part that has been proved byte-identical for a year,
 and moving the data should not disturb it.
 
-One inherited constraint is worth stating. A reader document is keyed by its
-lab, not by its spec: `documents.json` calls them `anthropic` and `openai` while
-locators call them `constitution` and `model-spec`. Two labs are two documents,
-but a lab that published two specs would collide. That is upstream's shape, kept
-here because the payload and the ?spec= parameter both depend on it.
+One convention is worth stating. A reader document is a version, and its id is
+`<spec id>@<version>`, which is also the head of every locator into it. Two
+versions of one specification are two documents.
 """
 
 import sys
@@ -53,8 +51,7 @@ def install_registry(store):
 def documents(store, spec_version_ids=None):
     """The `documents` entries of the reader payload, markdown included.
 
-    Ordered by lab id, which is the document id the reader and the ?spec=
-    parameter both use, so the order is stable against anything but a new lab.
+    Ordered by document id, `<spec id>@<version>`.
     """
     labs = {row["id"]: row for row in _rows(store, "aci_labs")}
     specs = {row["id"]: row for row in _rows(store, "aci_specs")}
@@ -74,7 +71,7 @@ def documents(store, spec_version_ids=None):
         spec = specs[version["spec_id"]]
         lab = labs[spec["lab_id"]]
         document = {
-            "id": lab["id"],
+            "id": f"{spec['id']}@{version['version']}",
             "lab": lab["name"],
             "title": spec["title"],
             "shortTitle": spec["short_title"],
@@ -147,6 +144,34 @@ def runlog_rows(store, run_id):
             "via": via,
         })
     return rows
+
+
+def cell_depths(store, cells):
+    """The depth of each cell a publication carries, from its own run.
+
+    {(behaviour_slug, spec_version_id): {"mean": float, "judges": {model: {"depth",
+    "rationale"}}}}. A cell any of whose done calls has no done depth is left out:
+    the caller decides whether that refuses a publication."""
+    wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
+    calls = [c for c in _rows(store, "aci_judge_calls")
+             if (c["run_id"], c["behaviour_slug"], c["spec_version_id"]) in wanted
+             and c["status"] == "done"]
+    depths = {d["call_id"]: d for d in _rows(store, "aci_depths")}
+
+    by_cell = {}
+    for call in calls:
+        by_cell.setdefault((call["behaviour_slug"], call["spec_version_id"]), []).append(call)
+
+    out = {}
+    for key, cell in by_cell.items():
+        given = [depths.get(call["id"]) for call in cell]
+        if any(d is None or d["status"] != "done" for d in given):
+            continue
+        judges = {call["model"]: {"depth": d["depth"], "rationale": d.get("rationale") or ""}
+                  for call, d in zip(cell, given)}
+        out[key] = {"mean": round(sum(j["depth"] for j in judges.values()) / len(judges), 1),
+                    "judges": dict(sorted(judges.items()))}
+    return out
 
 
 def current_publication(store):

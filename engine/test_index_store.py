@@ -72,9 +72,9 @@ class SpecRegistryTest(unittest.TestCase):
 
 
 class DocumentTest(unittest.TestCase):
-    def test_a_document_is_keyed_by_its_lab_not_its_spec(self):
-        [doc] = index_store.documents(fake())
-        self.assertEqual(doc["id"], "acme-labs")
+    def test_a_document_is_a_version_named_by_its_spec_and_version(self):
+        [doc] = index_store.documents(fake(), ["row-1"])
+        self.assertEqual(doc["id"], "acme@2026-01-01")
         self.assertEqual(doc["lab"], "Acme Labs")
         self.assertEqual(doc["title"], "Acme Spec")
         self.assertEqual(doc["shortTitle"], "Acme")
@@ -82,13 +82,24 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(doc["sourceUrl"], "https://example.com/spec")
         self.assertIn("A paragraph.", doc["markdown"])
 
-    def test_documents_come_back_in_lab_order(self):
+    def test_two_versions_of_one_spec_are_two_documents(self):
+        versions = VERSIONS + [dict(VERSIONS[0], id="row-2", version="2026-06-01")]
+        got = index_store.documents(fake(aci_spec_versions=versions), ["row-1", "row-2"])
+        self.assertEqual([d["id"] for d in got], ["acme@2026-01-01", "acme@2026-06-01"])
+
+    def test_documents_come_back_in_id_order(self):
         labs = LABS + [{"id": "aardvark", "name": "Aardvark"}]
         specs = SPECS + [dict(SPECS[0], id="aard-spec", lab_id="aardvark")]
         versions = VERSIONS + [dict(VERSIONS[0], id="row-2", spec_id="aard-spec")]
         got = index_store.documents(FakeStore({
-            "aci_labs": labs, "aci_specs": specs, "aci_spec_versions": versions}))
-        self.assertEqual([d["id"] for d in got], ["aardvark", "acme-labs"])
+            "aci_labs": labs, "aci_specs": specs, "aci_spec_versions": versions}),
+            ["row-1", "row-2"])
+        self.assertEqual([d["id"] for d in got], ["aard-spec@2026-01-01", "acme@2026-01-01"])
+
+    def test_without_a_selection_the_newest_version_of_each_spec_is_the_document(self):
+        versions = VERSIONS + [dict(VERSIONS[0], id="row-2", version="2026-06-01")]
+        [doc] = index_store.documents(fake(aci_spec_versions=versions))
+        self.assertEqual(doc["id"], "acme@2026-06-01")
 
 
 class BehaviourTest(unittest.TestCase):
@@ -135,6 +146,40 @@ class RunlogTest(unittest.TestCase):
                                   "verdict": 1, "relevant": 0, "parsed": True}]),
             "run-1")
         self.assertEqual(rows, [])
+
+
+class CellDepthTest(unittest.TestCase):
+    CELL = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+
+    def store(self, depths):
+        calls = [{"id": f"call-{m}", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": m, "status": "done"}
+                 for m in ("sol", "fable", "deepseek")]
+        return FakeStore({"aci_judge_calls": calls, "aci_depths": depths})
+
+    def depth(self, model, value, status="done"):
+        return {"call_id": f"call-{model}", "status": status, "depth": value,
+                "rationale": f"{model} says {value}."}
+
+    def test_a_cell_carries_the_mean_and_every_judge(self):
+        got = index_store.cell_depths(self.store(
+            [self.depth("sol", 3), self.depth("fable", 3), self.depth("deepseek", 2)]),
+            [self.CELL])
+        entry = got[("helpfulness", "row-1")]
+        self.assertEqual(entry["mean"], 2.7)
+        self.assertEqual(list(entry["judges"]), ["deepseek", "fable", "sol"])
+        self.assertEqual(entry["judges"]["deepseek"], {"depth": 2, "rationale": "deepseek says 2."})
+
+    def test_a_cell_missing_a_depth_is_left_out(self):
+        got = index_store.cell_depths(self.store(
+            [self.depth("sol", 3), self.depth("fable", 3)]), [self.CELL])
+        self.assertEqual(got, {})
+
+    def test_a_depth_that_is_not_done_does_not_count(self):
+        got = index_store.cell_depths(self.store(
+            [self.depth("sol", 3), self.depth("fable", 3),
+             self.depth("deepseek", None, status="error")]), [self.CELL])
+        self.assertEqual(got, {})
 
 
 if __name__ == "__main__":
