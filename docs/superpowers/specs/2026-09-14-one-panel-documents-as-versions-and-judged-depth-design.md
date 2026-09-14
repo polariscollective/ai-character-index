@@ -68,8 +68,15 @@ A document's id is `<lab>--<document>@<version>`:
 `aci_specs.id` becomes `<lab>--<document>`. The double hyphen separates the lab
 from a document name that may itself carry single hyphens, and a lab that
 publishes a second document gets a second name (`openai--usage-policies`). No lab
-id contains a hyphen, so the split is never ambiguous. The version label stays a
-date, `YYYY-MM-DD`.
+id contains a hyphen, so the split is never ambiguous. The version label is
+written as a date, `YYYY-MM-DD`; nothing parses it as a calendar date, so a label
+for a document dated only to the month (`2026-04-00`) is accepted.
+
+Because the id is built from the label, two versions of one document cannot share
+a label. The table's only unique key is `(spec_id, content_sha256)`, so the
+registration route refuses a label already registered for the document, and the
+cleanup migration adds the unique key `(spec_id, version)`. A corrected text is a
+new version with its own label.
 
 This id is used everywhere a document is named: the portal's lists, the reader's
 `?spec=` parameter and panel ids, the MCP tools, and the head of every locator
@@ -113,16 +120,18 @@ commit), with source url `https://model-spec.openai.com/2026-08-18.html`.
 ### In the portal
 
 - **Register a version** asks for the lab (the list already reads `aci_labs`)
-  and the document name, and composes `<lab>--<document>`.
+  and the document name, and composes `<lab>--<document>`. It refuses a label the
+  document already carries.
 - **Runs** and **Publications** list every version as its own document:
   "Claude's constitution 2026-01-20", "OpenAI Model Spec 2025-12-18",
   "OpenAI Model Spec 2026-08-18". The forms post version ids.
 
 ### In the reader
 
-Each document's panel header shows the document's title and version, not the lab
-alone, since two documents can share a lab. Compare mode already takes any two
-documents, so the two Model Spec versions can be read side by side.
+Each document's panel header already shows its lab, its title and "Version
+<label>", so two versions of one lab's document are told apart without a change.
+Compare mode already takes any two documents, so the two Model Spec versions can
+be read side by side.
 
 ## One panel
 
@@ -254,10 +263,11 @@ The mean is rounded to one decimal.
 ### In the reader and the MCP server
 
 - The behaviour menu shows, beside each behaviour, its mean depth for each
-  document on screen, in mono, with the three judges' depths in its tooltip.
-- The panel header for the selected behaviour shows "Depth 2.7 of 4" and the
-  rubric's word for the nearest level.
-- `list_model_specs` and `retrieve_passages` report the depth with each cell.
+  document on screen, in mono, or a dash where none was given. Its tooltip names
+  each document, the rubric's word for the nearest level and the three judges'
+  depths.
+- `list_behaviours` reports the depth in each coverage entry, and
+  `retrieve_passages` with each cell it returns.
 
 ## The behaviours
 
@@ -281,13 +291,16 @@ The mean is rounded to one decimal.
    credited to "Polaris Collective". 99 passage calls, about $34.65, and 99 depth
    calls, about $2.10: about $36.75 in estimates, which do not count the judges'
    reasoning.
-3. One publication of all 33 cells, read as a draft, then made public.
+3. One publication of all 33 cells, read as a draft. Making it public follows the
+   merge of `develop` into `main`, because `main`'s deployed reader and MCP code do
+   not read depths or the new document ids.
 
 ## Cleanup (phase two)
 
 One migration in `polaris-supabase`, after `develop` is merged and the new
 publication is public:
 
+- add the unique key `(spec_id, version)` to `aci_spec_versions`;
 - drop `aci_cell_curation` and `aci_coverage`;
 - drop `aci_behaviours.set_name`, and the unique key that numbers within a set;
 - drop `aci_publications.grandfathered`, its partial unique index and the
@@ -317,11 +330,10 @@ Test first, as the repository does.
   keys coverage by document id and reads no set, curation or strict mapping.
 - **Application.** `runs.mjs` counts depth rows. `mcp-tools` reports depth and no
   comparability caveat. The registration route refuses a document name
-  containing `--`. The walker checks the forms post version ids and offer no
-  panel, set or judge fields.
+  containing `--` and a label already registered. The walker checks the forms post
+  version ids and offer no panel, set or judge fields.
 - **Reader.** `verify-reader-test.mjs` runs against a fixture whose document ids
-  carry `--` and `@`, and checks the panel header names the version and the menu
-  shows a depth.
+  carry `--` and `@`, and checks the menu shows each behaviour's depth.
 
 ## Out of scope
 
