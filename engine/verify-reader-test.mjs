@@ -206,7 +206,7 @@ report(navIssues.length === 0, "navigation links resolve",
 if (behaviours.length === 0) {
   // The behaviour set is empty: the point is that both specs are fully readable and untouched.
   for (const document of documents) {
-    const seen = await readView(`${base}?spec=${document.id}`);
+    const seen = await readView(`${base}?spec=${encodeURIComponent(document.id)}`);
     const panel = seen.panels[0];
     report(
       seen.passages === 0
@@ -240,7 +240,7 @@ if (behaviours.length === 0) {
       const passages = anchorCount(renderable(behaviour.slug, document.id));
       total += passages;
       await expectView(
-        `${base}?behavior=${behaviour.slug}&spec=${document.id}`,
+        `${base}?behavior=${behaviour.slug}&spec=${encodeURIComponent(document.id)}`,
         { passages, behaviour: behaviour.name },
         `${behaviour.slug} · ${document.id}`,
       );
@@ -273,7 +273,7 @@ if (behaviours.length === 0) {
   for (const selection of selections) {
     const slugs = selection.map(behaviour => behaviour.slug);
     for (const document of documents) {
-      const seen = await readView(`${base}?behavior=${slugs.join(",")}&spec=${document.id}`);
+      const seen = await readView(`${base}?behavior=${slugs.join(",")}&spec=${encodeURIComponent(document.id)}`);
       const short = selection.map(behaviour =>
         `${behaviour.slug} ${seen.byBehaviour[behaviour.name] || 0}/${anchorCount(renderable(behaviour.slug, document.id))}`);
       const accounted = selection.every(behaviour =>
@@ -294,18 +294,18 @@ if (behaviours.length === 0) {
   // Ticking the menu must change only the highlight layer: the reader keeps its place in
   // the text, and the behaviour taken away takes its passages with it.
   const [first, second] = behaviours;
-  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=corpus-labs`);
+  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=${encodeURIComponent(documents[0].id)}`);
   // Read the whole document, not the focused extract. Focus mode hides every section
   // that carries no highlight, so unticking a behaviour there removes text rather than
   // only its highlights -- on this fixture, most of what was on screen. Keeping one's
   // place is a promise about the reading mode where the text stays put, and that is the
   // mode this check measures; the focused view's own arithmetic is checked above, where
   // hidden blocks and collapsed sections are counted.
-  const unfocused = await page.evaluate(() => {
-    const panel = document.querySelector('.document-panel[data-document-id="corpus-labs"]');
+  const unfocused = await page.evaluate(id => {
+    const panel = document.querySelector(`.document-panel[data-document-id="${id}"]`);
     panel.querySelector(".document-focus-toggle").click();
     return panel.querySelectorAll(".section-collapsed").length;
-  });
+  }, documents[0].id);
   await page.waitForTimeout(100);
   // A third of the way down, not a fixed pixel count: the document under test is
   // whatever the fixture carries, and a number chosen for a four-thousand-line
@@ -344,7 +344,7 @@ if (behaviours.length === 0) {
       && after.passages === anchorCount(renderable(second.slug, documents[0].id))
       && after.behaviour === second.name
       && after.url === second.slug,
-    "unticking one of two · corpus-labs",
+    "unticking one of two · acme--corpus@2026-01-01",
     `scroll ${before} → ${after.scrollTop}, ${after.passages} passages left,`
     + ` ${unfocused} sections collapsed, menu reads ${after.behaviour}, url ${after.url}`,
   );
@@ -387,7 +387,7 @@ if (behaviours.length === 0) {
   const exported = behaviours.slice(0, 3);
   const citations = exported.flatMap(behaviour =>
     documents.flatMap(document => renderable(behaviour.slug, document.id)));
-  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=corpus-labs`);
+  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=${encodeURIComponent(documents[0].id)}`);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.click("#download-passages"),

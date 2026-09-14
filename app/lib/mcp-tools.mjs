@@ -77,6 +77,7 @@ export function listBehaviours({ publication, payload, notes }) {
           passages: passages.length,
           strongest: TIERS.find(
             tier => passages.some(passage => passage.band === tier)) || null,
+          depth: behaviour.coverage?.[modelSpecId]?.depth ?? null,
         };
       }
 
@@ -101,26 +102,6 @@ const VERDICT_WORDS = { 3: "defining", 2: "core", 1: "adjacent", 0: "neither" };
 const NO_COVERAGE =
   "No passages at this strength. Absence of coverage is an index finding, not "
   + "missing data.";
-
-/*
- * The defect the site hides, travelling with the data.
- *
- * The reader's band maths scores every cell against its own maximum, so a cell
- * swept by six judges and one swept by three both render on a full scale. An
- * agent handed two lists and left to count does not have that protection. This
- * sentence names no document: it is attached to any request naming more than
- * one specification, whichever those are, and the index does not know here
- * which ones a future registration will add. When the missing calls on the
- * model spec are filled, the design document for that work owns removing it
- * from here, from the tool description in app/api/mcp/route.js and from
- * site/mcp.html.
- */
-const COMPARABILITY =
-  "Passage counts are not comparable between these documents. Some behaviours "
-  + "were swept by more judges against one document than against another, so "
-  + "that document surfaced more candidate passages for them. The bands each "
-  + "passage carries are sound; the totals are not a like-for-like measure of "
-  + "coverage.";
 
 /** Four fields, and the judges in the rubric's own vocabulary. */
 function shapePassage(passage) {
@@ -244,13 +225,11 @@ export function retrievePassages({ publication, payload, documents }, args = {})
   return {
     publication,
     model_specs_read: modelSpecIds.map(id => specSummary(specById.get(id))),
-    // The request decides, not the page: a two specification walk whose first
-    // page happens to hold one cell is still a comparison being assembled.
-    ...(modelSpecIds.length > 1 ? { comparability: COMPARABILITY } : {}),
     panel: panelOf(payload.provenance),
     results: page.map(cell => ({
       behaviour: cell.slug,
       model_spec_id: cell.modelSpecId,
+      depth: behaviourBySlug.get(cell.slug).coverage?.[cell.modelSpecId]?.depth ?? null,
       passages: cell.passages.map(shapePassage),
       ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
     })),

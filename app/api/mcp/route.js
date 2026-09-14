@@ -92,9 +92,7 @@ const handler = createMcpHandler(
         + "more behaviours, quoted verbatim with a locator, the band the panel "
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
-        + "across pages. Passage counts are NOT comparable between laboratories: "
-        + "some behaviours were swept by more judges against one document than "
-        + "another, and any answer spanning more than one specification says so.",
+        + "across pages. Each pair carries the depth the panel gave it, 0 to 4.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "
