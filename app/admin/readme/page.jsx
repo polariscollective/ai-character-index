@@ -510,11 +510,11 @@ export default function Readme() {
         <p className="why">As of September 2026.</p>
         <ul>
           <li>
-            <strong>A specification from a new lab.</strong> The index knows two labs,
-            Anthropic and OpenAI, and the form refuses a document from any other. Adding
-            a lab is one row in a table, which no form writes yet, and parts of the
-            publication builder still name the two labs in code, so a third has never
-            been published.
+            <strong>A specification from a new lab.</strong> The form offers the
+            principal labs, and one missing from its list is added by a migration in{" "}
+            <code>polaris-supabase</code>. Parts of the publication builder still name
+            Anthropic and OpenAI in code, so a document from any other lab has never
+            been published, and its passages may not show.
           </li>
           <li>
             <strong>Only three judges can be shown.</strong> A publication shows the

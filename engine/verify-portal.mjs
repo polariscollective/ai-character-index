@@ -131,6 +131,17 @@ const rubrics = await page.$$eval("form.panel [name=rubric]", nodes => nodes.fla
 check(rubrics.length > 0 && rubrics.every(rubric => rubric === "v5"),
       "a run can only be composed with the rubric the job judges",
       rubrics.join(", "));
+// A document's lab is chosen from the labs the index carries. Typed, it was a
+// guess the route refused after the markdown had been pasted, and nothing on the
+// page said which labs would do.
+await open("/admin/specifications");
+const labs = await page.$eval("form.panel [name=lab]", field => ({
+  tag: field.tagName,
+  options: field.tagName === "SELECT" ? [...field.options].map(option => option.value) : [],
+}));
+check(labs.tag === "SELECT" && ["anthropic", "openai"].every(id => labs.options.includes(id)),
+      "a new document's lab is chosen from the labs the index carries",
+      `${labs.tag.toLowerCase()}, ${labs.options.filter(Boolean).join(", ") || "no options"}`);
 
 // Every control that changes something is a POST. A link that changed the index
 // would be followed by a crawler, a prefetch, or a mistaken bookmark.

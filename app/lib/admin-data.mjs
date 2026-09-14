@@ -53,6 +53,14 @@ export async function specifications(fetchImpl = fetch) {
   }));
 }
 
+/** The labs a document can belong to, by name.
+ *
+ * The portal chooses among them and never adds one: a lab is added by a migration
+ * in polaris-supabase, so the list the form offers is a reviewed one. */
+export async function labs(fetchImpl = fetch) {
+  return select("aci_labs", "select=id,name&order=name.asc", fetchImpl);
+}
+
 /** Runs, newest first, each with its calls counted by status. */
 export async function runs(limit = 25, fetchImpl = fetch) {
   const [rows, calls] = await Promise.all([

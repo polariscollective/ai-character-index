@@ -1,10 +1,10 @@
 /* The documents, their versions, and the form that adds one. */
-import { specifications } from "../../lib/admin-data.mjs";
+import { labs, specifications } from "../../lib/admin-data.mjs";
 import { Outcome, When } from "../parts.jsx";
 
 export default async function Specifications({ searchParams }) {
   const params = await searchParams;
-  const specs = await specifications();
+  const [specs, labRows] = await Promise.all([specifications(), labs()]);
 
   return (
     <>
@@ -85,7 +85,14 @@ export default async function Specifications({ searchParams }) {
             <legend>Only for a document the index has not seen</legend>
             <label>
               <span>Lab</span>
-              <input type="text" name="lab" placeholder="openai" />
+              <select name="lab" defaultValue="">
+                <option value="">Choose the lab that publishes it</option>
+                {labRows.map(lab => <option key={lab.id} value={lab.id}>{lab.name}</option>)}
+              </select>
+              <span className="hint">
+                A lab missing from this list is added by a migration in
+                polaris-supabase, not here.
+              </span>
             </label>
             <label>
               <span>Title</span>
