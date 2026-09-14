@@ -32,9 +32,12 @@ export async function POST(request) {
   // runs afterwards has already paid for the request it means to refuse.
   const declared = Number(request.headers.get("content-length") || 0);
   if (declared > MAX_REQUEST_BYTES) {
+    // The body is not read, so the kind is not known; but only the model spec
+    // form carries a file, and a body this large is one of its.
     return back(request, {
       problem: `That is larger than this form takes. A document may be up to `
              + `${MAX_DOCUMENT_BYTES / 1024 / 1024} MB.`,
+      kind: "specification",
     });
   }
 
@@ -80,8 +83,10 @@ export async function POST(request) {
       boundary: text(fields, "boundary"),
       why: text(fields, "why"),
     };
+    // From here every refusal names its kind, so the page reopens the form that
+    // was refused rather than whichever one it opens by default.
     const found = behaviourProblems({ ...proposal, email });
-    if (found.length) return back(request, { problem: found.join("\n") });
+    if (found.length) return back(request, { problem: found.join("\n"), kind });
   } else {
     proposal = {
       organisation: text(fields, "organisation"),
@@ -92,10 +97,10 @@ export async function POST(request) {
     };
     const file = fields.get("document");
     const found = specificationProblems({ ...proposal, email }, file);
-    if (found.length) return back(request, { problem: found.join("\n") });
+    if (found.length) return back(request, { problem: found.join("\n"), kind });
     document = await file.text();
     const refusal = asMarkdown(document);
-    if (refusal) return back(request, { problem: refusal });
+    if (refusal) return back(request, { problem: refusal, kind });
   }
 
   let row;
@@ -106,6 +111,7 @@ export async function POST(request) {
     return back(request, {
       problem: "Something on our side would not take that. Nothing was recorded, "
              + "so it is worth trying again.",
+      kind,
     });
   }
 

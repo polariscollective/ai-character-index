@@ -192,8 +192,13 @@
   /* ---------- the header, identical to the reader's ---------- */
   /* Same height, same rule, same background. Two surfaces differing by a few
      pixels read as two sites when you move between them, and moving between them
-     is what a nav is for. */
+     is what a nav is for. Held at the top while the page scrolls under it, which
+     is how the reader already behaves: its window is fixed and its content
+     scrolls. */
   .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     height: 54px;
     padding: 0 24px;
     display: flex;
@@ -213,7 +218,10 @@
   .site-header .wordmark:hover { background: none; color: var(--ink); }
   .site-header .mode { align-self: center; }
   @media (max-width: 700px) {
-    .site-header { padding: 0 16px; gap: 12px; }
+    /* Here the brand and the nav can take two rows. The header grows to hold
+       them, because it stays over the page and a row spilling out of it would
+       sit on the text scrolling underneath. */
+    .site-header { height: auto; min-height: 54px; padding: 8px 16px; gap: 6px 12px; }
     .site-header .collective, .site-header .brand-divider { display: none; }
     .site-header nav { gap: 14px; }
   }
@@ -225,7 +233,11 @@
   .with-rail { display: flex; align-items: flex-start; gap: 56px;
                max-width: 1000px; margin: 0 auto; padding: 0 40px; }
   .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
-  .rail { position: sticky; top: 22px; flex: 0 0 168px; padding-top: 92px; }
+  /* Both offsets clear the header, which stays over the page: the rail sits
+     under it, and a heading jumped to lands below it rather than behind it. On a
+     phone the header wraps and grows, so the script writes its real height into
+     --header-height; 54px is its height until then. */
+  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 168px; padding-top: 92px; }
   .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
   .rail li { margin: 0; }
   .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
@@ -234,7 +246,7 @@
             transition: color .15s ease, border-color .15s ease; }
   .rail a:hover { background: none; color: var(--ink); }
   .rail a[aria-current="true"] { color: var(--ink); border-left-color: var(--energy); }
-  .sheet [id] { scroll-margin-top: 24px; }
+  .sheet [id] { scroll-margin-top: calc(var(--header-height, 54px) + 24px); }
   @media (max-width: 940px) {
     .with-rail { display: block; padding: 0 22px; }
     .with-rail .sheet { max-width: 66ch; margin: 0 auto; }
@@ -369,12 +381,34 @@
     export takes the passages you ticked away as a file.</p>
   </section>
 
-  <section class="m" id="propose">
-    <h2>Propose one</h2>
-    <p class="lead">If there is a behaviour the index should be testing, or a document it should
-    be reading, send it here. We read every proposal ourselves, decide whether it belongs, and pay
-    for the run out of our own credits. If it goes in, we write and tell you, and it appears in
-    the reader for everyone.</p>
+  <!-- Two sections, so each kind of proposal has its own place in the rail and its
+       own button into the form it needs. The wrapper keeps #propose, which links
+       already shared point at. -->
+  <div id="propose">
+  <section class="m">
+    <h2>Propose a new model spec</h2>
+    <p class="lead">A model spec is a document a laboratory publishes saying how its models
+    should behave, the way Anthropic&rsquo;s constitution and OpenAI&rsquo;s model spec do. If
+    there is one the index should be reading, send it here.</p>
+    <p><b>Send the text itself, not only a link.</b> The index quotes documents word for word and
+    pins every citation to the exact version it read, so it keeps its own copy rather than
+    fetching the page again later. Markdown or plain text, up to 2 MB.</p>
+    <p>The form asks for four things beside it: who published it, what it is called, which version
+    this is, and where it is published. The version is whatever the publisher calls this release
+    (a date, a number, a name), because documents get reissued and a citation has to say which
+    one it read. Keep the headings in the text: they are how a citation names the place it points
+    at.</p>
+
+    <p><button type="button" class="open-propose" id="open-propose-specification"
+    data-kind="specification">Propose a new model spec</button></p>
+  </section>
+
+  <section class="m">
+    <h2>Propose a new behaviour</h2>
+    <p class="lead">A behaviour is one thing a model should or should not do, described closely
+    enough that a careful reader could go through a document and mark every passage that bears on
+    it. It is the question the index puts to every model spec, helpfulness or proportionate risk
+    mitigation for instance, and the reader shows the answer passage by passage.</p>
     <p><b>Describing the behaviour is the whole of it, and two sentences carry it.</b> The first
     says what the behaviour requires, in plain terms. The second says where it stops, usually by
     naming the neighbouring thing it would otherwise swallow.</p>
@@ -383,12 +417,15 @@
     trust, tone, transparency and error correction. &ldquo;Honesty, meaning the model does not
     assert what it believes to be false, not whether it volunteers everything it knows&rdquo;
     collects the passages you meant.</p>
-    <p>We cannot promise to run everything. If we decide against it, we will say so rather than
-    leave you waiting.</p>
+    <p>Whichever you send, a person reads it. We read every proposal ourselves, decide whether it
+    belongs, and pay for the run out of our own credits. If it goes in, we write and tell you, and
+    it appears in the reader for everyone. We cannot promise to run everything; if we decide
+    against it, we will say so rather than leave you waiting.</p>
 
-    <p><button type="button" class="open-propose" id="open-propose">Propose a behaviour
-    or a document</button></p>
+    <p><button type="button" class="open-propose" id="open-propose-behaviour"
+    data-kind="behaviour">Propose a new behaviour</button></p>
   </section>
+  </div>
 
   <section class="m">
     <h2>What it does not tell you</h2>
@@ -496,7 +533,7 @@ python3 -m http.server 8080 --directory site</code></pre>
   <dialog class="propose-dialog" id="propose-dialog" open
           aria-labelledby="propose-dialog-title">
     <div class="dialog-head">
-      <h2 id="propose-dialog-title">Propose one</h2>
+      <h2 id="propose-dialog-title">Propose a new model spec or behaviour</h2>
       <button type="button" class="dialog-close" id="propose-close"
               aria-label="Close">Close</button>
     </div>
@@ -505,8 +542,8 @@ python3 -m http.server 8080 --directory site</code></pre>
       <div id="said" hidden></div>
 
       <nav class="choice" aria-label="What you are sending">
+        <button type="button" id="pick-specification" data-kind="specification">A model spec</button>
         <button type="button" id="pick-behaviour" data-kind="behaviour">A behaviour</button>
-        <button type="button" id="pick-specification" data-kind="specification">A document</button>
       </nav>
 
       <div class="form-panel" id="form-behaviour">
@@ -660,8 +697,17 @@ const params = new URLSearchParams(location.search);
  * in, not to the one the page was loaded with. */
 let current = params.get("kind") === "specification" ? "specification" : "behaviour";
 
+/* The title follows the form, so the dialog carries the name of the button that
+   opened it, and changes with the switch. */
+const dialogTitles = {
+  behaviour: "Propose a new behaviour",
+  specification: "Propose a new model spec",
+};
+const dialogTitle = document.getElementById("propose-dialog-title");
+
 function show(kind) {
   current = kind;
+  dialogTitle.textContent = dialogTitles[kind];
   for (const [name, panel] of Object.entries(panels)) {
     panel.hidden = name !== kind;
     if (name === kind) picks[name].setAttribute("aria-current", "true");
@@ -683,7 +729,10 @@ if (dialog) {
   dialog.close();                       // it was open for the no-script case
   show(current);
 
-  document.getElementById("open-propose").addEventListener("click", () => open(current));
+  // Each section has its own button, and it opens the form that section explains.
+  for (const button of document.querySelectorAll(".open-propose")) {
+    button.addEventListener("click", () => open(button.dataset.kind));
+  }
   document.getElementById("propose-close").addEventListener("click", () => dialog.close());
   for (const [kind, button] of Object.entries(picks)) {
     button.addEventListener("click", () => open(kind));
@@ -765,6 +814,14 @@ for (const button of document.querySelectorAll("[data-copy]")) {
     setTimeout(() => { delete button.dataset.said; button.textContent = "Copy"; }, 2000);
   });
 }
+
+/* The header stays over the page and wraps onto more rows on a phone, so what
+   has to clear it (the rail, a heading jumped to) reads its real height from
+   here rather than from a constant. */
+const siteHeader = document.querySelector(".site-header");
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--header-height", `${siteHeader.offsetHeight}px`);
+}).observe(siteHeader);
 
 /* The rail is built from the page's own headings, so it cannot fall out of step
    with them. Each h2 gets an id from its text where it has none. */

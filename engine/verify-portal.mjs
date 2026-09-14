@@ -126,29 +126,36 @@ check(verbs.length > 0 && verbs.every(method => method === "post"),
 // walked too: both forms present, both posting to the route, and the honeypot
 // where a person will not find it but a machine will.
 await open("/how-it-works");
-// The forms live in a dialog behind one button: open, long, and on the page they
-// pushed everything after them out of reach. Written `open` in the markup so
-// they exist without JavaScript, then closed on load and reopened modally.
+// The forms live in a dialog: open, long, and on the page they pushed everything
+// after them out of reach. Written `open` in the markup so they exist without
+// JavaScript, then closed on load and reopened modally. Each of the two sections
+// that explain a kind of proposal has its own button, and it opens that form.
 const dialogue = await page.evaluate(() => {
   const dialog = document.getElementById("propose-dialog");
   return { exists: Boolean(dialog), closedOnLoad: dialog && !dialog.open };
 });
-await page.click("#open-propose");
-await page.waitForTimeout(200);
-const opened = await page.evaluate(() => {
-  const dialog = document.getElementById("propose-dialog");
-  return { open: dialog.open, showing: !document.getElementById("form-behaviour").hidden };
-});
-await page.click("#pick-specification");
-await page.waitForTimeout(200);
-const switched = await page.evaluate(() => ({
-  behaviour: document.getElementById("form-behaviour").hidden,
+const showing = () => page.evaluate(() => ({
+  open: document.getElementById("propose-dialog").open,
+  behaviour: !document.getElementById("form-behaviour").hidden,
   specification: !document.getElementById("form-specification").hidden,
 }));
-check(dialogue.exists && dialogue.closedOnLoad && opened.open && opened.showing
-        && switched.behaviour && switched.specification,
-      "the proposal dialog opens, and switches form without leaving the page",
-      `closed on load ${dialogue.closedOnLoad}, opens ${opened.open}, `
+await page.click("#open-propose-specification");
+await page.waitForTimeout(200);
+const specification = await showing();
+await page.click("#propose-close");
+await page.click("#open-propose-behaviour");
+await page.waitForTimeout(200);
+const behaviour = await showing();
+await page.click("#pick-specification");
+await page.waitForTimeout(200);
+const switched = await showing();
+check(dialogue.exists && dialogue.closedOnLoad
+        && specification.open && specification.specification && !specification.behaviour
+        && behaviour.open && behaviour.behaviour && !behaviour.specification
+        && switched.specification && !switched.behaviour,
+      "each proposal button opens its own form, and the dialog switches without leaving the page",
+      `closed on load ${dialogue.closedOnLoad}, model spec opens its form `
+      + `${specification.specification}, behaviour opens its form ${behaviour.behaviour}, `
       + `switches ${switched.specification}`);
 
 const forms = await page.$$eval("form.propose", nodes => nodes.map(form => ({
