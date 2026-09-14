@@ -129,6 +129,10 @@ fieldset legend { padding: 0 4px; color: var(--muted); font-size: 12px; }
    sits beside it, so the block display has to be undone here. */
 .checks label > span { display: inline; margin: 0; color: var(--ink); }
 .checks input { margin: 0; flex: none; accent-color: var(--accent); }
+/* A single checkbox outside a grid of choices, its caption beside it as there. */
+form.panel label.check { display: flex; gap: 7px; align-items: baseline; margin: 0; }
+form.panel label.check > span { display: inline; margin: 0; color: var(--ink); }
+form.panel label.check input { margin: 0; flex: none; accent-color: var(--accent); }
 
 button {
   padding: 7px 15px;

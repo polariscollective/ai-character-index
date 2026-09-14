@@ -1,11 +1,10 @@
 /* The registry, and the form that adds to it. */
-import { behaviours } from "../../lib/admin-data.mjs";
+import { BEHAVIOUR_SETS, behaviours } from "../../lib/admin-data.mjs";
 import { Outcome } from "../parts.jsx";
 
 export default async function Behaviours({ searchParams }) {
   const params = await searchParams;
   const rows = await behaviours();
-  const sets = [...new Set(rows.map(row => row.set_name))];
 
   return (
     <>
@@ -59,11 +58,15 @@ export default async function Behaviours({ searchParams }) {
           </label>
           <label>
             <span>Set</span>
-            <select name="set" defaultValue="reader-test">
-              {sets.map(set => <option key={set} value={set}>{set}</option>)}
+            <select name="set" defaultValue="user">
+              {BEHAVIOUR_SETS.map(set => <option key={set} value={set}>{set}</option>)}
             </select>
             <span className="hint">
-              The numeric id is assigned within the set, which is why it is not asked for.
+              Keep user for a behaviour you are adding. The other two are the sets the
+              index inherited: a reader-test behaviour needs a hand-written verdict per
+              lab that this portal cannot write, and a publication build refuses one
+              without it. The numeric id is assigned within the set, which is why it is
+              not asked for.
             </span>
           </label>
           <label>

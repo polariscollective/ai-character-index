@@ -10,12 +10,15 @@
  * beats four whose aggregation lives in a query string.
  */
 import panelConfig from "../../engine/panel/panel-config.json" with { type: "json" };
+import { byStatus } from "./runs.mjs";
 import { select, signedLink } from "./supabase.mjs";
 
-const byStatus = (rows) => rows.reduce((counts, row) => {
-  counts[row.status] = (counts[row.status] || 0) + 1;
-  return counts;
-}, {});
+/** The sets a behaviour can be registered into, in the order the form offers them.
+ *
+ * `user` comes first because the other two are the sets the index inherited. A
+ * reader-test behaviour needs a hand-written verdict per lab, which the portal has
+ * no form for, and a publication build refuses one without it. */
+export const BEHAVIOUR_SETS = ["user", "reader-test", "index"];
 
 /** Every behaviour, with the two independent states the registry can be in. */
 export async function behaviours(fetchImpl = fetch) {

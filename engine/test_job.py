@@ -121,6 +121,21 @@ class ComposeTest(unittest.TestCase):
         self.assertEqual(store.inserted, [])
         self.assertIn("already", result["detail"])
 
+    def composed_with(self, params):
+        seen = {}
+        def plan(*args, **kwargs):
+            seen.update(kwargs)
+            return {"id": "r", "estimated_usd": 1.0}, [{"id": "c1"}]
+        sys.modules["compose_run"] = type("M", (), {"plan": staticmethod(plan)})
+        job_module.run_compose(FakeStore(), {"behaviours": ["a"], "specs": ["x"]} | params)
+        return seen
+
+    def test_judging_again_reaches_the_composer(self):
+        self.assertIs(self.composed_with({"again": True}).get("again"), True)
+
+    def test_a_compose_that_does_not_ask_to_judge_again_pays_nothing_twice(self):
+        self.assertIs(self.composed_with({}).get("again"), False)
+
     def test_a_priced_run_is_written_with_its_calls_and_its_author(self):
         store = FakeStore()
         run = {"id": "r-9", "estimated_usd": 3.12}

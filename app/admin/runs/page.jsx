@@ -1,8 +1,11 @@
 /* Composing a run, reading its price, launching it, watching it. */
 import { behaviours, jobs, panels, runs, specifications } from "../../lib/admin-data.mjs";
+import { launchRefusal } from "../../lib/runs.mjs";
 import { Choices, Cost, Jobs, Outcome, State, When } from "../parts.jsx";
 
-const RUBRICS = ["v5", "v3"];
+/* What pressing launch does, named for the state the run is in. It is one act
+   underneath: the job takes every call of the run that is not done. */
+const LAUNCH = { pending: "launch", cancelled: "resume", done: "retry failed calls" };
 
 export default async function Runs({ searchParams }) {
   const params = await searchParams;
@@ -18,7 +21,9 @@ export default async function Runs({ searchParams }) {
           A run is a batch of judge calls, one per behaviour × document × model.
           Every call exists before the work starts, so progress is a count rather
           than an estimate, and resuming is a filter over the calls that are not
-          done. Composing spends nothing; launching spends.
+          done. Composing spends nothing; launching spends. A run that came back
+          with failed calls is retried in place, so its cells keep all their judges
+          in one run.
         </p>
         <Outcome done={params?.done} problem={params?.problem} />
         {rows.length === 0 ? <p className="empty">No run has been composed.</p> : (
@@ -65,13 +70,13 @@ export default async function Runs({ searchParams }) {
                     </td>
                     <td className="num"><Cost run={run} /></td>
                     <td>
-                      {run.status !== "done" && (
+                      {launchRefusal(run, run.by_status) === null && (
                         <form method="post" action="/api/admin/runs"
                               style={{ display: "inline" }}>
                           <input type="hidden" name="verb" value="launch" />
                           <input type="hidden" name="run_id" value={run.id} />
                           <button className="quiet" type="submit">
-                            {run.status === "pending" ? "launch" : "resume"}
+                            {LAUNCH[run.status] || "resume"}
                           </button>
                         </form>
                       )}
@@ -95,16 +100,17 @@ export default async function Runs({ searchParams }) {
       <section>
         <h2>Compose a run</h2>
         <p className="why">
-          This writes the calls and prices them, and spends nothing. A cell a done
-          call already covers is not composed again, so asking twice for the same
-          work costs nothing the second time.
+          This writes the calls and prices them, and spends nothing. Judges score on
+          the v5 rubric, the only one the judging job composes.
         </p>
         <form className="panel" method="post" action="/api/admin/runs">
           <input type="hidden" name="verb" value="compose" />
+          <input type="hidden" name="rubric" value="v5" />
           <Choices
             name="behaviours"
             legend="Behaviours"
-            hint="A behaviour with no brief is refused by the composer, not here."
+            hint="A behaviour marked (no brief) is not refused: it is judged against a
+                  blank scope, so its verdicts answer a question nobody wrote."
             options={behaviourRows.map(row => ({
               value: row.slug,
               label: `${row.name}${row.defined ? "" : " (no brief)"}`,
@@ -133,12 +139,19 @@ export default async function Runs({ searchParams }) {
               two documents is sixty calls.
             </span>
           </label>
-          <label>
-            <span>Rubric</span>
-            <select name="rubric" defaultValue="v5">
-              {RUBRICS.map(rubric => <option key={rubric} value={rubric}>{rubric}</option>)}
-            </select>
-          </label>
+          <fieldset>
+            <legend>Cells already judged</legend>
+            <p className="why" style={{ margin: "0 0 8px" }}>
+              Left unticked, a judge that has already scored a behaviour on this
+              version of a document is left out, and nothing is paid for twice. A cell
+              whose judges end up split across two runs cannot be published, because a
+              publication needs all of a cell&apos;s judges in one run.
+            </p>
+            <label className="check">
+              <input type="checkbox" name="again" />
+              <span>Judge them again with the whole panel, and pay for it</span>
+            </label>
+          </fieldset>
           <button type="submit">Compose and price</button>
         </form>
       </section>

@@ -50,7 +50,8 @@ def run_compose(store, params):
     index_store.install_registry(store)
     run, calls = compose_run.plan(
         store, params["behaviours"], params["specs"],
-        params.get("panel", "frontier_fast"), params.get("rubric", "v5"))
+        params.get("panel", "frontier_fast"), params.get("rubric", "v5"),
+        again=bool(params.get("again", False)))
     run["created_by"] = params.get("created_by", "admin portal")
     if not calls:
         # Every cell already has a done call. Nothing to write, and saying so is

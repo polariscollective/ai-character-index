@@ -76,6 +76,15 @@ class PlanTest(unittest.TestCase):
         self.assertNotIn(("defined-behaviour", "a"),
                          {(c["behaviour_slug"], c["model"]) for c in calls})
 
+    def test_judging_again_composes_every_seat_a_done_call_already_covers(self):
+        """A publication needs all of a cell's judges in one run, so judging a cell
+        again must write the whole panel, not the seats nobody has filled."""
+        done = [{"id": "c", "run_id": "old", "behaviour_slug": "defined-behaviour",
+                 "spec_version_id": "v-new", "model": "a", "status": "done"}]
+        _run, calls = compose_run.plan(FakeStore(done), ["defined-behaviour"], ["corpus"],
+                                       "two", config=CONFIG, again=True)
+        self.assertEqual(sorted(c["model"] for c in calls), ["a", "b"])
+
     def test_a_call_that_failed_is_composed_again(self):
         failed = [{"id": "c", "run_id": "old", "behaviour_slug": "defined-behaviour",
                    "spec_version_id": "v-new", "model": "a", "status": "error"}]

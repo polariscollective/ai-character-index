@@ -6,11 +6,10 @@
  * The registry already carries one row in that state, and one is the number that
  * can be explained. */
 import { requireOperator } from "../../../auth.mjs";
+import { BEHAVIOUR_SETS } from "../../../lib/admin-data.mjs";
 import { insert, select } from "../../../lib/supabase.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
 import { problems, slugProblem } from "../../../lib/locator-safe.mjs";
-
-const SETS = ["index", "reader-test", "user"];
 
 export const POST = formRoute("/admin/behaviours", requireOperator, async (fields, email) => {
   const slug = fields.one("slug");
@@ -23,7 +22,7 @@ export const POST = formRoute("/admin/behaviours", requireOperator, async (field
   const source = fields.one("source");
 
   const found = problems([[slugProblem, slug, "slug"]]);
-  if (!SETS.includes(set)) found.push(`set must be one of ${SETS.join(", ")}`);
+  if (!BEHAVIOUR_SETS.includes(set)) found.push(`set must be one of ${BEHAVIOUR_SETS.join(", ")}`);
   for (const [value, what] of [[name, "name"], [group, "group"], [query, "query"],
                                [boundary, "boundary"], [source, "source"]]) {
     if (!value) found.push(`${what} is required`);

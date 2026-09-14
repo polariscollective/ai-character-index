@@ -87,7 +87,8 @@ const FORMS = [
   ["/admin/specifications", "/api/admin/specifications",
    ["id", "version", "source_url", "markdown", "lab", "title", "short_title",
     "locator_style"]],
-  ["/admin/runs", "/api/admin/runs", ["verb", "behaviours", "specs", "panel", "rubric"]],
+  ["/admin/runs", "/api/admin/runs",
+   ["verb", "behaviours", "specs", "panel", "rubric", "again"]],
   ["/admin/publications", "/api/admin/publications",
    ["verb", "behaviours", "specs", "panel", "rubric", "notes"]],
 ];
@@ -112,6 +113,24 @@ for (const [path, action, fields] of FORMS) {
                + (missing.length ? `, missing: ${missing.join(", ")}` : "")
              : "no form with that action");
 }
+
+// The defaults an operator is likeliest to leave as they are. A reader-test
+// behaviour carries a hand-written verdict per lab that the portal cannot write,
+// so a publication build refuses one registered here; and the judging job composes
+// v5 only, so a form offering another rubric offers a job that fails.
+await open("/admin/behaviours");
+const sets = await page.$eval("form.panel select[name=set]", select => ({
+  value: select.value, options: [...select.options].map(option => option.value),
+}));
+check(sets.value === "user",
+      "a behaviour is registered into the user set unless someone chooses otherwise",
+      `${sets.value}, of ${sets.options.join(", ")}`);
+await open("/admin/runs");
+const rubrics = await page.$$eval("form.panel [name=rubric]", nodes => nodes.flatMap(node =>
+  node.tagName === "SELECT" ? [...node.options].map(option => option.value) : [node.value]));
+check(rubrics.length > 0 && rubrics.every(rubric => rubric === "v5"),
+      "a run can only be composed with the rubric the job judges",
+      rubrics.join(", "));
 
 // Every control that changes something is a POST. A link that changed the index
 // would be followed by a crawler, a prefetch, or a mistaken bookmark.

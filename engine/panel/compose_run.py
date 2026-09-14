@@ -13,6 +13,7 @@ which put them there.
 
 A cell already covered by a `done` call is not composed again. That makes this
 safe to re-run: asking twice for the same work costs nothing the second time.
+--again is the exception, asked for by name, because it pays twice.
 """
 
 import argparse
@@ -40,11 +41,16 @@ CHARS_PER_TOKEN = 4
 OUTPUT_TOKENS_PER_PASSAGE = 8
 
 
-def plan(store, behaviours, specs, panel_name, rubric="v5", config=None):
+def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=False):
     """Every call a run would carry, and what it would cost.
 
     Pure: it reads, it computes, it writes nothing. --go is the only thing that
     writes, and it writes exactly what this returned.
+
+    `again` composes every seat of every cell, including seats a done call already
+    covers. Without it, a panel that shares a judge with an earlier run is composed
+    without that judge, and a publication cannot use the result: it needs all of a
+    cell's judges in one run.
     """
     config = config or h.load_config()
     seats = sorted(h.resolve_panel_seats(config, panel_name)
@@ -66,9 +72,11 @@ def plan(store, behaviours, specs, panel_name, rubric="v5", config=None):
     if unknown_specs:
         sys.exit(f"not specs this index carries: {unknown_specs}")
 
-    # Cells a done call already covers, so asking twice costs nothing twice.
-    done = {(c["behaviour_slug"], c["spec_version_id"], c["model"])
-            for c in store.select("aci_judge_calls") if c["status"] == "done"}
+    # Cells a done call already covers, so asking twice costs nothing twice --
+    # unless the operator asked to judge them again.
+    done = set() if again else {
+        (c["behaviour_slug"], c["spec_version_id"], c["model"])
+        for c in store.select("aci_judge_calls") if c["status"] == "done"}
 
     prompt = judge_call.system_prompt(rubric)
     run_id = str(uuid.uuid4())
@@ -114,6 +122,8 @@ def main(argv=None):
     parser.add_argument("--rubric", default="v5")
     parser.add_argument("--go", action="store_true",
                         help="write the run and its calls; without it, nothing is written")
+    parser.add_argument("--again", action="store_true",
+                        help="judge again cells a done call already covers; pays twice")
     args = parser.parse_args(argv)
 
     store = Store.from_env()
@@ -121,7 +131,7 @@ def main(argv=None):
     run, calls = plan(store,
                       [s for s in args.behaviours.split(",") if s],
                       [s for s in args.specs.split(",") if s],
-                      args.panel, args.rubric)
+                      args.panel, args.rubric, again=args.again)
 
     print(f"  panel        {', '.join(run['panel'])}")
     print(f"  calls        {len(calls)}")
