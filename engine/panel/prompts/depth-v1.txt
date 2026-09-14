@@ -15,6 +15,8 @@ Boundary tests:
 - 3 or 4: a worked example is a concrete scenario for which the document states the sanctioned response, specific enough to adapt into an evaluation item. Format does not matter: a request and response block and a case described in prose both count. An example of a neighbouring behaviour, or a lone illustration of a broader norm, does not.
 - A dedicated section is evidence, not a requirement. Any level can be reached by passages spread across sections, and a dedicated section written only in general terms does not reach 3.
 
+Depth is independent of authority level: a default or a guideline can cover a behaviour as deeply as a hard rule. Note authority in the rationale where it matters.
+
 When in doubt between two levels, give the lower.
 
 Answer with exactly two lines and nothing else:
