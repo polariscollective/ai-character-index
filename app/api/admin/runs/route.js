@@ -27,8 +27,13 @@ export const POST = formRoute("/admin/runs", requireOperator, async (fields, ema
     if (!behaviours.length) refuse("choose at least one behaviour");
     if (!specs.length) refuse("choose at least one document");
     if (!panel) refuse("choose a panel");
+    // Who the verdicts are credited to, which a publication reads back when it
+    // builds its own citation. An address identifies the operator; it does not
+    // read as an author, so the form asks for a name and falls back to the
+    // address rather than inventing one.
+    const credit = fields.one("credit") || email;
     const job = await startJob("compose",
-                               { behaviours, specs, panel, rubric, again, created_by: email },
+                               { behaviours, specs, panel, rubric, again, created_by: credit },
                                email);
     return `Composing: ${behaviours.length} behaviours x ${specs.length} documents `
          + `x panel ${panel}${again ? ", judging again what is already judged" : ""}. `

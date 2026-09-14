@@ -152,6 +152,15 @@ export default async function Runs({ searchParams }) {
               <span>Judge them again with the whole panel, and pay for it</span>
             </label>
           </fieldset>
+          <label>
+            <span>Credit these verdicts to</span>
+            <input type="text" name="credit" placeholder="Ada Lovelace; Charles Babbage" />
+            <span className="hint">
+              A publication computes its own citation from this, so write it as it
+              should read in an author field. Left empty, the run is credited to the
+              address you signed in with, which is not a citation.
+            </span>
+          </label>
           <button type="submit">Compose and price</button>
         </form>
       </section>

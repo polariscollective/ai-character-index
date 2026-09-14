@@ -42,7 +42,11 @@ export const POST = formRoute("/admin/behaviours", requireOperator, async (field
   await insert("aci_behaviours", [{
     slug, name, set_name: set, numeric_id: next, group_name: group,
     definition: definition || query,
-    judging: { query, boundary, source: `${source} (registered by ${email})` },
+    judging: { query, boundary, source },
+    // Who wrote it. A behaviour's two sentences are the whole of what a verdict
+    // is a verdict on, so whoever wrote them is owed the credit for it, and a
+    // publication computes that from this column rather than from a list.
+    added_by: email,
   }]);
   return `Registered ${slug} as ${set} #${next}. It reaches a panel when a run `
        + "names it, and the reader when a publication carries it.";

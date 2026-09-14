@@ -459,6 +459,12 @@ model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     <p>Change the style to whatever your venue asks for. The parts that matter are the authors,
     the publication identifier and the date, because those are what let somebody else fetch the
     same numbers you read.</p>
+    <p><b>The authors are read off the build, not kept in a list.</b> Every run records who
+    produced its verdicts and every behaviour records who wrote it, so a publication computes its
+    own credit from what it actually carries. A build made of somebody&rsquo;s runs names them
+    whether or not anyone remembered to. The method is credited separately and does not change:
+    the scale, the prompt and the citation grammar are Andr&eacute;s Cotton&rsquo;s and Matt
+    Stults&rsquo;s work, whoever runs it.</p>
     <p><b>Cite the specification to its publisher, not to us.</b> The documents are Anthropic&rsquo;s
     and OpenAI&rsquo;s, released under CC0, and they should be cited to Anthropic and to OpenAI.
     What is ours to be cited for is the coverage: which passages address which behaviour, and how
@@ -780,10 +786,17 @@ if (citeText) {
     .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
     .then(publication => {
       const published = publication.published_at.slice(0, 10);
+      const credit = publication.credit || {};
+      /* The authors are the people whose runs produced these verdicts, read off
+         the build itself. A build carrying somebody's work names them without
+         anyone having remembered to add them to a list. */
+      const authors = (credit.judged_by || []).join("; ") || "AI Character Index";
+      const method = (credit.method?.authors || []).join(", ");
       citeText.textContent =
-        `Cotton, A., & Stults, M. (2026). AI Character Index [Data set]. `
-        + `Polaris Collective. Publication ${publication.id}, published ${published}. `
-        + `${location.origin}/spec-reader/?publication=${publication.id}`;
+        `${authors} (${published.slice(0, 4)}). AI Character Index [Data set]. `
+        + `Publication ${publication.id}, published ${published}. `
+        + `${location.origin}/spec-reader/?publication=${publication.id}`
+        + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
     })
     .catch(() => {
       /* Say what is missing rather than leave a loading line that never resolves. */
