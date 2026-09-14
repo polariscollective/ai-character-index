@@ -109,6 +109,28 @@
         background: var(--lift); border: 1px solid var(--hair); border-radius: 4px; }
   pre code { display: block; border: none; background: none; padding: 0;
              font-size: 13px; line-height: 1.7; color: var(--ink); }
+  /* The copy button, added by the script to every block. It sits beside the pre
+     rather than inside it, so it stays put while a long line scrolls under it,
+     and its top centres it on the first line. */
+  .copy-block { position: relative; max-width: 66ch; margin: 16px 0; }
+  .copy-block pre { margin: 0; padding-right: 56px; }
+  /* A long line scrolls under the button, so the strip the button sits on is
+     painted with the block's own ground: the line stops at an edge instead of
+     running through the icon. First line only, clear of a scrollbar. */
+  .copy-block::after { content: ""; position: absolute; top: 1px; right: 1px; width: 55px; height: 44px;
+                       border-radius: 0 3px 0 0; background: var(--lift); }
+  .copy-block button { position: absolute; z-index: 1; top: 13px; right: 12px;
+                       display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+                       border: 1px solid var(--hair2); border-radius: 999px;
+                       background: var(--bg); color: var(--ink2); cursor: pointer;
+                       transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+  .copy-block button:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  .copy-block button[data-said] { background: var(--spec); color: var(--on-accent); border-color: var(--spec); }
+  .copy-block svg { width: 14px; height: 14px; }
+  .copy-block .done, .copy-block button[data-said] .copy { display: none; }
+  .copy-block button[data-said] .done { display: block; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden;
+                     clip-path: inset(50%); white-space: nowrap; }
   /* The framework's link: ink text over a 2px chartreuse underline; hover fills
      the highlight behind it. */
   a { color: var(--ink); text-decoration: none; box-shadow: inset 0 -2px 0 var(--energy);
@@ -143,8 +165,13 @@
   /* ---------- the header, identical to the reader's ---------- */
   /* Same height, same rule, same background. Two surfaces differing by a few
      pixels read as two sites when you move between them, and moving between them
-     is what a nav is for. */
+     is what a nav is for. Held at the top while the page scrolls under it, which
+     is how the reader already behaves: its window is fixed and its content
+     scrolls. */
   .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     height: 54px;
     padding: 0 24px;
     display: flex;
@@ -164,7 +191,10 @@
   .site-header .wordmark:hover { background: none; color: var(--ink); }
   .site-header .mode { align-self: center; }
   @media (max-width: 700px) {
-    .site-header { padding: 0 16px; gap: 12px; }
+    /* Here the brand and the nav can take two rows. The header grows to hold
+       them, because it stays over the page and a row spilling out of it would
+       sit on the text scrolling underneath. */
+    .site-header { height: auto; min-height: 54px; padding: 8px 16px; gap: 6px 12px; }
     .site-header .collective, .site-header .brand-divider { display: none; }
     .site-header nav { gap: 14px; }
   }
@@ -297,6 +327,51 @@ setPalette(qp || saved || "daylight");
 document.querySelectorAll("[data-origin]").forEach(node => {
   node.textContent = node.textContent.replaceAll("/api/mcp", `${location.origin}/api/mcp`);
 });
+
+/* A copy button on every block. Built here rather than written into the
+   markup, so a reader without JavaScript is not offered a button that does
+   nothing, and read at click time, so it copies the absolute endpoint above. */
+const COPY_ICON = '<svg class="copy" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+  + '<rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+  + '<path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const DONE_ICON = '<svg class="done" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+  + '<path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* An icon changing says nothing to a screen reader, so the outcome is spoken here. */
+const copyStatus = document.createElement("span");
+copyStatus.className = "visually-hidden";
+copyStatus.setAttribute("role", "status");
+document.body.append(copyStatus);
+
+for (const pre of document.querySelectorAll("pre")) {
+  const block = document.createElement("div");
+  block.className = "copy-block";
+  pre.replaceWith(block);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.title = "Copy";
+  button.setAttribute("aria-label", "Copy");
+  button.innerHTML = COPY_ICON + DONE_ICON;
+  block.append(pre, button);
+  let reset;
+  button.addEventListener("click", async () => {
+    clearTimeout(reset);
+    try {
+      await navigator.clipboard.writeText(pre.textContent.trim());
+      button.dataset.said = "yes";
+      copyStatus.textContent = "Copied";
+    } catch {
+      /* A refused clipboard is not a dead end: select the text so the usual
+         keyboard copy works. */
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      copyStatus.textContent = "Selected, press copy on your keyboard";
+    }
+    reset = setTimeout(() => { delete button.dataset.said; copyStatus.textContent = ""; }, 2000);
+  });
+}
 </script>
 
 </body>
