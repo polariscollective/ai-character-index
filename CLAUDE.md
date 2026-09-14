@@ -259,7 +259,8 @@ the Runs page now ask the calls rather than the run (`app/lib/runs.mjs`): a run
 with calls that are not done is launched again, in place.
 
 Not fixed, and worth knowing: a retried call's meter reading replaces the failed
-attempt's, so a run's summed cost undercounts what a parse failure spent.
+attempt's, and a retried depth's replaces its failed attempt's the same way, so a
+run's summed cost undercounts what a parse failure spent.
 
 The registration form had a smaller trap beside these. It offered only the sets
 rows already carried, so `user`, the set a publication build accepts a new

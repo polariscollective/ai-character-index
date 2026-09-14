@@ -53,7 +53,20 @@ class BuildTest(unittest.TestCase):
         self.assertIsNone(row["coverage"][NEW]["depth"])
 
     def test_the_strict_variant_is_not_fed_by_another_behaviour(self):
-        self.assertFalse(hasattr(bs, "SLUGS_EXTRA"))
+        """The strict variant was once a re-reading of animal welfare's votes. Votes
+        recorded for one behaviour now reach that behaviour's coverage and no other,
+        whatever the mapping that used to do the feeding was called."""
+        behaviours = [
+            {"slug": "animal-welfare-impacts", "name": "Animal welfare impacts",
+             "definition": "d", "category": "G1"},
+            {"slug": "general-welfare-impacts-strict", "name": "General welfare impacts (strict)",
+             "definition": "d", "category": "G1"}]
+        votes = {("animal-welfare-impacts", locator): verdicts
+                 for (_slug, locator), verdicts in VOTES.items()}
+        animal, strict = bs.build_behaviours(behaviours, votes, TEXT, [OLD, NEW], {},
+                                             PANEL, DISPLAY)
+        self.assertEqual([len(animal["coverage"][d]["passages"]) for d in (OLD, NEW)], [1, 1])
+        self.assertEqual([strict["coverage"][d]["passages"] for d in (OLD, NEW)], [[], []])
 
 
 if __name__ == "__main__":

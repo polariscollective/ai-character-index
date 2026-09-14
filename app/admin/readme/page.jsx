@@ -29,11 +29,12 @@ const PANEL_USE = {
   frontier_primary: "Kept for older runs. Not needed for new work.",
 };
 
-/* What the composer priced one behaviour at, per panel and specification, on the
- * date in the caption. Recomputed with compose_run.plan, which writes nothing. */
+/* What the composer priced one behaviour at, per panel and document, depth calls
+ * included, on the date in the caption. Recomputed with compose_run.plan, which
+ * writes nothing. */
 const ESTIMATES = [
-  ["frontier_fast", "0.79", "1.17"],
-  ["cheap", "0.08", "0.12"],
+  ["frontier_fast", "0.85", "1.23"],
+  ["cheap", "0.09", "0.13"],
   ["itest", "0.01", "0.01"],
 ];
 
@@ -351,9 +352,11 @@ export default function Readme() {
         </p>
         <p>
           So ten behaviours on the Model Spec with <code>frontier_fast</code> come to
-          about $12. The estimate counts the length of the specification and a short
-          answer per passage. It does not count the reasoning some judges do before
-          answering, so the real bill for <code>sol</code> and <code>fable</code> can
+          about $12. The estimate counts the length of the document, a short answer per
+          passage, and the depth call each judge makes after the passages, priced on
+          3,000 characters of passages and a 600-token answer. It does not count the
+          reasoning some judges do before answering, so the real bill for{" "}
+          <code>sol</code> and <code>fable</code> can
           be higher. It is good for telling a two-dollar run from a two-hundred-dollar
           one.
         </p>
@@ -367,8 +370,8 @@ export default function Readme() {
         <ol>
           <li>
             <strong>Publications, Build a publication.</strong> Tick the behaviours.
-            Tick the documents: both, if the reader should compare the two labs.
-            Keep the note saying what changed. Press{" "}
+            Tick the documents: more than one, if the reader should compare documents.
+            Write a note saying what changed. Press{" "}
             <strong>Build as a draft</strong>.
           </li>
           <li>
@@ -423,9 +426,11 @@ export default function Readme() {
             Press <strong>Register</strong>.
           </li>
           <li>
-            <strong>Runs, compose it on both documents with{" "}
-            <code>frontier_fast</code>, and launch.</strong> Two documents times
-            three judges is six calls, about $2.
+            <strong>Runs, compose it on every document with{" "}
+            <code>frontier_fast</code>, and launch.</strong> A run is its behaviours
+            times its documents times three judges, plus a depth call from each judge on
+            each document: on the constitution and the Model Spec, six calls and six
+            depth calls, about $2.
           </li>
           <li>
             <strong>Publications, build a draft</strong> with the new behaviour and the
