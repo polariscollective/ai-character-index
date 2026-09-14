@@ -30,10 +30,8 @@ the behaviour, core establishes it there, related bears on it without
 establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
-Passage counts are not a like-for-like measure between laboratories. Some
-behaviours were swept by more judges against one document than another, so that
-document surfaced more candidate passages. Any answer spanning more than one
-specification says so in the response.
+Every behaviour and specification pair was judged by one panel, and carries the
+depth that panel gave it, from 0 (absent) to 4 (rules with worked examples).
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
