@@ -110,13 +110,20 @@ class JobDispatchTest(unittest.TestCase):
 
 
 class ComposeTest(unittest.TestCase):
+    def stub(self, plan):
+        sys.modules["compose_run"] = type("M", (), {
+            "plan": staticmethod(plan),
+            "depth_rows": staticmethod(
+                lambda calls: [{"call_id": c["id"], "status": "pending"} for c in calls]),
+        })
+
     def test_nothing_to_do_writes_nothing_and_says_so(self):
         """Asking twice for work already done must cost nothing the second time,
         and must not leave an empty run behind to look at."""
         store = FakeStore()
         plan = lambda *a, **k: ({"id": "r", "estimated_usd": 0}, [])
-        sys.modules["compose_run"] = type("M", (), {"plan": staticmethod(plan)})
-        result = job_module.run_compose(store, {"behaviours": ["a"], "specs": ["x"]})
+        self.stub(plan)
+        result = job_module.run_compose(store, {"behaviours": ["a"], "documents": ["x"]})
         self.assertIsNone(result["run_id"])
         self.assertEqual(store.inserted, [])
         self.assertIn("already", result["detail"])
@@ -124,10 +131,10 @@ class ComposeTest(unittest.TestCase):
     def composed_with(self, params):
         seen = {}
         def plan(*args, **kwargs):
-            seen.update(kwargs)
+            seen.update(kwargs, args=args)
             return {"id": "r", "estimated_usd": 1.0}, [{"id": "c1"}]
-        sys.modules["compose_run"] = type("M", (), {"plan": staticmethod(plan)})
-        job_module.run_compose(FakeStore(), {"behaviours": ["a"], "specs": ["x"]} | params)
+        self.stub(plan)
+        job_module.run_compose(FakeStore(), {"behaviours": ["a"], "documents": ["v-1"]} | params)
         return seen
 
     def test_judging_again_reaches_the_composer(self):
@@ -136,18 +143,23 @@ class ComposeTest(unittest.TestCase):
     def test_a_compose_that_does_not_ask_to_judge_again_pays_nothing_twice(self):
         self.assertIs(self.composed_with({}).get("again"), False)
 
-    def test_a_priced_run_is_written_with_its_calls_and_its_author(self):
+    def test_the_documents_are_composed_with_the_configured_panel(self):
+        seen = self.composed_with({})
+        self.assertEqual(seen["args"][2], ["v-1"])
+        self.assertIsNone(seen["args"][3], "the panel is the configuration's, never a form's")
+
+    def test_a_priced_run_is_written_with_its_calls_its_depths_and_its_author(self):
         store = FakeStore()
         run = {"id": "r-9", "estimated_usd": 3.12}
         calls = [{"id": "c1"}, {"id": "c2"}]
-        sys.modules["compose_run"] = type(
-            "M", (), {"plan": staticmethod(lambda *a, **k: (run, calls))})
+        self.stub(lambda *a, **k: (run, calls))
         result = job_module.run_compose(
-            store, {"behaviours": ["a"], "specs": ["x"], "created_by": "me@example.com"})
+            store, {"behaviours": ["a"], "documents": ["x"], "created_by": "Polaris Collective"})
         self.assertEqual(result["run_id"], "r-9")
-        self.assertEqual(run["created_by"], "me@example.com")
+        self.assertEqual(run["created_by"], "Polaris Collective")
         self.assertEqual([table for table, _ in store.inserted],
-                         ["aci_runs", "aci_judge_calls"])
+                         ["aci_runs", "aci_judge_calls", "aci_depths"])
+        self.assertEqual([row["call_id"] for row in store.inserted[2][1]], ["c1", "c2"])
         self.assertIn("$3.12", result["detail"])
 
 

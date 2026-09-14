@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compose a run: the rows the job will consume.
 
-    python3 engine/panel/compose_run.py --behaviours=a,b --specs=x,y     # priced, not written
-    python3 engine/panel/compose_run.py --behaviours=a,b --specs=x,y --go
+    python3 engine/panel/compose_run.py --behaviours=a,b --documents=<version id>,<version id>   # priced, not written
+    python3 engine/panel/compose_run.py --behaviours=a,b --documents=<version id> --go
 
 Priced and printed by default, written only with --go, because a run spends real
 money and the amount should be read before it is spent rather than after.
@@ -30,6 +30,7 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 
 import index_store               # noqa: E402
 import judge_call                # noqa: E402
+import depth_call                # noqa: E402
 from store import Store          # noqa: E402
 
 h = judge_call.h
@@ -40,12 +41,24 @@ h = judge_call.h
 CHARS_PER_TOKEN = 4
 OUTPUT_TOKENS_PER_PASSAGE = 8
 
+# A depth call reads the passages the reader shows for a cell, which are not
+# known until the passages are judged. Priced on a fixed allowance: the inherited
+# run's median cell carried about 2,100 characters of them, its largest 5,600.
+DEPTH_PASSAGE_ALLOWANCE = 3000
+DEPTH_OUTPUT_TOKENS = 600
 
-def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=False):
+
+def plan(store, behaviours, documents, panel_name=None, rubric="v5", config=None,
+         again=False):
     """Every call a run would carry, and what it would cost.
 
     Pure: it reads, it computes, it writes nothing. --go is the only thing that
     writes, and it writes exactly what this returned.
+
+    `documents` are aci_spec_versions ids. A document is a version, judged as
+    itself: registering a newer one does not replace it here. `panel_name`
+    defaults to the configuration's display panel, the one panel the index
+    publishes.
 
     `again` composes every seat of every cell, including seats a done call already
     covers. Without it, a panel that shares a judge with an earlier run is composed
@@ -53,9 +66,8 @@ def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=F
     cell's judges in one run.
     """
     config = config or h.load_config()
-    seats = sorted(h.resolve_panel_seats(config, panel_name)
-                   if hasattr(h, "resolve_panel_seats")
-                   else config["panels"][panel_name])
+    panel_name = panel_name or config["display"]["panel"]
+    seats = sorted(config["panels"][panel_name])
 
     registry = index_store.behaviours(store)
     unknown = sorted(set(behaviours) - set(registry))
@@ -63,14 +75,9 @@ def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=F
         sys.exit(f"not behaviours this index carries: {unknown}")
 
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
-    by_spec = {}
-    for version in versions.values():
-        current = by_spec.get(version["spec_id"])
-        if current is None or version["version"] > current["version"]:
-            by_spec[version["spec_id"]] = version
-    unknown_specs = sorted(set(specs) - set(by_spec))
-    if unknown_specs:
-        sys.exit(f"not specs this index carries: {unknown_specs}")
+    unknown_documents = sorted(set(documents) - set(versions))
+    if unknown_documents:
+        sys.exit(f"not document versions this index carries: {unknown_documents}")
 
     # Cells a done call already covers, so asking twice costs nothing twice --
     # unless the operator asked to judge them again.
@@ -79,13 +86,16 @@ def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=F
         for c in store.select("aci_judge_calls") if c["status"] == "done"}
 
     prompt = judge_call.system_prompt(rubric)
+    depth_prompt = depth_call.system_prompt()
     run_id = str(uuid.uuid4())
     calls, estimate = [], 0.0
     for slug in sorted(behaviours):
-        for spec in sorted(specs):
-            version = by_spec[spec]
+        brief = len(json.dumps(registry[slug].get("judging") or {}))
+        depth_tokens_in = (len(depth_prompt) + brief + DEPTH_PASSAGE_ALLOWANCE) // CHARS_PER_TOKEN
+        for document in sorted(documents):
+            version = versions[document]
             tokens_in = len(version["markdown"]) // CHARS_PER_TOKEN
-            passages = len(h.passages(spec))
+            passages = len(h.passages(version["spec_id"], version["version"]))
             for seat in seats:
                 if (slug, version["id"], seat) in done:
                     continue
@@ -94,14 +104,22 @@ def plan(store, behaviours, specs, panel_name, rubric="v5", config=None, again=F
                               "model": seat, "status": "pending"})
                 estimate += seat_cost(seat, tokens_in,
                                       passages * OUTPUT_TOKENS_PER_PASSAGE, config)
+                estimate += seat_cost(seat, depth_tokens_in, DEPTH_OUTPUT_TOKENS, config)
 
     run = {"id": run_id, "created_by": "compose_run.py", "status": "pending",
            "rubric": rubric, "prompt": prompt,
            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-           "panel": seats, "config": config | {"via": judge_call.VIA[rubric]},
+           "panel": seats,
+           "config": config | {"via": judge_call.VIA[rubric],
+                               "depth_prompt_sha256": depth_call.prompt_sha256()},
            "behaviours": {slug: registry[slug] for slug in sorted(behaviours)},
            "estimated_usd": round(estimate, 2)}
     return run, calls
+
+
+def depth_rows(calls):
+    """A pending depth for every call: each judge of a cell also gives its depth."""
+    return [{"call_id": call["id"], "status": "pending"} for call in calls]
 
 
 def seat_cost(seat, tokens_in, tokens_out, config):
@@ -116,9 +134,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--behaviours", required=True,
                         help="comma-separated slugs")
-    parser.add_argument("--specs", required=True,
-                        help="comma-separated spec ids; the newest version of each")
-    parser.add_argument("--panel", default="frontier_fast")
+    parser.add_argument("--documents", required=True,
+                        help="comma-separated aci_spec_versions ids")
+    parser.add_argument("--panel", default=None,
+                        help="a configured panel; the display panel by default")
     parser.add_argument("--rubric", default="v5")
     parser.add_argument("--go", action="store_true",
                         help="write the run and its calls; without it, nothing is written")
@@ -130,7 +149,7 @@ def main(argv=None):
     index_store.install_registry(store)
     run, calls = plan(store,
                       [s for s in args.behaviours.split(",") if s],
-                      [s for s in args.specs.split(",") if s],
+                      [s for s in args.documents.split(",") if s],
                       args.panel, args.rubric, again=args.again)
 
     print(f"  panel        {', '.join(run['panel'])}")
@@ -144,6 +163,7 @@ def main(argv=None):
         return 0
     store.insert("aci_runs", [run])
     store.insert("aci_judge_calls", calls)
+    store.insert("aci_depths", depth_rows(calls))
     print(f"written: run {run['id']}")
     return 0
 

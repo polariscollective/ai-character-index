@@ -31,7 +31,7 @@ class FakeStore:
                  "numeric_id": 2, "group_name": "g", "definition": "d", "facets": [],
                  "judging": None}],
             "aci_spec_versions": [
-                {"id": "v-old", "spec_id": "corpus", "version": "2025-01-01",
+                {"id": "v-old", "spec_id": "corpus", "version": "2025-06-01",
                  "markdown": "x" * 4000, "source_url": ""},
                 {"id": "v-new", "spec_id": "corpus", "version": "2026-01-01",
                  "markdown": "x" * 4000, "source_url": ""}],
@@ -50,23 +50,59 @@ class PlanTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         fixture.install_spec()
+        # An older version of the corpus beside the fixture's own, so a test can
+        # name a version that is not the newest.
+        cite.SPECS[(fixture.SPEC_NAME, "2025-06-01")] = "corpus"
 
     @classmethod
     def tearDownClass(cls):
         cite.reset_registry()
 
     def plan(self, store, behaviours=("defined-behaviour", "undefined-behaviour")):
-        return compose_run.plan(store, list(behaviours), ["corpus"], "two",
+        return compose_run.plan(store, list(behaviours), ["v-new"], "two",
                                 config=CONFIG)
 
     def test_the_calls_are_behaviours_times_versions_times_seats(self):
         run, calls = self.plan(FakeStore())
         self.assertEqual(len(calls), 2 * 1 * 2)
 
-    def test_only_the_newest_version_of_a_spec_is_judged(self):
+    def test_the_version_named_is_the_version_judged(self):
+        _run, calls = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-old"],
+                                       "two", config=CONFIG)
+        self.assertEqual({c["spec_version_id"] for c in calls}, {"v-old"},
+                         "a document is a version: an older one is judged as itself")
+
+    def test_a_document_the_index_does_not_carry_is_refused(self):
+        with self.assertRaises(SystemExit):
+            compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-nope"], "two",
+                             config=CONFIG)
+
+    def test_every_call_has_a_pending_depth(self):
         _run, calls = self.plan(FakeStore())
-        self.assertEqual({c["spec_version_id"] for c in calls}, {"v-new"},
-                         "an older version is history, not work")
+        rows = compose_run.depth_rows(calls)
+        self.assertEqual([row["call_id"] for row in rows], [call["id"] for call in calls])
+        self.assertTrue(all(row["status"] == "pending" for row in rows))
+
+    def test_the_depth_calls_are_priced(self):
+        dear = dict(CONFIG, models={k: dict(v, price_per_mtok=[1000.0, 2000.0])
+                                    for k, v in CONFIG["models"].items()})
+        run, _calls = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"],
+                                       "two", config=dear)
+        passages = len(compose_run.h.passages("corpus", "2026-01-01"))
+        passages_only = 2 * compose_run.seat_cost(
+            "a", 4000 // 4, passages * compose_run.OUTPUT_TOKENS_PER_PASSAGE, dear)
+        self.assertGreater(run["estimated_usd"], round(passages_only, 2))
+
+    def test_the_run_records_the_depth_prompt_it_will_use(self):
+        run, _calls = self.plan(FakeStore())
+        self.assertEqual(run["config"]["depth_prompt_sha256"],
+                         compose_run.depth_call.prompt_sha256())
+
+    def test_without_a_panel_the_display_panel_is_used(self):
+        config = dict(CONFIG, display={"panel": "two"})
+        run, _calls = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"],
+                                       config=config)
+        self.assertEqual(run["panel"], ["a", "b"])
 
     def test_a_cell_a_done_call_covers_is_not_composed_again(self):
         done = [{"id": "c", "run_id": "old", "behaviour_slug": "defined-behaviour",
@@ -81,7 +117,7 @@ class PlanTest(unittest.TestCase):
         again must write the whole panel, not the seats nobody has filled."""
         done = [{"id": "c", "run_id": "old", "behaviour_slug": "defined-behaviour",
                  "spec_version_id": "v-new", "model": "a", "status": "done"}]
-        _run, calls = compose_run.plan(FakeStore(done), ["defined-behaviour"], ["corpus"],
+        _run, calls = compose_run.plan(FakeStore(done), ["defined-behaviour"], ["v-new"],
                                        "two", config=CONFIG, again=True)
         self.assertEqual(sorted(c["model"] for c in calls), ["a", "b"])
 
@@ -96,9 +132,9 @@ class PlanTest(unittest.TestCase):
         self.assertGreater(run["estimated_usd"], 0)
         dearer = dict(CONFIG, models={k: dict(v, price_per_mtok=[10.0, 20.0])
                                       for k, v in CONFIG["models"].items()})
-        pricier, _ = compose_run.plan(FakeStore(), ["defined-behaviour"], ["corpus"],
+        pricier, _ = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"],
                                       "two", config=dearer)
-        cheaper, _ = compose_run.plan(FakeStore(), ["defined-behaviour"], ["corpus"],
+        cheaper, _ = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"],
                                       "two", config=CONFIG)
         self.assertGreater(pricier["estimated_usd"], cheaper["estimated_usd"])
 
