@@ -99,6 +99,49 @@ class ParseTest(unittest.TestCase):
             depth_call.parse("DEPTH: 2\nRATIONALE: The no_sycophancy section is general.")[1],
             "The no_sycophancy section is general.")
 
+    # R1: a trailing line that starts with "Depth:" but goes on to argue in prose
+    # is not an answer, and must not steal the depth an earlier, real answer gave.
+    def test_prose_naming_a_higher_depth_does_not_override_the_real_answer(self):
+        reply = ("DEPTH: 3\nRATIONALE: Rules, but no worked examples, so\n"
+                 "Depth: 4 is not reached.")
+        self.assertEqual(depth_call.parse(reply), (3, "Rules, but no worked examples, so"))
+
+    def test_a_bulleted_prose_line_naming_a_depth_does_not_override_the_real_answer(self):
+        reply = ("DEPTH: 3\nRATIONALE: Rules without examples.\n"
+                 "- Depth: 4 would need examples.")
+        self.assertEqual(depth_call.parse(reply), (3, "Rules without examples."))
+
+    def test_a_figure_followed_by_a_denominator_of_four_still_answers(self):
+        self.assertEqual(depth_call.parse("DEPTH: 3/4\nRATIONALE: Rules.")[0], 3)
+        self.assertEqual(depth_call.parse("DEPTH: 3 of 4\nRATIONALE: Rules.")[0], 3)
+
+    def test_a_figure_followed_by_a_parenthetical_still_answers(self):
+        self.assertEqual(
+            depth_call.parse("DEPTH: 3 (rules stated, no worked examples)\n"
+                             "RATIONALE: Rules.")[0], 3)
+
+    def test_a_figure_followed_by_one_word_of_the_scale_still_answers(self):
+        self.assertEqual(depth_call.parse("DEPTH: 3 - prescribed\nRATIONALE: Rules.")[0], 3)
+        self.assertEqual(depth_call.parse("DEPTH: 3, prescribed.\nRATIONALE: Rules.")[0], 3)
+
+    def test_a_figure_followed_by_bare_punctuation_still_answers(self):
+        self.assertEqual(depth_call.parse("DEPTH: 3.\nRATIONALE: Rules.")[0], 3)
+        self.assertEqual(depth_call.parse("DEPTH: 3)\nRATIONALE: Rules.")[0], 3)
+
+    # R2: an empty RATIONALE must not blank out a rationale that already had text,
+    # and a label whose value is split onto the next line still answers.
+    def test_a_trailing_empty_rationale_does_not_blank_an_earlier_one(self):
+        reply = "RATIONALE: Rules, no examples.\nDEPTH: 3\nRATIONALE:"
+        self.assertEqual(depth_call.parse(reply), (3, "Rules, no examples."))
+
+    def test_a_rationale_split_onto_the_next_line_is_read(self):
+        self.assertEqual(
+            depth_call.parse("RATIONALE:\nRules are stated without examples."),
+            (None, "Rules are stated without examples."))
+
+    def test_a_depth_split_onto_the_next_line_is_read(self):
+        self.assertEqual(depth_call.parse("DEPTH:\n3"), (3, None))
+
 
 if __name__ == "__main__":
     unittest.main()
