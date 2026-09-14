@@ -11,7 +11,7 @@
  * judges in one run, which is what a publication needs of a cell. */
 import { select, update } from "../../../lib/supabase.mjs";
 import { startJob } from "../../../lib/jobs.mjs";
-import { byStatus, launchRefusal, unfinished } from "../../../lib/runs.mjs";
+import { byStatus, launchRefusal, mergeCounts, unfinished } from "../../../lib/runs.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
 
@@ -20,24 +20,22 @@ export const POST = formRoute("/admin/runs", requireOperator, async (fields, ema
 
   if (verb === "compose") {
     const behaviours = fields.many("behaviours");
-    const specs = fields.many("specs");
-    const panel = fields.one("panel");
+    const documents = fields.many("documents");
     const rubric = fields.one("rubric") || "v5";
     const again = fields.on("again");
     if (!behaviours.length) refuse("choose at least one behaviour");
-    if (!specs.length) refuse("choose at least one document");
-    if (!panel) refuse("choose a panel");
+    if (!documents.length) refuse("choose at least one document");
     // Who the verdicts are credited to, which a publication reads back when it
     // builds its own citation. An address identifies the operator; it does not
     // read as an author, so the form asks for a name and falls back to the
     // address rather than inventing one.
     const credit = fields.one("credit") || email;
     const job = await startJob("compose",
-                               { behaviours, specs, panel, rubric, again, created_by: credit },
+                               { behaviours, documents, rubric, again, created_by: credit },
                                email);
-    return `Composing: ${behaviours.length} behaviours x ${specs.length} documents `
-         + `x panel ${panel}${again ? ", judging again what is already judged" : ""}. `
-         + `Nothing is spent yet -- the job writes the calls and `
+    return `Composing: ${behaviours.length} behaviours x ${documents.length} documents`
+         + `${again ? ", judging again what is already judged" : ""}. `
+         + `Nothing is spent yet -- the job writes the calls, their depths and `
          + `their price, and the run appears here with a launch control. `
          + `Job ${job.id.slice(0, 8)}, ${job.origin}.`;
   }
@@ -46,9 +44,12 @@ export const POST = formRoute("/admin/runs", requireOperator, async (fields, ema
     const runId = fields.one("run_id");
     const [[run], calls] = await Promise.all([
       select("aci_runs", `select=id,status,estimated_usd&id=eq.${runId}`),
-      select("aci_judge_calls", `select=status&run_id=eq.${runId}`),
+      select("aci_judge_calls", `select=id,status&run_id=eq.${runId}`),
     ]);
-    const counts = byStatus(calls);
+    const depths = calls.length
+      ? await select("aci_depths", `select=status&call_id=in.(${calls.map(c => c.id).join(",")})`)
+      : [];
+    const counts = mergeCounts(byStatus(calls), byStatus(depths));
     const refusal = launchRefusal(run, counts);
     if (refusal) refuse(refusal);
     // A cancelled run may be launched again: cancelling is a pause an operator

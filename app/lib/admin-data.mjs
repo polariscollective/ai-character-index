@@ -13,19 +13,12 @@ import panelConfig from "../../engine/panel/panel-config.json" with { type: "jso
 import { byStatus } from "./runs.mjs";
 import { select, signedLink } from "./supabase.mjs";
 
-/** The sets a behaviour can be registered into, in the order the form offers them.
- *
- * `user` comes first because the other two are the sets the index inherited. A
- * reader-test behaviour needs a hand-written verdict per lab, which the portal has
- * no form for, and a publication build refuses one without it. */
-export const BEHAVIOUR_SETS = ["user", "reader-test", "index"];
-
 /** Every behaviour, with the two independent states the registry can be in. */
 export async function behaviours(fetchImpl = fetch) {
   const [rows, calls] = await Promise.all([
     select("aci_behaviours",
-           "select=slug,name,set_name,numeric_id,group_name,definition,judging"
-           + "&order=set_name.asc,numeric_id.asc", fetchImpl),
+           "select=slug,name,numeric_id,group_name,definition,judging"
+           + "&order=group_name.asc,name.asc", fetchImpl),
     select("aci_judge_calls", "select=behaviour_slug,status", fetchImpl),
   ]);
   const judged = new Set(calls.filter(c => c.status === "done").map(c => c.behaviour_slug));
@@ -61,18 +54,22 @@ export async function labs(fetchImpl = fetch) {
   return select("aci_labs", "select=id,name&order=name.asc", fetchImpl);
 }
 
-/** Runs, newest first, each with its calls counted by status. */
+/** Runs, newest first, each with its calls and its depths counted by status. */
 export async function runs(limit = 25, fetchImpl = fetch) {
-  const [rows, calls] = await Promise.all([
+  const [rows, calls, depths] = await Promise.all([
     select("aci_runs",
            "select=id,created_at,created_by,status,rubric,panel,estimated_usd,cost_usd,"
            + "error,started_at,finished_at&order=created_at.desc"
            + `&limit=${limit}`, fetchImpl),
-    select("aci_judge_calls", "select=run_id,status", fetchImpl),
+    select("aci_judge_calls", "select=id,run_id,status", fetchImpl),
+    select("aci_depths", "select=call_id,status", fetchImpl),
   ]);
   return rows.map(run => {
     const mine = calls.filter(call => call.run_id === run.id);
-    return { ...run, calls: mine.length, by_status: byStatus(mine) };
+    const ids = new Set(mine.map(call => call.id));
+    const theirDepths = depths.filter(depth => ids.has(depth.call_id));
+    return { ...run, calls: mine.length, by_status: byStatus(mine),
+             depths: theirDepths.length, depth_status: byStatus(theirDepths) };
   });
 }
 
@@ -150,4 +147,10 @@ export function panels() {
     .filter(([name, seats]) => !name.startsWith("_") && Array.isArray(seats))
     .map(([name, seats]) => ({ name, seats }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The one panel the index composes and publishes with: `display.panel`. */
+export function displayPanel() {
+  const name = panelConfig.display.panel;
+  return { name, seats: [...panelConfig.panels[name]].sort() };
 }

@@ -83,14 +83,14 @@ check(answers.every(([, status]) => status === 200), "every link in the bar reso
 // reads an empty string, and the operator is told a required field is required.
 const FORMS = [
   ["/admin/behaviours", "/api/admin/behaviours",
-   ["slug", "name", "set", "group", "query", "boundary", "source", "definition"]],
+   ["slug", "name", "group", "query", "boundary", "source", "definition", "credit"]],
   ["/admin/specifications", "/api/admin/specifications",
-   ["id", "version", "source_url", "markdown", "lab", "title", "short_title",
+   ["lab", "name", "version", "source_url", "markdown", "title", "short_title",
     "locator_style"]],
   ["/admin/runs", "/api/admin/runs",
-   ["verb", "behaviours", "specs", "panel", "rubric", "again"]],
+   ["verb", "behaviours", "documents", "rubric", "again", "credit"]],
   ["/admin/publications", "/api/admin/publications",
-   ["verb", "behaviours", "specs", "panel", "rubric", "notes"]],
+   ["verb", "behaviours", "documents", "rubric", "notes"]],
 ];
 
 for (const [path, action, fields] of FORMS) {
@@ -114,20 +114,20 @@ for (const [path, action, fields] of FORMS) {
              : "no form with that action");
 }
 
-// The defaults an operator is likeliest to leave as they are. A reader-test
-// behaviour carries a hand-written verdict per lab that the portal cannot write,
-// so a publication build refuses one registered here; and the judging job composes
-// v5 only, so a form offering another rubric offers a job that fails.
-await open("/admin/behaviours");
-const sets = await page.$eval("form.panel select[name=set]", select => ({
-  value: select.value, options: [...select.options].map(option => option.value),
-}));
-check(sets.value === "user",
-      "a behaviour is registered into the user set unless someone chooses otherwise",
-      `${sets.value}, of ${sets.options.join(", ")}`);
+// What the forms no longer offer. The index publishes one panel, so no form
+// chooses judges; sets decide nothing, so none asks for one; and the judging job
+// composes v5 only.
+const offered = async (path, selector) => {
+  await open(path);
+  return page.$$eval(selector, nodes => nodes.length);
+};
+check(await offered("/admin/behaviours", "form.panel [name=set]") === 0,
+      "a behaviour is registered with no set", "");
+check(await offered("/admin/runs", "form.panel [name=panel]") === 0
+        && await offered("/admin/publications", "form.panel [name=panel]") === 0,
+      "no form offers a panel", "");
 await open("/admin/runs");
-const rubrics = await page.$$eval("form.panel [name=rubric]", nodes => nodes.flatMap(node =>
-  node.tagName === "SELECT" ? [...node.options].map(option => option.value) : [node.value]));
+const rubrics = await page.$$eval("form.panel [name=rubric]", nodes => nodes.map(node => node.value));
 check(rubrics.length > 0 && rubrics.every(rubric => rubric === "v5"),
       "a run can only be composed with the rubric the job judges",
       rubrics.join(", "));

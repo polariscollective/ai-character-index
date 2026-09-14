@@ -20,6 +20,16 @@ export function unfinished(counts) {
     .reduce((total, [status, count]) => (status === "done" ? total : total + count), 0);
 }
 
+/** Tallies as one: a run's work is its passage calls and its depths. */
+export function mergeCounts(...tallies) {
+  return tallies.reduce((total, tally) => {
+    for (const [status, count] of Object.entries(tally || {})) {
+      total[status] = (total[status] || 0) + count;
+    }
+    return total;
+  }, {});
+}
+
 /** Why a run cannot be launched, or null when it can. */
 export function launchRefusal(run, counts) {
   if (!run) return "no such run";

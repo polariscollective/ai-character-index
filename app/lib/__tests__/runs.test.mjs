@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { launchRefusal } from "../runs.mjs";
+import { launchRefusal, mergeCounts } from "../runs.mjs";
 
 test("a pending run is launched", () => {
   assert.equal(launchRefusal({ status: "pending" }, { pending: 6 }), null);
@@ -33,4 +33,12 @@ test("a cancelled run is launched again: cancelling is a pause", () => {
 
 test("no run is refused as no run", () => {
   assert.equal(launchRefusal(undefined, {}), "no such run");
+});
+
+test("a run's work is its passage calls and its depths, counted as one", () => {
+  assert.deepEqual(mergeCounts({ done: 6 }, { done: 4, pending: 2 }), { done: 10, pending: 2 });
+});
+
+test("a done run whose depths are not all given can be launched again", () => {
+  assert.equal(launchRefusal({ status: "done" }, mergeCounts({ done: 6 }, { error: 1, done: 5 })), null);
 });

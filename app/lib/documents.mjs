@@ -1,0 +1,52 @@
+/**
+ * What a document is called, and how a form lists them.
+ *
+ * A document is a version of a specification. A specification's id is
+ * `<lab>--<name>`: the double hyphen splits the lab from a name that may carry
+ * single hyphens, and a document's id is that followed by `@<version>`, the head
+ * of every locator into it. The citation grammar reads a specification name as
+ * [a-z-]+ and a version as a date, so those are what a name and a version may be.
+ */
+const NAME = /^[a-z]+(-[a-z]+)*$/;
+const VERSION = /^\d{4}-\d{2}-\d{2}$/;
+
+export function specificationId(lab, name) {
+  return `${lab}--${name}`;
+}
+
+export function nameProblem(name) {
+  if (!name) return "the document name is required";
+  if (!NAME.test(name)) {
+    return "the document name must be lowercase words joined by single hyphens, "
+         + "such as model-spec: a citation reads it as letters and hyphens";
+  }
+  return null;
+}
+
+export function versionProblem(version) {
+  if (!version) return "the version is required";
+  if (!VERSION.test(version)) {
+    return "the version must be the release date, written 2026-08-18: a citation reads it as a date";
+  }
+  return null;
+}
+
+/** Why a label cannot be registered for a document, or null.
+ *
+ * The label is part of the document's id, so a second text under the same label
+ * would share the first one's id; the table's unique key is on the digest only.
+ * A corrected text is a new version with a label of its own. */
+export function labelTaken(versions, specId, version) {
+  return versions.some(row => row.spec_id === specId && row.version === version)
+    ? `${specId}@${version} is already registered. A document is a version and its `
+      + "label is part of its id, so a corrected text needs a label of its own."
+    : null;
+}
+
+/** Every version as its own document, in the order the specifications list them. */
+export function documentChoices(specs) {
+  return specs.flatMap(spec => spec.versions.map(version => ({
+    value: version.id,
+    label: `${spec.title} ${version.version}`,
+  })));
+}

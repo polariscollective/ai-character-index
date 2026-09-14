@@ -44,7 +44,7 @@ test("a judged behaviour reports its brief, its boundary and both states", async
   const { fetchImpl } = stub([judged], [{ behaviour_slug: "judged-one" }]);
   const notes = await behaviourNotes(fetchImpl);
   assert.deepEqual(notes["judged-one"], {
-    name: "Judged one", group: "Behaviours under test", set: "index",
+    name: "Judged one", group: "Behaviours under test",
     query: "The brief.", described: null, boundary: "Not that.",
     source: "somewhere", defined: true, judged: true,
   });
@@ -77,7 +77,7 @@ test("no set is named: every set comes back, keyed by slug", async () => {
   const { urls, fetchImpl } = stub([judged, reader], []);
   const notes = await behaviourNotes(fetchImpl);
   assert.deepEqual(Object.keys(notes).sort(), ["in-the-reader-set", "judged-one"]);
-  assert.equal(notes["in-the-reader-set"].set, "reader-test");
+  assert.equal(notes["in-the-reader-set"].set, undefined, "a note names no set");
   assert.doesNotMatch(urls[0], /set_name=/, "selected, never filtered on");
 });
 

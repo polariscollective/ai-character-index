@@ -11,7 +11,7 @@
 
 import { select } from "./supabase.mjs";
 
-const SELECT = "slug,name,set_name,numeric_id,group_name,definition,judging";
+const SELECT = "slug,name,numeric_id,group_name,definition,judging";
 
 /**
  * The behaviours a publication shows, which is not the same as the cells it
@@ -42,8 +42,8 @@ async function publishedSlugs(publicationId, fetchImpl) {
 /**
  * One entry per behaviour the reader shows, keyed by slug.
  *
- * Scoped to the publication rather than to the registry, and no set is named
- * here: the slug is the primary key of `aci_behaviours`, and which behaviours a
+ * Scoped to the publication rather than to the registry, and nothing is filtered
+ * by set: the slug is the primary key of `aci_behaviours`, and which behaviours a
  * reader shows is the publication's decision. That scoping is also what keeps a
  * behaviour registered but not yet published out of a public response -- this
  * route would otherwise describe work nobody has decided to show.
@@ -75,7 +75,6 @@ export async function behaviourNotes(fetchImpl = fetch, publicationId = null) {
     notes[row.slug] = {
       name: row.name,
       group: row.group_name,
-      set: row.set_name,
       query,
       // Suppressed where it repeats the brief, which is the usual case: the
       // registry was written by copying one into the other.

@@ -1,13 +1,14 @@
 /* What the reader shows, and the decision to show it. */
-import { behaviours, panels, publications, specifications } from "../../lib/admin-data.mjs";
+import { behaviours, displayPanel, publications, specifications } from "../../lib/admin-data.mjs";
+import { documentChoices } from "../../lib/documents.mjs";
 import { Choices, Outcome, When } from "../parts.jsx";
 
 export default async function Publications({ searchParams }) {
   const params = await searchParams;
-  const [rows, behaviourRows, specs, panelRows] = await Promise.all([
-    publications(), behaviours(), specifications(), panels(),
+  const [rows, behaviourRows, specs] = await Promise.all([
+    publications(), behaviours(), specifications(),
   ]);
-  const seats = [...new Set(panelRows.flatMap(panel => panel.seats))].sort();
+  const panel = displayPanel();
 
   return (
     <>
@@ -76,11 +77,11 @@ export default async function Publications({ searchParams }) {
       <section>
         <h2>Build a publication</h2>
         <p className="why">
-          Every cell must have been judged by exactly the models named below, all of
-          them done, in one run. That is the claim the index sells: a verdict on one
-          lab&apos;s document and a verdict on another&apos;s were reached the same way.
-          It is refused here and again by the database. The build is written as a
-          draft, and making it public is the next decision.
+          Every cell must have been judged by {panel.seats.join(", ")} ({panel.name}),
+          all of them done, in one run, with a depth from each. That is the claim the
+          index sells: a verdict on one document and a verdict on another were reached
+          the same way. It is refused here and again by the database. The build is
+          written as a draft, and making it public is the next decision.
         </p>
         <form className="panel" method="post" action="/api/admin/publications">
           <input type="hidden" name="verb" value="build" />
@@ -92,21 +93,12 @@ export default async function Publications({ searchParams }) {
             hint="Only behaviours a panel has answered for can be published."
           />
           <Choices
-            name="specs"
+            name="documents"
             legend="Documents"
-            options={specs.map(spec => ({ value: spec.id, label: spec.short_title }))}
+            options={documentChoices(specs)}
+            hint="Each version is its own document."
           />
-          <Choices
-            name="panel"
-            legend="The panel every cell must carry"
-            options={seats.map(seat => ({ value: seat, label: seat }))}
-            hint="Not a panel name: the exact set of models. A cell judged by more
-                  models than these is not an answer to this publication."
-          />
-          <label>
-            <span>Rubric</span>
-            <input type="text" name="rubric" defaultValue="v5" />
-          </label>
+          <input type="hidden" name="rubric" value="v5" />
           <label>
             <span>Note</span>
             <input type="text" name="notes"

@@ -17,18 +17,16 @@ export const POST = formRoute("/admin/publications", requireOperator, async (fie
 
   if (verb === "build") {
     const behaviours = fields.many("behaviours");
-    const specs = fields.many("specs");
-    const panel = fields.many("panel");
+    const documents = fields.many("documents");
     const rubric = fields.one("rubric") || "v5";
     const notes = fields.one("notes");
     if (!behaviours.length) refuse("choose at least one behaviour");
-    if (!specs.length) refuse("choose at least one document");
-    if (panel.length === 0) refuse("name the panel every cell must have been judged by");
+    if (!documents.length) refuse("choose at least one document");
     const job = await startJob("publish", {
-      behaviours, specs, panel, rubric, notes, created_by: email,
+      behaviours, documents, rubric, notes, created_by: email,
     }, email);
-    return `Building. Every cell must have been judged by exactly `
-         + `${panel.join(", ")} under rubric ${rubric}, in one run; the job refuses `
+    return `Building. Every cell must have been judged by the index's panel under `
+         + `rubric ${rubric}, in one run, with a depth from each judge; the job refuses `
          + `and names the cells that were not. It is written as a draft. `
          + `Job ${job.id.slice(0, 8)}, ${job.origin}.`;
   }
