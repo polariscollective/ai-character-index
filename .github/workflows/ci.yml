@@ -46,6 +46,7 @@ jobs:
         run: |
           python3 engine/panel/test_judge_call.py
           python3 engine/panel/test_passages.py
+          python3 engine/panel/test_bands.py
           python3 engine/panel/test_batch_job.py
           python3 engine/panel/test_compose_run.py
           python3 engine/test_job.py
