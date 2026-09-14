@@ -66,6 +66,10 @@ class SpecRegistryTest(unittest.TestCase):
         _, defaults, _, _ = index_store.spec_registry(fake(aci_spec_versions=versions))
         self.assertEqual(defaults, {"acme": "2026-06-01"})
 
+    def test_the_locator_style_travels_with_the_version(self):
+        _, _, meta, _ = index_store.spec_registry(fake())
+        self.assertEqual(meta[("acme", "2026-01-01")]["locatorStyle"], "path")
+
 
 class DocumentTest(unittest.TestCase):
     def test_a_document_is_keyed_by_its_lab_not_its_spec(self):

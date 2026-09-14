@@ -37,7 +37,8 @@ def spec_registry(store):
         key = (spec["id"], version["version"])
         entries[key] = version["id"]
         text[version["id"]] = version["markdown"]
-        meta[key] = {"title": spec["title"], "sourceUrl": version["source_url"]}
+        meta[key] = {"title": spec["title"], "sourceUrl": version["source_url"],
+                     "locatorStyle": spec.get("locator_style")}
         if version["version"] > newest.get(spec["id"], ""):
             newest[spec["id"]] = version["version"]
 
