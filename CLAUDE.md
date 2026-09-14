@@ -240,6 +240,44 @@ evals-playground already learned: the local subprocess and the deployed job writ
 into the same database, and without a marker a throwaway trial looks like
 production work.
 
+### A cell can be judged again, and a failed call is retried in its run
+
+**Found by writing the portal's readme. Fixed.**
+
+The composer left out every judge that had already scored a cell, whichever run
+held the verdict, and a publication needs all of a cell's judges in one run.
+Together those were a dead end. A panel sharing one judge with an earlier run was
+composed without that judge, and no publication could use the result; and the
+calls that would equalise the ragged bench could not be composed at all, because
+every one of their judges had already answered. Composing now takes an explicit
+"judge again", which writes the whole panel and pays for it.
+
+The second dead end was a run with failures. `batch_job` marks a run done once
+every call has come back, failed or not, and the launch route refused a done run,
+so a failed seat could only go into a second run and split its cell. The route and
+the Runs page now ask the calls rather than the run (`app/lib/runs.mjs`): a run
+with calls that are not done is launched again, in place.
+
+Not fixed, and worth knowing: a retried call's meter reading replaces the failed
+attempt's, so a run's summed cost undercounts what a parse failure spent.
+
+The registration form had a smaller trap beside these. It offered only the sets
+rows already carried, so `user`, the set a publication build accepts a new
+behaviour in, was not offered, and the default was `reader-test`, which a build
+refuses without a hand-written curation row per lab.
+
+### A publication shows the display panel, whatever panel it names
+
+**Not fixed. Found while checking the readme's advice.**
+
+`publish.py` never passes `--panel` to `build_site_data.py`, which therefore
+filters verdicts to `display.panel`, `frontier_fast`. A dry build of `helpfulness`
+from the inherited run, whose constitution cell carries five judges, held verdicts
+from `deepseek`, `fable` and `sol` alone, on both documents. Two things follow. A
+publication naming any other panel shows none of its verdicts. And the homogeneity
+rule, which requires a cell's run to hold exactly the named judges, refuses cells
+whose displayed verdicts would already be homogeneous.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
@@ -247,8 +285,10 @@ judging runs as a Cloud Run job, the site is a Next.js application on Vercel, an
 the index is operated from a portal rather than a terminal. Upstream keeps the
 property this fork gave up, which is running from a bare clone.
 
-What is left: the twelve calls that would equalise the ragged bench, until which
-no new publication can carry the four behaviours whose panels are unequal.
+What is left: the calls that would equalise the ragged bench, fifteen with
+`frontier_fast` (the four behaviours on the constitution, and
+`proportionate-risk-mitigation` on the model spec). They can be composed now, with
+judge again ticked, and until they run no new publication can carry those four.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

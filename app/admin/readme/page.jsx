@@ -23,8 +23,8 @@ const TITLE = Object.fromEntries(CONTENTS);
 
 const PANEL_USE = {
   frontier_fast: "The panel the public index is judged with. Use it for anything you mean to publish.",
-  cheap: "Three inexpensive models, for trying out a behaviour before paying for the real panel.",
-  itest: "One cheap model, for checking that the pipeline works. Never publish it.",
+  cheap: "Three inexpensive models. Its verdicts are stored, but a publication cannot show them yet.",
+  itest: "One cheap model, for checking that the pipeline runs. Never publish it.",
   frontier: "Kept for older runs. Not needed for new work.",
   frontier_primary: "Kept for older runs. Not needed for new work.",
 };
@@ -96,6 +96,13 @@ export default function Readme() {
                 Spec or Claude&apos;s constitution. Also called a document. Its text is
                 stored as markdown, one row per version, and a stored version is never
                 edited.
+              </td>
+            </tr>
+            <tr>
+              <td>Lab</td>
+              <td>
+                The organisation that publishes a specification, such as Anthropic or
+                OpenAI. It has nothing to do with which models judge it.
               </td>
             </tr>
             <tr>
@@ -243,10 +250,10 @@ export default function Readme() {
           </li>
           <li>
             <strong>Runs, Compose a run.</strong> Tick the behaviours to judge, tick
-            only this specification, keep the panel <code>frontier_fast</code> and the
-            rubric <code>v5</code>. Press <strong>Compose and price</strong>. Nothing
-            is spent. A run always uses the newest version of each specification,
-            which is now the one you registered.
+            only this specification, and keep the panel <code>frontier_fast</code>.
+            Press <strong>Compose and price</strong>. Nothing is spent. A run always
+            uses the newest version of each specification, which is now the one you
+            registered.
           </li>
           <li>
             <strong>Reload after a few seconds.</strong> The run appears at the top of
@@ -257,6 +264,12 @@ export default function Readme() {
             <strong>Press launch.</strong> The judges start. Each call reads the whole
             specification and takes from under a minute to several minutes, and
             several run at once. Reload to follow the Done column.
+          </li>
+          <li>
+            <strong>If some calls failed, press retry failed calls.</strong> Only the
+            calls that are not done are tried again, in the same run, and they are
+            paid for again. The same run matters: a publication needs all of a
+            cell&apos;s judges in one run.
           </li>
           <li>
             <strong>Publish it</strong>, as described in{" "}
@@ -288,16 +301,16 @@ export default function Readme() {
           </tbody>
         </table>
         <p>
+          As of September 2026, a publication shows the verdicts of <code>sol</code>,{" "}
+          <code>fable</code> and <code>deepseek</code> only, whichever judges it names.
+          Judge anything you mean to publish with <code>frontier_fast</code>.
+        </p>
+        <p>
           A combination no panel offers has to be added to{" "}
           <code>engine/panel/panel-config.json</code> in the repository and merged into{" "}
           <code>main</code>. The site and the judging job both redeploy from that
           merge, and the new panel then appears in the Runs form. It is a code change,
           not a button.
-        </p>
-        <p>
-          The rubric is the scoring scale the judges are given. Always choose{" "}
-          <code>v5</code>: the portal no longer judges with <code>v3</code>, and a job
-          asked to fails.
         </p>
       </Section>
 
@@ -377,9 +390,9 @@ export default function Readme() {
           <p>
             The rule a build checks: every behaviour on every specification you ticked
             must have been judged by exactly the judges you ticked, all of them done,
-            in the same run. It uses the newest version of each specification. This is
-            what lets the index compare two labs on equal terms, and the database
-            refuses a build that breaks it.
+            in the same run. It uses the newest version of each specification, and for
+            each cell the newest run that meets the rule. The database refuses a build
+            that breaks it.
           </p>
         </div>
       </Section>
@@ -394,7 +407,11 @@ export default function Readme() {
             <ul>
               <li>Slug: lowercase words joined by hyphens, such as <code>user-autonomy</code>. Never reused.</li>
               <li>Name: as the reader should show it.</li>
-              <li>Set: choose <code>user</code>. The note below says why.</li>
+              <li>
+                Set: leave it on <code>user</code>. The other two are the sets the index
+                inherited, and a publication build refuses a new{" "}
+                <code>reader-test</code> behaviour.
+              </li>
               <li>Group: the heading it sits under in the reader&apos;s menu.</li>
               <li>
                 What the judges are asked: the brief, word for word. Every verdict is a
@@ -409,13 +426,6 @@ export default function Readme() {
             Press <strong>Register</strong>.
           </li>
           <li>
-            <strong>Try it cheaply, if you like.</strong> Compose it on one
-            specification with the <code>cheap</code> panel, launch, build a draft with
-            those three judges ticked, and read it. The <code>cheap</code> judges share
-            nobody with <code>frontier_fast</code>, so this does not get in the way of
-            the next step.
-          </li>
-          <li>
             <strong>Runs, compose it on both specifications with{" "}
             <code>frontier_fast</code>, and launch.</strong> Two specifications times
             three judges is six calls, about $2.
@@ -425,45 +435,34 @@ export default function Readme() {
             behaviours already public, read it, and make it public.
           </li>
         </ol>
-        <div className="notice">
-          <p>
-            Choose the set <code>user</code>, not the form&apos;s default{" "}
-            <code>reader-test</code>. The <code>reader-test</code> behaviours are the ten
-            the index launched with, and each carries a hand-written verdict per lab
-            that the portal has no form for. A build refuses a{" "}
-            <code>reader-test</code> behaviour that lacks one.
-          </p>
-        </div>
       </Section>
 
       <Section id="judge-again">
-        <p className="why">Possible with different judges, not with the same ones.</p>
+        <p className="why">
+          Tick &ldquo;Judge them again with the whole panel&rdquo; when you compose.
+        </p>
         <ul>
           <li>
-            The portal never pays twice for the same verdict. When you compose, any
-            judge that has already scored that behaviour on that version of the
-            specification is left out, whichever run it was in. If every judge is left
-            out, the job finishes and no run appears.
+            By default, a judge that has already scored a behaviour on a version of a
+            specification is left out when you compose, so nothing is paid for twice.
+            If every judge is left out, the job finishes and no run appears.
           </li>
           <li>
-            A panel with no judge in common with the earlier one works:{" "}
-            <code>cheap</code> after <code>frontier_fast</code>, for example. It makes a
-            separate run, which you publish by ticking those judges.
+            To replace verdicts, tick <strong>Judge them again with the whole
+            panel</strong> under Cells already judged. Every judge of the panel scores
+            every cell again, in one new run, and you pay for all of it.
           </li>
           <li>
-            A panel that shares some judges with the earlier one makes a run with only
-            the new judges, and that run cannot be published, because a publication
-            needs all of a cell&apos;s judges in one run. As of September 2026,
-            composing <code>user-autonomy</code> on the Model Spec with the{" "}
-            <code>frontier</code> panel wrote calls for <code>kimi</code>,{" "}
-            <code>kimi-k2</code> and <code>opus</code>, and left out <code>sol</code>{" "}
-            and <code>fable</code>.
+            The next publication you build takes the newest run for each cell, so the
+            new verdicts replace the old ones there. Publications already built keep
+            theirs.
           </li>
           <li>
-            Judging again with the same judges, after rewording a brief for instance, is
-            not possible from the portal.
+            Leave the box unticked with a panel that shares some judges with an earlier
+            run, and the run leaves those judges out. A cell whose judges are split
+            across two runs cannot be published, so tick the box in that case.
           </li>
-          <li>A new version of a specification is new text, so every judge scores it afresh.</li>
+          <li>A new version of a specification is new text: every judge scores it without the box.</li>
         </ul>
       </Section>
 
@@ -511,30 +510,31 @@ export default function Readme() {
         <p className="why">As of September 2026.</p>
         <ul>
           <li>
-            <strong>A specification from a new lab.</strong> The form accepts documents
-            from Anthropic and OpenAI only. Another lab needs a database change in{" "}
-            <code>polaris-supabase</code> first, and the publication builder has never
-            been run with a third lab: parts of it still name the two labs in code.
+            <strong>A specification from a new lab.</strong> The index knows two labs,
+            Anthropic and OpenAI, and the form refuses a document from any other. Adding
+            a lab is one row in a table, which no form writes yet, and parts of the
+            publication builder still name the two labs in code, so a third has never
+            been published.
           </li>
           <li>
-            <strong>Four published behaviours cannot enter a new publication.</strong>{" "}
+            <strong>Only three judges can be shown.</strong> A publication shows the
+            verdicts of <code>sol</code>, <code>fable</code> and <code>deepseek</code>,
+            whichever judges it names.
+          </li>
+          <li>
+            <strong>Four published behaviours need judging again first.</strong>{" "}
             <code>helpfulness</code>, <code>how-to-approach-tradeoffs</code>,{" "}
             <code>avoiding-over-and-under-caution</code> and{" "}
             <code>proportionate-risk-mitigation</code> were judged by five or six models
-            on the constitution and by three on the Model Spec. A publication needs the
-            same judges everywhere, and the portal will not judge those cells again
-            with three. The publication public today carries them under a one-off
-            exemption. A new publication with both specifications can carry the five
-            other behaviours and new ones, not these four.{" "}
+            on the constitution and by three on the Model Spec, in one run. A
+            publication needs exactly the judges it names, so they cannot enter a new
+            one as they stand; the publication public today carries them under a one-off
+            exemption. To bring them back, compose the four on the constitution with{" "}
+            <code>frontier_fast</code> and Judge them again ticked: twelve calls, about
+            $3. <code>proportionate-risk-mitigation</code> needs the same on the Model
+            Spec, three calls and about $1, unless you are judging a new version of it.{" "}
             <code>general-welfare-impacts-strict</code> cannot be published through the
-            portal either.
-          </li>
-          <li>
-            <strong>Retrying failed calls.</strong> A run is marked done once every call
-            has come back, even if some failed, and a done run cannot be launched again.
-            Composing again puts the failed judges in a new run, and a cell whose judges
-            are split across two runs cannot be published. <strong>resume</strong> only
-            appears on a run that was cancelled or stopped part way.
+            portal.
           </li>
           <li>
             <strong>Behaviours without a brief.</strong> The Runs form marks them{" "}
