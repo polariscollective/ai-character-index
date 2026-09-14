@@ -72,6 +72,7 @@ jobs:
           node engine/panel/test_appjs_tiers.js
           node engine/panel/test_appjs_quotes.js
           node engine/panel/test_appjs_wiring.js
+          node engine/panel/test_appjs_depth.js
 
   browser:
     runs-on: ubuntu-latest

@@ -21,6 +21,21 @@ function passagesOf(behaviour, modelSpecId) {
   return bandCell(behaviour.coverage?.[modelSpecId]?.passages || []);
 }
 
+/**
+ * The depth the index's panel gave a cell, or null. Every depth an answer
+ * carries is read through here.
+ *
+ * A depth counts only as an object with a finite numeric mean. The grandfathered
+ * publication was written by the old builder and carries a human curation's
+ * integer in this field; answering with it would present the curation's figure
+ * as the panel's mean.
+ */
+function panelDepth(behaviour, modelSpecId) {
+  const depth = behaviour?.coverage?.[modelSpecId]?.depth;
+  return depth !== null && typeof depth === "object" && Number.isFinite(depth.mean)
+    ? depth : null;
+}
+
 /** The fields that identify a specification, without its text. */
 function specSummary(document) {
   return {
@@ -77,7 +92,7 @@ export function listBehaviours({ publication, payload, notes }) {
           passages: passages.length,
           strongest: TIERS.find(
             tier => passages.some(passage => passage.band === tier)) || null,
-          depth: behaviour.coverage?.[modelSpecId]?.depth ?? null,
+          depth: panelDepth(behaviour, modelSpecId),
         };
       }
 
@@ -229,7 +244,7 @@ export function retrievePassages({ publication, payload, documents }, args = {})
     results: page.map(cell => ({
       behaviour: cell.slug,
       model_spec_id: cell.modelSpecId,
-      depth: behaviourBySlug.get(cell.slug).coverage?.[cell.modelSpecId]?.depth ?? null,
+      depth: panelDepth(behaviourBySlug.get(cell.slug), cell.modelSpecId),
       passages: cell.passages.map(shapePassage),
       ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
     })),

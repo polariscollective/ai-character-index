@@ -30,8 +30,9 @@ the behaviour, core establishes it there, related bears on it without
 establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
-Every behaviour and specification pair was judged by one panel, and carries the
-depth that panel gave it, from 0 (absent) to 4 (rules with worked examples).
+Where a behaviour and specification pair carries a depth, it is the mean the
+index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
+with no depth answers null.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
@@ -90,7 +91,8 @@ const handler = createMcpHandler(
         + "more behaviours, quoted verbatim with a locator, the band the panel "
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
-        + "across pages. Each pair carries the depth the panel gave it, 0 to 4.",
+        + "across pages. Where a pair carries a depth, it is the mean the index's "
+        + "panel gave it, 0 to 4; a pair with no depth answers null.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "

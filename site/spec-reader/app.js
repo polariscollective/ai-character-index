@@ -150,7 +150,7 @@ function openBehaviourNote(button) {
     depthHeading.textContent = "How deeply the documents on screen cover it";
     body.append(depthHeading);
     shownDocuments.forEach(doc => {
-      const depth = behaviour?.coverage?.[doc.id]?.depth ?? null;
+      const depth = panelDepth(behaviour, doc.id);
       const p = document.createElement("p");
       p.textContent = depthSummaryLine(doc, depth);   // never innerHTML: rationale is model output
       body.append(p);
@@ -820,6 +820,19 @@ function renderBehaviourList() {
  * no depth shows a dash: zero is a finding, a dash is the absence of one. */
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
+/* The depth the index's panel gave a behaviour on a document, or null. Every read of
+ * a depth in this file goes through here.
+ *
+ * A depth counts only as an object with a finite numeric mean. The grandfathered
+ * publication was written by the old builder and carries a human curation's integer
+ * in the same field; that is not the panel's mean, and reading it as one threw on
+ * every visit, which the reader reported as a payload that could not be loaded. */
+function panelDepth(behaviour, documentId) {
+  const depth = behaviour?.coverage?.[documentId]?.depth;
+  return depth !== null && typeof depth === "object" && Number.isFinite(depth.mean)
+    ? depth : null;
+}
+
 /* One line naming a document's depth for a behaviour: the mean out of 4 and the
  * rubric word, or that none was given. Shared by the figure's hover title, the
  * hidden description a screen reader hears, and the note's own paragraph -- one
@@ -835,7 +848,7 @@ function updateBehaviourDepths() {
   const shown = visibleDocuments().filter(Boolean);
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(cell => {
     const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
-    const depths = shown.map(doc => behaviour?.coverage?.[doc.id]?.depth ?? null);
+    const depths = shown.map(doc => panelDepth(behaviour, doc.id));
     cell.textContent = depths.map(depth => (depth ? depth.mean.toFixed(1) : "–")).join(" / ");
     const summary = shown.map((doc, i) => depthSummaryLine(doc, depths[i])).join("\n");
     // Kept for mouse users; a keyboard, touch or screen-reader user reaches the same

@@ -184,6 +184,50 @@ test("a retrieved cell carries its depth", () => {
   assert.equal(answer.results[0].depth.judges.c.depth, 2);
 });
 
+/* The grandfathered publication, which the routes keep serving after the merge
+ * until a new one is made public, was written by the old builder. Its coverage
+ * carries a human curation's integer where a new publication carries the panel's
+ * { mean, judges }; the fields beside it are the recorded payload's, at 085fd2e. */
+const grandfathered = () => {
+  const old = structuredClone(payload);
+  for (const behaviour of old.behaviours) {
+    for (const id of Object.keys(behaviour.coverage)) {
+      behaviour.coverage[id] = { verdict: "covered", depth: 4, note: "",
+                                 verifiedDate: "2026-07-24",
+                                 passages: behaviour.coverage[id].passages };
+    }
+  }
+  return { ...snapshot(), payload: old };
+};
+
+test("a curation's integer is not reported as the depth the panel gave", () => {
+  const answer = listBehaviours(grandfathered());
+  const depths = answer.behaviours.flatMap(
+    behaviour => Object.values(behaviour.coverage).map(cell => cell.depth));
+  assert.equal(depths.length, 4);
+  assert.deepEqual(depths, [null, null, null, null]);
+});
+
+test("a retrieved cell of the grandfathered publication carries no depth", () => {
+  const answer = retrievePassages(grandfathered(), { behaviours: BOTH });
+  assert.equal(answer.results.length, 4);
+  assert.deepEqual(answer.results.map(cell => cell.depth), [null, null, null, null]);
+});
+
+test("a depth counts only as an object with a finite mean, and a mean of zero counts", () => {
+  const odd = snapshot();
+  odd.payload = structuredClone(payload);
+  const [defined, undefinedBehaviour] = odd.payload.behaviours;
+  defined.coverage["acme--corpus@2026-01-01"].depth = { mean: "2.7", judges: {} };
+  defined.coverage["acme--second@2026-02-01"].depth = { mean: 0, judges: {} };
+  undefinedBehaviour.coverage["acme--corpus@2026-01-01"].depth = { judges: {} };
+  const answer = listBehaviours(odd);
+  assert.equal(answer.behaviours[0].coverage["acme--corpus@2026-01-01"].depth, null);
+  assert.deepEqual(answer.behaviours[0].coverage["acme--second@2026-02-01"].depth,
+                   { mean: 0, judges: {} });
+  assert.equal(answer.behaviours[1].coverage["acme--corpus@2026-01-01"].depth, null);
+});
+
 test("no answer carries a comparability caveat: every cell is judged by one panel", () => {
   const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
   assert.equal(answer.comparability, undefined);

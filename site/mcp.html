@@ -262,9 +262,10 @@
     <ul>
       <li><b>behaviours.</b> Required, at least one slug. It is what bounds the size of the
           answer.</li>
-      <li><b>model_spec_ids.</b> Optional, every specification by default. Each behaviour and
-          specification pair comes back with its depth, the mean of what each judge gave on a
-          scale from 0, absent, to 4, rules with worked examples.</li>
+      <li><b>model_spec_ids.</b> Optional, every specification by default. Where a behaviour and
+          specification pair carries a depth, it comes back as the mean the index&rsquo;s panel
+          gave it, on a scale from 0, absent, to 4, rules with worked examples. A pair with no
+          depth comes back with <code>null</code>.</li>
       <li><b>strength.</b> Optional. <code>defining</code> is the document&rsquo;s fullest
           statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
           bears on it without establishing it. Each means that band and stronger.

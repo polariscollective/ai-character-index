@@ -415,6 +415,27 @@ class TestAppJSWiring(unittest.TestCase):
         self.assertIn("27 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSDepth(unittest.TestCase):
+    """The depth app.js draws beside a behaviour and in its note: panelDepth,
+    depthSummaryLine, updateBehaviourDepths and openBehaviourNote. The
+    grandfathered publication carries a curation's integer where a new one
+    carries the panel's { mean, judges }, and reading the integer as the object
+    threw on every visit to the public reader. Skips (not fails) without
+    `node`."""
+
+    HARNESS = HERE / "test_appjs_depth.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_depth_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("18 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestRunlogPathResolution(unittest.TestCase):
     """--runlog= must reach the spawned whole_doc.py cells as an absolute
     path: cells run with cwd=engine/panel, so a caller-relative path would
