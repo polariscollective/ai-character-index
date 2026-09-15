@@ -1971,9 +1971,11 @@ function latestOfLab(lab) {
 /* What the second panel opens on.
  *
  * Anthropic's newest, or OpenAI's when Anthropic's is already the one being
- * read: comparing a document with itself is the one pairing with nothing to
- * say. Against a payload carrying neither lab, the first document that is not
- * the one on the left, so a comparison opens on something rather than refusing.
+ * read. An opening pair is one the reader did not choose, so it shows two
+ * different texts. The identical document on both sides is still allowed as the
+ * reader's explicit choice, and kept when made (see comparePair). Against a
+ * payload carrying neither lab, the first document that is not the one on the
+ * left, so a comparison opens on something rather than refusing.
  */
 const COMPARISON_ORDER = ["Anthropic", "OpenAI"];
 
@@ -2171,6 +2173,10 @@ function updatePanelMeta(panel, doc) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
       .reduce((total, behaviour) => total + (behaviour.coverage?.[doc.id]?.panelFiltered || 0), 0);
+    // "Not judged yet" is selected by the document's own `judged` flag. Only a
+    // documents payload built with judged_version_ids carries it, and publish
+    // builds none today, so a published document always takes one of the other
+    // two branches; the reader fixture is what reaches this one.
     panel.querySelector(".document-body").insertAdjacentHTML(
       "afterbegin",
       doc.judged === false
@@ -2331,10 +2337,11 @@ function placeUnder(popover, anchor) {
 
 /* Each side is chosen on its own, and a document may be put on both.
  *
- * Choosing the document already on the other side used to swap the two, on the
- * reasoning that comparing a document with itself says nothing. It says
- * something once versions exist: the same document at two dates, side by side,
- * is the comparison a reader of a reissued specification wants most. */
+ * Choosing the document already on the other side used to swap the two. Two
+ * versions of one specification were never affected: an id carries its version,
+ * so the same document at two dates is two ids and was always a valid pair. What
+ * the swap overrode was the identical document on both sides, which is kept now
+ * because putting it there is the reader's explicit choice (see comparePair). */
 function setComparePair(side, id) {
   const [a, b] = comparePair();
   const next = side === "a" ? [id, b] : [a, id];
