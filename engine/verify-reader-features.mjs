@@ -803,18 +803,18 @@ await at("?compare=1");
     JSON.stringify({ before, afterRight, afterHome }));
 }
 {
-  // The passage arrows sit below the name/version/Show original row, on a
-  // row of their own shared with the tier toggles, arrows first at the
-  // left -- whatever wrapped above: a long title, a translation band on one
-  // side only (it sits below the header, not in it, so it cannot move this
-  // row), a narrower half. Checked at both viewports, for a pair where one
-  // side carries the translation band and the other does not and with a
-  // behaviour selected (so the tier toggles carry counts and the passage
-  // counter reads "N of M", the widest either gets), so a shared answer
-  // cannot be an accident of both panels wrapping alike or of an empty,
-  // narrow-text state. The resizer tests just above leave an off-centre
-  // compare split and a widened sidebar in localStorage; reset both so the
-  // panels start from the defaults this check means to cover.
+  /* Comparing, each header ends in one row below the name/version/Show original
+   * line, whatever wrapped above it: a long title, a translation band on one side
+   * only (it sits below the header, not in it), a narrower half. At the left the
+   * walk, "N/M" and then the arrows; at the right what changes the view, Expand all
+   * and then the band toggles, flush with the header's right edge. Where the row
+   * has the width, both groups share one line (1440x900); where it does not (two
+   * panels at 1024x768) the view controls wrap below, still at the right, and
+   * nothing leaves the header. Checked for a pair where one side carries the
+   * translation band and the other does not, with a behaviour selected so the
+   * toggles carry counts, the widest they get. The resizer tests just above leave
+   * an off-centre compare split and a widened sidebar in localStorage; reset both
+   * so the panels start from the defaults this check means to cover. */
   await page.evaluate(() => {
     localStorage.setItem("aci-compare-first", "50");
     localStorage.removeItem("aci-sidebar-width");
@@ -824,80 +824,93 @@ await at("?compare=1");
     await at(`?compare=1&compare-with=${DOC_TRANSLATED},${DOC_ID}`
       + `&behavior=${DEFINED}&tiers=defining,core,related`);
     const measured = await page.evaluate(() => [...document.querySelectorAll(".document-panel")].map(panel => {
+      const rect = element => element.getBoundingClientRect();
+      const centre = box => (box.top + box.bottom) / 2;
       const header = panel.querySelector(".document-header");
-      const documentRow = panel.querySelector(".document-row");
-      const nav = panel.querySelector(".passage-nav");
-      const legend = panel.querySelector(".rail-legend");
       const style = getComputedStyle(header);
-      const rowRect = documentRow.getBoundingClientRect();
-      const nRect = nav.getBoundingClientRect();
-      const lRect = legend.getBoundingClientRect();
-      // The compact counter: "3/12" after the arrows, while "3 of 12 passages"
-      // stays the counter a screen reader reads.
+      const h = rect(header);
+      // The header's content box: its border box less its own side padding, so
+      // this holds however the two panels are split.
+      const contentLeft = h.left + parseFloat(style.paddingLeft);
+      const contentRight = h.right - parseFloat(style.paddingRight);
+      const identity = rect(panel.querySelector(".document-row"));
+      const nav = rect(panel.querySelector(".passage-nav"));
+      const previous = rect(panel.querySelector(".previous-passage"));
+      const next = rect(panel.querySelector(".next-passage"));
+      const expand = rect(panel.querySelector(".document-focus-toggle"));
+      const legend = rect(panel.querySelector(".rail-legend"));
+      const inside = box => box.left >= h.left - 0.5 && box.right <= h.right + 0.5
+        && box.top >= h.top - 0.5 && box.bottom <= h.bottom + 0.5;
+      // The compact counter, "3/12", while "3 of 12 passages" stays the counter
+      // a screen reader reads.
       const counter = panel.querySelector(".passage-count-short");
       const full = panel.querySelector(".passage-count");
-      const next = panel.querySelector(".next-passage").getBoundingClientRect();
-      const cRect = counter?.getBoundingClientRect();
-      const headerRect = header.getBoundingClientRect();
+      const c = counter ? rect(counter) : null;
       const anchors = panel._anchors || [];
-      const position = anchors.length ? `${panel._passageIndex + 1}/${anchors.length}` : "0/0";
+      const expandOnBandsRow = Math.abs(centre(expand) - centre(legend)) <= 4;
       return {
+        documentId: panel.dataset.documentId,
+        hasBand: !panel.querySelector(".document-translation").hidden,
+        walk: {
+          leads: Math.round((nav.left - contentLeft) * 10) / 10,
+          belowIdentity: Math.round(nav.top - identity.bottom),
+          arrowsInOrder: previous.right <= next.left,
+        },
         counter: counter ? {
           text: counter.textContent,
-          position,
+          position: anchors.length ? `${panel._passageIndex + 1}/${anchors.length}` : "0/0",
           // Visible: a box with area that the browser draws, not clipped away
           // the way the full counter is in compare mode.
-          visible: cRect.width > 0 && cRect.height > 0 && counter.checkVisibility({ visibilityProperty: true })
+          visible: c.width > 0 && c.height > 0 && counter.checkVisibility({ visibilityProperty: true })
             && getComputedStyle(counter).clip === "auto",
-          inside: cRect.left >= headerRect.left && cRect.right <= headerRect.right
-            && cRect.top >= headerRect.top && cRect.bottom <= headerRect.bottom,
-          afterArrows: cRect.left - next.right,
-          centreDiff: (cRect.top + cRect.bottom) / 2 - (next.top + next.bottom) / 2,
-          spoken: full.textContent,
+          beforeArrows: Math.round(previous.left - c.right),
+          centreDiff: Math.round(centre(c) - centre(previous)),
           spokenMatches: anchors.length
             ? full.textContent === `${panel._passageIndex + 1} of ${anchors.length} passages`
             : !/\d/.test(full.textContent),
           hiddenFromScreenReaders: counter.getAttribute("aria-hidden") === "true",
         } : null,
-        documentId: panel.dataset.documentId,
-        hasBand: !panel.querySelector(".document-translation").hidden,
-        // Left edge against the header's own content-left (its border box
-        // left plus its own padding), not the viewport, so this holds
-        // however the two panels are split.
-        leftDiff: nRect.left - (header.getBoundingClientRect().left + parseFloat(style.paddingLeft)),
-        // Both arrows and toggles must clear the name/version/Show original
-        // row -- that row's own bottom already includes Show original where
-        // it is present.
-        navBelowIdentity: nRect.top - rowRect.bottom,
-        legendBelowIdentity: lRect.top - rowRect.bottom,
-        // Sharing one row: vertical centres a few px apart, not stacked.
-        centreDiff: (nRect.top + nRect.bottom) / 2 - (lRect.top + lRect.bottom) / 2,
+        view: {
+          expandBeforeBands: expandOnBandsRow ? expand.right <= legend.left : expand.bottom <= legend.top,
+          flushRight: Math.round((contentRight - legend.right) * 10) / 10,
+          belowIdentity: Math.round(Math.min(expand.top, legend.top) - identity.bottom),
+        },
+        oneRow: Math.abs(centre(nav) - centre(legend)) <= 4 && expandOnBandsRow,
+        viewWrappedBelow: Math.min(expand.top, legend.top) >= nav.bottom - 0.5,
+        nothingLeaves: [nav, expand, legend, ...(c ? [c] : [])].every(inside),
       };
     }));
+    const detail = key => measured.map(p => `${p.documentId} ${JSON.stringify(p[key])}`).join("; ");
     check(measured.length === 2 && measured.some(p => p.hasBand) && measured.some(p => !p.hasBand),
       `compare header layout ${width}x${height}: fixture pair has one banded panel and one plain one`,
       measured.map(p => `${p.documentId} band=${p.hasBand}`).join(", "));
-    check(
-      measured.every(p => Math.abs(p.leftDiff) <= 1 && p.navBelowIdentity >= 0 && p.legendBelowIdentity >= 0
-        && Math.abs(p.centreDiff) <= 4),
-      `compare ${width}x${height}: arrows lead the tier toggles on one row below the name/version row`,
-      measured.map(p => `${p.documentId} left ${p.leftDiff.toFixed(1)}px, nav below ${p.navBelowIdentity.toFixed(1)}px,`
-        + ` legend below ${p.legendBelowIdentity.toFixed(1)}px, centre diff ${p.centreDiff.toFixed(1)}px`)
-        .join("; "));
-    // The passage counter came back in compare mode, compact: visible in both
-    // panels, on the arrows' row and to their right, saying where the walk is.
-    const counterDetail = measured.map(p => `${p.documentId} ${JSON.stringify(p.counter)}`).join("; ");
-    check(measured.every(p => p.counter?.visible && p.counter.inside),
+    check(measured.every(p => Math.abs(p.walk.leads) <= 1 && p.walk.belowIdentity >= 0 && p.walk.arrowsInOrder),
+      `compare ${width}x${height}: the walk leads the row at the left, below the name/version line`,
+      detail("walk"));
+    check(measured.every(p => p.counter?.visible),
       `compare ${width}x${height}: the passage counter is visible in both panels, not clipped`,
-      counterDetail);
-    check(measured.every(p => p.counter && p.counter.afterArrows >= 0 && p.counter.afterArrows <= 12
+      detail("counter"));
+    check(measured.every(p => p.counter && p.counter.beforeArrows >= 0 && p.counter.beforeArrows <= 12
         && Math.abs(p.counter.centreDiff) <= 3),
-      `compare ${width}x${height}: the counter sits on the arrows' row, just to their right`,
-      counterDetail);
+      `compare ${width}x${height}: the counter comes first, just left of the arrows, on their row`,
+      detail("counter"));
     check(measured.every(p => p.counter && p.counter.text === p.counter.position
         && p.counter.spokenMatches && p.counter.hiddenFromScreenReaders),
       `compare ${width}x${height}: the counter reads N/M for the passage position,`
-        + " and the full sentence stays what a screen reader hears", counterDetail);
+        + " and the full sentence stays what a screen reader hears", detail("counter"));
+    check(measured.every(p => p.view.expandBeforeBands && p.view.flushRight >= -0.5
+        && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
+      `compare ${width}x${height}: at the right, Expand all and then the band toggles, flush right`,
+      detail("view"));
+    if (width >= 1440) {
+      check(measured.every(p => p.oneRow),
+        `compare ${width}x${height}: the walk and the view controls share one row`,
+        measured.map(p => `${p.documentId} oneRow=${p.oneRow}`).join("; "));
+    }
+    check(measured.every(p => (p.oneRow || p.viewWrappedBelow) && p.nothingLeaves),
+      `compare ${width}x${height}: the row fits or wraps below, and nothing leaves the header`,
+      measured.map(p => `${p.documentId} oneRow=${p.oneRow} wrapped=${p.viewWrappedBelow}`
+        + ` inside=${p.nothingLeaves}`).join("; "));
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }
