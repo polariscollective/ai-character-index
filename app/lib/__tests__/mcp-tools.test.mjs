@@ -108,6 +108,23 @@ test("ToolError is an Error, so the route can tell a caller's mistake from a fau
   assert.ok(new ToolError("bad slug") instanceof Error);
 });
 
+/* A development deployment can serve a draft, and the instructions tell a client
+ * that is_public false means the answer is not the index's published data. That
+ * holds only if every answer carries the flag through, so all three are held to it. */
+test("every tool's answer carries the publication's is_public", () => {
+  const draft = snapshot();
+  draft.publication = { ...draft.publication, is_public: false };
+  const answers = {
+    list_model_specs: listModelSpecs(draft),
+    list_behaviours: listBehaviours(draft),
+    retrieve_passages: retrievePassages(draft, { behaviours: ["defined-behaviour"] }),
+  };
+  for (const [tool, answer] of Object.entries(answers)) {
+    assert.equal(answer.publication?.is_public, false,
+                 `${tool} must say the publication it read is not public`);
+  }
+});
+
 const BOTH = ["defined-behaviour", "undefined-behaviour"];
 
 test("a cell comes back with its passages quoted and located", () => {
@@ -118,7 +135,8 @@ test("a cell comes back with its passages quoted and located", () => {
   const [cell] = answer.results;
   assert.equal(cell.behaviour, "defined-behaviour");
   assert.equal(cell.model_spec_id, "acme--corpus@2026-01-01");
-  assert.equal(cell.passages.length, 1, "core is the default strength");
+  assert.equal(cell.passages.length, 2,
+               "related is the default strength, so the cell's related passage comes too");
 
   const [passage] = cell.passages;
   assert.deepEqual(Object.keys(passage).sort(),
@@ -140,10 +158,28 @@ test("strength means that band and stronger", () => {
   assert.equal(counted(call("related")), 7);
 });
 
-test("the default strength is core", () => {
+/* The spec reader opens on every band, related drawn softer, so the tools do too.
+ * Every passage still carries its strength, which is what a client filters on. */
+const strengthsOf = answer => answer.results.flatMap(
+  cell => cell.passages.map(passage => passage.strength));
+
+test("the default strength is related, the reader's own default", () => {
   const withDefault = retrievePassages(snapshot(), { behaviours: BOTH });
-  const explicit = retrievePassages(snapshot(), { behaviours: BOTH, strength: "core" });
+  const explicit = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
   assert.deepEqual(withDefault.results, explicit.results);
+});
+
+test("with no strength given, related passages are returned", () => {
+  const strengths = strengthsOf(retrievePassages(snapshot(), { behaviours: BOTH }));
+  assert.ok(strengths.includes("related"), `strengths returned: ${strengths.join(", ")}`);
+  assert.equal(strengths.length, 7, "every banded passage of the fixture");
+});
+
+test("with strength core, related passages are not returned", () => {
+  const strengths = strengthsOf(
+    retrievePassages(snapshot(), { behaviours: BOTH, strength: "core" }));
+  assert.ok(!strengths.includes("related"), `strengths returned: ${strengths.join(", ")}`);
+  assert.equal(strengths.length, 5);
 });
 
 test("cells follow the order of the arguments, passages strongest first", () => {
@@ -175,8 +211,11 @@ test("omitting model_spec_ids reads every specification", () => {
 });
 
 test("an empty cell says so rather than disappearing", () => {
+  // This cell holds one related passage and nothing stronger, so it is empty at
+  // core, which is named because the default now returns every band.
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour"], model_spec_ids: ["acme--second@2026-02-01"],
+    strength: "core",
   });
   const [cell] = answer.results;
   assert.deepEqual(cell.passages, []);

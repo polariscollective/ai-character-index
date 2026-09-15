@@ -109,5 +109,19 @@ check(note("claude-opus-5 except the appendix", false),
       "Machine translation from Chinese in part by Claude Opus 5.",
       "the qualification and the judged sentence are independent");
 
+/* ---- nothing left to name: no attribution at all ---- */
+
+/* A field that starts at "except" keeps nothing before the cut, and the band read
+ * "in part by ." with nobody in it. With nobody to name, it names nobody. */
+check(note("except the appendix", undefined),
+      `Machine translation from Chinese.${JUDGED}`,
+      "a field that starts at except drops the attribution");
+check(note(", except the appendix", false),
+      "Machine translation from Chinese.",
+      "punctuation before except is not somebody to credit");
+check(note(null, undefined),
+      `Machine translation from Chinese.${JUDGED}`,
+      "an empty field drops the attribution rather than saying by nobody");
+
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

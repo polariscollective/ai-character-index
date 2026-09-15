@@ -19,6 +19,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** The id the current publication answers to, so a pin can be exercised. */
 export const CURRENT_PUBLICATION = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
+/**
+ * A second publication, answered only to a pin: a draft nobody has made public,
+ * carrying documents the current publication does not. Documents are per
+ * publication, so a reader pinned to it must read that publication's documents
+ * as well as its payload; one publication alone could not tell the two apart.
+ */
+export const DRAFT_PUBLICATION = "8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37";
+
+/** Where each publication's files sit, relative to the reader's data directory. */
+const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "draft" };
+
 
 /**
  * Answers /api/reader/documents and /api/reader/payload, or returns false so
@@ -70,14 +81,15 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
     response.end(JSON.stringify({ error: "publication must be a uuid" }));
     return true;
   }
-  if (pin !== null && pin !== CURRENT_PUBLICATION) {
+  if (pin !== null && !Object.hasOwn(PUBLICATION_DIRS, pin)) {
     response.writeHead(404, { "content-type": "application/json" });
     response.end(JSON.stringify({ error: "no such publication" }));
     return true;
   }
 
   try {
-    const body = await readFile(join(dataDir, file));
+    const dir = join(dataDir, PUBLICATION_DIRS[pin ?? CURRENT_PUBLICATION]);
+    const body = await readFile(join(dir, file));
     response.writeHead(200, { "content-type": "application/json" });
     response.end(body);
   } catch {

@@ -30,6 +30,10 @@ the behaviour, core establishes it there, related bears on it without
 establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
+retrieve_passages answers with every band unless its strength argument narrows
+it, which is what the spec reader shows before any toggle is touched. Every
+passage carries its strength, so a client can also filter what comes back.
+
 Where a behaviour and specification pair carries a depth, it is the mean the
 index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
 with no depth answers null.
@@ -64,9 +68,11 @@ async function answer(work) {
 const STRENGTH =
   "The weakest band to return, meaning that band and stronger. defining is the "
   + "document's fullest statement of the behaviour, core establishes it there, "
-  + "related bears on it without establishing it. Defaults to core, which is "
-  + "what the spec reader shows before any toggle is touched. A judge's own "
-  + "verdict of adjacent is the band named related here.";
+  + "related bears on it without establishing it. Defaults to related, so every "
+  + "band comes back, which is what the spec reader shows before any toggle is "
+  + "touched. Every passage carries its strength, so pass core or defining to "
+  + "narrow the answer. A judge's own verdict of adjacent is the band named "
+  + "related here.";
 
 const handler = createMcpHandler(
   server => {

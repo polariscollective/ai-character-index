@@ -18,7 +18,7 @@ import { readFile as readFileAsync } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { serveReaderRoute, CURRENT_PUBLICATION } from "./reader-routes.mjs";
+import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -37,6 +37,8 @@ const DATA = join(fileURLToPath(new URL("..", import.meta.url)),
 const payloadDoc = JSON.parse(readFileSync(join(DATA, "behaviours.json"), "utf8"));
 const keepSet = payloadDoc.behaviours;
 const fixtureDocs = JSON.parse(readFileSync(join(DATA, "documents.json"), "utf8")).documents;
+// The draft publication's own documents, served only to a pin on DRAFT_PUBLICATION.
+const draftDocs = JSON.parse(readFileSync(join(DATA, "draft", "documents.json"), "utf8")).documents;
 const DOC_ID = fixtureDocs[0].id;
 const DOC_B = fixtureDocs[1].id;
 // Carries a translation band; DOC_ID does not, which is the pair the header
@@ -114,12 +116,61 @@ await at("?publication=00000000-0000-0000-0000-000000000000");
   check(unexpected.length === 0 && (await sidebar()).includes("Defined behaviour"),
     "a pin naming no publication degrades to the current one, with only its 404",
     unexpected.join("; "));
+  // The documents fall back with the payload: a pinned documents request would
+  // 404 the same way, and a reader that asked for it would have nothing to show.
+  const fellBack = await page.evaluate(() =>
+    document.querySelector(".document-panel")?.dataset.documentId ?? null);
+  check(fixtureDocs.some(doc => doc.id === fellBack),
+    "a pin that falls back reads the current publication's documents too", String(fellBack));
 }
 
 await at("?publication=behaviours-v5-reader");
 check(pageErrors.length === 0 && (await sidebar()).includes("Defined behaviour"),
   "a pin that is not a uuid is refused and degrades to the current one (no error)",
   pageErrors.join("; "));
+
+/* A pinned draft reads its documents from the publication it names. The reader
+ * used to fetch the documents unpinned and pair the draft's payload with the
+ * current publication's documents. Since documents became per publication their
+ * ids carry a version, so nothing matched: every tier read 0, and ?spec= was
+ * rewritten to a document the draft does not carry. */
+await at(`?publication=${DRAFT_PUBLICATION}`);
+{
+  const draftIds = draftDocs.map(doc => doc.id);
+  const currentIds = fixtureDocs.map(doc => doc.id);
+  const seen = await page.evaluate(() => ({
+    panels: [...document.querySelectorAll(".document-panel")].map(panel => panel.dataset.documentId),
+    labs: [...document.querySelectorAll(".provider-tab")].map(button => button.dataset.lab),
+    passages: document.querySelectorAll("[data-passage-id]").length,
+    tierCounts: [...document.querySelectorAll(".document-panel .tier-toggle")]
+      .reduce((total, button) => total + Number((button.textContent.match(/\((\d+)\)/) || [])[1] || 0), 0),
+    spec: new URL(location.href).searchParams.get("spec"),
+    sidebar: document.querySelector("#behaviour-list")?.textContent || "",
+  }));
+  const errors = [...pageErrors];
+  await page.click(".document-picker");
+  await page.waitForTimeout(150);
+  const offered = await page.evaluate(() =>
+    [...document.querySelectorAll(".spec-choice")].map(option => option.dataset.spec));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  check(seen.sidebar.includes("Draft behaviour"),
+    "a pin on a draft publication loads its payload", seen.sidebar.replace(/\s+/g, " ").slice(0, 80));
+  check(seen.panels.length === 1 && draftIds.includes(seen.panels[0]) && seen.spec === seen.panels[0],
+    "a pinned draft opens on one of its own documents, and ?spec= names it",
+    `panels ${seen.panels.join(", ")}; spec=${seen.spec}`);
+  check(seen.passages > 0 && seen.tierCounts > 0,
+    "a pinned draft's passages render on its documents, and its tiers count them",
+    `${seen.passages} passages, tier counts sum to ${seen.tierCounts}`);
+  const shown = [...seen.panels, ...offered, seen.spec];
+  check(offered.length > 0
+      && shown.every(id => draftIds.includes(id))
+      && !shown.some(id => currentIds.includes(id))
+      && seen.labs.length > 0 && seen.labs.every(lab => draftDocs.some(doc => doc.lab === lab)),
+    "a pinned draft never shows the current publication's documents",
+    `offered ${offered.join(", ")}; publishers ${seen.labs.join(", ")}`);
+  check(errors.length === 0, "a pinned draft: no console errors", errors.join("; "));
+}
 
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
@@ -151,10 +202,41 @@ check(pageErrors.length === 0 && (await page.evaluate(() =>
 // =============================================================================
 console.log("== Reader: tier bands (incl. the single-judge floor, B1) ==");
 const definedAll = q => at(`?behavior=${DEFINED}&spec=${DOC_ID}${q}`);
-await definedAll("");                       // default bands: defining + core
+await definedAll("");                       // default bands: all three
 {
   const n = await cards();
-  check(n === 1, "default bands: lone core vote renders, lone related vote waits in the related band", `${n} cards`);
+  check(n === 2, "default bands: all three show, so the lone related vote renders beside the core one",
+    `${n} cards`);
+  const tiers = new URL(page.url()).searchParams.get("tiers");
+  check(tiers === "defining,core,related", "the default bands are written to ?tiers=", tiers);
+}
+await definedAll("&tiers=defining,core");
+check((await cards()) === 1, "an explicit ?tiers= still wins: leaving related out hides the related vote");
+// The toggles still narrow the default view band by band, and give each band back.
+await definedAll("");
+{
+  const toggle = tier => `.document-panel .tier-toggle[data-tier="${tier}"]`;
+  const press = async tier => {
+    await page.click(toggle(tier));
+    await page.waitForTimeout(250);
+    return {
+      cards: await cards(),
+      tiers: new URL(page.url()).searchParams.get("tiers"),
+      pressed: await page.getAttribute(toggle(tier), "aria-pressed"),
+    };
+  };
+  let seen = await press("related");
+  check(seen.cards === 1 && seen.tiers === "defining,core" && seen.pressed === "false",
+    "the related toggle hides the related band", JSON.stringify(seen));
+  seen = await press("related");
+  check(seen.cards === 2 && seen.tiers === "defining,core,related" && seen.pressed === "true",
+    "pressed again, the related toggle shows it", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 1 && seen.tiers === "core,related" && seen.pressed === "false",
+    "the defining toggle hides the defining band and leaves related", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 2 && seen.pressed === "true",
+    "pressed again, the defining toggle shows it", JSON.stringify(seen));
 }
 await definedAll("&tiers=defining,core,related");
 {
@@ -321,7 +403,7 @@ console.log("== Reader: compare is a two-document choice ==");
     "compare renders exactly two panes and one boundary", `${c.panes} panes, ${c.resizers} resizers`);
   check(c.overflow === 0, "compare does not overflow the page", `${c.overflow}px`);
   check(c.pickers === 2, "each pane carries its own document picker", `${c.pickers} pickers`);
-  check(c.a !== c.b, "the two sides are never the same document", `${c.a} / ${c.b}`);
+  check(c.a !== c.b, "the opening pair is two different documents", `${c.a} / ${c.b}`);
 
   {
     await pickerFor("a").click();
@@ -447,6 +529,28 @@ console.log("== Reader: publishers ==");
     seen.panels.map(panel => panel.id).join(" | "));
   check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 1,
     "comparing, focus lands back on the right side's publisher", JSON.stringify(seen.focus));
+
+  // A tier toggle rebuilds both headers too. With one document on both sides its
+  // id cannot say which side pressed the toggle, so focus has to go back by
+  // position, to the side that pressed it.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=${DEFINED}`);
+  for (const side of [1, 0]) {
+    await page.locator(".document-panel").nth(side)
+      .locator('.tier-toggle[data-tier="related"]').focus();
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    const focus = await page.evaluate(() => {
+      const panels = [...document.querySelectorAll(".document-panel")];
+      const focused = document.activeElement;
+      return {
+        tier: focused?.dataset?.tier ?? null,
+        side: panels.indexOf(focused?.closest?.(".document-panel")),
+      };
+    });
+    check(focus.tier === "related" && focus.side === side,
+      `comparing one document twice, a tier toggle pressed on the ${side ? "right" : "left"}`
+        + " keeps focus on that side", JSON.stringify(focus));
+  }
   check(pageErrors.length === 0, "publishers: no console errors", pageErrors.join("; "));
 }
 

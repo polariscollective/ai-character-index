@@ -90,6 +90,20 @@ async function loadBehaviourNotes() {
   }
 }
 
+/* The specification text, from the publication the payload resolved to.
+ *
+ * Documents are per publication and their ids carry a version, so a draft's
+ * payload beside the current publication's documents matches nothing: every
+ * tier reads 0 and the reader settles on a document the draft does not carry,
+ * which is what fetching them unpinned did. Read after loadBehaviours and from
+ * state.payloadSource rather than from the URL, so a pin that fell back reads
+ * the current publication's documents with its payload. */
+async function loadDocuments() {
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  return loadJSON(
+    pinned ? `${DOCUMENTS_URL}?publication=${encodeURIComponent(pinned)}` : DOCUMENTS_URL);
+}
+
 /* The note a reader opens beside a behaviour. It answers the question an
  * unexpected label raises -- where does this behaviour stop -- which the reader
  * could not answer at all: the passage popover says what the judges decided,
@@ -269,9 +283,11 @@ const elements = {
  * IS the whole evidence, so their related vote renders at its own weight instead of
  * dying under the multi-judge floor. Weaker citations never render: with two-plus
  * judges a lone related vote is recorded in the data, not shown. Each tier is a
- * toggle in the document headers; the defaults show defining + core. */
+ * toggle in the document headers. The defaults show all three: related is drawn in
+ * the same colour thinned (--tint-related, --rule-related), so it reads as the weaker
+ * claim without waiting behind a toggle, and the toggles still narrow the view. */
 const TIERS = ["defining", "core", "related"];
-const DEFAULT_BANDS = ["defining", "core"];
+const DEFAULT_BANDS = ["defining", "core", "related"];
 
 /* The tier band for one passage score in one cell, or null when below every tier.
  * `related` is the related-vote weight (display tuning, default 1): for a
@@ -552,8 +568,9 @@ const KEY_NOTES = {
     reader:
       "Drawn when at least two judges are behind it, which is four of nine on the " +
       "default panel. A lone related vote is kept in the data and not drawn. This " +
-      "tier is off until you ask for it. The toggles in the document header " +
-      "beside the version turn it on.",
+      "tier is shown from the start, in a paler wash and a fainter margin rule than " +
+      "core, so it reads as the weaker claim. The toggles in the document header " +
+      "beside the version hide it, or any other tier.",
   },
   overlap: {
     title: "Shared",
@@ -1836,11 +1853,13 @@ function translatorNames(by) {
    ("in part by"). Shorter, and still true.
 
    Returns the attribution as the band says it, "by" included, because where "in
-   part" goes depends on what was cut. */
+   part" goes depends on what was cut. With nobody left to name, a field that is
+   empty or starts at "except", it returns nothing: "in part by ." credits nobody. */
 function shortenTranslator(by) {
   const cut = by.search(/\bexcept\b/i);
-  if (cut < 0) return `by ${by}`;
+  if (cut < 0) return by.trim() ? `by ${by}` : "";
   const kept = by.slice(0, cut).replace(/[\s,;:]+$/, "");
+  if (!kept.trim()) return "";
   const clause = [...kept.matchAll(/\b\w+ (by)\b/gi)].at(-1);
   if (!clause) return `in part by ${kept}`;
   const at = clause.index + clause[0].length - clause[1].length;
@@ -1857,7 +1876,7 @@ function translationNote(translation, judged) {
   const by = shortenTranslator(translatorNames(translation.by));
   // A review is worth saying; its absence is the ordinary case for a machine
   // translation and saying so every time buys nothing but length.
-  return `Machine translation from ${languageName(translation.from)} ${by}`
+  return `Machine translation from ${languageName(translation.from)}${by ? ` ${by}` : ""}`
        + `${translation.reviewed ? ", reviewed by a person" : ""}.`
        + (judged === false ? "" : " The index judged this translation.");
 }
@@ -2711,14 +2730,17 @@ function toggleBand(tier) {
 }
 
 /* The toggles live in the document headers, which rebuildReader re-clones, so the
- * listener is delegated and focus is put back on the equivalent button afterwards. */
+ * listener is delegated and focus is put back on the equivalent button afterwards.
+ * The panel is found by position rather than by document id, as the publisher row
+ * does: comparing, both sides may carry the same document, and its id would send
+ * focus from a toggle pressed on the right to the one on the left. */
 elements.documentReader.addEventListener("click", (event) => {
   const button = event.target.closest?.(".tier-toggle");
   if (!button || !TIERS.includes(button.dataset.tier)) return;
-  const panelId = button.closest(".document-panel")?.dataset.documentId;
+  const side = panels().indexOf(button.closest(".document-panel"));
   toggleBand(button.dataset.tier);
-  elements.documentReader
-    .querySelector(`.document-panel[data-document-id="${panelId}"] .tier-toggle[data-tier="${button.dataset.tier}"]`)
+  panels()[side]
+    ?.querySelector(`.tier-toggle[data-tier="${button.dataset.tier}"]`)
     ?.focus({ preventScroll: true });
 });
 
@@ -2732,13 +2754,13 @@ async function loadJSON(url) {
 async function initialize() {
   renderBehaviourList();
   try {
-    const [documents, behaviours] = await Promise.all([
-      loadJSON(DOCUMENTS_URL),
-      loadBehaviours(),
-    ]);
-    // Beside the payload, not before it: a note that fails to load must not stop
-    // the reader rendering, so it is awaited and its failure swallowed.
-    await loadBehaviourNotes();
+    // The payload first: which publication it resolved to decides where the
+    // documents and the behaviour notes are read from, so all three describe the
+    // same publication.
+    const behaviours = await loadBehaviours();
+    // The notes beside the documents, not before them: a note that fails to load
+    // must not stop the reader rendering, so its failure is swallowed.
+    const [documents] = await Promise.all([loadDocuments(), loadBehaviourNotes()]);
     state.rawBehaviours = behaviours.behaviours || [];
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();

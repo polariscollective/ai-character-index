@@ -111,10 +111,10 @@ function report(ok, label, detail) {
 }
 
 async function readView(url) {
-  /* Every view walks with all three bands on so the rendered anchors must equal
-   * the keep-set count; the default view keeps the related band collapsed (and
-   * verify-reader-features.mjs covers the band cuts). */
-  url += (url.includes("?") ? "&" : "?") + "tiers=defining,core,related";
+  /* Every view walks as a reader opens it, with no ?tiers= in the URL. The
+   * default is all three bands, so the rendered anchors must equal the keep-set
+   * count; a default that dropped a band would come up short here.
+   * verify-reader-features.mjs covers the band cuts and the toggles. */
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForFunction(
     () => !document.querySelector(".passage-count").textContent.startsWith("Loading"),
