@@ -1825,8 +1825,22 @@ function translatorNames(by) {
     (said, [id, name]) => said.split(id).join(name), by || "");
 }
 
+/* The band names who did the work and stops there. The column may go on to list
+   which parts a reviser never reached, which is a sentence of section names in a
+   strip meant to be read at a glance, so the reader cuts the list. What cannot
+   be cut with it is the claim: a reviser that skipped part of a document did not
+   revise the document, and "revised by" with the exceptions removed would say it
+   did. It becomes "revised in part by" whenever anything was dropped. Shorter,
+   and still true. */
+function shortenTranslator(by) {
+  const cut = by.search(/\bexcept\b/i);
+  if (cut < 0) return by;
+  return by.slice(0, cut).replace(/,\s*$/, "").trim()
+           .replace(/\brevised by\b/i, "revised in part by");
+}
+
 function translationNote(translation) {
-  const by = translatorNames(translation.by);
+  const by = shortenTranslator(translatorNames(translation.by));
   // A review is worth saying; its absence is the ordinary case for a machine
   // translation and saying so every time buys nothing but length.
   return `Machine translation from ${languageName(translation.from)} by ${by}`

@@ -582,12 +582,16 @@ if (behaviours.length === 0) {
   }));
   report(
     !note.hidden
-      // Both models named, both as names: the one translated document the index
-      // carries was written by one model and revised by another, and the field
-      // that says so is a sentence rather than a model id. Asserting the simple
+      // Both models named, both as names, and the column's list of the parts the
+      // reviser never reached left out of a strip read at a glance. The claim
+      // goes with the list: what is left says "in part", because a reviser that
+      // skipped sections did not revise the document. The fixture carries the
+      // shape the real field has, exceptions and all -- asserting the simple
       // case is what let raw ids through into the band in the first place.
       && note.text.includes(
-        "Machine translation from Chinese by Claude Opus 5, revised by Claude Fable 5")
+        "Machine translation from Chinese by Claude Opus 5, revised in part by Claude Fable 5")
+      && !note.text.includes("except")
+      && !note.text.includes("refuse-violence")
       && note.text.includes("The index judged this translation"),
     "translated · the header says whose translation was judged",
     note.text,
