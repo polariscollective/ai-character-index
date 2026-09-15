@@ -39,6 +39,9 @@ const keepSet = payloadDoc.behaviours;
 const fixtureDocs = JSON.parse(readFileSync(join(DATA, "documents.json"), "utf8")).documents;
 const DOC_ID = fixtureDocs[0].id;
 const DOC_B = fixtureDocs[1].id;
+// Carries a translation band; DOC_ID does not, which is the pair the header
+// layout check below wants: one panel with the band, one without.
+const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
@@ -511,6 +514,65 @@ await at("?compare=1");
   check(before.length === 1 && afterRight[0] !== before[0] && afterHome[0] !== afterRight[0],
     "compare: the single boundary responds to the keyboard",
     JSON.stringify({ before, afterRight, afterHome }));
+}
+{
+  // The passage arrows sit below the name/version/Show original row, on a
+  // row of their own shared with the tier toggles, arrows first at the
+  // left -- whatever wrapped above: a long title, a translation band on one
+  // side only (it sits below the header, not in it, so it cannot move this
+  // row), a narrower half. Checked at both viewports, for a pair where one
+  // side carries the translation band and the other does not and with a
+  // behaviour selected (so the tier toggles carry counts and the passage
+  // counter reads "N of M", the widest either gets), so a shared answer
+  // cannot be an accident of both panels wrapping alike or of an empty,
+  // narrow-text state. The resizer tests just above leave an off-centre
+  // compare split and a widened sidebar in localStorage; reset both so the
+  // panels start from the defaults this check means to cover.
+  await page.evaluate(() => {
+    localStorage.setItem("aci-compare-first", "50");
+    localStorage.removeItem("aci-sidebar-width");
+  });
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    await page.setViewportSize({ width, height });
+    await at(`?compare=1&compare-with=${DOC_TRANSLATED},${DOC_ID}`
+      + `&behavior=${DEFINED}&tiers=defining,core,related`);
+    const measured = await page.evaluate(() => [...document.querySelectorAll(".document-panel")].map(panel => {
+      const header = panel.querySelector(".document-header");
+      const documentRow = panel.querySelector(".document-row");
+      const nav = panel.querySelector(".passage-nav");
+      const legend = panel.querySelector(".rail-legend");
+      const style = getComputedStyle(header);
+      const rowRect = documentRow.getBoundingClientRect();
+      const nRect = nav.getBoundingClientRect();
+      const lRect = legend.getBoundingClientRect();
+      return {
+        documentId: panel.dataset.documentId,
+        hasBand: !panel.querySelector(".document-translation").hidden,
+        // Left edge against the header's own content-left (its border box
+        // left plus its own padding), not the viewport, so this holds
+        // however the two panels are split.
+        leftDiff: nRect.left - (header.getBoundingClientRect().left + parseFloat(style.paddingLeft)),
+        // Both arrows and toggles must clear the name/version/Show original
+        // row -- that row's own bottom already includes Show original where
+        // it is present.
+        navBelowIdentity: nRect.top - rowRect.bottom,
+        legendBelowIdentity: lRect.top - rowRect.bottom,
+        // Sharing one row: vertical centres a few px apart, not stacked.
+        centreDiff: (nRect.top + nRect.bottom) / 2 - (lRect.top + lRect.bottom) / 2,
+      };
+    }));
+    check(measured.length === 2 && measured.some(p => p.hasBand) && measured.some(p => !p.hasBand),
+      `compare header layout ${width}x${height}: fixture pair has one banded panel and one plain one`,
+      measured.map(p => `${p.documentId} band=${p.hasBand}`).join(", "));
+    check(
+      measured.every(p => Math.abs(p.leftDiff) <= 1 && p.navBelowIdentity >= 0 && p.legendBelowIdentity >= 0
+        && Math.abs(p.centreDiff) <= 4),
+      `compare ${width}x${height}: arrows lead the tier toggles on one row below the name/version row`,
+      measured.map(p => `${p.documentId} left ${p.leftDiff.toFixed(1)}px, nav below ${p.navBelowIdentity.toFixed(1)}px,`
+        + ` legend below ${p.legendBelowIdentity.toFixed(1)}px, centre diff ${p.centreDiff.toFixed(1)}px`)
+        .join("; "));
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {

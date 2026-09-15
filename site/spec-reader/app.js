@@ -2025,6 +2025,27 @@ function renderDocument(doc, side = 0) {
     usedHeadingIds: new Map(),
   };
   panel.dataset.documentId = doc.id;
+  // Comparing, document-meta becomes the header's own last child: a row
+  // beneath document-row (the name, version and Show original) rather than
+  // one more thing squeezed onto that row. That is what puts the arrows
+  // first and leftmost on the header's own last row, spanning its full
+  // content width whatever wrapped above -- a long title, Show original
+  // present on one side only, a resizer split leaving the two panels
+  // different widths. The translation band is unaffected: it is already a
+  // sibling below the whole header, not one of its rows.
+  //
+  // Expand all moves to the end of that row rather than staying between the
+  // arrows and the tier toggles: at a panel's narrowest (two panels at
+  // 1024px), keeping it there is what pushed the toggles onto a line of
+  // their own under the arrows -- the toggles need to stay next to the
+  // arrows more than Expand all needs to stay put. Both moves are in the
+  // DOM, not only reordered in CSS, so tab order follows the rows they now
+  // sit in rather than the rows they used to.
+  if (state.comparing) {
+    const meta = panel.querySelector(".document-meta");
+    panel.querySelector(".document-header").append(meta);
+    meta.append(panel.querySelector(".document-focus-toggle"));
+  }
   renderProviderTabs(panel, doc, side);
   panel.querySelector(".document-name").textContent = doc.title;
   panel.querySelector(".document-version").textContent = versionLabel(doc.version);

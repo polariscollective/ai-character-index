@@ -1041,14 +1041,45 @@ body.sidebar-collapsed .sidebar-resizer {
   font-size: 11px;
 }
 
-/* Comparing, this half is narrow enough that everything crowds the right edge
-   and wraps ragged. Spread it instead: the passage walk at the left of the
-   half, what changes the view at its right. At full width the right-aligned
-   cluster reads better, so the rule is scoped to compare. */
+/* Comparing, app.js moves this whole row out to be .document-header's own
+   last child, below the name/version/Show original row rather than beside
+   it: the panel is narrow enough there that a shared row crowds and wraps
+   ragged. As a header child it takes the header's full content width from
+   the column flex's align-items: stretch (see .document-header) rather than
+   from anything set here, and reads left-aligned -- arrows first, then the
+   tier toggles, Expand all moved to trail them (app.js) rather than spread
+   to the row's far edges. That keeps the arrows leading at the header's
+   bottom-left whatever wrapped above: a long title, Show original on one
+   side only, a resizer split leaving the two panels different widths. At
+   full width the right-aligned cluster reads better, so the rule is scoped
+   to compare. */
 .document-grid.compare .document-meta {
-  flex: 1;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
+/* At a panel's narrowest -- two panels sharing 1024px, a behaviour with
+   passages selected so the arrows read "N of M passages" and the toggles
+   carry counts, the widest either gets -- the arrows and the three tier
+   toggles together still overrun the row before Expand all even joins it.
+   The passage count is the one number here a reader is mid-sentence about
+   to read already -- "N of M passages" repeats what the toggles themselves
+   already count out by tier -- so it gives way first: present for a screen
+   reader, off-screen for everyone else, in compare mode only. The toggles
+   then trim their own padding and gap, a size step matching the title and
+   version reductions just above, which closes the rest of the gap. */
+.document-grid.compare .passage-count {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.document-grid.compare .passage-nav { position: relative; }
+.document-grid.compare .tier-toggle { padding: 3px 6px; }
+.document-grid.compare .rail-legend { gap: 3px; }
 .document-version { font-family: var(--mono); font-size: 11px; }
 .document-focus-toggle {
   padding: 2px 4px;
