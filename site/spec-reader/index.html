@@ -89,18 +89,14 @@
     ></div>
 
     <section class="workspace" aria-label="Specification reader">
-      <div class="finding-bar" aria-live="polite">
-        <div>
-          <span class="finding-behaviour" id="finding-behaviour">Loading…</span>
-          <span class="finding-definition" id="finding-definition"></span>
-        </div>
-        <div class="finding-actions">
-          <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false">
-            <span class="split-icon" aria-hidden="true"></span>
-            Compare
-          </button>
-        </div>
-      </div>
+      <!-- The switch into and out of compare. It belongs to no one document, so
+           there is one of it: app.js puts it at the right of the last panel's
+           publisher row whenever the panels are drawn, and until then it is hidden. -->
+      <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false"
+        title="Compare two documents side by side" hidden>
+        <span class="split-icon" aria-hidden="true"></span>
+        <span class="compare-label">Compare</span>
+      </button>
 
       <div id="reader-status" class="reader-status" role="status"></div>
       <div id="document-reader" class="document-grid" tabindex="-1"></div>
@@ -132,7 +128,9 @@
              which lab you are reading and which of its documents are different
              choices, and comparing asks both of them twice. A group of buttons
              rather than a tablist; app.js names each side's group when comparing. -->
-        <div class="provider-tabs" role="group" aria-label="Publisher"></div>
+        <div class="provider-row">
+          <div class="provider-tabs" role="group" aria-label="Publisher"></div>
+        </div>
         <div class="document-row">
           <div class="document-identity">
             <h2 class="document-title">

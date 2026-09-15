@@ -185,18 +185,26 @@ await at("");
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
-  const finding = await page.evaluate(() => ({
-    name: document.querySelector("#finding-behaviour")?.textContent.trim(),
-    def: document.querySelector("#finding-definition")?.textContent.trim() || "",
-  }));
-  check(finding.name === "Defined behaviour", "?behavior= selects the defined behaviour", finding.name);
-  check(finding.def.includes("say what it means"),
-    "the behaviour definition renders", finding.def.slice(0, 50));
+  const ticked = await page.evaluate(() => [...document.querySelectorAll("[data-behaviour]")]
+    .filter(input => input.checked).map(input => input.dataset.behaviour));
+  check(ticked.join(",") === DEFINED, "?behavior= ticks the defined behaviour in the menu",
+    ticked.join(","));
+  // The strip under the header that repeated the selection and the definition is
+  // gone. The definition is read in the behaviour's note, beside its name.
+  await page.click(`[data-behaviour-note="${DEFINED}"]`);
+  await page.waitForTimeout(150);
+  const note = await page.evaluate(() => document.querySelector("#key-note-body")?.textContent || "");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  check(note.includes("say what it means"),
+    "the behaviour's definition is read in its note in the menu",
+    note.replace(/\s+/g, " ").slice(0, 60));
 }
 await at("?behavior=no-such-behaviour");
 check(pageErrors.length === 0 && (await page.evaluate(() =>
-  document.querySelector("#finding-behaviour")?.textContent.trim().length > 0)),
-  "unknown ?behavior= degrades to a real behaviour without errors",
+  document.querySelectorAll(".document-panel").length === 1
+  && !document.querySelector(".passage-count").textContent.startsWith("Loading"))),
+  "unknown ?behavior= still opens a document, without errors",
   pageErrors.join("; "));
 
 // =============================================================================
@@ -693,26 +701,63 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
     "sidebar resizer: keyboard Home/End resize", `${atHome} -> ${atEnd}`);
 }
 {
-  // The sidebar's own header row and the reader's finding bar sit side by
-  // side, so their bottom rules have to fall on the same line -- expanded or
-  // collapsed (the arrow button, not a class swapped in by the walker), at a
-  // wide and a narrow desktop width.
-  const dividerBottoms = () => page.evaluate(() => ({
-    sidebar: document.querySelector(".sidebar-intro").getBoundingClientRect().bottom,
-    finding: document.querySelector(".finding-bar").getBoundingClientRect().bottom,
-  }));
+  /* The sidebar's own header row and each document panel's first row, its
+   * publishers with Compare at the right of the last panel's, sit side by side,
+   * so their bottom rules fall on one line: expanded or collapsed (the arrow
+   * button, not a class swapped in by the walker), one document or two, at a
+   * wide and a narrow desktop width. The strip of behaviour tags that used to
+   * hold that line, and Compare with it, is gone. */
+  const topRows = () => page.evaluate(() => {
+    const panels = [...document.querySelectorAll(".document-panel")];
+    const toggle = document.querySelector("#compare-toggle");
+    const lastRow = panels.at(-1)?.querySelector(".provider-row");
+    const tabs = panels.at(-1)?.querySelector(".provider-tabs");
+    const t = toggle?.getBoundingClientRect();
+    const r = lastRow?.getBoundingClientRect();
+    const g = tabs?.getBoundingClientRect();
+    return {
+      sidebar: document.querySelector(".sidebar-intro").getBoundingClientRect().bottom,
+      rows: panels.map(panel => panel.querySelector(".provider-row")?.getBoundingClientRect().bottom ?? null),
+      strip: Boolean(document.querySelector(".finding-bar, .behaviour-chip, #finding-behaviour")),
+      toggle: toggle && r && g ? {
+        inRow: lastRow.contains(toggle),
+        visible: t.width > 0 && t.height > 0,
+        rightOfTabs: Math.round(t.left - g.right),
+        withinRow: t.top >= r.top && t.bottom <= r.bottom && t.right <= r.right,
+      } : null,
+    };
+  });
+  const setMenu = async open => {
+    if ((await page.getAttribute("#sidebar-toggle", "aria-expanded")) !== String(open)) {
+      await page.click("#sidebar-toggle");
+      await page.waitForTimeout(200);
+    }
+  };
   for (const [width, height] of [[1440, 900], [1024, 768]]) {
     await page.setViewportSize({ width, height });
-    await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
-    const expanded = await dividerBottoms();
-    await page.click("#sidebar-toggle");
-    await page.waitForTimeout(200);
-    const collapsed = await dividerBottoms();
-    const diffExpanded = Math.abs(expanded.sidebar - expanded.finding);
-    const diffCollapsed = Math.abs(collapsed.sidebar - collapsed.finding);
-    check(diffExpanded <= 1 && diffCollapsed <= 1,
-      `sidebar/finding-bar dividers align at ${width}x${height}, expanded and collapsed`,
-      `expanded diff ${diffExpanded.toFixed(2)}px, collapsed diff ${diffCollapsed.toFixed(2)}px`);
+    for (const [mode, query] of [
+      ["one document", `?behavior=${DEFINED}&spec=${DOC_ID}`],
+      ["compare", `?behavior=${DEFINED}&compare=1&compare-with=${DOC_ID},${DOC_B}`],
+    ]) {
+      await at(query);
+      await setMenu(true);
+      const expanded = await topRows();
+      await setMenu(false);
+      const collapsed = await topRows();
+      await setMenu(true);
+      const off = seen => seen.rows.map(bottom => (bottom === null ? Infinity : Math.abs(bottom - seen.sidebar)));
+      check([...off(expanded), ...off(collapsed)].every(diff => diff <= 1),
+        `${mode} ${width}x${height}: the sidebar's rule and each panel's publisher row rule are one line,`
+          + " expanded and collapsed",
+        `expanded ${off(expanded).map(d => d.toFixed(2)).join("/")}px,`
+          + ` collapsed ${off(collapsed).map(d => d.toFixed(2)).join("/")}px`);
+      check(!expanded.strip && !collapsed.strip,
+        `${mode} ${width}x${height}: no strip of behaviour tags under the header`);
+      check([expanded.toggle, collapsed.toggle].every(seen =>
+          seen?.inRow && seen.visible && seen.rightOfTabs >= 0 && seen.withinRow),
+        `${mode} ${width}x${height}: Compare sits at the right of the publishers, on their row`,
+        JSON.stringify({ expanded: expanded.toggle, collapsed: collapsed.toggle }));
+    }
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }
