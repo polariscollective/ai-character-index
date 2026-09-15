@@ -40,6 +40,7 @@ import index_store               # noqa: E402
 import judge_call                # noqa: E402
 import bands                     # noqa: E402
 import depth_call                # noqa: E402
+import whole_doc                 # noqa: E402
 from store import Store, StoreError  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "harness.py")
@@ -228,8 +229,7 @@ def one_call(store, call, run_row, registry, passages_for, versions,
     try:
         reply, usage, finish_reason, seconds = call_model(
             provider=provider, model_id=model_id, system=system, user=user,
-            kwargs=h.judge_kwargs(call["model"], model_id, config)
-            if hasattr(h, "judge_kwargs") else {})
+            kwargs=whole_doc.judge_kwargs(call["model"], model_id, config))
     except Exception as refused:                      # noqa: BLE001
         # The provider refused or the request died. The call carries why, and the
         # run carries on: one seat failing is not the run failing.
@@ -338,8 +338,7 @@ def one_depth(store, call, registry, retained, call_model, config, report, lock)
     try:
         reply, usage, finish_reason, seconds = call_model(
             provider=provider, model_id=model_id, system=system, user=user,
-            kwargs=h.judge_kwargs(call["model"], model_id, config)
-            if hasattr(h, "judge_kwargs") else {})
+            kwargs=whole_doc.judge_kwargs(call["model"], model_id, config))
     except Exception as refused:                      # noqa: BLE001
         store.update("aci_depths", match, {"status": "error", "error": str(refused)[:1000],
                                            "finished_at": now()})

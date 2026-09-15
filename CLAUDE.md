@@ -105,6 +105,32 @@ This is also what `json` rather than `jsonb` was for. jsonb reorders keys on the
 way in, which breaks that equality permanently and silently. It did, once, and the
 tables were recreated.
 
+### Every hosted call went out with none of the panel's settings
+
+**Fixed.**
+
+`batch_job.one_call`, `batch_job.one_depth` and `local_run.one_call` built each
+call's settings with `h.judge_kwargs(...) if hasattr(h, "judge_kwargs") else {}`.
+`h` is harness.py, loaded by each of those modules the same way, and harness.py
+carries no `judge_kwargs`: that function lives in whole_doc.py. The `hasattr`
+check was therefore always false, and every call the job made went out with
+`kwargs={}` -- no `temperature`, no `max_tokens` cap, no `reasoning_effort`,
+whatever the model. This has been true since 52bb6a7, the job's first commit, so
+every run the hosted job has executed carries it, including the smoke run
+`29d490e8` and the full `frontier_fast` rerun of 2026-09-15, `aef5e906`: both ran
+every seat at the provider's default settings.
+
+It showed on deepseek, called at the provider's default temperature: its depth
+replies came back garbled on repeated attempts, for example `DEPTH:计量2`,
+`DEPTH: infant` and `DEPTH:{JUDGMENT}`. sol ran without its `reasoning_effort`,
+and no model had its output capped.
+
+The three call sites now import whole_doc.py and call `whole_doc.judge_kwargs`
+directly, with no guard. `judge_kwargs` reads a model's quirk off its resolved id
+after stripping any OpenRouter vendor prefix, so a native call and its mirror --
+`deepseek-ai/DeepSeek-V3.2` and `deepseek/deepseek-v3.2`, alike for fable and sol
+-- get the same settings.
+
 ## Changes of substance we made
 
 ### The reader's data attributes stay machine-readable, its prose does not

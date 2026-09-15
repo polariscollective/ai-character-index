@@ -352,6 +352,79 @@ class DepthTest(unittest.TestCase):
         self.assertEqual(finished[-1]["cost_usd"], expected)
 
 
+class CallSettingsTest(unittest.TestCase):
+    """The panel's per-model quirks (whole_doc.judge_kwargs) must reach every
+    model call the job makes, passage and depth alike. Guards the defect where
+    `h.judge_kwargs` was checked with `hasattr` -- harness.py carries no such
+    function, judge_kwargs lives in whole_doc.py -- so the guard was always
+    false and every call went out with no settings at all."""
+
+    @classmethod
+    def setUpClass(cls):
+        fixture.install_spec()
+        cls.registry = fixture.judging_registry()
+        cls.passages = batch_job.h.passages("corpus")
+
+    @classmethod
+    def tearDownClass(cls):
+        cite.reset_registry()
+
+    def recording(self, sink, depth_sink=None):
+        """A stub that records the settings dict each call received, keyed by
+        whether it is a depth call (the depth system prompt carries "DEPTH")."""
+        passages = good_reply(len(self.passages))
+        depth_reply = lambda **k: ("DEPTH: 2\nRATIONALE: fine.",
+                                   {"prompt_tokens": 5, "completion_tokens": 3},
+                                   "stop", 0.1)
+
+        def model(**kwargs):
+            if "DEPTH" in kwargs["system"]:
+                if depth_sink is not None:
+                    depth_sink.append(kwargs["kwargs"])
+                return depth_reply(**kwargs)
+            sink.append(kwargs["kwargs"])
+            return passages(**kwargs)
+        return model
+
+    def go(self, store, model):
+        return batch_job.run(store, RUN, call_model=model, registry=self.registry,
+                             passages_for=lambda spec, version: self.passages,
+                             concurrency=1)
+
+    def test_a_deepseek_passage_call_gets_temperature_zero_and_a_cap(self):
+        sink = []
+        store = FakeStore([call_row(1, "deepseek")])
+        self.go(store, self.recording(sink))
+        self.assertEqual(len(sink), 1)
+        self.assertEqual(sink[0].get("temperature"), 0)
+        self.assertIn("max_tokens", sink[0])
+
+    def test_a_deepseek_depth_call_gets_temperature_zero_and_a_cap(self):
+        sink, depth_sink = [], []
+        store = FakeStore([call_row(1, "deepseek")])
+        store.tables["aci_depths"] = [depth_row(1)]
+        self.go(store, self.recording(sink, depth_sink))
+        self.assertEqual(len(depth_sink), 1)
+        self.assertEqual(depth_sink[0].get("temperature"), 0)
+        self.assertIn("max_tokens", depth_sink[0])
+
+    def test_a_fable_call_gets_no_temperature(self):
+        sink = []
+        store = FakeStore([call_row(1, "fable")])
+        self.go(store, self.recording(sink))
+        self.assertEqual(len(sink), 1)
+        self.assertNotIn("temperature", sink[0])
+
+    def test_a_sol_call_gets_reasoning_effort_and_completion_tokens_no_temperature(self):
+        sink = []
+        store = FakeStore([call_row(1, "sol")])
+        self.go(store, self.recording(sink))
+        self.assertEqual(len(sink), 1)
+        self.assertIn("reasoning_effort", sink[0])
+        self.assertIn("max_completion_tokens", sink[0])
+        self.assertNotIn("temperature", sink[0])
+
+
 class RoutingTest(unittest.TestCase):
     """With only OPENROUTER_API_KEY set, every seat must resolve to its mirror.
 
