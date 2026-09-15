@@ -1789,8 +1789,11 @@ const COPY_SAID = {
 };
 
 async function copyFromPassage(button) {
-  const block = button.closest("[data-passage-id]");
-  const locator = (block?.dataset.locators || "").split("\n")[0];
+  // A paragraph's own icons (setupBlockCopy) copy the paragraph's locator; a cited
+  // passage's icons, in its head, copy the locator it is cited by.
+  const holder = button.closest(".block-copy")?.parentElement;
+  const block = holder || button.closest("[data-passage-id]");
+  const locator = holder ? holder.dataset.locator : (block?.dataset.locators || "").split("\n")[0];
   if (!locator) return;
   const kind = button.dataset.copy === "link" ? "link" : "locator";
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
@@ -1806,8 +1809,25 @@ async function copyFromPassage(button) {
     say(COPY_SAID[kind][0]);
   } catch {
     /* A refused clipboard is not a dead end: open the passage's note and select
-       what would have been copied, so the usual keyboard copy works. */
-    const note = block.querySelector(".passage-rationale");
+       what would have been copied, so the usual keyboard copy works. A paragraph
+       no passage cites has no note, so the text is written under it instead. */
+    const note = holder ? null : block.querySelector(".passage-rationale");
+    if (holder) {
+      let line = holder.querySelector(":scope > .block-copy-fallback");
+      if (!line) {
+        line = document.createElement("span");
+        line.className = "block-copy-fallback";
+        holder.append(line);
+      }
+      line.textContent = text;
+      const range = document.createRange();
+      range.selectNodeContents(line);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      say(COPY_SAID[kind][1]);
+      return;
+    }
     if (!note) return;
     if (note.hidden) {
       note.hidden = false;
@@ -1828,6 +1848,64 @@ async function copyFromPassage(button) {
     selection.addRange(range);
     say(COPY_SAID[kind][1]);
   }
+}
+
+/* The same two icons for every paragraph no passage cites.
+ *
+ * One toolbar per panel, moved into the paragraph the pointer is over, the one
+ * that takes focus (a link opens on it) or the one tapped, rather than a pair of
+ * buttons in each of several hundred paragraphs: the document stays as light as
+ * it was, and the tab order does not grow by a thousand stops. It sits in the
+ * gutter at the paragraph's right (see .block-copy). A cited passage keeps the
+ * icons in its head, and none go on a heading, which carries no locator, or on a
+ * code block or a table, which scroll sideways and would clip them or put them
+ * over their text. Those blocks still open from a link. */
+const BLOCK_COPY = `<span class="block-copy">${COPY_ICONS}</span>`;
+
+function setupBlockCopy(panel) {
+  const body = panel.querySelector(".document-body");
+  const holder = document.createElement("template");
+  holder.innerHTML = BLOCK_COPY.trim();
+  const toolbar = holder.content.firstElementChild;
+  panel._blockCopy = toolbar;
+  const holdAt = target => {
+    const block = target?.closest?.("[data-locator]");
+    if (!block || !body.contains(block) || block.classList.contains("passage")
+        || /^(H[1-6]|PRE)$/.test(block.tagName)) return null;
+    if (toolbar.parentElement !== block) {
+      toolbar.parentElement?.classList.remove("holds-copy", "touched");
+      block.classList.add("holds-copy");
+      block.append(toolbar);
+    }
+    return block;
+  };
+  body.addEventListener("pointerover", event => holdAt(event.target));
+  body.addEventListener("focusin", event => {
+    if (!event.target.closest?.(".block-copy")) holdAt(event.target);
+  });
+  // Where there is no pointer to hover with, a tapped paragraph shows its icons.
+  body.addEventListener("click", event => {
+    if (!event.target.closest?.(".block-copy")) holdAt(event.target)?.classList.add("touched");
+  });
+}
+
+/* A paragraph a link names, no passage citing it: its section opened if focus mode
+ * had folded it, scrolled to, focused, and outlined for a moment. No behaviour is
+ * ticked for it and it is not a passage, so the arrows do not take it as theirs. */
+function revealBlock(panel, block) {
+  const body = block.closest(".document-body");
+  let sectionChild = block;
+  while (sectionChild.parentElement && sectionChild.parentElement !== body) {
+    sectionChild = sectionChild.parentElement;
+  }
+  (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
+  updateSectionVisibility(panel);
+  block.scrollIntoView({ behavior: "smooth", block: "center" });
+  block.setAttribute("tabindex", "-1");
+  block.focus({ preventScroll: true });
+  block.classList.add("linked-block");
+  setTimeout(() => block.classList.remove("linked-block"), 2500);
+  requestAnimationFrame(updateRails);
 }
 
 /* Opening a rationale changes the height of the block it sits in, so the rail marks -- which
@@ -1858,6 +1936,9 @@ function setupPassageDisclosure(panel) {
  * reads exactly as the specification does -- passage matching runs against textContent. */
 function clearHighlights(panel) {
   const body = panel.querySelector(".document-body");
+  // A paragraph that is about to become a passage gets its icons in its head.
+  panel._blockCopy?.parentElement?.classList.remove("holds-copy", "touched");
+  panel._blockCopy?.remove();
   body.querySelectorAll(".passage-head, .passage-rationale").forEach(part => part.remove());
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
@@ -2463,6 +2544,7 @@ function renderDocument(doc, side = 0) {
   setupSectionFocus(panel);
   setupInternalLinks(panel);
   setupPassageDisclosure(panel);
+  setupBlockCopy(panel);
   setupOriginalNotes(panel);
   return panel;
 }
@@ -3180,15 +3262,30 @@ function openPassageLink(locator) {
   const cites = behaviour => (behaviour.coverage?.[doc?.id]?.passages || [])
     .some(passage => passage.locator === locator);
   const citing = doc ? (state.rawBehaviours || []).filter(cites) : [];
-  if (!citing.length) return { locator, resolved: false };
+  if (!doc) return { locator, resolved: false };
 
-  const bands = state.bands;
-  state.bands = new Set(TIERS);
-  const band = applyPanelThreshold({ behaviours: structuredClone(citing) }).behaviours
-    .flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || [])
-    .find(passage => passage.locator === locator)?.band;
-  state.bands = bands;
-  if (!band) return { locator, resolved: false };
+  let band = null;
+  if (citing.length) {
+    const bands = state.bands;
+    state.bands = new Set(TIERS);
+    band = applyPanelThreshold({ behaviours: structuredClone(citing) }).behaviours
+      .flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || [])
+      .find(passage => passage.locator === locator)?.band || null;
+    state.bands = bands;
+  }
+  if (!band) {
+    /* No passage the reader shows is cited by it, so it is a paragraph like any
+       other: open it if the engine numbers such a block, sentence span aside, and
+       tick nothing. A locator the engine gives no block stays unresolved. */
+    const withoutSpan = locator.replace(/ s\d+(?:\s*-\s*(?:s?\d+|¶\d+\s*s\d+))?$/, "");
+    const blockLocator = [doc.id, ...withoutSpan.split(" > ").slice(1)].join(" > ");
+    const known = documentLocators(doc.markdown, doc.id, locatesByAnchor(doc))
+      .some(entry => entry.locator === blockLocator);
+    if (!known) return { locator, resolved: false };
+    state.selectedSpec = doc.id;
+    if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
+    return { locator, blockLocator, documentId: doc.id, resolved: true, uncited: true };
+  }
 
   state.selectedSpec = doc.id;
   if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
@@ -3219,6 +3316,15 @@ function revealPassageLink(linked) {
     return;
   }
   const panel = panels().find(item => item.dataset.documentId === linked.documentId);
+  if (linked.uncited) {
+    const block = panel?.querySelector(`.document-body [data-locator="${CSS.escape(linked.blockLocator)}"]`);
+    if (!block) {
+      say(`The passage this link names could not be found in the document: ${linked.locator}.`);
+      return;
+    }
+    revealBlock(panel, block);
+    return;
+  }
   const index = (panel?._anchors || [])
     .findIndex(anchor => (anchor.dataset.locators || "").split("\n").includes(linked.locator));
   if (index < 0) {
