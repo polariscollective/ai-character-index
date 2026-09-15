@@ -12,11 +12,13 @@ import { createHash } from "node:crypto";
 import { insert, select } from "../../../lib/supabase.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
-import { labelTaken, nameProblem, specificationId, versionProblem } from "../../../lib/documents.mjs";
+import { labelTaken, nameProblem, newVersionRow, specificationId, versionProblem }
+  from "../../../lib/documents.mjs";
+import { creditProblem } from "../../../lib/credit.mjs";
 
 const STYLES = ["path", "anchor"];
 
-export const POST = formRoute("/admin/specifications", requireOperator, async (fields, email) => {
+export const POST = formRoute("/admin/specifications", requireOperator, async (fields) => {
   const lab = fields.one("lab");
   const name = fields.one("name");
   const version = fields.one("version");
@@ -25,12 +27,16 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
   const title = fields.one("title");
   const shortTitle = fields.one("short_title");
   const style = fields.one("locator_style");
+  // Who a citation credits this version to. Never the operator's address: an
+  // empty field credits the Collective, and an address-shaped one is refused.
+  const credit = fields.one("credit");
 
   const [specs, labs] = await Promise.all([
     select("aci_specs", "select=*"),
     select("aci_labs", "select=id"),
   ]);
-  const found = [nameProblem(name), versionProblem(version)].filter(Boolean);
+  const found = [nameProblem(name), versionProblem(version), creditProblem(credit)]
+    .filter(Boolean);
   if (!labs.some(row => row.id === lab)) {
     found.push(`lab must be one of ${labs.map(row => row.id).join(", ")}`);
   }
@@ -69,10 +75,8 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
       source_url: sourceUrl, locator_style: style,
     }]);
   }
-  await insert("aci_spec_versions", [{
-    spec_id: id, version, markdown, content_sha256: digest,
-    source_url: sourceUrl, added_by: email,
-  }]);
+  await insert("aci_spec_versions",
+              [newVersionRow({ specId: id, version, markdown, digest, sourceUrl, credit })]);
   return `Registered ${id}@${version}, ${markdown.length.toLocaleString("en-GB")} `
        + `characters, digest ${digest.slice(0, 12)}. Nothing judges it until a run `
        + "names it.";

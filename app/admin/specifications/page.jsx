@@ -92,6 +92,15 @@ export default async function Specifications({ searchParams }) {
               bytes cannot be registered twice under two labels.
             </span>
           </label>
+          <label>
+            <span>Credit this version to</span>
+            <input type="text" name="credit" defaultValue="Polaris Collective" />
+            <span className="hint">
+              How the registrar reads in a publication&apos;s citation. Left empty,
+              it credits the Collective; it is never the address you signed in
+              with.
+            </span>
+          </label>
 
           <fieldset>
             <legend>Only for a document the index has not seen</legend>

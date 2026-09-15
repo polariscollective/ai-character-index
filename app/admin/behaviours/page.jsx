@@ -96,7 +96,9 @@ export default async function Behaviours({ searchParams }) {
             <input type="text" name="credit" defaultValue="Polaris Collective" />
             <span className="hint">
               How the author reads in a publication&apos;s citation. A behaviour&apos;s
-              two sentences are what every verdict on it is a verdict on.
+              two sentences are what every verdict on it is a verdict on. Left
+              empty, it credits the Collective; it is never the address you
+              signed in with.
             </span>
           </label>
           <button type="submit">Register</button>

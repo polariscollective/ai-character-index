@@ -14,6 +14,7 @@ import { startJob } from "../../../lib/jobs.mjs";
 import { byStatus, depthTally, launchRefusal, mergeCounts, unfinished } from "../../../lib/runs.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
+import { creditProblem, resolveCredit } from "../../../lib/credit.mjs";
 
 const counted = (count, noun) => `${count} ${noun}${count === 1 ? "" : "s"}`;
 
@@ -28,12 +29,17 @@ export const POST = formRoute("/admin/runs", requireOperator, async (fields, ema
     if (!behaviours.length) refuse("choose at least one behaviour");
     if (!documents.length) refuse("choose at least one document");
     // Who the verdicts are credited to, which a publication reads back when it
-    // builds its own citation. An address identifies the operator; it does not
-    // read as an author, so the form asks for a name and falls back to the
-    // address rather than inventing one.
-    const credit = fields.one("credit") || email;
+    // builds its own citation. An address identifies the operator, not an
+    // author, so this never falls back to it: left empty, the run is credited
+    // to the Collective instead, and an address-shaped credit is refused.
+    const credit = fields.one("credit");
+    const creditIssue = creditProblem(credit);
+    if (creditIssue) refuse(creditIssue);
+    // email still travels to startJob below: aci_jobs.created_by is the audit
+    // trail of who pressed the button, a column this fix leaves alone.
     const job = await startJob("compose",
-                               { behaviours, documents, rubric, again, created_by: credit },
+                               { behaviours, documents, rubric, again,
+                                 created_by: resolveCredit(credit) },
                                email);
     return `Composing: ${behaviours.length} behaviours x ${documents.length} documents`
          + `${again ? ", judging again what is already judged" : ""}. `
