@@ -269,9 +269,11 @@ const elements = {
  * IS the whole evidence, so their related vote renders at its own weight instead of
  * dying under the multi-judge floor. Weaker citations never render: with two-plus
  * judges a lone related vote is recorded in the data, not shown. Each tier is a
- * toggle in the document headers; the defaults show defining + core. */
+ * toggle in the document headers. The defaults show all three: related is drawn in
+ * the same colour thinned (--tint-related, --rule-related), so it reads as the weaker
+ * claim without waiting behind a toggle, and the toggles still narrow the view. */
 const TIERS = ["defining", "core", "related"];
-const DEFAULT_BANDS = ["defining", "core"];
+const DEFAULT_BANDS = ["defining", "core", "related"];
 
 /* The tier band for one passage score in one cell, or null when below every tier.
  * `related` is the related-vote weight (display tuning, default 1): for a
@@ -552,8 +554,9 @@ const KEY_NOTES = {
     reader:
       "Drawn when at least two judges are behind it, which is four of nine on the " +
       "default panel. A lone related vote is kept in the data and not drawn. This " +
-      "tier is off until you ask for it. The toggles in the document header " +
-      "beside the version turn it on.",
+      "tier is shown from the start, in a paler wash and a fainter margin rule than " +
+      "core, so it reads as the weaker claim. The toggles in the document header " +
+      "beside the version hide it, or any other tier.",
   },
   overlap: {
     title: "Shared",

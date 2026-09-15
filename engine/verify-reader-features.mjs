@@ -151,10 +151,41 @@ check(pageErrors.length === 0 && (await page.evaluate(() =>
 // =============================================================================
 console.log("== Reader: tier bands (incl. the single-judge floor, B1) ==");
 const definedAll = q => at(`?behavior=${DEFINED}&spec=${DOC_ID}${q}`);
-await definedAll("");                       // default bands: defining + core
+await definedAll("");                       // default bands: all three
 {
   const n = await cards();
-  check(n === 1, "default bands: lone core vote renders, lone related vote waits in the related band", `${n} cards`);
+  check(n === 2, "default bands: all three show, so the lone related vote renders beside the core one",
+    `${n} cards`);
+  const tiers = new URL(page.url()).searchParams.get("tiers");
+  check(tiers === "defining,core,related", "the default bands are written to ?tiers=", tiers);
+}
+await definedAll("&tiers=defining,core");
+check((await cards()) === 1, "an explicit ?tiers= still wins: leaving related out hides the related vote");
+// The toggles still narrow the default view band by band, and give each band back.
+await definedAll("");
+{
+  const toggle = tier => `.document-panel .tier-toggle[data-tier="${tier}"]`;
+  const press = async tier => {
+    await page.click(toggle(tier));
+    await page.waitForTimeout(250);
+    return {
+      cards: await cards(),
+      tiers: new URL(page.url()).searchParams.get("tiers"),
+      pressed: await page.getAttribute(toggle(tier), "aria-pressed"),
+    };
+  };
+  let seen = await press("related");
+  check(seen.cards === 1 && seen.tiers === "defining,core" && seen.pressed === "false",
+    "the related toggle hides the related band", JSON.stringify(seen));
+  seen = await press("related");
+  check(seen.cards === 2 && seen.tiers === "defining,core,related" && seen.pressed === "true",
+    "pressed again, the related toggle shows it", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 1 && seen.tiers === "core,related" && seen.pressed === "false",
+    "the defining toggle hides the defining band and leaves related", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 2 && seen.pressed === "true",
+    "pressed again, the defining toggle shows it", JSON.stringify(seen));
 }
 await definedAll("&tiers=defining,core,related");
 {

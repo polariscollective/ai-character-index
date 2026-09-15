@@ -157,8 +157,8 @@ check(p.behaviours[0].coverage.spec.bandCounts, { defining: 2, core: 0, related:
 /* ---- initialBands: the legacy mapping is actually WIRED IN ---- */
 
 /* Every check below would still pass if initialBands ignored its helpers and
- * returned DEFAULT_BANDS -- except that DEFAULT_BANDS is defining+core, so a
- * case expecting all three tiers and a case expecting defining alone together
+ * returned DEFAULT_BANDS -- except that DEFAULT_BANDS is all three tiers, so a
+ * case expecting defining alone and a case expecting defining and core together
  * pin the call. */
 state.rawBehaviours = payload([cell([{ a: 2, b: 2, c: 2 }])]).behaviours;
 setParams("?threshold=6");
@@ -172,6 +172,26 @@ check([...initialBands()], ["defining", "core"],
 setParams("?threshold=4");
 check([...initialBands()], TIERS,
       "?threshold=4 on a 9-scale payload falls through to every tier");
+
+/* ---- initialBands: the defaults, and what still overrides them ---- */
+
+/* With nothing in the URL every band shows. Related passages, the concrete
+ * examples and applications of a norm, used to wait behind a toggle a reader had
+ * to know to press; they are drawn softer than core instead, and the toggles
+ * still narrow the view. A link that names its bands keeps them. */
+setParams("");
+check([...initialBands()], ["defining", "core", "related"],
+      "no ?tiers= in the URL shows all three bands");
+setParams("?tiers=defining,core");
+check([...initialBands()], ["defining", "core"],
+      "an explicit ?tiers= still wins over the defaults");
+setParams("?tiers=none");
+check([...initialBands()], [],
+      "?tiers=none still hides every band");
+setParams("?tier=core");
+check([...initialBands()], ["defining", "core"],
+      "a legacy ?tier= link still maps to the bands it showed");
+setParams("");
 
 /* ---- judgesPerCell takes the LARGEST, and it matters on real data ---- */
 
