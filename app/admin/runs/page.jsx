@@ -150,11 +150,12 @@ export default async function Runs({ searchParams }) {
           </fieldset>
           <label>
             <span>Credit these verdicts to</span>
-            <input type="text" name="credit" placeholder="Ada Lovelace; Charles Babbage" />
+            <input type="text" name="credit" defaultValue="Polaris Collective"
+                   placeholder="Ada Lovelace; Charles Babbage" />
             <span className="hint">
               A publication computes its own citation from this, so write it as it
-              should read in an author field. Left empty, the run is credited to the
-              address you signed in with, which is not a citation.
+              should read in an author field. Left empty, the run is credited to
+              the Collective; it is never the address you signed in with.
             </span>
           </label>
           <button type="submit">Compose and price</button>

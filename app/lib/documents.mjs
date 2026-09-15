@@ -7,6 +7,8 @@
  * of every locator into it. The citation grammar reads a specification name as
  * [a-z-]+ and a version as a date, so those are what a name and a version may be.
  */
+import { resolveCredit } from "./credit.mjs";
+
 const NAME = /^[a-z]+(-[a-z]+)*$/;
 const VERSION = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -62,4 +64,20 @@ export function documentChoices(specs) {
     value: version.id,
     label: `${spec.title} ${version.version}`,
   })));
+}
+
+/**
+ * The row a registered version writes.
+ *
+ * `credit` is the form's field, not the operator's address -- this is the one
+ * place the row is assembled, so it is the one place a reviewer needs to check
+ * that an address cannot land in `added_by`. It never does: `resolveCredit`
+ * reads only what was typed, and the operator's e-mail is not among this
+ * function's arguments at all.
+ */
+export function newVersionRow({ specId, version, markdown, digest, sourceUrl, credit }) {
+  return {
+    spec_id: specId, version, markdown, content_sha256: digest,
+    source_url: sourceUrl, added_by: resolveCredit(credit),
+  };
 }

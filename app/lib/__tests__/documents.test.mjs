@@ -4,8 +4,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { documentChoices, labelTaken, nameProblem, specificationId, versionProblem }
-  from "../documents.mjs";
+import { documentChoices, labelTaken, nameProblem, newVersionRow, specificationId,
+         versionProblem } from "../documents.mjs";
 
 test("a label a document already carries is refused, since the label is in its id", () => {
   const versions = [{ spec_id: "openai--model-spec", version: "2026-08-18" }];
@@ -53,4 +53,30 @@ test("every version is its own document in a form, and only a row named by its l
     { value: "v-new", label: "OpenAI Model Spec 2026-08-18" },
     { value: "v-old", label: "OpenAI Model Spec 2025-12-18" },
   ]);
+});
+
+/* This is the row the registration route writes. It used to carry the
+ * operator's e-mail unconditionally: these are the tests for the fix. */
+const BASE_VERSION = {
+  specId: "openai--model-spec", version: "2026-08-18",
+  markdown: "# Model Spec", digest: "abc123", sourceUrl: "https://example.com/spec",
+};
+
+test("a document registered with no credit is credited to Polaris Collective, not an e-mail", () => {
+  const row = newVersionRow({ ...BASE_VERSION, credit: "" });
+  assert.equal(row.added_by, "Polaris Collective");
+});
+
+test("a document registered with a credit keeps it", () => {
+  const row = newVersionRow({ ...BASE_VERSION, credit: "Ada Lovelace" });
+  assert.equal(row.added_by, "Ada Lovelace");
+});
+
+test("a version's row carries the other fields untouched", () => {
+  const row = newVersionRow({ ...BASE_VERSION, credit: "Ada Lovelace" });
+  assert.deepEqual(row, {
+    spec_id: "openai--model-spec", version: "2026-08-18", markdown: "# Model Spec",
+    content_sha256: "abc123", source_url: "https://example.com/spec",
+    added_by: "Ada Lovelace",
+  });
 });
