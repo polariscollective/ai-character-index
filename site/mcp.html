@@ -248,14 +248,17 @@
 
   <section class="m">
     <h2>Tools</h2>
-    <p><b>list_model_specs.</b> Every specification the current publication carries: laboratory,
-    title, version, source URL, how many behaviours were judged against it and how many passages
-    it holds. No arguments. It does not return the specification text, which runs to hundreds of
-    kilobytes; the source URL is in the answer.</p>
-    <p><b>list_behaviours.</b> Every behaviour the publication shows, with the brief the judge
-    panel was given, the boundary of the construct and where the definition came from. Each one
-    also carries, per specification, how many passages it has and the strongest band any of them
-    reaches. No arguments. The slugs it returns are what the next tool takes.</p>
+    <p><b>list_model_specs.</b> Every specification the current publication carries: id,
+    laboratory, title, version, source URL, how many behaviours were judged against it and how
+    many passages it holds. No arguments. It does not return the specification text, which runs to
+    hundreds of kilobytes; the source URL is in the answer. Each specification is one version, and
+    its id reads <code>&lt;lab&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
+    <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into
+    it.</p>
+    <p><b>list_behaviours.</b> Every behaviour the publication shows, with the section it is
+    grouped in, the brief the judge panel was given, the boundary of the construct and where the
+    definition came from. Each one also carries, per specification, how many passages it has, the
+    strongest band any of them reaches and the panel&rsquo;s mean depth. No arguments. The slugs it returns are what the next tool takes.</p>
     <p><b>retrieve_passages.</b> The passages of a specification that bear on a behaviour, quoted
     verbatim and located. Each one comes back with its locator, its quote, the band it sits in and
     the verdict every judge gave it.</p>
@@ -280,6 +283,10 @@
           publication it was issued against, so a walk that spans a new publication stops rather
           than drifting across two indexes.</li>
     </ul>
+    <p>Where a judge could not answer a pair at all and a model declared for its seat judged in
+    its place, the pair carries <code>substitutions</code>, naming the seat, the substitute and the
+    reason, in both <code>list_behaviours</code> and <code>retrieve_passages</code>. That
+    seat&rsquo;s verdicts and depth are then the substitute&rsquo;s.</p>
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
   </section>
