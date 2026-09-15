@@ -1827,25 +1827,39 @@ function translatorNames(by) {
 
 /* The band names who did the work and stops there. The column may go on to list
    which parts a reviser never reached, which is a sentence of section names in a
-   strip meant to be read at a glance, so the reader cuts the list. What cannot
-   be cut with it is the claim: a reviser that skipped part of a document did not
-   revise the document, and "revised by" with the exceptions removed would say it
-   did. It becomes "revised in part by" whenever anything was dropped. Shorter,
-   and still true. */
+   strip meant to be read at a glance, so the reader cuts the list at "except".
+   What cannot be cut with it is the claim the exceptions qualify. A reviser that
+   skipped part of a document did not revise the document, and a translator with
+   parts excepted did not translate all of it, so whenever anything is cut the
+   band says "in part": on the last "<verb> by" before the cut ("revised in part
+   by", "reviewed in part by"), or on the attribution itself where there is none
+   ("in part by"). Shorter, and still true.
+
+   Returns the attribution as the band says it, "by" included, because where "in
+   part" goes depends on what was cut. */
 function shortenTranslator(by) {
   const cut = by.search(/\bexcept\b/i);
-  if (cut < 0) return by;
-  return by.slice(0, cut).replace(/,\s*$/, "").trim()
-           .replace(/\brevised by\b/i, "revised in part by");
+  if (cut < 0) return `by ${by}`;
+  const kept = by.slice(0, cut).replace(/[\s,;:]+$/, "");
+  const clause = [...kept.matchAll(/\b\w+ (by)\b/gi)].at(-1);
+  if (!clause) return `in part by ${kept}`;
+  const at = clause.index + clause[0].length - clause[1].length;
+  return `by ${kept.slice(0, at)}in part ${kept.slice(at)}`;
 }
 
-function translationNote(translation) {
+/* `judged` is the document's own flag. Only a documents payload built with
+   judged_version_ids carries it, and publish builds none today, so a published
+   document has no flag at all; every document of a publication comes from a
+   cell some run judged, so the last sentence is true there. A document marked
+   `judged: false` sits above "Not judged yet", and saying the index judged it
+   would contradict that note on the same screen. */
+function translationNote(translation, judged) {
   const by = shortenTranslator(translatorNames(translation.by));
   // A review is worth saying; its absence is the ordinary case for a machine
   // translation and saying so every time buys nothing but length.
-  return `Machine translation from ${languageName(translation.from)} by ${by}`
-       + `${translation.reviewed ? ", reviewed by a person" : ""}. `
-       + "The index judged this translation.";
+  return `Machine translation from ${languageName(translation.from)} ${by}`
+       + `${translation.reviewed ? ", reviewed by a person" : ""}.`
+       + (judged === false ? "" : " The index judged this translation.");
 }
 
 /* Each passage's original, reachable from the passage itself.
@@ -2025,7 +2039,7 @@ function renderDocument(doc, side = 0) {
   });
   const translation = panel.querySelector(".document-translation");
   if (doc.translation) {
-    translation.textContent = translationNote(doc.translation);
+    translation.textContent = translationNote(doc.translation, doc.judged);
     translation.hidden = false;
   }
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);

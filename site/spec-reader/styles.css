@@ -1660,24 +1660,31 @@ body.no-behaviours .sidebar-export { display: none; }
   body[data-local-data] .local-data-note { display: none; }
 }
 
-/* A document the index read in translation says so where it says its version:
-   one line in the header, never a band across the page.
+/* A document the index read in translation says so in a band under its header,
+   across the panel and above the text it is about.
 
-   The colour is a deliberate departure, taken by the operator and recorded
-   here. The framework reserves --fail for status -- failures, violations,
-   errors -- and a machine translation is a caveat, not a failure. It is also
-   the palette's only warm colour, and the operator asked for this notice to
-   read as a warning rather than blend into the header. --warn gold does not
-   pass AA as text on paper, so the choice was --fail or nothing loud at all. */
+   Rust marks it. That is a deliberate departure, taken by the operator and
+   recorded here: the framework reserves --fail for status, and a machine
+   translation is a caveat rather than a failure, but rust is the palette's only
+   warm colour and the operator asked for this notice to read as a warning
+   rather than blend into the header.
+
+   The rust is the band's left rule, not its words. As 11px text on
+   --chrome-deep it measured 4.07:1 on daylight and 3.53:1 on umber, under the
+   4.5:1 AA asks of text. As a rule it is a non-text mark, which needs 3:1, and
+   clears it in both. The words are --ink: 10.95:1 on daylight, 10.07:1 on
+   umber. Left-aligned like every other line of the reader, with the rule taking
+   2px of the left padding so the words keep their place. */
 .document-translation {
   margin: 0;
-  padding: 6px 24px;
+  padding: 6px 24px 6px 22px;
+  border-left: 2px solid var(--fail);
   border-bottom: 1px solid var(--line-light);
   background: var(--chrome-deep);
-  color: var(--fail);
+  color: var(--ink);
   font-size: 11px;
   line-height: 1.4;
-  text-align: center;
+  text-align: left;
 }
 
 /* The mark that opens a passage's original. A glyph, not an icon: the framework

@@ -569,11 +569,19 @@ if (behaviours.length === 0) {
 }
 
 /* A document the index read in translation carries its original beside it, and
- * says so. The fixture's third document is the one with a `translation`; the
- * other two prove the feature reaches no document that does not ask for it. */
+ * says so. The fixture carries two. Acme's has not been judged, and its
+ * translator field has the real column's shape, exceptions and all. Zenith's
+ * carries no `judged` field, which is what every document of a published payload
+ * looks like today. The plain documents prove the feature reaches no document
+ * that does not ask for it. */
 {
-  const translated = documents.find(document => document.translation);
+  const translated = documents.find(document => document.translation && document.judged === false);
+  const judgedTranslation = documents.find(
+    document => document.translation && document.judged !== false);
   const plain = documents.find(document => !document.translation);
+  report(Boolean(translated && judgedTranslation),
+    "translated: the fixture carries a judged and an unjudged translation",
+    "so neither band check below is vacuous");
 
   await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
   const note = await page.$eval(".document-translation", el => ({
@@ -592,8 +600,11 @@ if (behaviours.length === 0) {
         "Machine translation from Chinese by Claude Opus 5, revised in part by Claude Fable 5")
       && !note.text.includes("except")
       && !note.text.includes("refuse-violence")
-      && note.text.includes("The index judged this translation"),
-    "translated · the header says whose translation was judged",
+      // No panel has judged this one, and the reader says "Not judged yet" just
+      // below. A band that still said the index judged it would contradict that
+      // note on the same screen.
+      && !note.text.includes("The index judged this translation"),
+    "translated, unjudged: the band names the translators and does not say the index judged it",
     note.text,
   );
 
@@ -652,6 +663,64 @@ if (behaviours.length === 0) {
     "translated · an unjudged document says so",
     unjudged.slice(0, 90),
   );
+
+  // A translation a panel has read says so, in the same band and the same words
+  // the unjudged one leaves out.
+  await readView(`${base}?spec=${encodeURIComponent(judgedTranslation.id)}`);
+  const judgedNote = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !judgedNote.hidden
+      && judgedNote.text === "Machine translation from Chinese by Claude Opus 5, "
+        + "reviewed by a person. The index judged this translation.",
+    "judged translation: the band says the index judged it",
+    judgedNote.text,
+  );
+  const judgedMarks = await page.locator(".original-open").count();
+  report(judgedMarks === judgedTranslation.original.length,
+    "judged translation: one mark per passage",
+    `${judgedMarks}/${judgedTranslation.original.length}`);
+
+  /* The band is read at 11px, so its text has to clear 4.5:1 on the band's own
+   * ground in both palettes. Rust is the band's marker by the operator's choice,
+   * and it stays as the band's left rule, where a colour needs 3:1 rather than
+   * text's 4.5. Measured from computed colours, not from the stylesheet, so a
+   * token that moves is caught too. Left-aligned like everything else. */
+  const palette = await page.evaluate(() => document.body.dataset.palette);
+  for (const name of ["daylight", "umber"]) {
+    const band = await page.evaluate(name => {
+      document.body.dataset.palette = name;
+      const style = getComputedStyle(document.querySelector(".document-translation"));
+      const probe = document.createElement("span");
+      probe.style.color = "var(--fail)";
+      document.body.append(probe);
+      const fail = getComputedStyle(probe).color;
+      probe.remove();
+      const luminance = value => {
+        const [r, g, b] = value.match(/[\d.]+/g).slice(0, 3).map(channel => {
+          const c = Number(channel) / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [lighter, darker] = [luminance(style.color), luminance(style.backgroundColor)]
+        .sort((a, b) => b - a);
+      return {
+        ratio: (lighter + 0.05) / (darker + 0.05),
+        align: style.textAlign,
+        rule: `${style.borderLeftWidth} ${style.borderLeftStyle} ${style.borderLeftColor}`,
+        fail,
+      };
+    }, name);
+    report(
+      band.ratio >= 4.5 && band.align === "left" && band.rule === `2px solid ${band.fail}`,
+      `translation band, ${name}: its text clears AA, it is left-aligned, and rust is its rule`,
+      `${band.ratio.toFixed(2)}:1, ${band.align}, rule ${band.rule}`,
+    );
+  }
+  await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
 }
 
 /* One document on both sides of a comparison.
