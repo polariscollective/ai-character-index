@@ -1055,17 +1055,22 @@ body.sidebar-collapsed .sidebar-resizer {
    to compare. */
 .document-grid.compare .document-meta {
   justify-content: flex-start;
+  /* 8px, not 10: with the short counter after the arrows, two panels at
+     1024px need the arrows, the counter and the three toggles on one row, and
+     the right-hand panel, which also carries the scrollbar, has the least room. */
+  column-gap: 8px;
 }
 /* At a panel's narrowest -- two panels sharing 1024px, a behaviour with
    passages selected so the arrows read "N of M passages" and the toggles
    carry counts, the widest either gets -- the arrows and the three tier
    toggles together still overrun the row before Expand all even joins it.
-   The passage count is the one number here a reader is mid-sentence about
-   to read already -- "N of M passages" repeats what the toggles themselves
-   already count out by tier -- so it gives way first: present for a screen
-   reader, off-screen for everyone else, in compare mode only. The toggles
-   then trim their own padding and gap, a size step matching the title and
-   version reductions just above, which closes the rest of the gap. */
+   The sentence "N of M passages" gives way first: present for a screen
+   reader, off-screen for everyone else, in compare mode only. Its short form
+   takes its place on screen, "N/M" after the arrows (.passage-count-short),
+   because a reader walking two documents still wants to know where the walk
+   is. The toggles then trim their own padding and gap, a size step matching
+   the title and version reductions just above, and Expand all wraps below the
+   row where it still does not fit. */
 .document-grid.compare .passage-count {
   position: absolute;
   width: 1px;
@@ -1078,7 +1083,17 @@ body.sidebar-collapsed .sidebar-resizer {
   border: 0;
 }
 .document-grid.compare .passage-nav { position: relative; }
-.document-grid.compare .tier-toggle { padding: 3px 6px; }
+/* The short counter is compare mode's alone: one document has room for the
+   sentence. Hidden from screen readers in the markup, which hear the sentence. */
+.passage-count-short { display: none; }
+.document-grid.compare .passage-count-short {
+  display: inline;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.document-grid.compare .tier-toggle { padding: 3px 5px; gap: 4px; }
 .document-grid.compare .rail-legend { gap: 3px; }
 .document-version { font-family: var(--mono); font-size: 11px; }
 .document-focus-toggle {
