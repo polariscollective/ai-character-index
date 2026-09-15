@@ -180,6 +180,14 @@ walker turns focus off explicitly where it measures that the reader keeps your
 place, because in focus mode unticking a behaviour removes text rather than only
 its highlights.
 
+It prefers a lab now, and keeps that fallback. With no `?spec=`, the reader opens
+on the newest document of `PREFERRED_LAB` (`anthropic`, matched on the head of
+the document id) when the publication carries one, and on its first document
+when it does not. The fallback stays because the preference is the same
+assumption that once rendered nothing: a payload without the lab, the test
+fixture among them, must still open on something. `?spec=` still wins, and
+`engine/panel/test_appjs_opening.js` holds the three cases.
+
 ### A publication's menu is the selection, not the configuration
 
 Found by building one. The payload builder takes its behaviour list from

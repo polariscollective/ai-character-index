@@ -436,6 +436,27 @@ class TestAppJSDepth(unittest.TestCase):
         self.assertIn("24 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSOpening(unittest.TestCase):
+    """The document app.js opens on with no ?spec=: the preferred lab's newest
+    document when the payload carries one, the first document otherwise, which
+    is the fallback that fixed a hardcoded id rendering nothing. ?spec= still
+    wins, and compare's second panel never repeats the first. The fixture the
+    walkers use names no preferred lab, so this is where that path is held.
+    Skips (not fails) without `node`."""
+
+    HARNESS = HERE / "test_appjs_opening.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_opening_document_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("7 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSTranslation(unittest.TestCase):
     """The sentence app.js writes in a translated document's band:
     translatorNames, shortenTranslator and translationNote. It said the index
