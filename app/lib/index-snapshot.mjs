@@ -21,7 +21,8 @@ const TTL_MS = 60_000;
  * serves is read from the environment at request time. A module constant would
  * freeze the answer an instance booted with, and would also let this server
  * answer from a different build than the reader on the same deployment. */
-const query = () => `select=id,published_at,payload,documents&${currentPublication()}`;
+const query = () =>
+  `select=id,published_at,is_public,payload,documents&${currentPublication()}`;
 
 let memo = null;
 
@@ -31,11 +32,16 @@ export function forgetSnapshot() {
 }
 
 /**
- * `{ publication: { id, published_at }, payload, documents, notes }`.
+ * `{ publication: { id, published_at, is_public }, payload, documents, notes }`.
  *
  * Current means the newest PUBLIC publication, exactly as the reader resolves
  * it: a build exists before anyone has looked at it, and `is_public` is how an
  * operator says they have.
+ *
+ * On a development deployment current means the newest build, published or not,
+ * which is why `is_public` travels with the publication. Every MCP answer quotes
+ * it, and a draft quoted there with nothing to mark it would be cited as the
+ * index's published data.
  */
 export async function indexSnapshot(fetchImpl = fetch, now = () => Date.now()) {
   if (memo && now() - memo.at < TTL_MS) return memo.snapshot;
@@ -44,7 +50,8 @@ export async function indexSnapshot(fetchImpl = fetch, now = () => Date.now()) {
   if (!row) throw new Error("nothing published yet");
 
   const snapshot = {
-    publication: { id: row.id, published_at: row.published_at },
+    // Strictly true: a row that came back without the column is not called public.
+    publication: { id: row.id, published_at: row.published_at, is_public: row.is_public === true },
     payload: row.payload,
     documents: row.documents,
     notes: await behaviourNotes(fetchImpl, row.id),

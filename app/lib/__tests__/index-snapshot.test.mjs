@@ -16,6 +16,7 @@ const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 const ROW = {
   id: ID,
   published_at: "2026-09-10T14:05:25.472064+00:00",
+  is_public: true,
   payload: { behaviours: [{ slug: "helpfulness" }] },
   documents: { documents: [{ id: "anthropic" }] },
 };
@@ -38,13 +39,13 @@ test("the snapshot reads the newest public publication", async () => {
   const snapshot = await indexSnapshot(fetchImpl);
 
   assert.deepEqual(snapshot.publication,
-                   { id: ID, published_at: "2026-09-10T14:05:25.472064+00:00" });
+                   { id: ID, published_at: "2026-09-10T14:05:25.472064+00:00", is_public: true });
   assert.deepEqual(snapshot.payload, ROW.payload);
   assert.deepEqual(snapshot.documents, ROW.documents);
   assert.deepEqual(snapshot.notes, {});
 
   const [first] = urls;
-  assert.match(first, /select=id,published_at,payload,documents/);
+  assert.match(first, /select=id,published_at,is_public,payload,documents/);
   assert.match(first, /is_public=is\.true/);
   assert.match(first, /order=published_at\.desc/);
   assert.match(first, /limit=1/);
@@ -52,19 +53,24 @@ test("the snapshot reads the newest public publication", async () => {
 
 /* The MCP server and the reader must answer from the same build. This is the
  * server's half of that: on a development deployment it reaches an unpublished
- * publication, exactly as the reader's routes do. */
-test("a development deployment's snapshot reaches an unpublished build", async () => {
+ * publication, exactly as the reader's routes do. And it says so. Every answer
+ * quotes the snapshot's publication, so a draft carried there with nothing to
+ * mark it would be cited by a caller as the index. */
+test("a development deployment's snapshot reaches an unpublished build, and flags it", async () => {
   forgetSnapshot();
-  const { urls, fetchImpl } = stub();
+  const { urls, fetchImpl } = stub({ aci_publications: [{ ...ROW, is_public: false }] });
   process.env.ACI_SERVES_DEVELOPMENT = "true";
+  let snapshot;
   try {
-    await indexSnapshot(fetchImpl);
+    snapshot = await indexSnapshot(fetchImpl);
   } finally {
     delete process.env.ACI_SERVES_DEVELOPMENT;
     forgetSnapshot();
   }
-  assert.doesNotMatch(urls[0], /is_public/);
+  assert.doesNotMatch(urls[0], /is_public=is\.true/);
   assert.match(urls[0], /order=published_at\.desc/);
+  assert.equal(snapshot.publication.is_public, false,
+               "a draft reached on a development deployment says it is not public");
 });
 
 test("a second read inside the window asks the database nothing", async () => {

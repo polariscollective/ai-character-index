@@ -38,6 +38,10 @@ Where one judge of the panel could not answer a pair at all, another model judge
 it in that seat, and the pair carries substitutions: the seat, the substitute and
 the reason. A pair without that field was judged by the panel as configured.
 
+Every answer names the publication it was read from. A publication whose
+is_public is false is a build nobody has published, served by a development
+deployment, and what it answers is not the index's published data.
+
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
 /** JSON in one text block, and a caller's mistake reported as one. */
