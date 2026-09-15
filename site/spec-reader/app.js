@@ -47,6 +47,52 @@ function payloadUrl(id) {
   return id ? `${PAYLOAD_URL}?publication=${encodeURIComponent(id)}` : PAYLOAD_URL;
 }
 
+/* A link to one passage: ?passage=<locator>. The locator is the citation the
+ * export already prints, and its head names the document it points into, so the
+ * link needs nothing else to open the reader at it (see openPassageLink). */
+const PASSAGE_PARAM = "passage";
+
+/* "openai--model-spec@2026-08-18 > #levels_of_authority > ¶2" -> its document. */
+function locatorHead(locator) {
+  return String(locator || "").split(" > ")[0].trim();
+}
+
+/* The document a locator's head names. A head is the document id; locators
+ * written before ids carried their lab end the id instead ("second@2026-02-01"
+ * for "acme--second@2026-02-01"), and still find it. */
+function documentForLocator(documents, locator) {
+  const head = locatorHead(locator);
+  if (!head) return null;
+  return documents.find(doc => doc.id === head)
+    || documents.find(doc => String(doc.id).endsWith(`--${head}`))
+    || null;
+}
+
+/* A link that opens the reader at a passage. Only the passage travels, and the
+ * publication when the reader is pinned to one: the rest of the view is the
+ * reader's who copied it, and the link chooses what it needs when it opens. */
+function passageLink(href, locator, publication) {
+  const url = new URL(href);
+  url.search = "";
+  url.hash = "";
+  if (publication) url.searchParams.set("publication", publication);
+  url.searchParams.set(PASSAGE_PARAM, locator);
+  return url.toString();
+}
+
+function passageFromSearch(search) {
+  return new URLSearchParams(search).get(PASSAGE_PARAM);
+}
+
+/* The link opened the reader once. Once the reader moves on, stepping to
+ * another passage included, it no longer describes the page. */
+function dropPassageParam() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has(PASSAGE_PARAM)) return;
+  params.delete(PASSAGE_PARAM);
+  history.replaceState(null, "", `${location.pathname}?${params}${location.hash}`);
+}
+
 /* Resolves the payload AND records which source won, in state.payloadSource:
  * {origin: "pin"|"current", name, requested}. `requested` is set only when a pin was
  * asked for and not served, which is exactly the case worth flagging. */
@@ -399,6 +445,9 @@ function syncURL() {
   }
   if (state.embedded) params.set("embedded", "1");
   else params.delete("embedded");
+  // A passage link is kept only while the reader is still where it opened; any
+  // choice written here after that is a view of the reader's own.
+  if (!state.keepPassageParam) params.delete(PASSAGE_PARAM);
   history.replaceState(null, "", `${location.pathname}?${params}${location.hash}`);
   if (state.embedded) {
     window.parent.postMessage(
@@ -1525,6 +1574,7 @@ function passageLabels(marks, passageId) {
         : ""}
       <span class="passage-reason-role">${passage.adjacent ? "Related, " : ""}${
         applyInlineFormatting(escapeHTML(passage.role))}</span>
+      <span class="passage-locator">${escapeHTML(passage.locator)}</span>
     </span>
   `).join("");
   const panelId = `${passageId}-why`;
@@ -1561,7 +1611,7 @@ function clearHighlights(panel) {
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
     block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current");
-    ["passageId", "documentId", "passageNumber", "role", "behaviours"]
+    ["passageId", "documentId", "passageNumber", "role", "behaviours", "locators"]
       .forEach(key => { delete block.dataset[key]; });
     ["--tint", "--tint-strong", "--gutter", "--gutter-size", "--gutter-pos",
       "--gutter-width", "--bh-primary"]
@@ -1648,6 +1698,11 @@ function annotatePassages(panel, doc) {
     block.dataset.role = marks
       .flatMap(mark => mark.anchored.map(passage => passage.role))
       .join(" · ");
+    // One per line: a locator carries " > " and "·" is prose here, so neither can
+    // separate them. What a ?passage= link finds its passage by.
+    block.dataset.locators = marks
+      .flatMap(mark => mark.anchored.map(passage => passage.locator))
+      .join("\n");
     block._railTint = railTint(marks);
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
   });
@@ -2598,6 +2653,7 @@ elements.documentReader.addEventListener("click", event => {
   const panel = step.closest(".document-panel");
   const delta = step.classList.contains("next-passage") ? 1 : -1;
   focusPassage(panel, (panel._passageIndex || 0) + delta);
+  dropPassageParam();
 });
 
 /* Choosing a publisher, in the panel that asked. Delegated like the tier
@@ -2661,8 +2717,8 @@ document.addEventListener("keydown", event => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   // The panel the reader last stepped through, or the only one there is.
   const panel = state.activePanel || panels()[0];
-  if (event.key === "j") focusPassage(panel, (panel?._passageIndex || 0) + 1);
-  if (event.key === "k") focusPassage(panel, (panel?._passageIndex || 0) - 1);
+  if (event.key === "j") { focusPassage(panel, (panel?._passageIndex || 0) + 1); dropPassageParam(); }
+  if (event.key === "k") { focusPassage(panel, (panel?._passageIndex || 0) - 1); dropPassageParam(); }
 });
 
 window.addEventListener("resize", () => {
@@ -2824,6 +2880,69 @@ async function loadJSON(url) {
 }
 
 
+/* What a ?passage= link needs before the panels are drawn: the document its
+ * locator names (over ?spec= and the default), a behaviour citing the passage
+ * ticked if none already is, and the band it sits in turned on. The band is
+ * scored as the reader scores it, with every band on, because the link may name
+ * one the rest of the URL left off. A locator the publication carries no passage
+ * for changes nothing, and revealPassageLink says so. */
+function openPassageLink(locator) {
+  if (!locator) return null;
+  const doc = documentForLocator(state.payload.documents, locator);
+  const cites = behaviour => (behaviour.coverage?.[doc?.id]?.passages || [])
+    .some(passage => passage.locator === locator);
+  const citing = doc ? (state.rawBehaviours || []).filter(cites) : [];
+  if (!citing.length) return { locator, resolved: false };
+
+  const bands = state.bands;
+  state.bands = new Set(TIERS);
+  const band = applyPanelThreshold({ behaviours: structuredClone(citing) }).behaviours
+    .flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || [])
+    .find(passage => passage.locator === locator)?.band;
+  state.bands = bands;
+  if (!band) return { locator, resolved: false };
+
+  state.selectedSpec = doc.id;
+  if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
+  if (!citing.some(behaviour => state.selectedSlugs.includes(behaviour.slug))) {
+    const chosen = new Set([...state.selectedSlugs, citing[0].slug]);
+    state.selectedSlugs = payloadBehaviours().map(behaviour => behaviour.slug)
+      .filter(slug => chosen.has(slug));
+  }
+  if (!state.bands.has(band)) {
+    state.bands.add(band);
+    state.payload.behaviours =
+      applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
+  }
+  return { locator, documentId: doc.id, resolved: true };
+}
+
+/* The passage itself, once drawn: current for the arrows, scrolled to and
+ * focused. Where it cannot be reached, the reader status says so in a sentence
+ * and the reader stays as it opened. */
+function revealPassageLink(linked) {
+  const say = sentence => {
+    elements.readerStatus.classList.add("visible");
+    elements.readerStatus.textContent = sentence;
+  };
+  if (!linked.resolved) {
+    say(`The passage this link names is not in this publication: ${linked.locator}. `
+      + "The reader has opened as it would without the link.");
+    return;
+  }
+  const panel = panels().find(item => item.dataset.documentId === linked.documentId);
+  const index = (panel?._anchors || [])
+    .findIndex(anchor => (anchor.dataset.locators || "").split("\n").includes(linked.locator));
+  if (index < 0) {
+    say(`The passage this link names could not be found in the document: ${linked.locator}.`);
+    return;
+  }
+  focusPassage(panel, index, true);
+  const anchor = panel._anchors[index];
+  anchor.setAttribute("tabindex", "-1");
+  anchor.focus({ preventScroll: true });
+}
+
 async function initialize() {
   renderBehaviourList();
   try {
@@ -2862,12 +2981,19 @@ async function initialize() {
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
+    // A link to a passage chooses the document, a behaviour and a band before
+    // anything is drawn, and is followed to the passage once the panels are.
+    const linked = openPassageLink(params.get(PASSAGE_PARAM));
     elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     renderBehaviourList();
+    state.keepPassageParam = Boolean(linked?.resolved);
     syncURL();
+    state.keepPassageParam = false;
     rebuildReader();
     // A link into a heading is followed once, when the page opens on it.
     requestAnimationFrame(revealHashTarget);
+    // Two frames: after the one in which applyHighlights collects the passages.
+    if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
   } catch (error) {
     elements.readerStatus.classList.add("visible");
     elements.readerStatus.textContent = "The cached spec documents or the reader's behaviour set could not be loaded. Serve this directory over HTTP and reload.";

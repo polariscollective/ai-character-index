@@ -1667,6 +1667,16 @@ body.no-behaviours .sidebar-export { display: none; }
 
 /* panel rationale: model-vote list uses newlines */
 .passage-reason-role { white-space: pre-line; }
+/* The passage's locator under the reason it was cited: data, so mono, and free to
+   break anywhere, since a locator is one long string with few natural breaks. */
+.passage-locator {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 
 /* The list a document's title opens: one entry per registered document, so it
    grows with every spec a reader adds. Comparing, each panel opens its own and

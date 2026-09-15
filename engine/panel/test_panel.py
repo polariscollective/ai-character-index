@@ -436,6 +436,26 @@ class TestAppJSDepth(unittest.TestCase):
         self.assertIn("24 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSLocator(unittest.TestCase):
+    """The passage link in app.js: a locator's head, the document it names (a
+    full document id or an older head without its lab), and a ?passage= link
+    that gives the locator back unchanged, carries a pinned publication, and
+    carries nothing of the view it was copied from. Skips (not fails) without
+    `node`."""
+
+    HARNESS = HERE / "test_appjs_locator.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_passage_link_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("10 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSOpening(unittest.TestCase):
     """The document app.js opens on with no ?spec=: the preferred lab's newest
     document when the payload carries one, the first document otherwise, which
