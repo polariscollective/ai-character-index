@@ -34,6 +34,9 @@ body[data-palette="daylight"] {
   --chrome: #E9E6D7;
   --chrome-deep: #DFDCCA;
   --paper: #F1EFE3;
+  /* The document's own reading surface, lighter than --paper: the user's explicit
+     choice over the framework's --paper for the text a reader spends an hour on. */
+  --reading: #F8F7F0;
   --ink: #23281B;
   --muted: #5C6B3C;
   --faint: #676C58;
@@ -84,6 +87,8 @@ body[data-palette="umber"] {
   --chrome: #2A331C;
   --chrome-deep: #323C23;
   --paper: #333D22;
+  /* Unchanged on the dark surface: the reading surface is the ground itself. */
+  --reading: #333D22;
   --ink: #F1EFE3;
   --muted: #C4CBA8;
   --faint: #A2AA88;
@@ -972,7 +977,7 @@ body.sidebar-collapsed .sidebar-resizer {
     minmax(0, calc(100% - var(--compare-first) - 9px));
 }
 .document-resizer { height: 100%; }
-.document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
+.document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--reading); }
 /* A stack of rows, not a row of columns: publishers, then the document at a
    version with what it takes to read it, then the caveat when there is one.
    This header used to hold two things side by side, which is why it was a row;
@@ -1546,7 +1551,8 @@ body.sidebar-collapsed .sidebar-resizer {
   right: 1px;
   width: 9px;
   min-height: 7px;
-  box-shadow: 0 0 0 1px var(--paper), 0 0 0 2px var(--energy);
+  /* The gap ring is the ground the rail sits on, so it takes the reading surface. */
+  box-shadow: 0 0 0 1px var(--reading), 0 0 0 2px var(--energy);
   opacity: 1;
 }
 
