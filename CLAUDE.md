@@ -409,8 +409,6 @@ What is left, as of 15 September 2026:
 - The judging image's deploy. `deploy-runner.yml` has failed on every run, at
   Google Cloud authentication, so jobs are launched from a local portal with
   `ACI_PYTHON` set rather than on Cloud Run.
-- The daily provenance check. `provenance.yml` receives empty `SUPABASE_URL` and
-  `SUPABASE_SERVICE_ROLE_KEY` secrets, so it exits before checking anything.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

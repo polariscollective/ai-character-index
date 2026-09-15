@@ -1,10 +1,13 @@
 # CI/CD workflows
 
-Three workflows, as of September 2026:
+Two workflows, as of September 2026:
 
 - `ci.yml` verifies every pull request and every push to `main` against fixtures, with no secrets.
 - `deploy-runner.yml` builds the judging job's image and points the Cloud Run job at it, on a push to `main` that touches the engine.
-- `provenance.yml` checks the public publication against the database once a day, with the Supabase credentials.
+
+The published data is checked by `engine/verify_supabase_provenance.py
+--publication=<uuid>`, run when a publication is built rather than on a
+schedule: the Supabase service role key is not a GitHub secret.
 
 The site has no workflow: Vercel builds the Next.js application on a push. PLAN.md §5
 also promises `notion-sync.yml` and `spec-watch.yml`; neither exists.
@@ -36,15 +39,6 @@ updates the `ai-character-index-runner` Cloud Run job to that image.
 As of 15 September 2026 it has not once succeeded: the workload identity
 provider rejects the token by its attribute condition, which `polaris-tf`
 defines. Until that is fixed, run jobs from a local portal with `ACI_PYTHON` set.
-
-## `provenance.yml`: the published data
-
-Runs daily at 06:17 UTC and on demand: `python3 engine/verify_supabase_provenance.py`
-with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from secrets. A failure means
-the database moved, not that a branch is wrong.
-
-As of 15 September 2026 both secrets reach the job empty, so every scheduled run
-exits before checking anything.
 
 ## Deployment
 

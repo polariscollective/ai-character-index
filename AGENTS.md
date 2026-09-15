@@ -66,8 +66,9 @@ pipeline in parts.
 
 Offline, with no credentials: the battery `.github/workflows/ci.yml` runs, listed
 under "Checks" in `README.md`. With credentials:
-`python3 engine/verify_supabase_provenance.py` (also run daily by
-`.github/workflows/provenance.yml`) and `node engine/verify-portal.mjs`.
+`python3 engine/verify_supabase_provenance.py` (also run, as
+`--publication=<uuid>`, when a publication is built) and
+`node engine/verify-portal.mjs`.
 
 ## Conventions
 
