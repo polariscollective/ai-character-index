@@ -787,6 +787,125 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }
+{
+  /* The publisher tabs: labels large enough to read at a glance, in a row that
+   * does not grow (the rule above holds it on the sidebar's line), and the chosen
+   * publisher unmistakable. Chosen: ink at 600 with the chartreuse marker under
+   * it. The others: quieter, at most about half the chosen tab's contrast, and
+   * still AA. Chartreuse marks, it never writes. The focus ring must survive the
+   * strip, which scrolls sideways and so clips whatever sits outside it. Held
+   * with one document and two, in both palettes, at the narrower desktop width. */
+  const tabStyles = () => page.evaluate(() => {
+    const channels = colour => colour.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const luminance = colour => {
+      const [r, g, b] = channels(colour).map(value => {
+        const c = value / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const contrast = (a, b) => {
+      const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const ground = element => {
+      for (let node = element; node; node = node.parentElement) {
+        const colour = getComputedStyle(node).backgroundColor;
+        if (colour !== "rgba(0, 0, 0, 0)" && colour !== "transparent") return colour;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const token = name => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${name})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    };
+    const ink = token("--ink");
+    const energy = token("--energy");
+    return [...document.querySelectorAll(".document-panel")].map(panel => ({
+      rowHeight: Math.round(panel.querySelector(".provider-row").getBoundingClientRect().height * 10) / 10,
+      headerHeight: parseFloat(getComputedStyle(document.body).getPropertyValue("--panel-header-height")),
+      tabs: [...panel.querySelectorAll(".provider-tab")].map(tab => {
+        const style = getComputedStyle(tab);
+        return {
+          lab: tab.dataset.lab,
+          pressed: tab.getAttribute("aria-pressed") === "true",
+          size: parseFloat(style.fontSize),
+          weight: Number(style.fontWeight),
+          ink: style.color === ink,
+          textIsChartreuse: style.color === energy,
+          contrast: Math.round(contrast(style.color, ground(tab)) * 100) / 100,
+          marker: { width: parseFloat(style.borderBottomWidth), chartreuse: style.borderBottomColor === energy },
+        };
+      }),
+    }));
+  });
+  const ringOf = selector => page.evaluate(selector => {
+    const tab = document.querySelector(selector);
+    const style = getComputedStyle(tab);
+    const reach = parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth);
+    const box = tab.getBoundingClientRect();
+    const clip = tab.closest(".provider-tabs").getBoundingClientRect();
+    const probe = document.createElement("span");
+    probe.style.color = "var(--energy)";
+    document.body.append(probe);
+    const energy = getComputedStyle(probe).color;
+    probe.remove();
+    return {
+      focusVisible: tab.matches(":focus-visible"),
+      ring: `${style.outlineWidth} ${style.outlineStyle}`,
+      chartreuse: style.outlineColor === energy,
+      unclipped: box.left - reach >= clip.left - 0.5 && box.right + reach <= clip.right + 0.5
+        && box.top - reach >= clip.top - 0.5 && box.bottom + reach <= clip.bottom + 0.5,
+    };
+  }, selector);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const initialPalette = await page.evaluate(() => document.body.dataset.palette);
+  for (const [mode, query] of [
+    ["one document", `?behavior=${DEFINED}&spec=${DOC_ID}`],
+    ["compare", `?behavior=${DEFINED}&compare=1&compare-with=${DOC_ID},${DOC_B}`],
+  ]) {
+    await at(query);
+    for (const palette of ["daylight", "umber"]) {
+      await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
+      // The tabs change colour over 150ms; read them once the palette has landed.
+      await page.waitForTimeout(300);
+      const panels = await tabStyles();
+      const label = `publisher tabs, ${mode}, ${palette}`;
+      check(panels.every(panel => panel.tabs.every(tab => tab.size >= 15)
+          && Math.abs(panel.rowHeight - panel.headerHeight) <= 0.5),
+        `${label}: labels at 15px or more, in a row still --panel-header-height tall`,
+        panels.map(panel => `row ${panel.rowHeight}/${panel.headerHeight}, sizes `
+          + panel.tabs.map(tab => tab.size).join("/")).join("; "));
+      check(panels.every(panel => {
+          const chosen = panel.tabs.filter(tab => tab.pressed);
+          const others = panel.tabs.filter(tab => !tab.pressed);
+          return chosen.length === 1 && others.length >= 1
+            && chosen[0].ink && chosen[0].weight >= 600
+            && chosen[0].marker.chartreuse && chosen[0].marker.width >= 3
+            && others.every(tab => tab.weight <= 400 && !tab.marker.chartreuse
+              && tab.contrast >= 4.5 && tab.contrast <= chosen[0].contrast * 0.55)
+            && panel.tabs.every(tab => !tab.textIsChartreuse);
+        }),
+        `${label}: the chosen publisher in ink at 600 over a chartreuse marker,`
+          + " the others quieter and still AA",
+        panels.map(panel => JSON.stringify(panel.tabs)).join("; "));
+    }
+    await page.evaluate(name => { document.body.dataset.palette = name; }, initialPalette);
+    // By keyboard, on a publisher that is not the chosen one.
+    const selector = '.document-panel .provider-tab[aria-pressed="false"]';
+    await page.locator(selector).first().focus();
+    await page.keyboard.press("Shift");
+    const ring = await ringOf(selector);
+    check(ring.focusVisible && ring.ring === "2px solid" && ring.chartreuse && ring.unclipped,
+      `publisher tabs, ${mode}: a focused publisher shows the whole chartreuse focus ring`,
+      JSON.stringify(ring));
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
 await at("?compare=1");
 {
   const widths = () => page.evaluate(() =>
