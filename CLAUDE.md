@@ -341,8 +341,9 @@ version whatever version a call named, so judging an older version after
 registering a newer one would have judged the newer text.
 
 The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions-and-judged-depth-design.md`.
-The database only gained while `develop` was built; the cleanup migration it lists
-follows the merge.
+The database only gained while `develop` was built. `develop` was merged into
+`main` on 15 September 2026, and the cleanup migration the design lists has not
+been written yet; see `Where the fork is heading`.
 
 ### A seat can be judged by a recorded substitute
 
@@ -390,12 +391,26 @@ that seat, naming the cell and the declared order.
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
-judging runs as a Cloud Run job, the site is a Next.js application on Vercel, and
-the index is operated from a portal rather than a terminal. Upstream keeps the
-property this fork gave up, which is running from a bare clone.
+judging runs as a job the portal launches, the site is a Next.js application on
+Vercel, and the index is operated from a portal rather than a terminal. Upstream
+keeps the property this fork gave up, which is running from a bare clone.
 
-What is left: the cleanup migration after `develop` is merged, and retiring the
-provenance record of the grandfathered publication with it.
+`develop` was merged into `main` on 15 September 2026 (PR #1, `119fa63`), Vercel
+deployed it to production, and publication `07958c5e`, thirteen behaviours over
+four documents, is public on https://ai-character-index.vercel.app.
+
+What is left, as of 15 September 2026:
+
+- The cleanup migration, and retiring the provenance record of the grandfathered
+  publication with it. It is not in `polaris-supabase` yet: the newest migration,
+  `20260915140000_aci_documents_credited_to_polaris_collective.sql`, credits
+  documents and publications to Polaris Collective. What the cleanup must do is
+  listed under Cleanup in the 2026-09-14 design.
+- The judging image's deploy. `deploy-runner.yml` has failed on every run, at
+  Google Cloud authentication, so jobs are launched from a local portal with
+  `ACI_PYTHON` set rather than on Cloud Run.
+- The daily provenance check. `provenance.yml` receives empty `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` secrets, so it exits before checking anything.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

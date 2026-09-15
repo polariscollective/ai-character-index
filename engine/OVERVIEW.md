@@ -1,67 +1,70 @@
-# engine/ — the automation layer: citation resolution, LLM panel judging, and site-payload builders
+# engine/: the automation layer for citation resolution, LLM panel judging, publication builders and checks
 
-> Current-state doc: describes what exists now, not what should exist.
+> Current-state doc, as of September 2026: describes what exists now, not what should exist.
 
 ## Purpose
 
-Everything that keeps the index alive: resolves spec citations, runs LLM panel judging, transforms sweep artifacts and run logs into the JSON payloads the site renders, and verifies the rendered site end-to-end. No component here serves the public directly; outputs land in `data/`, `site/**/data/`, the `specs/` mirrors (spec-watch), and engine-local run artifacts (run logs, metrics, smoke samples, failure dumps).
+Everything that judges the index and builds what it publishes: resolves spec citations, composes and executes judge calls, builds a publication's two payloads, and verifies the reader, the portal and the published data. No component here serves the public directly. Outputs are rows in the `aci_` tables of the `evals` Supabase project; only `local_run.py` writes files, to the gitignored `artefacts/`.
 
 ## Contents
 
 | Path | What it is |
 |---|---|
-| `spec-cite/cite.py` | Locator resolver/verifier (`outline`/`show`/`resolve`/`find`). Grammar defined by `specs/CITATION.md`; bundled specs (`BUNDLED_SPECS`) plus an optional user-spec manifest (`specs/user/specs.json`, gitignored; `SPEC_CITE_USER_SPECS` overrides) whose entries can carry `title`/`sourceUrl` rendering metadata (`spec_meta()`/`user_specs()`). Stdlib-only; CLI **and** imported library. Tests: `tests/test_cite.py`, `tests/test_cite_user_specs.py`. |
-| `spec-watch/pull-latest.sh` | Pulls upstream OpenAI/Anthropic specs into `specs/` via `gh`. Manual today; no version pinning or diff detection. Known issue: the dated upstream HTML release archives exceed the contents API's 1 MB inline limit and are fetched as 0-byte files. |
-| `panel/` | LLM panel pipeline: `harness.py` (library: lazy injectable config, frozen rubrics v1/v2/v3, explicit prompt composition, verdict parsing, resume), `whole_doc.py` (one API call per behaviour×spec×model), `run_rollout.py` (grid driver, dry-run default), `build_site_data.py` (runlog → site payload; behaviour metadata registry-driven from `data/behaviours.json`; parameterized via `--runlog=`/`--rubric=`/`--panel=`/`--behaviours=`/`--registry=`/`--run-date=`/`--out=`/`--threshold=`/`--solid-threshold=` for iteration and derived builds; with no `--out=`, a run writes timestamped `behaviours-<ts>.json` + `data/manifest.json`, latest-by-default), `select_strata.py` (validation sampler), `select_run.py` (pin → manifest-latest → shipped-fallback resolution, same order as the page), `verify_panel_provenance.py` (proves the shipped payload rebuilds byte-identically from the committed runlog), `test_panel.py` (92 offline tests), `test_verify_panel_provenance.py`, `panel-config.json`, `behaviours.json`, `runlog-v5.jsonl` (canonical runlog behind the shipped payload, documented in `runlog-v5.md`; the v3-era `runlog-v3.jsonl` stays committed with its record). |
-| `generate_behaviour_constants.py` | Regenerates the derived behaviour constants from `data/behaviours.json` (the registry): `BEHAVIOURS` in `build-spec-reader-data.py`, and the `title` fields of `engine/panel/behaviours.json` (keys are registry slugs). `--check` exits 1 with a diff on drift; `tests/test_behaviour_registry.py` is the drift gate. |
-| `build-spec-reader-data.py` | `data/coverage.json` + spec markdown → `site/spec-reader/data/documents.json`. Index behaviour list (`BEHAVIOURS`) generated from `data/behaviours.json` by `generate_behaviour_constants.py` (currently ids 1–3, the covered behaviours); `--user-manifest=PATH` folds user-registered specs in as extra documents (byte-identical output with no manifest — pinned by test). |
-| `verify-reader-test.mjs` | Playwright E2E check of the reader (needs Chrome): walks its default resolution state (no pin, no manifest) and asserts every view anchors exactly the keep-set's passage counts (the client renders nothing below the related cut, so `behaviours-v5-reader.json` is the oracle), the nav must be present and every link resolve, the shipped fallback must return 200, no unexpected 404s, no console errors. Hardcodes site DOM selectors. |
-| `verify-reader-features.mjs`, `stage_user_demo.py` | Site feature harness (needs Chrome): drives the reader against BOTH the bundled payload and a user-extended staging, pinning URL/DOM-state features (payload resolution, tier bands incl. the single-judge floor, N-document compare, export) and interactions (resizers, focus toggle, passage navigation, URL sync). `stage_user_demo.py` stages a clone/fork-style site into scratch (synthetic user spec + a `set:user` behaviour); the repo's own site data is restored exactly after. |
-| `notion-sync/` | Empty placeholder (`.gitkeep`) — Phase 3 per PLAN.md; does not exist. |
+| `spec-cite/cite.py` | Locator resolver and verifier (`outline`/`show`/`resolve`/`find`), grammar in `specs/CITATION.md`. Registers nothing at import time: a caller installs a registry through `use_registry`, and the CLI installs the database's. Stdlib only; CLI **and** imported library. Tests: `tests/test_cite.py`, `tests/test_cite_document_source.py`, `tests/test_cite_needs_a_registry.py`, `tests/test_parser_corpus.py`. |
+| `spec-watch/pull-latest.sh` | Pre-migration spec puller. No longer runs: it reads `cite.BUNDLED_SPECS`, which no longer exists, and writes into `specs/`, which no longer holds texts. |
+| `panel/` | The judging pipeline: `harness.py` (config, registry, passages, prompt composition, verdict parsing), `judge_call.py` and `depth_call.py` (one passage call, one depth call), `compose_run.py` (prices and writes a run's calls), `batch_job.py` (executes them), `bands.py` (the reader's tier bands, held to `app/lib/bands.mjs`), `build_site_data.py` (the behaviour payload), `panel-config.json`, `prompts/`. `whole_doc.py`, `run_rollout.py` and `select_strata.py` are the pre-migration CLIs; `whole_doc.judge_kwargs` still sets every call's parameters. `runlog-v5.md` and `runlog-v3.md` record logs that left the branch. See `panel/README.md`. |
+| `job.py` | What the judging image runs: reads its `aci_jobs` row and dispatches on `ACI_JOB_MODE` (`compose`, `judge`, `publish`). |
+| `publish.py` | Builds a publication as a draft: holds every cell to the panel with recorded substitutions applied, builds both payloads for the selection, inserts the row. |
+| `seat_substitutions.py` | Reads `aci_seat_substitutions`, and states the publication trigger's seating rule for `publish.py` and the builder. |
+| `store.py`, `index_store.py` | Stdlib PostgREST client, and the index read back in the shapes the builders expect (`install_registry` among them). |
+| `build-spec-reader-data.py` | The documents payload: the text of every version a publication carries. |
+| `coverage_payload.py` | Converts a frozen-ledger record into the reader's coverage shape. Nothing imports it any more; `test_coverage_payload.py` still tests it. |
+| `local_run.py` | Judges one document against one behaviour with one key and no database; results in `artefacts/`. |
+| `verify_supabase_provenance.py` | Checks one publication (the newest public one, or `--publication=<uuid>`): digests, rebuild, boundaries, locators. Needs credentials. |
+| `published-artefacts.sha256.json` | Digests of what the index published when the migration was verified, and the commit (`085fd2e`) its source files are recoverable from. |
+| `verify-reader-test.mjs`, `verify-reader-features.mjs`, `reader-routes.mjs` | The two reader walkers (need Chrome). `reader-routes.mjs` answers the reader's routes from `tests/fixtures/reader/`, a current and a draft publication. |
+| `verify-portal.mjs` | Read-only walk through the admin portal against a running server. Needs credentials, so no workflow runs it. |
+| `notion-sync/` | Empty placeholder (`.gitkeep`). |
 
 ## Relationships
 
-- `cite.py` is the shared foundation: imported by `panel/harness.py`; `tests/test_coverage_json.py` re-resolves the frozen ledger's quotes against it in-process.
-- Behaviour identity is registry-driven: `data/behaviours.json` → `generate_behaviour_constants.py` → the derived constants (reader-builder `BEHAVIOURS`, judge-prompt titles in `engine/panel/behaviours.json`); `tests/test_behaviour_registry.py` fails any drift.
-- The panel chain: `run_rollout.py` drives `whole_doc.py` → runlogs (the canonical log behind the shipped payload is committed as `runlog-v5.jsonl`, documented in `runlog-v5.md`; the v3-era `runlog-v3.jsonl` stays committed with its record; other runlogs stay gitignored) → `build_site_data.py` → `site/spec-reader/data/`. The builder reads `data/behaviours.json` for behaviour metadata and `data/panel-cell-curation.json` for the per-lab cell rows (verdict/depth/verifiedDate); with no `--out=` it writes a timestamped payload + `data/manifest.json` (latest-by-default, both gitignored). A second committed payload, `behaviours-v5-reader.json` (built with `--threshold=4 --solid-threshold=6 --run-date=2026-08-17`), is the band keep-set — exactly what the reader can render, since the client shows nothing below the related cut; `verify-reader-test.mjs` holds the two together.
-- The frozen chain: `data/coverage.json` (frozen ledger) → `build-spec-reader-data.py` → `site/spec-reader/data/documents.json` (user-registered specs fold in via `--user-manifest=`).
-- `spec-watch` overwrites `specs/`, which `cite.py` and `build-spec-reader-data.py` consume.
+- `cite.py` is the shared foundation: `harness.passages` segments a document through it, and `index_store.install_registry` feeds it the stored text of `aci_spec_versions`.
+- The judging chain: the portal writes an `aci_jobs` row and starts `job.py`; `compose_run.py` writes a run's calls; `batch_job.py` executes them through `judge_call.py`, then `depth_call.py`, writing `aci_judgements` and `aci_depths`.
+- The publication chain: `publish.py` selects cells, `build_site_data.py` and `build-spec-reader-data.py` build the two payloads for them, and one insert writes `aci_publications`, not public until an operator says so.
+- `verify_supabase_provenance.py` rebuilds a publication with the same builders and holds the stored bytes to their digests.
+- `local_run.py` uses the same composer, parser and prompt as the job, against a file instead of the database.
 
 ## Dependency map
 
 ```mermaid
 graph LR
-  watch["spec-watch/pull-latest.sh"] -->|overwrites| specs["specs/ mirrors"]
-  specs --> cite["spec-cite/cite.py"]
-  specs --> bsr["build-spec-reader-data.py"]
-  um["specs/user/specs.json (gitignored)"] -.->|user-manifest| cite
-  um -.-> bsr
-  cite --> harness["panel/harness.py"]
-  rollout["panel/run_rollout.py"] --> wholedoc["panel/whole_doc.py"]
-  harness --> wholedoc
-  wholedoc --> runlog["runlog-v5.jsonl (committed canonical log; see runlog-v5.md)"]
-  runlog --> bsd["panel/build_site_data.py"]
-  reg["data/behaviours.json (registry)"] --> gbc["generate_behaviour_constants.py"]
-  gbc -->|derived constants| bsr
-  reg -->|behaviour metadata| bsd
-  bsd --> panelpayload["site/spec-reader/data/ (behaviours payloads, timestamped runs + manifest)"]
-  coverage["data/coverage.json (frozen ledger)"] --> bsr
-  bsr --> docpayload["site/spec-reader/data/documents.json"]
-  cur["data/panel-cell-curation.json"] --> bsd
-  bsd -->|"--threshold=4 --solid-threshold=6"| readerpayload["behaviours-v5-reader.json (band keep-set)"]
-  docpayload --> verify["verify-*.mjs (Playwright E2E)"]
-  readerpayload --> verify
+  portal["app/admin (portal)"] -->|"aci_jobs row"| job["job.py"]
+  job -->|compose| compose["panel/compose_run.py"]
+  job -->|judge| batch["panel/batch_job.py"]
+  job -->|publish| pub["publish.py"]
+  batch --> jc["panel/judge_call.py"]
+  batch --> dc["panel/depth_call.py"]
+  jc --> harness["panel/harness.py"]
+  dc --> harness
+  local["local_run.py"] --> harness
+  harness --> cite["spec-cite/cite.py"]
+  sb["Supabase aci_ tables"] -->|"install_registry"| cite
+  compose -->|"runs, calls"| sb
+  batch -->|"judgements, depths"| sb
+  pub --> bsd["panel/build_site_data.py"]
+  pub --> bsr["build-spec-reader-data.py"]
+  pub -->|"aci_publications"| sb
+  sb --> ver["verify_supabase_provenance.py"]
+  fix["tests/fixtures/reader/"] --> rr["reader-routes.mjs"] --> walkers["verify-reader-*.mjs (Playwright)"]
 ```
 
 ## As-is observations
 
-- No Python package structure: no `__init__.py`/`pyproject.toml`; all cross-module wiring is `importlib` file-loading and a `sys.path` hack. Renames/moves break only at runtime.
-- `cite.py` is the foundation of every chain — the trickiest code in the repo; its bundled + user-manifest contracts are pinned by `tests/test_cite.py` and `tests/test_cite_user_specs.py` (plus the corpus goldens in `tests/golden/`).
-- Behaviour identity is registry-driven (`data/behaviours.json` → `generate_behaviour_constants.py`, drift-gated); spec identity still lives in `cite.py`'s bundled registry + `specs/CITATION.md` examples.
-- Config loads lazily at use time and is injectable (`harness.load_config()`); the import-side-effect probe in `test_panel.py` pins that no panel module reads files at import.
-- Runlog defaults disagree: `harness.RUNLOG` = `runlog.jsonl`, executors default to `runlog-v3.jsonl`; resume silently reads the wrong file if the override is forgotten.
-- Locator separators: the panel chain and the frozen coverage ledger both carry `" > "`; `cite.py` also tolerates the grammar's display separator `" › "`.
-- `threshold`/`solid_threshold` are both live: `threshold` sets `keeps_citation`'s score cut, `solid_threshold` bakes into the payload's `adjacent` flag (tier display is client-side), and `--threshold=`/`--solid-threshold=` override both for derived builds without touching the committed config.
-- Rubric prompts compose explicitly from named slots (`harness.render_system_v3`), with frozen-prompt tests pinning byte-identity to the pre-refactor strings (replaced the former `str.replace`+`assert` coupling).
-- `.github/workflows/ci.yml` runs the offline battery (panel/provenance/registry suites, data gate, byte-identity rebuilds, app.js harnesses) and the two browser walkers on every PR.
-- Hygiene: `__pycache__/` + `*.pyc` are now gitignored (the committed `.pyc` was removed); `wholedoc-FAILED-*.txt` outputs are still not gitignored.
+- No Python package structure: no `__init__.py`/`pyproject.toml`; all cross-module wiring is `importlib` file-loading and `sys.path` inserts. Renames and moves break only at runtime.
+- `cite.py` is the foundation of every chain and the trickiest code in the repo; its parser is pinned by `tests/test_cite.py` and the corpus in `tests/fixtures/parser-corpus.md` (goldens in `tests/golden/`).
+- Config loads lazily at use time and is injectable (`harness.load_config()`); `TestImportSideEffects` in `test_panel.py` pins that no panel module reads files at import.
+- Locators are stored with `" > "`; `cite.py` also accepts the grammar's display separator `" › "`.
+- `display.threshold` and `display.solid_threshold` still shape the behaviour payload, but the reader recomputes its bands from each passage's verdicts, so the baked `adjacent` flag is vestigial (see `display._comment` in `panel-config.json`).
+- The pre-migration CLIs still read and write runlog files nothing else uses, and are no longer the path anything takes; `run_rollout.py` ends by suggesting a `build_site_data.py --runlog=` rebuild, which the builder now refuses.
+- `.github/workflows/ci.yml` runs the offline suites and the two reader walkers on every PR. It does not run `test_seat_substitutions.py`, `test_coverage_payload.py`, `panel/test_appjs_locator.js`, `panel/test_appjs_opening.js`, `panel/test_appjs_translation.js` or `panel/test_reader_v5_labels.js`.
+- Hygiene: `__pycache__/` and `*.pyc` are gitignored; `wholedoc-FAILED-*.txt` outputs are still not.
