@@ -13,12 +13,15 @@
  */
 import { select } from "./supabase.mjs";
 import { behaviourNotes } from "./behaviours.mjs";
+import { currentPublication } from "./publications.mjs";
 
 const TTL_MS = 60_000;
 
-const QUERY =
-  "select=id,published_at,payload,documents&is_public=is.true"
-  + "&order=published_at.desc&limit=1";
+/* Built per call rather than once, because which publications a deployment
+ * serves is read from the environment at request time. A module constant would
+ * freeze the answer an instance booted with, and would also let this server
+ * answer from a different build than the reader on the same deployment. */
+const query = () => `select=id,published_at,payload,documents&${currentPublication()}`;
 
 let memo = null;
 
@@ -37,7 +40,7 @@ export function forgetSnapshot() {
 export async function indexSnapshot(fetchImpl = fetch, now = () => Date.now()) {
   if (memo && now() - memo.at < TTL_MS) return memo.snapshot;
 
-  const [row] = await select("aci_publications", QUERY, fetchImpl);
+  const [row] = await select("aci_publications", query(), fetchImpl);
   if (!row) throw new Error("nothing published yet");
 
   const snapshot = {

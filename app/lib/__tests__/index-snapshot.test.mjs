@@ -50,6 +50,23 @@ test("the snapshot reads the newest public publication", async () => {
   assert.match(first, /limit=1/);
 });
 
+/* The MCP server and the reader must answer from the same build. This is the
+ * server's half of that: on a development deployment it reaches an unpublished
+ * publication, exactly as the reader's routes do. */
+test("a development deployment's snapshot reaches an unpublished build", async () => {
+  forgetSnapshot();
+  const { urls, fetchImpl } = stub();
+  process.env.ACI_SERVES_DEVELOPMENT = "true";
+  try {
+    await indexSnapshot(fetchImpl);
+  } finally {
+    delete process.env.ACI_SERVES_DEVELOPMENT;
+    forgetSnapshot();
+  }
+  assert.doesNotMatch(urls[0], /is_public/);
+  assert.match(urls[0], /order=published_at\.desc/);
+});
+
 test("a second read inside the window asks the database nothing", async () => {
   forgetSnapshot();
   const { urls, fetchImpl } = stub();
