@@ -176,7 +176,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     "Exactly" is the whole point: a cell judged by six models and a cell judged
     by three are not the same claim, and a publication that mixed them would
     compare labs on unequal evidence -- which is what the bench inherited from
-    before this rule does, and why it is the one grandfathered exemption.
+    upstream did. That bench was this rule's one exemption, and the cleanup
+    migration of 16 September 2026 archived both.
 
     The panel is compared as each cell of each run was seated: a recorded
     substitution gives its seat to the substitute for that cell of that run and

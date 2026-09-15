@@ -18,10 +18,8 @@ Everything that judges the index and builds what it publishes: resolves spec cit
 | `seat_substitutions.py` | Reads `aci_seat_substitutions`, and states the publication trigger's seating rule for `publish.py` and the builder. |
 | `store.py`, `index_store.py` | Stdlib PostgREST client, and the index read back in the shapes the builders expect (`install_registry` among them). |
 | `build-spec-reader-data.py` | The documents payload: the text of every version a publication carries. |
-| `coverage_payload.py` | Converts a frozen-ledger record into the reader's coverage shape. Nothing imports it any more; `test_coverage_payload.py` still tests it. |
 | `local_run.py` | Judges one document against one behaviour with one key and no database; results in `artefacts/`. |
 | `verify_supabase_provenance.py` | Checks one publication (the newest public one, or `--publication=<uuid>`): digests, rebuild, boundaries, locators. Needs credentials. |
-| `published-artefacts.sha256.json` | Digests of what the index published when the migration was verified, and the commit (`085fd2e`) its source files are recoverable from. |
 | `verify-reader-test.mjs`, `verify-reader-features.mjs`, `reader-routes.mjs` | The two reader walkers (need Chrome). `reader-routes.mjs` answers the reader's routes from `tests/fixtures/reader/`, a current and a draft publication. |
 | `verify-portal.mjs` | Read-only walk through the admin portal against a running server. Needs credentials, so no workflow runs it. |
 | `notion-sync/` | Empty placeholder (`.gitkeep`). |

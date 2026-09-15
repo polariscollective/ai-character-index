@@ -24,7 +24,7 @@ not descriptions of the current system.
 ## The system in brief, as of September 2026
 
 - The index lives in the `aci_` tables of the shared `evals` Supabase project.
-  This repository holds code, fixtures and `engine/published-artefacts.sha256.json`.
+  This repository holds code and fixtures.
 - Schema changes are migrations in the `polaris-supabase` repository. This
   application reads and writes its tables and never migrates them.
 - The site is a Next.js application on Vercel

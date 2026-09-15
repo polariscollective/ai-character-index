@@ -39,7 +39,7 @@ graph LR
 ## As-is observations
 - The "pnpm workspace" is the root package alone: `pnpm-workspace.yaml` has no `packages:` key and `pnpm-lock.yaml` has a single importer.
 - PLAN.md §8's repo map lists `outreach/` as a repo folder, but `.gitignore` excludes `outreach/` — it can only exist in local clones, never on main.
-- PLAN.md and the older overviews describe a `data/` directory of canonical JSON. It is gone: the index lives in Supabase, and `engine/published-artefacts.sha256.json` is what stands in the repository for what it published.
+- PLAN.md and the older overviews describe a `data/` directory of canonical JSON. It is gone: the index lives in Supabase, and the repository holds none of its data.
 - PLAN.md §5's CI/CD table promises `ci.yml`, `notion-sync.yml`, `spec-watch.yml` alongside a deploy workflow; what exists is `ci.yml`, the scheduled `provenance.yml`, and `deploy-runner.yml`, which builds the judging job's image. The site's deployment is Vercel's, fired by a push rather than by a workflow here.
 - `engines`/`scripts` nothing calls: none — `playwright-core` is used by the two `engine/verify-*.mjs`, in CI's browser job and locally.
 - `engines.node` is `>=22.13 <25`: the floor is the one pnpm actually needs, and the ceiling stops the runtime following every new Node major on its own — a deploy warned about exactly that. It was `>=22`, which admitted Node 22.0–22.12, versions the pinned packageManager will not run on.

@@ -85,12 +85,10 @@ Vercel: Next.js, serving the public pages, the reader's routes, the MCP
 ```
 
 **The database is the only source.** The behaviours, the specification text, the
-judgements, the frozen ledger and the two payloads the reader is served all live
+judgements and the two payloads the reader is served all live
 in the `aci_` tables of the shared `evals` Supabase project. Their migrations live
 in the `polaris-supabase` repository: this application reads and writes the tables
-and never migrates them. What this repository holds is code, fixtures, and
-`engine/published-artefacts.sha256.json`, which records what the index published
-when the migration was verified against it.
+and never migrates them. What this repository holds is code and fixtures.
 
 **Publishing is not a deploy.** A publication row decides what the reader shows,
 and making one public is a database write.

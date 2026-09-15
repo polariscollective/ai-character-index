@@ -8,7 +8,7 @@
 
 An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel (https://ai-character-index.vercel.app) whose reader routes and public MCP endpoint (`/api/mcp`) read the index out of Supabase, and operated from an admin portal in the same application. As of September 2026 the public publication, `07958c5e-eb91-4e31-81f2-32f79c01b84c`, carries 13 behaviours over 4 documents (Claude's Constitution 2026-01-20, the OpenAI Model Spec 2025-12-18 and 2026-08-18, and the Alibaba Model Spec 2026-04-00, read in an English machine translation), judged by the `frontier_fast` panel under rubric v5.
 
-**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
+**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements and the two payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code and fixtures.
 
 Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot register a spec or publish, and the upstream repository `AndresCotton/ai-character-index` keeps that property. Judging survives it: `engine/local_run.py` judges a document with one key and no database. And CI knows no secret: it verifies the code against fixtures, while `provenance.yml` verifies the published data on a schedule, where the credentials already are.
 
@@ -24,13 +24,12 @@ graph TB
   panel["engine/panel/ (LLM judge APIs)"] -->|"judgements"| sb
   sb -->|"registry + spec text"| cite["engine/spec-cite/cite.py"]
   sb -->|"judgements + registry"| bsd["engine/panel/build_site_data.py"]
-  sb -->|"spec text + frozen ledger"| bsr["engine/build-spec-reader-data.py"]
+  sb -->|"spec text"| bsr["engine/build-spec-reader-data.py"]
   bsd & bsr -->|"materialised at publication time"| pub["aci_publications"]
   pub -->|"/api/reader/payload, /api/reader/documents"| reader["site/spec-reader/ (served from public/)"]
   pub -->|"read-only tools"| mcp["/api/mcp"]
   reader ==> vc["Next.js on Vercel"]
-  rec["engine/published-artefacts.sha256.json"] -->|"the oracle"| ver["engine/verify_supabase_provenance.py"]
-  sb --> ver
+  sb -->|"rebuilds a publication and holds it to its digests"| ver["engine/verify_supabase_provenance.py"]
   fix["tests/fixtures/ (parser corpus, fixture index, reader payloads)"] -->|"offline"| ci["CI"]
 ```
 
@@ -66,8 +65,8 @@ graph TB
    `judging`: the definition the panel is given, the boundary of the construct,
    the provenance, and for one behaviour a definition the current rubric prefers.
    The set a row names and its numbering within that set decide nothing any
-   more: a publication shows every behaviour it selects, and the cleanup
-   migration drops the set column. **Defined
+   more: a publication shows every behaviour it selects. The set column stays
+   until the portal's registration route stops writing it. **Defined
    and judged are independent states**: a behaviour is defined once it carries a
    query, and judged once a call for it reaches `done`.
 3. **Judging** — a run is a batch of judge calls, one per behaviour × spec
@@ -83,13 +82,14 @@ graph TB
    by exactly the models it names, with the substitutions recorded in
    `aci_seat_substitutions` applied, enforced by a trigger rather than by method
    (`publish.py` also refuses a substitute the panel does not declare for that
-   seat in `panel-config.json`);
-   the bench inherited from before that rule is the single `grandfathered`
-   exemption, and a partial unique index means there can never be a second.
-5. **Provenance** — `engine/published-artefacts.sha256.json` records what the
-   index published when the migration was verified. The committed payloads it
-   replaced are gone from the branch and recoverable from git history at the
-   commit it names. `verify_supabase_provenance.py` holds the database to it.
+   seat in `panel-config.json`). The rule has no exemption: the bench inherited
+   from before it, and the `grandfathered` flag that exempted it, were archived by
+   the cleanup migration (`polaris-supabase`,
+   `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`).
+5. **Provenance** — `verify_supabase_provenance.py` holds one publication to the
+   digests it stores, rebuilds it from its own cells, and re-resolves every
+   passage it cites against the stored text. The committed payloads the index
+   once shipped are recoverable from git history at `085fd2e`.
 6. **Serving** — Vercel builds on a push, `prebuild` copies `site/` into
    `public/`, and the reader takes its two payloads from routes. Publishing is
    not a deploy: what the public sees changes with a database write, and the

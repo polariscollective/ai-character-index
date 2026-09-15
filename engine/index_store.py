@@ -187,13 +187,13 @@ def documents(store, spec_version_ids=None, judged_version_ids=None):
 
 def behaviours(store):
     """The behaviour registry in the shape data/behaviours.json holds, keyed by
-    slug. Three columns are renamed back: `set` and `group` are reserved words
-    in SQL and could not carry their own names in the table."""
+    slug. `group` is a reserved word in SQL and could not carry its own name in
+    the table, so it is renamed back. Sets decide nothing since the one-panel
+    redesign, so `set_name` is not carried."""
     out = {}
     for row in _rows(store, "aci_behaviours"):
         out[row["slug"]] = {
             "name": row["name"],
-            "set": row["set_name"],
             "numeric_id": row["numeric_id"],
             "group": row["group_name"],
             "definition": row["definition"],
@@ -204,14 +204,6 @@ def behaviours(store):
         if row.get("judging") is not None:
             out[row["slug"]]["judging"] = row["judging"]
     return out
-
-
-def cell_curation(store):
-    """The rows data/panel-cell-curation.json carries under `cells`."""
-    return [{"slug": row["behaviour_slug"], "lab_id": row["lab_id"],
-             "verdict": row["verdict"], "depth_0_4": row["depth_0_4"],
-             "verified_date": row["verified_date"]}
-            for row in _rows(store, "aci_cell_curation")]
 
 
 def runlog_rows(store, run_id):
@@ -336,47 +328,6 @@ def published_spec_version_ids(store, publication=None, cells=None):
         return None
     return sorted({c["spec_version_id"] for c in _rows(store, "aci_publication_cells")
                    if c["publication_id"] == publication["id"]})
-
-
-def coverage(store):
-    """The frozen ledger in the shape data/coverage.json holds under `coverage`.
-
-    The file keys a record by the index set's file-local numeric id; the table
-    keys it by slug, which is the global key. This maps back, because
-    coverage_payload() and the reader both still speak in numeric ids.
-    """
-    numeric_of_slug = {slug: entry["numeric_id"]
-                       for slug, entry in behaviours(store).items()
-                       if entry["set"] == "index"}
-    names = {slug: entry["name"] for slug, entry in behaviours(store).items()}
-    records = []
-    for row in _rows(store, "aci_coverage"):
-        records.append({
-            "behaviour_id": numeric_of_slug[row["behaviour_slug"]],
-            "behaviour_name": names[row["behaviour_slug"]],
-            "lab_id": row["lab_id"],
-            "verdict": row["verdict"],
-            "depth_0_4": row["depth_0_4"],
-            "depth_note": row["depth_note"],
-            "verified_against_version": row["verified_against_version"],
-            "verified_date": row["verified_date"],
-            "citation_format": row["citation_format"],
-            "citations": row["citations"],
-        })
-    return records
-
-
-def index_behaviours(store):
-    """The index-set behaviours that carry a coverage record, in numeric order,
-    in the shape build-spec-reader-data.py's BEHAVIOURS constant holds. That
-    constant is generated from the registry today; here it is read."""
-    registry = behaviours(store)
-    covered = {row["behaviour_slug"] for row in _rows(store, "aci_coverage")}
-    rows = [(entry["numeric_id"], slug, entry) for slug, entry in registry.items()
-            if entry["set"] == "index" and slug in covered]
-    return [{"id": numeric_id, "slug": slug, "name": entry["name"],
-             "definition": entry["definition"], "category": entry["group"]}
-            for numeric_id, slug, entry in sorted(rows)]
 
 
 def judging_registry(store):

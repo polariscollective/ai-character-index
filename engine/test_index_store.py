@@ -252,14 +252,16 @@ class PairingTest(unittest.TestCase):
 
 
 class BehaviourTest(unittest.TestCase):
-    def test_behaviours_come_back_in_the_registry_file_shape(self):
+    def test_behaviours_come_back_in_the_registry_file_shape_with_no_set(self):
+        """Sets decide nothing since the one-panel redesign. The column is still
+        in the table, and is not carried."""
         rows = [{"slug": "helpfulness", "name": "Helpfulness",
                  "set_name": "reader-test", "numeric_id": 1,
                  "group_name": "Behaviours under test",
                  "definition": "A definition.", "facets": []}]
         got = index_store.behaviours(FakeStore({"aci_behaviours": rows}))
         self.assertEqual(got["helpfulness"], {
-            "name": "Helpfulness", "set": "reader-test", "numeric_id": 1,
+            "name": "Helpfulness", "numeric_id": 1,
             "group": "Behaviours under test",
             "definition": "A definition.", "facets": [],
         })

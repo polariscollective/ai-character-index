@@ -78,7 +78,7 @@ export async function publications(fetchImpl = fetch) {
   const [rows, cells] = await Promise.all([
     // Never the payload columns. They are megabytes, and no page shows them.
     select("aci_publications",
-           "select=id,published_at,published_by,notes,panel,rubric,grandfathered,"
+           "select=id,published_at,published_by,notes,panel,rubric,"
            + "is_public,payload_sha256,documents_sha256,build_params"
            + "&order=published_at.desc", fetchImpl),
     select("aci_publication_cells", "select=publication_id", fetchImpl),

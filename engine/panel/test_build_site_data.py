@@ -12,9 +12,9 @@ bs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(bs)
 
 REGISTRY = {
-    "b": {"name": "Bravo", "group": "G1", "definition": "d", "set": "user"},
-    "a": {"name": "Alpha", "group": "G2", "definition": "d", "set": "index"},
-    "c": {"name": "Charlie", "group": "G1", "definition": "d", "set": "reader-test"},
+    "b": {"name": "Bravo", "group": "G1", "definition": "d"},
+    "a": {"name": "Alpha", "group": "G2", "definition": "d"},
+    "c": {"name": "Charlie", "group": "G1", "definition": "d"},
 }
 PANEL = {"sol", "fable", "deepseek"}
 DISPLAY = {"threshold": 1, "solid_threshold": 6}
@@ -27,7 +27,7 @@ TEXT = {locator: "Quoted." for _slug, locator in VOTES}
 
 
 class DisplayTest(unittest.TestCase):
-    def test_every_set_is_displayed_ordered_by_group_then_name(self):
+    def test_every_selected_behaviour_is_displayed_ordered_by_group_then_name(self):
         rows = bs.display_behaviours(["a", "b", "c"], REGISTRY)
         self.assertEqual([row["slug"] for row in rows], ["b", "c", "a"])
 
@@ -52,22 +52,6 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(row["coverage"][OLD], {"depth": depth,
                                                "passages": row["coverage"][OLD]["passages"]})
         self.assertIsNone(row["coverage"][NEW]["depth"])
-
-    def test_the_strict_variant_is_not_fed_by_another_behaviour(self):
-        """The strict variant was once a re-reading of animal welfare's votes. Votes
-        recorded for one behaviour now reach that behaviour's coverage and no other,
-        whatever the mapping that used to do the feeding was called."""
-        behaviours = [
-            {"slug": "animal-welfare-impacts", "name": "Animal welfare impacts",
-             "definition": "d", "category": "G1"},
-            {"slug": "general-welfare-impacts-strict", "name": "General welfare impacts (strict)",
-             "definition": "d", "category": "G1"}]
-        votes = {("animal-welfare-impacts", locator): verdicts
-                 for (_slug, locator), verdicts in VOTES.items()}
-        animal, strict = bs.build_behaviours(behaviours, votes, TEXT, [OLD, NEW], {},
-                                             PANEL, DISPLAY)
-        self.assertEqual([len(animal["coverage"][d]["passages"]) for d in (OLD, NEW)], [1, 1])
-        self.assertEqual([strict["coverage"][d]["passages"] for d in (OLD, NEW)], [[], []])
 
 
 FILTERED = "fable's output was content-filtered on every attempt."

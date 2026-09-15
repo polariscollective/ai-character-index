@@ -35,15 +35,6 @@ export default async function Overview() {
                   {index.live.documents_sha256.slice(0, 12)}
                 </td>
               </tr>
-              {index.live.grandfathered && (
-                <tr>
-                  <td>Exemption</td>
-                  <td>
-                    Grandfathered: its panels are unequal across labs on four
-                    behaviours. No second exemption can exist.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         ) : (
