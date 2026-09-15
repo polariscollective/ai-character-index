@@ -42,7 +42,8 @@ test("list_model_specs names every document with its counts", () => {
   assert.equal(answer.publication.id, "3114dd65-c6f2-5cb3-bf98-af5b314381c3");
   assert.deepEqual(answer.model_specs.map(spec => spec.id),
                    ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
-                    "acme--translated@2026-03-01"]);
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
 
   const [corpus] = answer.model_specs;
   assert.equal(corpus.lab, "Acme");
@@ -165,10 +166,12 @@ test("omitting model_spec_ids reads every specification", () => {
   const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
                    ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
-                    "acme--translated@2026-03-01"]);
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
   assert.deepEqual(answer.model_specs_read.map(spec => spec.id),
                    ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
-                    "acme--translated@2026-03-01"]);
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
 });
 
 test("an empty cell says so rather than disappearing", () => {
@@ -264,9 +267,9 @@ test("a curation's integer is not reported as the depth the panel gave", () => {
 
 test("a retrieved cell of the grandfathered publication carries no depth", () => {
   const answer = retrievePassages(grandfathered(), { behaviours: BOTH });
-  assert.equal(answer.results.length, 6, "two behaviours over three documents");
+  assert.equal(answer.results.length, 10, "two behaviours over five documents");
   assert.deepEqual(answer.results.map(cell => cell.depth),
-                   [null, null, null, null, null, null]);
+                   [null, null, null, null, null, null, null, null, null, null]);
 });
 
 test("a depth counts only as an object with a finite mean, and a mean of zero counts", () => {
@@ -326,7 +329,7 @@ test("an unknown strength is refused", () => {
 
 test("everything fits in one page when the budget is large", () => {
   const answer = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
-  assert.equal(answer.results.length, 6, "two behaviours over three documents");
+  assert.equal(answer.results.length, 10, "two behaviours over five documents");
   assert.equal(answer.next_cursor, null);
   assert.deepEqual(answer.remaining, { cells: 0, passages: 0 });
 });
@@ -342,7 +345,8 @@ test("a page stops on a whole cell and names the next one", () => {
     publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
     behaviour: "defined-behaviour", model_spec_id: "acme--second@2026-02-01",
   });
-  assert.deepEqual(answer.remaining, { cells: 5, passages: 5 });
+  // Two behaviours over five documents is ten cells, one of them on this page.
+  assert.deepEqual(answer.remaining, { cells: 9, passages: 5 });
 });
 
 test("no cell is ever split", () => {
@@ -417,11 +421,12 @@ test("an empty cell rides along instead of starting a page of its own", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour"], strength: "core", limit: 3,
   });
-  // acme--corpus@2026-01-01 holds three; the other two hold none. An empty cell
+  // acme--corpus@2026-01-01 holds three; the others hold none. An empty cell
   // costs nothing and its note stays with the page that reached it.
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
                    ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
-                    "acme--translated@2026-03-01"]);
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
   assert.equal(answer.next_cursor, null);
 });
 

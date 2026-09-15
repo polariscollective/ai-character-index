@@ -127,11 +127,12 @@
   <template id="document-template">
     <article class="document-panel">
       <header class="document-header">
-        <!-- One tab per publisher, then the document and version that publisher
-             is being read at. Two rows rather than one control, because which
-             lab you are reading and which of its documents are different
-             choices, and comparing asks both of them twice. -->
-        <div class="provider-tabs" role="tablist" aria-label="Publisher"></div>
+        <!-- One button per publisher, then the document and version that
+             publisher is being read at. Two rows rather than one control, because
+             which lab you are reading and which of its documents are different
+             choices, and comparing asks both of them twice. A group of buttons
+             rather than a tablist; app.js names each side's group when comparing. -->
+        <div class="provider-tabs" role="group" aria-label="Publisher"></div>
         <div class="document-row">
           <div class="document-identity">
             <h2 class="document-title">

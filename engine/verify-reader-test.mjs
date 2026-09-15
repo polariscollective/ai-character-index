@@ -127,8 +127,8 @@ async function readView(url) {
     behaviour: document.querySelector("#finding-behaviour").textContent,
     // Body text of every rendered panel, to prove the spec itself is there to read.
     panels: [...document.querySelectorAll(".document-panel")].map(panel => ({
-      // The publisher is the selected tab of the panel's own row of them.
-      lab: panel.querySelector('.provider-tab[aria-selected="true"]')?.textContent ?? null,
+      // The publisher is the pressed button of the panel's own row of them.
+      lab: panel.querySelector('.provider-tab[aria-pressed="true"]')?.textContent ?? null,
       blocks: panel.querySelectorAll(".document-body [data-block]").length,
       // Nothing may be collapsed out of view while there is no behaviour to focus on.
       hiddenBlocks: [...panel.querySelectorAll(".document-body > *")]

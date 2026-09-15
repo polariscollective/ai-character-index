@@ -1760,7 +1760,7 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 
 .provider-tab:hover { color: var(--ink); }
-.provider-tab[aria-selected="true"] {
+.provider-tab[aria-pressed="true"] {
   border-bottom-color: var(--energy);
   color: var(--ink);
   font-weight: 600;

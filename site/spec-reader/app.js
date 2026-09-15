@@ -1972,25 +1972,36 @@ function defaultComparison(leftId) {
   return (state.payload?.documents || []).find(doc => doc.id !== leftId)?.id || null;
 }
 
-/* One tab per publisher, the panel's own. Choosing a publisher shows its newest
- * document, which is the version a reader means unless they say otherwise; the
- * row below is where they say otherwise. */
-function renderProviderTabs(panel, doc) {
-  const tabs = panel.querySelector(".provider-tabs");
-  if (!tabs) return;
-  tabs.replaceChildren(...labsOf().map(lab => {
-    const tab = document.createElement("button");
-    tab.type = "button";
-    tab.className = "provider-tab";
-    tab.role = "tab";
-    tab.dataset.lab = lab;
-    tab.textContent = lab;
-    tab.setAttribute("aria-selected", String(lab === doc.lab));
-    return tab;
+/* One button per publisher, the panel's own. Choosing a publisher shows its
+ * newest document, which is the version a reader means unless they say
+ * otherwise; the row below is where they say otherwise.
+ *
+ * Buttons in a labelled group, not tabs. A tablist promises arrow keys, a roving
+ * tabindex and a panel each tab controls, and this row keeps none of those
+ * promises: each publisher is a stop of its own, and Enter or Space chooses it.
+ * The pressed one is the publisher being read. Comparing, both groups would be
+ * announced as "Publisher", so each is named for its side. */
+const PUBLISHER_GROUP_LABELS = ["Publisher, left document", "Publisher, right document"];
+
+function renderProviderTabs(panel, doc, side = 0) {
+  const group = panel.querySelector(".provider-tabs");
+  if (!group) return;
+  group.setAttribute("aria-label",
+    state.comparing ? PUBLISHER_GROUP_LABELS[side] || "Publisher" : "Publisher");
+  group.replaceChildren(...labsOf().map(lab => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "provider-tab";
+    button.dataset.lab = lab;
+    button.textContent = lab;
+    button.setAttribute("aria-pressed", String(lab === doc.lab));
+    return button;
   }));
 }
 
-function renderDocument(doc) {
+/* `side` is the panel's position, 0 on the left, which is what names a control
+ * when two panels carry the same ones. */
+function renderDocument(doc, side = 0) {
   const panel = elements.template.content.firstElementChild.cloneNode(true);
   const markdownContext = {
     headings: buildHeadingIndex(doc.markdown),
@@ -1998,7 +2009,7 @@ function renderDocument(doc) {
     usedHeadingIds: new Map(),
   };
   panel.dataset.documentId = doc.id;
-  renderProviderTabs(panel, doc);
+  renderProviderTabs(panel, doc, side);
   panel.querySelector(".document-name").textContent = doc.title;
   panel.querySelector(".document-version").textContent = versionLabel(doc.version);
   // Each panel points at its own source. That is the whole reason this link left
@@ -2323,7 +2334,7 @@ function setComparePair(side, id) {
 
 function rebuildReader() {
   elements.documentReader.classList.toggle("compare", state.comparing);
-  const panels = visibleDocuments().map(renderDocument);
+  const panels = visibleDocuments().map((doc, side) => renderDocument(doc, side));
   const children = state.comparing
     ? panels.flatMap((panel, i) => (i < panels.length - 1 ? [panel, createDocumentResizer()] : [panel]))
     : panels;
@@ -2456,13 +2467,23 @@ elements.documentReader.addEventListener("click", event => {
 });
 
 /* Choosing a publisher, in the panel that asked. Delegated like the tier
- * toggles, because every rebuild re-clones the headers these buttons live in. */
+ * toggles, because every rebuild re-clones the headers these buttons live in.
+ *
+ * The rebuild takes the focused button away with the header, which would drop a
+ * keyboard user at the top of the page, so focus goes back to the same publisher
+ * in the same panel afterwards. The panel is found by position rather than by
+ * document id: comparing, both sides may carry the same document. */
 elements.documentReader.addEventListener("click", event => {
-  const tab = event.target.closest?.(".provider-tab");
-  if (!tab) return;
-  const panel = tab.closest(".document-panel");
-  const latest = latestOfLab(tab.dataset.lab);
+  const button = event.target.closest?.(".provider-tab");
+  if (!button) return;
+  const panel = button.closest(".document-panel");
+  const side = panels().indexOf(panel);
+  const lab = button.dataset.lab;
+  const latest = latestOfLab(lab);
   if (latest && latest.id !== panel?.dataset.documentId) chooseSpec(panel, latest.id);
+  panels()[side]
+    ?.querySelector(`.provider-tab[data-lab="${CSS.escape(lab)}"]`)
+    ?.focus({ preventScroll: true });
 });
 
 /* Comparison is one mode over both panels, so its switch is in the band both
