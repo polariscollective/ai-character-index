@@ -4,38 +4,36 @@
 > grammar (`CITATION.md`) and each mirror's provenance note — documents about
 > the data rather than the data.
 
-# specs/ — version-pinned mirrors of the lab specs every citation resolves against
-> As-is snapshot of origin/main @ 72e2e6b (2026-08-18); the documentation set itself is added by this PR. Describes what exists now, not what should exist.
+# specs/: the locator grammar, and the provenance notes of the mirrors that used to live here
+> Current-state doc, as of September 2026: describes what exists now, not what should exist.
 
 ## Purpose
-Local copies of the two published lab behaviour specs, pinned by version, plus `CITATION.md`, which defines the locator grammar that makes every stored quote resolvable to an exact span. Per `CITATION.md`, a locator is only valid if `engine/spec-cite/cite.py` resolves it against these files.
+`CITATION.md` defines the locator grammar that makes every stored quote resolvable to an exact span. The two upstream readmes and their licence files are kept from the mirrors that used to live here. The texts themselves are rows of `aci_spec_versions`, and `engine/spec-cite/cite.py` resolves a locator only against a registry installed from those rows or from a fixture.
 
 ## Contents
 | Path | Holds |
 |---|---|
 | `CITATION.md` | Locator format `<spec>@<version> > <section-ref> > ¶<n>[ s<a>[-<b>]]` (`>` / `›` interchangeable); section refs are `#anchor` for the Model Spec and heading-title paths for the constitution; block (¶) and sentence (s) counting rules; the three mechanical normalizations applied to quotes; cite.py command reference |
-| `claude-constitution/20260120-constitution.md` | Anthropic constitution mirror, 830 lines / 182K; no `{#anchor}` syntax — cited by heading path only |
-| `claude-constitution/README.md`, `LICENSE` | Mirrored upstream readme and CC0 1.0 license |
-| `openai-model-spec/model_spec.md` | OpenAI Model Spec mirror, 4692 lines / 265K; 80 lines carry `{#anchor}` markers (59 also carry `authority=` tags); worked examples are `~~~`-fenced transcripts paired with `**Example**:` captions |
+| `claude-constitution/README.md`, `LICENSE` | Upstream readme under a provenance note, and the CC0 1.0 licence |
+| `openai-model-spec/README.md` | Upstream readme under a provenance note |
 | `openai-model-spec/CHANGELOG.md` | Upstream changelog, v2024.05.08 → v2025.12.18 |
-| `openai-model-spec/README.md` | Mirrored readme |
 
 ## Relationships
-Writer: `engine/spec-watch/pull-latest.sh` (run manually; needs an authenticated `gh` CLI) pulls files from `openai/model_spec` and `anthropics/claude-constitution` via the GitHub API and base64-decodes them into this directory; nothing else writes here. The script checks upstream versions against cite.py's registry before touching anything and aborts loud on mismatch; it does not fetch the dated release archives (nothing consumes them, and they exceed the contents API's 1 MB inline limit). Readers: `engine/spec-cite/cite.py` parses both mirrors (headings → sections → blocks → sentences) for its `outline/show/resolve/find` commands; its `SPECS` registry pins `constitution@2026-01-20` → `claude-constitution/20260120-constitution.md` and `model-spec@2025-12-18` → `openai-model-spec/model_spec.md`. `tests/test_coverage_json.py` re-resolves every stored quote of the frozen `data/coverage.json` through cite.py in CI. `engine/build-spec-reader-data.py` inlines both mirrors' full markdown into `site/spec-reader/data/documents.json`. `data/labs.json` `local_copy` fields point here but are string data no code reads.
+Nothing writes here. Documents and versions are registered through the admin portal into `aci_spec_versions`; as of September 2026 the public publication reads four of them: Claude's Constitution 2026-01-20, the OpenAI Model Spec 2025-12-18 and 2026-08-18, and the Alibaba Model Spec 2026-04-00. `engine/index_store.py` installs them as `cite.py`'s registry under `<lab>--<document>` names. `cite.py` implements the grammar in code and does not read `CITATION.md`. Its offline tests resolve against `tests/fixtures/parser-corpus.md`, and `engine/verify_supabase_provenance.py` re-resolves a publication's locators against the stored text. `engine/build-spec-reader-data.py` puts the text of every version a publication carries into its documents payload.
 
 ## Dependency map
 ```mermaid
 graph LR
-  upstream["GitHub: openai/model_spec + anthropics/claude-constitution"] -->|"pull-latest.sh (manual, gh API)"| mirrors["specs/ mirrored markdown"]
-  mirrors -->|"parse + resolve locators"| cite["engine/spec-cite/cite.py"]
+  portal["admin portal"] -->|"registers a version"| versions["aci_spec_versions (insert-only)"]
+  versions -->|"index_store.install_registry"| cite["engine/spec-cite/cite.py"]
   citation["specs/CITATION.md"] -.->|"locator grammar"| cite
-  cite -->|"quote re-verification (CI)"| coverage["tests/test_coverage_json.py (frozen data/coverage.json)"]
-  mirrors -->|"full markdown inlined"| build["engine/build-spec-reader-data.py"]
+  corpus["tests/fixtures/parser-corpus.md"] -->|"offline tests"| cite
+  cite -->|"re-resolves cited locators"| ver["engine/verify_supabase_provenance.py"]
+  versions -->|"text of published versions"| build["engine/build-spec-reader-data.py"]
 ```
 
 ## As-is observations
-- The pinned versions (`constitution@2026-01-20`, `model-spec@2025-12-18`) are restated in `cite.py` `SPECS`/`DEFAULT_VERSION`, `engine/build-spec-reader-data.py` `DOCUMENTS`, `data/labs.json`, and every stored locator prefix; nothing reads cite.py's registry to keep the others in sync.
-- `pull-latest.sh` still fetches the upstream dated release archives although they exceed the GitHub contents API's 1 MB inline limit and arrive as 0-byte files; the empty artifacts have been removed from the repo and the fetch needs fixing (closeout list). Version detection (knowing when upstream has moved past the pinned registry) is an open closeout-list item too, and will need its own signal (e.g. a `docs/` listing or CHANGELOG diff).
-- PLAN.md §1.2 and `engine/README.md` describe a weekly spec-watch Action that opens a PR when a spec changes; `.github/workflows/README.md` confirms `spec-watch.yml` is "still to come" — pulls are manual only.
-- `CITATION.md` says CI re-resolves locators against `specs/` "so a spec update that moves text fails loudly"; `.github/workflows/ci.yml` does — the `tests/` suite re-resolves every published locator, and `tests/test_coverage_json.py` byte-compares every quote in the frozen ledger.
-- The constitution mirror has no anchors, so its locators depend on exact heading-title paths; `CITATION.md` notes a trailing path subset resolves "when unique" today, and stored citations should carry full paths to survive future duplicate titles.
+- `CITATION.md` still describes the pre-migration arrangement in places: its examples use the old names (`constitution@2026-01-20`, `model-spec@2025-12-18`) where stored locators now read `anthropic--constitution@…` and `openai--model-spec@…`, and it says CI re-resolves locators against `specs/` and that a new version is registered in `BUNDLED_SPECS` or the user manifest, none of which exists.
+- `engine/spec-watch/pull-latest.sh` no longer runs (it reads `cite.BUNDLED_SPECS`), and nothing detects when a lab publishes a new version.
+- The old document names `constitution` and `model-spec` remain in the database beside their `<lab>--<document>` copies until the cleanup migration deletes them.
+- The constitution has no anchors, so its locators depend on exact heading-title paths; `CITATION.md` notes a trailing path subset resolves "when unique" today, and stored citations should carry full paths to survive future duplicate titles.

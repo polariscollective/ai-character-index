@@ -1,3 +1,5 @@
+> **A dated archive (as of September 2026).** This overview describes the July 2026 design sprint as the repository stood in August 2026, and has not been brought current since.
+
 # design/ — settled aesthetics decisions, the interaction model, and the core-page prototype
 
 > As-is snapshot of origin/main @ 72e2e6b (2026-08-18), kept current where the site changed under it; the documentation set itself is added by this PR. Describes what exists now, not what should exist.
