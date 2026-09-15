@@ -35,7 +35,8 @@ body[data-palette="daylight"] {
   --chrome-deep: #DFDCCA;
   --paper: #F1EFE3;
   /* The document's own reading surface, lighter than --paper: the user's explicit
-     choice over the framework's --paper for the text a reader spends an hour on. */
+     choice over the framework's --paper for the text a reader spends an hour on.
+     The text area only (.document-body); the header rows above it keep --paper. */
   --reading: #F8F7F0;
   --ink: #23281B;
   --muted: #5C6B3C;
@@ -949,7 +950,7 @@ body.sidebar-collapsed .sidebar-resizer {
     minmax(0, calc(100% - var(--compare-first) - 9px));
 }
 .document-resizer { height: 100%; }
-.document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--reading); }
+.document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
 /* A stack of rows, not a row of columns: publishers, then the document at a
    version with what it takes to read it, then the caveat when there is one.
    This header used to hold two things side by side, which is why it was a row;
@@ -1203,6 +1204,11 @@ body.sidebar-collapsed .sidebar-resizer {
  * have something to bleed into. */
 .document-body {
   width: 100%;
+  /* The text, and only the text, on the lighter reading surface: the header rows
+     above it stay on the panel's --paper. At least the scroll area's height, so a
+     short document leaves no strip of --paper under its last line. */
+  min-height: 100%;
+  background: var(--reading);
   padding: 56px max(28px, (100% - 50vw) / 2) 120px;
   font-family: var(--reader);
   font-size: 17px;

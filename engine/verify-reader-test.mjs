@@ -745,6 +745,93 @@ if (behaviours.length === 0) {
          ids.join(" | "));
 }
 
+/* The lighter reading surface is the document's text, and nothing above it.
+ *
+ * The user asked for the document paler, not the menus at its top: the
+ * publishers, the name and version, Show original, the counter and arrows,
+ * Expand all and the band toggles stay on the page's own --paper, and only the
+ * text area takes --reading, including what a short document leaves below its
+ * last line. Held with one document and two, the menu open and folded, in both
+ * palettes; umber has one ground for both. */
+{
+  const surfaces = () => page.evaluate(() => {
+    const ground = element => {
+      for (let node = element; node; node = node.parentElement) {
+        const colour = getComputedStyle(node).backgroundColor;
+        if (colour !== "rgba(0, 0, 0, 0)" && colour !== "transparent") return colour;
+      }
+      return null;
+    };
+    const token = name => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${name})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    };
+    return {
+      paper: token("--paper"),
+      reading: token("--reading"),
+      panels: [...document.querySelectorAll(".document-panel")].map(panel => {
+        const scroll = panel.querySelector(".document-scroll").getBoundingClientRect();
+        // In the text's left gutter, just above the bottom of the scroll area:
+        // below the last line of a short document, and clear of any passage.
+        const below = document.elementFromPoint(scroll.left + 8, scroll.bottom - 6);
+        return {
+          id: panel.dataset.documentId,
+          top: {
+            publishers: ground(panel.querySelector(".provider-tabs")),
+            name: ground(panel.querySelector(".document-name")),
+            showOriginal: ground(panel.querySelector(".source-link")),
+            walk: ground(panel.querySelector(".passage-nav")),
+            expandAll: ground(panel.querySelector(".document-focus-toggle")),
+            bands: ground(panel.querySelector(".rail-legend")),
+          },
+          text: ground(panel.querySelector(".document-body")),
+          belowText: below && panel.contains(below) ? ground(below) : "outside the panel",
+        };
+      }),
+    };
+  });
+  const setMenu = async open => {
+    if ((await page.getAttribute("#sidebar-toggle", "aria-expanded")) !== String(open)) {
+      await page.click("#sidebar-toggle");
+      await page.waitForTimeout(200);
+    }
+  };
+  const [first] = behaviours;
+  const translatedDoc = documents.find(document => document.translation) || documents[1];
+  const initialPalette = await page.evaluate(() => document.body.dataset.palette);
+  for (const [mode, query] of [
+    ["one document", `?behavior=${first.slug}&spec=${encodeURIComponent(documents[0].id)}`],
+    ["compare", `?behavior=${first.slug}&compare=1&compare-with=`
+      + `${encodeURIComponent(translatedDoc.id)},${encodeURIComponent(documents[0].id)}`],
+  ]) {
+    await readView(`${base}${query}`);
+    for (const open of [true, false]) {
+      await setMenu(open);
+      for (const palette of ["daylight", "umber"]) {
+        await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
+        const seen = await surfaces();
+        const topOnPaper = seen.panels.every(panel =>
+          Object.values(panel.top).every(colour => colour === seen.paper));
+        const textOnReading = seen.panels.every(panel =>
+          panel.text === seen.reading && panel.belowText === seen.reading);
+        const distinct = palette === "daylight" ? seen.paper !== seen.reading : seen.paper === seen.reading;
+        report(topOnPaper && textOnReading && distinct,
+          `reading surface, ${mode}, menu ${open ? "open" : "folded"}, ${palette}:`
+            + " the top rows on --paper, the text on --reading",
+          `paper ${seen.paper}, reading ${seen.reading}; `
+            + seen.panels.map(panel => `${panel.id} top ${JSON.stringify(panel.top)}`
+              + ` text ${panel.text} below ${panel.belowText}`).join("; "));
+      }
+    }
+    await setMenu(true);
+  }
+  await page.evaluate(name => { document.body.dataset.palette = name; }, initialPalette);
+}
+
 /* 404 audit: every path the page asks for must exist. There used to be one
  * exception, the manifest, whose absence was the fresh-clone state the reader
  * fell through; the chain that needed it is gone. */
