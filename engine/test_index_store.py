@@ -102,6 +102,64 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(doc["id"], "acme@2026-06-01")
 
 
+TRANSLATED = [dict(VERSIONS[0],
+                   original_language="zh", translated_by="claude-opus-5",
+                   original_sha256="0" * 64,
+                   original_markdown="# 规约\n\n## 一节\n\n一个段落。")]
+
+
+class TranslatedDocumentTest(unittest.TestCase):
+    def test_a_translated_document_carries_its_provenance_and_its_original(self):
+        [doc] = index_store.documents(fake(aci_spec_versions=TRANSLATED), ["row-1"])
+        self.assertEqual(doc["translation"],
+                         {"from": "zh", "by": "claude-opus-5", "reviewed": False})
+        self.assertEqual(doc["original"], [{
+            "locator": "acme@2026-01-01 > Acme Spec > A section > ¶1",
+            "text": "A paragraph.",
+            "original": "一个段落。",
+        }])
+
+    def test_a_document_that_is_its_own_original_says_nothing_about_translation(self):
+        [doc] = index_store.documents(fake(), ["row-1"])
+        self.assertNotIn("translation", doc)
+        self.assertNotIn("original", doc)
+
+    def test_a_translation_that_cuts_differently_is_refused_rather_than_guessed(self):
+        # One block against two: pairing them would put the first paragraph of
+        # the original beside the only paragraph of the translation and call it
+        # a citation.
+        versions = [dict(TRANSLATED[0],
+                         original_markdown="# 规约\n\n## 一节\n\n第一段。\n\n第二段。")]
+        with self.assertRaises(SystemExit) as refused:
+            index_store.documents(fake(aci_spec_versions=versions), ["row-1"])
+        self.assertIn("1 passages", str(refused.exception))
+        self.assertIn("2", str(refused.exception))
+
+    def test_a_person_reading_it_is_a_review_and_a_model_reading_it_is_not(self):
+        model = [{"spec_version_id": "row-1", "reviewer_kind": "model",
+                  "reviewed_by": "deepseek-v3.2"}]
+        [doc] = index_store.documents(
+            fake(aci_spec_versions=TRANSLATED, aci_translation_reviews=model), ["row-1"])
+        self.assertIs(doc["translation"]["reviewed"], False,
+                      "a model reading a translation is not a person reviewing it")
+
+        person = model + [{"spec_version_id": "row-1", "reviewer_kind": "person",
+                           "reviewed_by": "someone@example.com"}]
+        [doc] = index_store.documents(
+            fake(aci_spec_versions=TRANSLATED, aci_translation_reviews=person), ["row-1"])
+        self.assertIs(doc["translation"]["reviewed"], True)
+
+    def test_a_version_no_run_judged_says_so_and_silence_is_not_a_finding(self):
+        [doc] = index_store.documents(fake(), ["row-1"], judged_version_ids=set())
+        self.assertIs(doc["judged"], False)
+        [doc] = index_store.documents(fake(), ["row-1"], judged_version_ids={"row-1"})
+        self.assertIs(doc["judged"], True)
+        # Not asked, nothing claimed: the payload the provenance verifier rebuilds
+        # must not gain a field because this argument was left out.
+        [doc] = index_store.documents(fake(), ["row-1"])
+        self.assertNotIn("judged", doc)
+
+
 class BehaviourTest(unittest.TestCase):
     def test_behaviours_come_back_in_the_registry_file_shape(self):
         rows = [{"slug": "helpfulness", "name": "Helpfulness",

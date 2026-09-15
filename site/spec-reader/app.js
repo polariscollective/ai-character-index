@@ -1838,12 +1838,12 @@ function attachOriginals(panel, doc) {
     if (next >= pairs.length) return;
     const text = normalize(block.textContent);
     if (!text) return;
-    const pair = normalize(pairs[next].en);
+    const pair = normalize(pairs[next].text);
     if (pair !== text && !pair.startsWith(text)) return;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "original-open";
-    button.dataset.original = pairs[next].zh;
+    button.dataset.original = pairs[next].original;
     button.dataset.originalLang = doc.translation.from;
     button.dataset.originalLabel = label;
     button.setAttribute("aria-label", `Show the ${label} of this passage`);

@@ -602,9 +602,10 @@ if (behaviours.length === 0) {
     .map(button => button.dataset.original));
   report(
     carried.length === translated.original.length
-      && carried.every((zh, i) => zh === translated.original[i].zh),
+      && carried.every((source, i) => source === translated.original[i].original),
     "translated · each mark carries its own passage's original",
-    `${carried.length} marks, ${carried.filter((zh, i) => zh === translated.original[i]?.zh).length} paired`,
+    `${carried.length} marks, `
+    + `${carried.filter((source, i) => source === translated.original[i]?.original).length} paired`,
   );
 
   // And the first of them opens, which is the part a reader does.
@@ -618,7 +619,7 @@ if (behaviours.length === 0) {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(150);
   report(
-    opened.body === translated.original[0].zh
+    opened.body === translated.original[0].original
       && opened.lang === translated.translation.from
       && opened.label === "Chinese original",
     "translated · a mark opens the original beside it",
