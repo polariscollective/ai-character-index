@@ -11,6 +11,8 @@ import { select, update } from "../../../lib/supabase.mjs";
 import { startJob } from "../../../lib/jobs.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
+import { creditProblem } from "../../../lib/credit.mjs";
+import { publishJobParams } from "../../../lib/publish.mjs";
 
 export const POST = formRoute("/admin/publications", requireOperator, async (fields, email) => {
   const verb = fields.one("verb");
@@ -20,11 +22,18 @@ export const POST = formRoute("/admin/publications", requireOperator, async (fie
     const documents = fields.many("documents");
     const rubric = fields.one("rubric") || "v5";
     const notes = fields.one("notes");
+    // Who a citation credits this build to. Never the operator's address: an
+    // empty field credits the Collective, and an address-shaped one is refused.
+    const credit = fields.one("credit");
     if (!behaviours.length) refuse("choose at least one behaviour");
     if (!documents.length) refuse("choose at least one document");
-    const job = await startJob("publish", {
-      behaviours, documents, rubric, notes, created_by: email,
-    }, email);
+    const creditIssue = creditProblem(credit);
+    if (creditIssue) refuse(creditIssue);
+    // email still reaches startJob's own argument below, for aci_jobs.created_by
+    // -- the audit trail of who pressed the button, which this fix leaves alone.
+    const job = await startJob("publish",
+                               publishJobParams({ behaviours, documents, rubric, notes, credit }),
+                               email);
     return `Building. Every cell must have been judged by the index's panel under `
          + `rubric ${rubric}, in one run, with a depth from each judge; the job refuses `
          + `and names the cells that were not. It is written as a draft. `

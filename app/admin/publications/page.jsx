@@ -104,6 +104,15 @@ export default async function Publications({ searchParams }) {
             <input type="text" name="notes"
                    placeholder="What changed, for whoever reads this row later." />
           </label>
+          <label>
+            <span>Credit this build to</span>
+            <input type="text" name="credit" defaultValue="Polaris Collective" />
+            <span className="hint">
+              How the build reads in the row above and in a citation. Left empty,
+              it credits the Collective; it is never the address you signed in
+              with.
+            </span>
+          </label>
           <button type="submit">Build as a draft</button>
         </form>
       </section>

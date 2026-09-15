@@ -118,6 +118,10 @@ class JobDispatchTest(unittest.TestCase):
         job_module.run_publish(store, {"behaviours": ["b"], "documents": ["v-1"],
                                        "created_by": "Polaris Collective"})
         self.assertEqual(seen["args"][1:4], (["b"], ["v-1"], "v5"))
+        # published_by is whatever the params carried under created_by -- this
+        # file never reads an operator's e-mail, so it cannot write one. The
+        # portal is what must never put one in params in the first place.
+        self.assertEqual(seen["args"][4], "Polaris Collective")
 
 
 class ComposeTest(unittest.TestCase):
