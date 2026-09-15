@@ -10,7 +10,7 @@ An index of AI character: **behaviours** (a canonical list) × **model-spec cove
 
 **The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
 
-Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot register a spec or publish, and the upstream repository `AndresCotton/ai-character-index` keeps that property. Judging survives it: `engine/local_run.py` judges a document with one key and no database. And CI knows no secret: it verifies the code against fixtures, while `provenance.yml` verifies the published data on a schedule, where the credentials already are.
+Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot register a spec or publish, and the upstream repository `AndresCotton/ai-character-index` keeps that property. Judging survives it: `engine/local_run.py` judges a document with one key and no database. And CI knows no secret: it verifies the code against fixtures, while `verify_supabase_provenance.py` verifies the published data when a publication is built, where the credentials already are.
 
 ## Global dependency map
 
@@ -89,7 +89,8 @@ graph TB
 5. **Provenance** — `engine/published-artefacts.sha256.json` records what the
    index published when the migration was verified. The committed payloads it
    replaced are gone from the branch and recoverable from git history at the
-   commit it names. `verify_supabase_provenance.py` holds the database to it.
+   commit it names. `verify_supabase_provenance.py` holds the database to it,
+   run as `--publication=<uuid>` when a publication is built.
 6. **Serving** — Vercel builds on a push, `prebuild` copies `site/` into
    `public/`, and the reader takes its two payloads from routes. Publishing is
    not a deploy: what the public sees changes with a database write, and the

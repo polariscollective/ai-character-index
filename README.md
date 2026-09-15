@@ -289,7 +289,7 @@ node engine/verify-reader-features.mjs
 With credentials:
 
 ```sh
-python3 engine/verify_supabase_provenance.py   # the database still publishes what was verified; also run daily by provenance.yml
+python3 engine/verify_supabase_provenance.py   # the database still publishes what was verified; also run when a publication is built, as --publication=<uuid>
 node engine/verify-portal.mjs                  # the portal renders and its forms match its routes
 ```
 
