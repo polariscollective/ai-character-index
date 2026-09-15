@@ -733,7 +733,8 @@ function setupSidebarResizer() {
 function comparePair() {
   const ids = state.payload.documents.map(doc => doc.id);
   const [a, b] = state.comparePair || [];
-  const first = ids.includes(a) ? a : ids[0];
+  // With no pair chosen, the left panel is the document the reader opened on.
+  const first = ids.includes(a) ? a : ids.includes(state.selectedSpec) ? state.selectedSpec : ids[0];
   const second = ids.includes(b) ? b : defaultComparison(first);
   return [first, second];
 }
@@ -2009,6 +2010,23 @@ function latestOfLab(lab) {
  */
 const COMPARISON_ORDER = ["Anthropic", "OpenAI"];
 
+/* The lab a visitor with no ?spec= opens on, when the publication carries it.
+ *
+ * A preference with a fallback, not an assumption: the reader once defaulted to
+ * the id "anthropic" and rendered nothing against a payload without it, so a
+ * payload without this lab still opens on its first document. Matched on the head
+ * of the document id, which names the lab the same way in every publication
+ * (<lab>--<document>@<version>), and the newest version of it wins. */
+const PREFERRED_LAB = "anthropic";
+
+function openingDocument(documents, requested) {
+  if (documents.some(doc => doc.id === requested)) return requested;
+  const preferred = documents
+    .filter(doc => String(doc.id).startsWith(`${PREFERRED_LAB}--`))
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)))[0];
+  return (preferred || documents[0])?.id ?? null;
+}
+
 function defaultComparison(leftId) {
   const preferred = COMPARISON_ORDER
     .map(lab => latestOfLab(lab))
@@ -2837,11 +2855,9 @@ async function initialize() {
     if (requested.length) state.selectedSlugs = requested;
     else if (!params.has("behavior") && loaded.length) state.selectedSlugs = [loaded[0].slug];
 
-    const requestedSpec = params.get("spec");
-    state.selectedSpec =
-      state.payload.documents.some(document => document.id === requestedSpec)
-        ? requestedSpec
-        : (state.payload.documents[0]?.id ?? null);
+    // ?spec= when the payload carries it, else the preferred lab's newest document,
+    // else the first document (openingDocument).
+    state.selectedSpec = openingDocument(state.payload.documents, params.get("spec"));
     state.comparing = params.get("compare") === "1";
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
