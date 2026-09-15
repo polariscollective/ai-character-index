@@ -124,7 +124,7 @@ async function readView(url) {
   return page.evaluate(() => ({
     passages: document.querySelectorAll("[data-passage-id]").length,
     status: document.querySelector("#reader-status").textContent.trim(),
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    count: document.querySelector(".passage-count").textContent,
     // Body text of every rendered panel, to prove the spec itself is there to read.
     panels: [...document.querySelectorAll(".document-panel")].map(panel => ({
       // The publisher is the pressed button of the panel's own row of them.
@@ -159,14 +159,17 @@ async function readView(url) {
   }));
 }
 
+/* The behaviour a view is about is the one ticked in the menu. It used to be read
+ * off the strip of behaviour tags under the header, which is gone. */
 async function expectView(url, expected, label) {
   const seen = await readView(url);
+  const ticked = seen.ticked.join(",");
   const ok = seen.passages === expected.passages
     && seen.status === ""
-    && seen.behaviour === expected.behaviour;
+    && ticked === expected.ticked.join(",");
   report(ok, label, `${seen.passages}/${expected.passages} passages`
     + (seen.status ? `  status: ${seen.status}` : "")
-    + (seen.behaviour !== expected.behaviour ? `  behaviour: ${seen.behaviour}` : ""));
+    + (ticked !== expected.ticked.join(",") ? `  ticked: ${ticked}` : ""));
 }
 
 // The depth beside a behaviour also has to reach keyboard, touch and screen-reader
@@ -261,7 +264,7 @@ if (behaviours.length === 0) {
         && seen.status === ""
         && seen.emptyMenu
         && seen.menuItems === 0
-        && seen.behaviour === "No behavior under test"
+        && seen.count === "No behaviours under test"
         && panel?.blocks > 100
         && panel.hiddenBlocks === 0
         && panel.collapsedSections === 0
@@ -289,7 +292,7 @@ if (behaviours.length === 0) {
       total += passages;
       await expectView(
         `${base}?behavior=${behaviour.slug}&spec=${encodeURIComponent(document.id)}`,
-        { passages, behaviour: behaviour.name },
+        { passages, ticked: [behaviour.slug] },
         `${behaviour.slug} · ${document.id}`,
       );
       // Tint/role agreement, continuously: every Related-tinted passage must
@@ -309,7 +312,7 @@ if (behaviours.length === 0) {
     }
     await expectView(
       `${base}?behavior=${behaviour.slug}&compare=1`,
-      { passages: total, behaviour: behaviour.name },
+      { passages: total, ticked: [behaviour.slug] },
       `${behaviour.slug} · compare`,
     );
   }
@@ -482,7 +485,8 @@ if (behaviours.length === 0) {
     scrollRange: document.querySelector(".document-scroll").scrollHeight
                  - document.querySelector(".document-scroll").clientHeight,
     passages: document.querySelectorAll("[data-passage-id]").length,
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    ticked: [...document.querySelectorAll("[data-behaviour]")]
+      .filter(input => input.checked).map(input => input.dataset.behaviour),
     url: new URL(location.href).searchParams.get("behavior"),
   }));
   report(
@@ -493,11 +497,11 @@ if (behaviours.length === 0) {
     Math.abs(after.scrollTop - before) < Math.max(4, after.scrollRange * 0.1)
       && unfocused === 0
       && after.passages === anchorCount(renderable(second.slug, documents[0].id))
-      && after.behaviour === second.name
+      && after.ticked.join(",") === second.slug
       && after.url === second.slug,
     "unticking one of two · acme--corpus@2026-01-01",
     `scroll ${before} → ${after.scrollTop}, ${after.passages} passages left,`
-    + ` ${unfocused} sections collapsed, menu reads ${after.behaviour}, url ${after.url}`,
+    + ` ${unfocused} sections collapsed, ticked ${after.ticked.join(",")}, url ${after.url}`,
   );
 
   // And with the last behaviour unticked, the specification is readable in full again.
@@ -507,7 +511,7 @@ if (behaviours.length === 0) {
     passages: document.querySelectorAll("[data-passage-id]").length,
     hiddenBlocks: [...document.querySelectorAll(".document-body > *")].filter(child => child.hidden).length,
     collapsedSections: document.querySelectorAll(".section-collapsed").length,
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    count: document.querySelector(".passage-count").textContent,
     focusToggleHidden: getComputedStyle(document.querySelector(".document-focus-toggle")).display === "none",
     url: new URL(location.href).searchParams.get("behavior"),
   }));
@@ -515,12 +519,12 @@ if (behaviours.length === 0) {
     cleared.passages === 0
       && cleared.hiddenBlocks === 0
       && cleared.collapsedSections === 0
-      && cleared.behaviour === "No behaviours selected"
+      && cleared.count === "No behaviours selected"
       && cleared.focusToggleHidden
       && cleared.url === null,
     "nothing ticked · anthropic",
     `${cleared.passages} passages, ${cleared.hiddenBlocks} hidden,`
-    + ` ${cleared.collapsedSections} collapsed, menu reads ${cleared.behaviour}`,
+    + ` ${cleared.collapsedSections} collapsed, counter reads ${cleared.count}`,
   );
 
   // Nothing ticked is nothing to take away.

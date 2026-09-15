@@ -257,8 +257,6 @@ const elements = {
   documentReader: document.querySelector("#document-reader"),
   downloadHint: document.querySelector("#download-hint"),
   downloadPassages: document.querySelector("#download-passages"),
-  findingBehaviour: document.querySelector("#finding-behaviour"),
-  findingDefinition: document.querySelector("#finding-definition"),
   mode: document.querySelector("#mode"),
   compareToggle: document.querySelector("#compare-toggle"),
   readerStatus: document.querySelector("#reader-status"),
@@ -1053,32 +1051,6 @@ function downloadPassages() {
 
 elements.downloadPassages.addEventListener("click", downloadPassages);
 
-function behaviourChip(behaviour) {
-  return `<span class="behaviour-chip" style="--bh: ${behaviourHue(behaviour)}">${escapeHTML(behaviour.name)}</span>`;
-}
-
-function updateFindingBar(overlaps = null) {
-  const behaviours = selectedBehaviours();
-  if (!behaviours.length) {
-    const loaded = payloadBehaviours().length;
-    elements.findingBehaviour.textContent = loaded ? "No behaviours selected" : "No behaviour under test";
-    elements.findingDefinition.textContent = loaded
-      ? "Every specification is shown in full. Tick a behaviour in the menu to highlight the passages that bear on it."
-      : "Reading every specification in full -- nothing is highlighted until a behaviour is published to this reader.";
-    return;
-  }
-
-  elements.findingBehaviour.innerHTML = behaviours.map(behaviourChip).join("");
-  if (behaviours.length === 1) {
-    elements.findingDefinition.textContent = behaviours[0].definition;
-    return;
-  }
-  const shared = overlaps === null
-    ? ""
-    : `, ${overlaps} ${overlaps === 1 ? "passage is" : "passages are"} cited by more than one`;
-  elements.findingDefinition.textContent = `${behaviours.length} behaviours read over the same text${shared}.`;
-}
-
 /* Ticking or unticking never re-renders the specification, only its highlight layer, so
  * the reader keeps its place in the text while a behaviour is added or taken away. */
 function setSelection(slugs) {
@@ -1588,7 +1560,6 @@ function annotatePassages(panel, doc) {
 
   const behaviours = selectedBehaviours();
   const blocks = [...body.querySelectorAll("[data-block]")].filter(block => contributions.has(block));
-  let overlaps = 0;
   let number = 0;
 
   blocks.forEach(block => {
@@ -1610,7 +1581,6 @@ function annotatePassages(panel, doc) {
 
     const anchored = marks.some(mark => mark.anchored.length);
     const gutter = gutterRules(marks);
-    if (marks.length > 1) overlaps += 1;
 
     block.classList.add("passage");
     block.classList.toggle("adjacent", marks.every(mark => mark.adjacent));
@@ -1640,7 +1610,7 @@ function annotatePassages(panel, doc) {
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
   });
 
-  return { missing, overlaps };
+  return { missing };
 }
 
 function addContentsSection(body) {
@@ -2249,14 +2219,12 @@ function applyHighlights() {
     [panel.dataset.documentId, panel._anchors?.[panel._passageIndex] || null]));
   const rendered = panels();
   const missing = [];
-  let overlaps = 0;
 
   rendered.forEach(panel => {
     const doc = state.payload.documents.find(item => item.id === panel.dataset.documentId);
     clearHighlights(panel);
     const annotated = annotatePassages(panel, doc);
     missing.push(...annotated.missing);
-    overlaps += annotated.overlaps;
     updatePanelMeta(panel, doc);
     refreshSectionPassages(panel);
   });
@@ -2269,7 +2237,6 @@ function applyHighlights() {
     elements.readerStatus.title = missing.join(" ; ");
     console.info("[anchors] unresolved:", missing);
   }
-  updateFindingBar(overlaps);
 
   requestAnimationFrame(() => {
     collectAnchors();
@@ -2403,6 +2370,9 @@ function setComparePair(side, id) {
  * scrolled whichever panel first carried that heading back to it, the other
  * panel included, whenever anything was chosen or toggled. */
 function rebuildReader() {
+  // Compare's switch sits in the last panel's publisher row, so it leaves with the
+  // panels; a keyboard user who pressed it gets it back focused.
+  const compareFocused = document.activeElement === elements.compareToggle;
   const kept = [...elements.documentReader.querySelectorAll(".document-panel")].map(panel => ({
     id: panel.dataset.documentId,
     top: panel.querySelector(".document-scroll")?.scrollTop || 0,
@@ -2414,6 +2384,12 @@ function rebuildReader() {
     ? rendered.flatMap((panel, i) => (i < rendered.length - 1 ? [panel, createDocumentResizer()] : [panel]))
     : rendered;
   elements.documentReader.replaceChildren(...children);
+  const compareRow = rendered.at(-1)?.querySelector(".provider-row");
+  if (compareRow) {
+    compareRow.append(elements.compareToggle);
+    elements.compareToggle.hidden = false;
+    if (compareFocused) elements.compareToggle.focus({ preventScroll: true });
+  }
   {
     elements.documentReader.style.gridTemplateColumns = "";
     if (state.comparing) setCompareFirst(state.compareFirst);
@@ -2583,8 +2559,9 @@ elements.documentReader.addEventListener("click", event => {
     ?.focus({ preventScroll: true });
 });
 
-/* Comparison is one mode over both panels, so its switch is in the band both
- * panels share rather than repeated in each of their headers.
+/* Comparison is one mode over both panels, so it has one switch rather than one in
+ * each header: at the right of the last panel's publisher row, where rebuildReader
+ * puts it every time the panels are drawn.
  *
  * Turning it on carries the document being read onto the left; turning it off
  * keeps the left-hand document rather than reverting to whatever was selected
@@ -2759,7 +2736,6 @@ function toggleBand(tier) {
   else state.bands.add(tier);
   state.payload.behaviours =
     applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
-  updateFindingBar();
   updateExportControl();
   syncURL();
   rebuildReader();
@@ -2828,7 +2804,6 @@ async function initialize() {
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
     elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
-    updateFindingBar();
     renderBehaviourList();
     syncURL();
     rebuildReader();
