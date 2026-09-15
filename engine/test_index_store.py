@@ -102,6 +102,155 @@ class DocumentTest(unittest.TestCase):
         self.assertEqual(doc["id"], "acme@2026-06-01")
 
 
+TRANSLATED = [dict(VERSIONS[0],
+                   original_language="zh", translated_by="claude-opus-5",
+                   original_sha256="0" * 64,
+                   original_markdown="# 规约\n\n## 一节\n\n一个段落。")]
+
+
+class TranslatedDocumentTest(unittest.TestCase):
+    def test_a_translated_document_carries_its_provenance_and_its_original(self):
+        [doc] = index_store.documents(fake(aci_spec_versions=TRANSLATED), ["row-1"])
+        self.assertEqual(doc["translation"],
+                         {"from": "zh", "by": "claude-opus-5", "reviewed": False})
+        self.assertEqual(doc["original"], [{
+            "locator": "acme@2026-01-01 > Acme Spec > A section > ¶1",
+            "text": "A paragraph.",
+            "original": "一个段落。",
+        }])
+
+    def test_a_document_that_is_its_own_original_says_nothing_about_translation(self):
+        [doc] = index_store.documents(fake(), ["row-1"])
+        self.assertNotIn("translation", doc)
+        self.assertNotIn("original", doc)
+
+    def test_a_translation_that_cuts_differently_is_refused_rather_than_guessed(self):
+        # One block against two: pairing them would put the first paragraph of
+        # the original beside the only paragraph of the translation and call it
+        # a citation.
+        versions = [dict(TRANSLATED[0],
+                         original_markdown="# 规约\n\n## 一节\n\n第一段。\n\n第二段。")]
+        with self.assertRaises(SystemExit) as refused:
+            index_store.documents(fake(aci_spec_versions=versions), ["row-1"])
+        # The refusal names the section where the two part, and what each holds
+        # there, so whoever registers the next version knows where to look.
+        message = str(refused.exception)
+        self.assertIn("'Acme Spec > A section' (heading level 2, ¶1)", message)
+        self.assertIn("'规约 > 一节' (heading level 2, ¶1, ¶2)", message)
+
+    def test_a_person_reading_it_is_a_review_and_a_model_reading_it_is_not(self):
+        model = [{"spec_version_id": "row-1", "reviewer_kind": "model",
+                  "reviewed_by": "deepseek-v3.2"}]
+        [doc] = index_store.documents(
+            fake(aci_spec_versions=TRANSLATED, aci_translation_reviews=model), ["row-1"])
+        self.assertIs(doc["translation"]["reviewed"], False,
+                      "a model reading a translation is not a person reviewing it")
+
+        person = model + [{"spec_version_id": "row-1", "reviewer_kind": "person",
+                           "reviewed_by": "someone@example.com"}]
+        [doc] = index_store.documents(
+            fake(aci_spec_versions=TRANSLATED, aci_translation_reviews=person), ["row-1"])
+        self.assertIs(doc["translation"]["reviewed"], True)
+
+    def test_a_version_no_run_judged_says_so_and_silence_is_not_a_finding(self):
+        [doc] = index_store.documents(fake(), ["row-1"], judged_version_ids=set())
+        self.assertIs(doc["judged"], False)
+        [doc] = index_store.documents(fake(), ["row-1"], judged_version_ids={"row-1"})
+        self.assertIs(doc["judged"], True)
+        # Not asked, nothing claimed: the payload the provenance verifier rebuilds
+        # must not gain a field because this argument was left out.
+        [doc] = index_store.documents(fake(), ["row-1"])
+        self.assertNotIn("judged", doc)
+
+
+def pairing_refused(markdown, original):
+    """The message a build refuses a translation with, or None if it pairs."""
+    versions = [dict(TRANSLATED[0], markdown=markdown, original_markdown=original)]
+    try:
+        index_store.documents(fake(aci_spec_versions=versions), ["row-1"])
+    except SystemExit as refused:
+        return str(refused)
+    return None
+
+
+class PairingTest(unittest.TestCase):
+    """Equal totals do not prove a pairing.
+
+    The pairing is the order of the two texts. A section that cuts into one block
+    more and another that cuts into one fewer leave the totals equal, and shift
+    every pair between them onto the wrong original, which the reader then shows
+    without complaint. So the two texts are held to each other section by
+    section: the same headings at the same levels, and in each section the same
+    passages at the same ¶ indices.
+    """
+
+    def test_equal_totals_with_one_section_cut_differently_are_refused(self):
+        # Three passages each. The translation's first section holds two and its
+        # second one; the original's the other way round. Zipped, the second
+        # passage would open the third's original.
+        message = pairing_refused(
+            "# Acme Spec\n\n## A section\n\nFirst.\n\nSecond.\n\n## B section\n\nThird.",
+            "# 规约\n\n## 一节\n\n第一。第二。\n\n## 二节\n\n第三。\n\n第四。")
+        self.assertIsNotNone(message, "equal totals were taken for a sound pairing")
+        self.assertIn("'Acme Spec > A section' (heading level 2, ¶1, ¶2)", message)
+        self.assertIn("'规约 > 一节' (heading level 2, ¶1)", message)
+        self.assertNotIn("B section", message,
+                         "the first section where the two part is named, not a later one")
+
+    def test_a_caption_rule_only_english_triggers_is_refused(self):
+        # cite.py joins a fence to a preceding **Example** caption and to no other
+        # caption. A Chinese **示例** caption stays a block apart from its fence,
+        # and a paragraph merged further on makes the totals agree again.
+        message = pairing_refused(
+            "# Acme Spec\n\n## Examples\n\n**Example**: a caption\n\n```\nUser: hello\n```\n\n"
+            "## Next\n\nOne paragraph.\n\nAnother paragraph.",
+            "# 规约\n\n## 示例\n\n**示例**：一个标题\n\n```\n用户：你好\n```\n\n"
+            "## 下一节\n\n合并成一段的两段文字。")
+        self.assertIsNotNone(message, "the caption rule split the two texts unseen")
+        self.assertIn("'Acme Spec > Examples' (heading level 2, ¶1)", message)
+        self.assertIn("'规约 > 示例' (heading level 2, ¶1, ¶2)", message)
+
+    def test_a_section_one_text_lacks_is_refused(self):
+        message = pairing_refused(
+            "# Acme Spec\n\n## A section\n\nOne.\n\n## B section\n\nTwo.",
+            "# 规约\n\n## 一节\n\n一。\n\n## 二节\n\n二。\n\n## 三节\n")
+        self.assertIsNotNone(message)
+        self.assertIn("the translation has no section", message)
+        self.assertIn("'规约 > 三节' (heading level 2, no passages)", message)
+
+    def test_heading_levels_must_agree(self):
+        message = pairing_refused(
+            "# Acme Spec\n\n## A section\n\nOne.\n\n### B section\n\nTwo.",
+            "# 规约\n\n## 一节\n\n一。\n\n## 二节\n\n二。")
+        self.assertIsNotNone(message)
+        self.assertIn("'Acme Spec > A section > B section' (heading level 3, ¶1)", message)
+        self.assertIn("'规约 > 二节' (heading level 2, ¶1)", message)
+
+    def test_the_same_count_at_different_indices_is_refused(self):
+        # A block repeating its section's heading is not a passage, so the
+        # translation's one passage here is ¶2 and the original's is ¶1: one
+        # each, and not the same locator.
+        message = pairing_refused(
+            "# Acme Spec\n\n## A section\n\nA section\n\nOne.",
+            "# 规约\n\n## 一节\n\n一。")
+        self.assertIsNotNone(message)
+        self.assertIn("'Acme Spec > A section' (heading level 2, ¶2)", message)
+        self.assertIn("'规约 > 一节' (heading level 2, ¶1)", message)
+
+    def test_a_translation_that_keeps_its_structure_pairs_passage_by_passage(self):
+        versions = [dict(TRANSLATED[0],
+                         markdown="# Acme Spec\n\n## A section\n\nOne.\n\n- An item.\n\n"
+                                  "## B section\n\nTwo.",
+                         original_markdown="# 规约\n\n## 一节\n\n一。\n\n- 一项。\n\n"
+                                           "## 二节\n\n二。")]
+        [doc] = index_store.documents(fake(aci_spec_versions=versions), ["row-1"])
+        self.assertEqual(
+            [(pair["locator"], pair["text"], pair["original"]) for pair in doc["original"]],
+            [("acme@2026-01-01 > Acme Spec > A section > ¶1", "One.", "一。"),
+             ("acme@2026-01-01 > Acme Spec > A section > ¶2", "An item.", "一项。"),
+             ("acme@2026-01-01 > Acme Spec > B section > ¶1", "Two.", "二。")])
+
+
 class BehaviourTest(unittest.TestCase):
     def test_behaviours_come_back_in_the_registry_file_shape(self):
         rows = [{"slug": "helpfulness", "name": "Helpfulness",

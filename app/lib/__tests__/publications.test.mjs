@@ -4,8 +4,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isPublicationId, publicationColumn, readerResponse }
-  from "../publications.mjs";
+import { currentPublication, isPublicationId, publicationColumn, publicationRow,
+         readerResponse, SERVES_DEVELOPMENT } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
@@ -40,6 +40,50 @@ test("no pin asks for the newest publication", async () => {
   assert.match(calls[0].url, /is_public=is\.true/, "a draft is not what the reader serves");
 });
 
+test("a development deployment serves the newest build, published or not", async () => {
+  const { calls, fetchImpl } = stub([{ payload: { ok: 1 } }]);
+  process.env[SERVES_DEVELOPMENT] = "true";
+  try {
+    await publicationColumn("payload", null, fetchImpl);
+  } finally {
+    delete process.env[SERVES_DEVELOPMENT];
+  }
+  assert.doesNotMatch(calls[0].url, /is_public/,
+                      "a development deployment is for looking at what is not published");
+  assert.match(calls[0].url, /order=published_at\.desc/);
+  assert.match(calls[0].url, /limit=1/);
+});
+
+/* The variable is a switch, not a hint: a deployment that carries it as "0" or
+ * "false" meant to turn it off, and one that carries nothing never meant to
+ * turn it on. Either way the public sees only what was published. */
+test("only the word true opens a deployment to development builds", () => {
+  assert.match(currentPublication({}), /is_public=is\.true/);
+  assert.match(currentPublication({ [SERVES_DEVELOPMENT]: "1" }), /is_public=is\.true/);
+  assert.match(currentPublication({ [SERVES_DEVELOPMENT]: "false" }), /is_public=is\.true/);
+  assert.match(currentPublication({ [SERVES_DEVELOPMENT]: "" }), /is_public=is\.true/);
+  assert.doesNotMatch(currentPublication({ [SERVES_DEVELOPMENT]: "true" }), /is_public/);
+});
+
+/* The production deployment is not a place where this can be turned on. A
+ * variable set there by mistake would show every unread build to the public,
+ * so the platform's own answer about where it is running wins. */
+test("production ignores the variable however it is set", () => {
+  const on = { [SERVES_DEVELOPMENT]: "true" };
+  assert.match(currentPublication({ ...on, VERCEL_ENV: "production" }), /is_public=is\.true/);
+  assert.match(currentPublication({ ...on, NODE_ENV: "production" }), /is_public=is\.true/);
+  // A preview deployment is not production, and neither is a laptop.
+  assert.doesNotMatch(currentPublication({ ...on, VERCEL_ENV: "preview" }), /is_public/);
+  assert.doesNotMatch(currentPublication({ ...on, VERCEL_ENV: "development" }), /is_public/);
+  assert.doesNotMatch(currentPublication(on), /is_public/);
+  // Vercel's answer wins over the build's: a preview build runs with
+  // NODE_ENV=production, and a preview is exactly where this is wanted.
+  assert.doesNotMatch(
+    currentPublication({ ...on, VERCEL_ENV: "preview", NODE_ENV: "production" }),
+    /is_public/,
+  );
+});
+
 test("a pin asks for that publication", async () => {
   const { calls, fetchImpl } = stub([{ documents: { ok: 1 } }]);
   await publicationColumn("documents", ID, fetchImpl);
@@ -48,6 +92,16 @@ test("a pin asks for that publication", async () => {
   // A pin reaches a draft: previewing what is about to be published is the
   // whole point of having a draft at all.
   assert.doesNotMatch(calls[0].url, /is_public/);
+});
+
+/* A surface that cites a build has to know whether anyone published it: served
+ * a draft, by a pin or by a development deployment, a citation calling it the
+ * index's data would be a false claim made by the page. */
+test("the publication's identity says whether it was published", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID, published_at: "2026-09-10", is_public: false }]);
+  const row = await publicationRow(ID, fetchImpl);
+  assert.match(calls[0].url, /select=[^&]*is_public/);
+  assert.equal(row.is_public, false);
 });
 
 test("the key travels in both headers and never in the body", async () => {

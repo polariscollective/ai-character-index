@@ -792,11 +792,21 @@ if (citeText) {
          anyone having remembered to add them to a list. */
       const authors = (credit.judged_by || []).join("; ") || "AI Character Index";
       const method = (credit.method?.authors || []).join(", ");
-      citeText.textContent =
-        `${authors} (${published.slice(0, 4)}). AI Character Index [Data set]. `
-        + `Publication ${publication.id}, published ${published}. `
-        + `${location.origin}/spec-reader/?publication=${publication.id}`
-        + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
+      /* A build nobody has published is not the index's data, and a citation of
+         it would say it was. This page can be served a draft two ways: a
+         ?publication= pin, which is how a draft is previewed, and a development
+         deployment, which serves the newest build whether or not it is public.
+         Either way the line says what it is rather than dressing it as the
+         published record. */
+      const draft = publication.is_public === false;
+      citeText.textContent = draft
+        ? `Draft publication ${publication.id}, built ${published}. Not published, `
+          + "and not citable as the AI Character Index: it is a build nobody has "
+          + `released.\n${location.origin}/spec-reader/?publication=${publication.id}`
+        : `${authors} (${published.slice(0, 4)}). AI Character Index [Data set]. `
+          + `Publication ${publication.id}, published ${published}. `
+          + `${location.origin}/spec-reader/?publication=${publication.id}`
+          + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
     })
     .catch(() => {
       /* Say what is missing rather than leave a loading line that never resolves. */

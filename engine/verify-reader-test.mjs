@@ -127,7 +127,8 @@ async function readView(url) {
     behaviour: document.querySelector("#finding-behaviour").textContent,
     // Body text of every rendered panel, to prove the spec itself is there to read.
     panels: [...document.querySelectorAll(".document-panel")].map(panel => ({
-      lab: panel.querySelector(".document-lab").textContent,
+      // The publisher is the pressed button of the panel's own row of them.
+      lab: panel.querySelector('.provider-tab[aria-pressed="true"]')?.textContent ?? null,
       blocks: panel.querySelectorAll(".document-body [data-block]").length,
       // Nothing may be collapsed out of view while there is no behaviour to focus on.
       hiddenBlocks: [...panel.querySelectorAll(".document-body > *")]
@@ -565,6 +566,179 @@ if (behaviours.length === 0) {
     `${download.suggestedFilename()}, ${written}/${citations.length} citations, menu reads ${hint}`
     + (missing.length ? `, missing ${missing.slice(0, 3).map(passage => passage.locator).join("; ")}` : ""),
   );
+}
+
+/* A document the index read in translation carries its original beside it, and
+ * says so. The fixture carries two. Acme's has not been judged, and its
+ * translator field has the real column's shape, exceptions and all. Zenith's
+ * carries no `judged` field, which is what every document of a published payload
+ * looks like today. The plain documents prove the feature reaches no document
+ * that does not ask for it. */
+{
+  const translated = documents.find(document => document.translation && document.judged === false);
+  const judgedTranslation = documents.find(
+    document => document.translation && document.judged !== false);
+  const plain = documents.find(document => !document.translation);
+  report(Boolean(translated && judgedTranslation),
+    "translated: the fixture carries a judged and an unjudged translation",
+    "so neither band check below is vacuous");
+
+  await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
+  const note = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !note.hidden
+      // Both models named, both as names, and the column's list of the parts the
+      // reviser never reached left out of a strip read at a glance. The claim
+      // goes with the list: what is left says "in part", because a reviser that
+      // skipped sections did not revise the document. The fixture carries the
+      // shape the real field has, exceptions and all -- asserting the simple
+      // case is what let raw ids through into the band in the first place.
+      && note.text.includes(
+        "Machine translation from Chinese by Claude Opus 5, revised in part by Claude Fable 5")
+      && !note.text.includes("except")
+      && !note.text.includes("refuse-violence")
+      // No panel has judged this one, and the reader says "Not judged yet" just
+      // below. A band that still said the index judged it would contradict that
+      // note on the same screen.
+      && !note.text.includes("The index judged this translation"),
+    "translated, unjudged: the band names the translators and does not say the index judged it",
+    note.text,
+  );
+
+  const marks = await page.locator(".original-open").count();
+  report(marks === translated.original.length, "translated · one mark per passage",
+         `${marks}/${translated.original.length}`);
+
+  // Each mark carries the original of the passage it sits in, which is what makes
+  // the pairing worth anything: marks that all carried the document's first
+  // original would pass a count and say nothing true. Read from the DOM rather
+  // than by clicking each one, because a mark inside a section focus mode has
+  // collapsed is not clickable -- correctly, since its text is not on screen
+  // either.
+  const carried = await page.evaluate(() => [...document.querySelectorAll(".original-open")]
+    .map(button => button.dataset.original));
+  report(
+    carried.length === translated.original.length
+      && carried.every((source, i) => source === translated.original[i].original),
+    "translated · each mark carries its own passage's original",
+    `${carried.length} marks, `
+    + `${carried.filter((source, i) => source === translated.original[i]?.original).length} paired`,
+  );
+
+  // And the first of them opens, which is the part a reader does.
+  await page.locator(".original-open").first().click();
+  await page.waitForSelector("#original-note:popover-open");
+  const opened = await page.evaluate(() => ({
+    label: document.querySelector("#original-note-label").textContent,
+    body: document.querySelector("#original-note-body").textContent,
+    lang: document.querySelector("#original-note-body").lang,
+  }));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  report(
+    opened.body === translated.original[0].original
+      && opened.lang === translated.translation.from
+      && opened.label === "Chinese original",
+    "translated · a mark opens the original beside it",
+    `${opened.label} (${opened.lang}): ${opened.body.slice(0, 24)}`,
+  );
+
+  await readView(`${base}?spec=${encodeURIComponent(plain.id)}`);
+  const clean = await page.evaluate(() => ({
+    noteHidden: document.querySelector(".document-translation").hidden,
+    marks: document.querySelectorAll(".original-open").length,
+  }));
+  report(clean.noteHidden && clean.marks === 0, "untranslated · no note and no marks",
+         `${clean.marks} marks`);
+
+  // Judged and unjudged are different claims. A document no panel has read must
+  // not say that its silence is a finding about the document.
+  await readView(`${base}?behavior=${behaviours[0].slug}&spec=${encodeURIComponent(translated.id)}`);
+  const unjudged = await page.$eval(".zero-coverage", el => el.textContent.replace(/\s+/g, " ").trim());
+  report(
+    unjudged.includes("Not judged yet") && !unjudged.includes("index finding"),
+    "translated · an unjudged document says so",
+    unjudged.slice(0, 90),
+  );
+
+  // A translation a panel has read says so, in the same band and the same words
+  // the unjudged one leaves out.
+  await readView(`${base}?spec=${encodeURIComponent(judgedTranslation.id)}`);
+  const judgedNote = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !judgedNote.hidden
+      && judgedNote.text === "Machine translation from Chinese by Claude Opus 5, "
+        + "reviewed by a person. The index judged this translation.",
+    "judged translation: the band says the index judged it",
+    judgedNote.text,
+  );
+  const judgedMarks = await page.locator(".original-open").count();
+  report(judgedMarks === judgedTranslation.original.length,
+    "judged translation: one mark per passage",
+    `${judgedMarks}/${judgedTranslation.original.length}`);
+
+  /* The band is read at 11px, so its text has to clear 4.5:1 on the band's own
+   * ground in both palettes. Rust is the band's marker by the operator's choice,
+   * and it stays as the band's left rule, where a colour needs 3:1 rather than
+   * text's 4.5. Measured from computed colours, not from the stylesheet, so a
+   * token that moves is caught too. Left-aligned like everything else. */
+  const palette = await page.evaluate(() => document.body.dataset.palette);
+  for (const name of ["daylight", "umber"]) {
+    const band = await page.evaluate(name => {
+      document.body.dataset.palette = name;
+      const style = getComputedStyle(document.querySelector(".document-translation"));
+      const probe = document.createElement("span");
+      probe.style.color = "var(--fail)";
+      document.body.append(probe);
+      const fail = getComputedStyle(probe).color;
+      probe.remove();
+      const luminance = value => {
+        const [r, g, b] = value.match(/[\d.]+/g).slice(0, 3).map(channel => {
+          const c = Number(channel) / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [lighter, darker] = [luminance(style.color), luminance(style.backgroundColor)]
+        .sort((a, b) => b - a);
+      return {
+        ratio: (lighter + 0.05) / (darker + 0.05),
+        align: style.textAlign,
+        rule: `${style.borderLeftWidth} ${style.borderLeftStyle} ${style.borderLeftColor}`,
+        fail,
+      };
+    }, name);
+    report(
+      band.ratio >= 4.5 && band.align === "left" && band.rule === `2px solid ${band.fail}`,
+      `translation band, ${name}: its text clears AA, it is left-aligned, and rust is its rule`,
+      `${band.ratio.toFixed(2)}:1, ${band.align}, rule ${band.rule}`,
+    );
+  }
+  await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
+}
+
+/* One document on both sides of a comparison.
+ *
+ * The pair used to be deduplicated, and choosing the document already opposite
+ * swapped the two sides instead. The operator asked for the opposite rule: any
+ * document may sit on either side, including the same one twice. It is a
+ * decision rather than an oversight, so it is pinned here -- an id carries its
+ * version, so this is the identical text twice and not two versions of one
+ * document, which was always a valid pair. */
+{
+  const [first] = documents;
+  await readView(`${base}?compare=1&compare-with=${encodeURIComponent(first.id)},${encodeURIComponent(first.id)}`);
+  const ids = await page.evaluate(() =>
+    [...document.querySelectorAll(".document-panel")].map(panel => panel.dataset.documentId));
+  report(ids.length === 2 && ids.every(id => id === first.id),
+         "compare · the same document may sit on both sides",
+         ids.join(" | "));
 }
 
 /* 404 audit: every path the page asks for must exist. There used to be one

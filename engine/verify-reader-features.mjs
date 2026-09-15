@@ -243,7 +243,7 @@ await at(`?compare=1`);
     "?compare=1 renders the chosen two documents",
     `${out.panels} panels, ${resizers} resizers`);
   check(out.toggle === "true", "compare toggle reflects ?compare=1");
-  check(out.link === "Original",
+  check(out.link === "Show original",
     "each pane links its own document rather than a shared 'Sources'", out.link);
 }
 await at("?embedded=1");
@@ -325,8 +325,11 @@ console.log("== Reader: compare is a two-document choice ==");
     await page.waitForTimeout(150);
     const options = await page.evaluate(() =>
       [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
-    check(options.length === fixtureDocs.length,
-      "the picker offers every registered document", options.join(","));
+    // The documents of this side's own publisher. Another lab is chosen in the
+    // row of publishers above, so the picker does not repeat it.
+    const sameLab = fixtureDocs.filter(doc => doc.lab === fixtureDocs[0].lab);
+    check(options.length === sameLab.length,
+      "the picker offers every document of the side's publisher", options.join(","));
     await page.keyboard.press("Escape");
     await page.waitForTimeout(150);
   }
@@ -345,11 +348,14 @@ console.log("== Reader: compare is a two-document choice ==");
   check(c.a === DOC_B && c.b === DOC_ID,
     "?compare-with= restores the pair from a shared link", `${c.a} / ${c.b}`);
 
-  // Choosing the document already on the other side swaps rather than duplicating.
+  // Choosing the document already on the other side puts it on both sides. It
+  // used to swap the two instead, which quietly undid the choice the reader had
+  // just made; the operator asked that either side take any document, including
+  // the one already opposite.
   await pick("a", DOC_ID);
   c = await compareState();
-  check(c.a === DOC_ID && c.b !== DOC_ID,
-    "picking the other side's document swaps them instead of duplicating", `${c.a} / ${c.b}`);
+  check(c.a === DOC_ID && c.b === DOC_ID,
+    "picking the other side's document puts it on both sides", `${c.a} / ${c.b}`);
 
   // A stale or nonsense pair degrades to the first two documents rather than breaking.
   await load(base, "?compare=1&compare-with=nope,alsonope");
@@ -358,6 +364,87 @@ console.log("== Reader: compare is a two-document choice ==");
     "an unknown ?compare-with= falls back to two real documents", `${c.a} / ${c.b}`);
   check(pageErrors.length === 0, "compare picker: no console errors", pageErrors.join("; "));
 
+}
+
+// =============================================================================
+console.log("== Reader: publishers ==");
+/* The row of publishers above each document. Choosing one rebuilds the reader,
+ * which re-clones the header the control lives in, so focus has to be put back
+ * or a keyboard user is dropped at the top of the page. They are buttons in a
+ * labelled group rather than tabs: a tablist promises arrow keys and a roving
+ * tabindex, and a promise the page does not keep is worse than none. */
+{
+  const labs = [...new Set(fixtureDocs.map(doc => doc.lab))];
+  check(labs.length >= 2, "the fixture carries two publishers, so switching between them is tested",
+    labs.join(", "));
+  const [home, other] = labs;
+  const otherDocs = fixtureDocs.filter(doc => doc.lab === other)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)));
+
+  const publishers = () => page.evaluate(() => {
+    const panels = [...document.querySelectorAll(".document-panel")];
+    const focused = document.activeElement;
+    return {
+      groups: [...document.querySelectorAll(".provider-tabs")].map(group =>
+        `${group.getAttribute("role")}: ${group.getAttribute("aria-label")}`),
+      tabRoles: document.querySelectorAll('[role="tab"], [role="tablist"]').length,
+      panels: panels.map(panel => ({
+        id: panel.dataset.documentId,
+        pressed: [...panel.querySelectorAll('.provider-tab[aria-pressed="true"]')]
+          .map(button => button.dataset.lab).join(","),
+      })),
+      focus: {
+        publisher: Boolean(focused?.matches?.(".provider-tab")),
+        lab: focused?.dataset?.lab ?? null,
+        side: panels.indexOf(focused?.closest?.(".document-panel")),
+      },
+    };
+  });
+
+  await at(`?spec=${DOC_ID}`);
+  let seen = await publishers();
+  check(seen.groups.join(" | ") === "group: Publisher" && seen.tabRoles === 0,
+    "the publishers are a labelled group of buttons, not tabs", seen.groups.join(" | "));
+  check(seen.panels[0].pressed === home, "the publisher being read is the pressed one",
+    seen.panels[0].pressed);
+
+  // By keyboard: focus a publisher, press Enter.
+  await page.focus(`.provider-tab[data-lab="${other}"]`);
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  seen = await publishers();
+  check(seen.panels[0].id === otherDocs[0].id && seen.panels[0].pressed === other,
+    "Enter on a publisher opens its newest document", `${seen.panels[0].id}, pressed ${seen.panels[0].pressed}`);
+  check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 0,
+    "focus lands back on the publisher just chosen", JSON.stringify(seen.focus));
+
+  await page.click(".document-picker");
+  await page.waitForTimeout(150);
+  const options = await page.evaluate(() =>
+    [...document.querySelectorAll(".spec-choice")].map(option => option.dataset.spec));
+  check(options.join(",") === otherDocs.map(doc => doc.id).join(","),
+    "the document picker lists that publisher's documents, newest first, and no other's",
+    options.join(", "));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+
+  // Comparing, each side has its own group, named for its side, and the side that
+  // chose keeps the focus.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_B}`);
+  seen = await publishers();
+  check(seen.groups.join(" | ")
+      === "group: Publisher, left document | group: Publisher, right document",
+    "comparing, each side's publishers are named for their side", seen.groups.join(" | "));
+  await page.locator(".document-panel").nth(1).locator(`.provider-tab[data-lab="${other}"]`).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  seen = await publishers();
+  check(seen.panels[0].id === DOC_ID && seen.panels[1].id === otherDocs[0].id,
+    "comparing, a publisher chosen on the right changes the right side only",
+    seen.panels.map(panel => panel.id).join(" | "));
+  check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 1,
+    "comparing, focus lands back on the right side's publisher", JSON.stringify(seen.focus));
+  check(pageErrors.length === 0, "publishers: no console errors", pageErrors.join("; "));
 }
 
 // =============================================================================
@@ -385,6 +472,30 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
     document.querySelector("#sidebar-resizer").getAttribute("aria-valuenow"));
   check(atHome === "200" && Number(atEnd) > Number(atHome),
     "sidebar resizer: keyboard Home/End resize", `${atHome} -> ${atEnd}`);
+}
+{
+  // The sidebar's own header row and the reader's finding bar sit side by
+  // side, so their bottom rules have to fall on the same line -- expanded or
+  // collapsed (the arrow button, not a class swapped in by the walker), at a
+  // wide and a narrow desktop width.
+  const dividerBottoms = () => page.evaluate(() => ({
+    sidebar: document.querySelector(".sidebar-intro").getBoundingClientRect().bottom,
+    finding: document.querySelector(".finding-bar").getBoundingClientRect().bottom,
+  }));
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    await page.setViewportSize({ width, height });
+    await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+    const expanded = await dividerBottoms();
+    await page.click("#sidebar-toggle");
+    await page.waitForTimeout(200);
+    const collapsed = await dividerBottoms();
+    const diffExpanded = Math.abs(expanded.sidebar - expanded.finding);
+    const diffCollapsed = Math.abs(collapsed.sidebar - collapsed.finding);
+    check(diffExpanded <= 1 && diffCollapsed <= 1,
+      `sidebar/finding-bar dividers align at ${width}x${height}, expanded and collapsed`,
+      `expanded diff ${diffExpanded.toFixed(2)}px, collapsed diff ${diffCollapsed.toFixed(2)}px`);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
 }
 await at("?compare=1");
 {

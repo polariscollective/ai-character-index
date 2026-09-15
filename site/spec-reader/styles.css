@@ -18,6 +18,10 @@
   /* What the menu leaves behind when it folds: enough for the button that
      brings it back, and nothing else. */
   --sidebar-rail: 40px;
+  /* The sidebar's own header and the reader's finding bar sit side by side,
+     so their bottom rules have to fall on the same line: one token, not two
+     paddings kept in sync by hand. */
+  --panel-header-height: 54px;
 }
 
 /* The framework's core tokens, written into the roles this reader already had.
@@ -388,7 +392,8 @@ body.resizing-columns {
    note that sends a reviewer here, not standing over the menu they came to use --
    the sidebar's whole height is worth more as behaviours than as an explanation read once. */
 .sidebar-intro {
-  padding: 15px 25px 14px;
+  min-height: var(--panel-header-height);
+  padding: 0 25px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -769,7 +774,7 @@ body.resizing-columns {
 }
 
 .workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.compare-toggle, .source-link {
+.compare-toggle {
   min-height: 34px;
   padding: 8px 14px;
   border: 1px solid var(--muted);
@@ -780,6 +785,23 @@ body.resizing-columns {
   text-decoration: none;
   cursor: pointer;
   transition: background-color .15s ease, color .15s ease;
+}
+
+/* A link, not a button. It leaves the site for the publisher's own copy, which
+   is what a link does; the pill it used to wear made it read as one of the
+   controls that change what this page shows. */
+.source-link {
+  padding: 1px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-color: var(--energy);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color .15s ease;
 }
 .compare-toggle { display: inline-flex; align-items: center; gap: 8px; }
 .compare-toggle[aria-pressed="true"] { border-color: transparent; background: var(--accent); color: var(--on-accent); }
@@ -841,7 +863,7 @@ body.sidebar-collapsed .sidebar-run {
   }
 
   body.sidebar-collapsed .sidebar-intro {
-    padding: 15px 0 14px;
+    padding: 0;
     justify-content: center;
   }
 }
@@ -852,10 +874,12 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
-.source-link:hover, .compare-toggle:hover { background: var(--energy); color: var(--ink); border-color: transparent; }
+.compare-toggle:hover { background: var(--energy); color: var(--ink); border-color: transparent; }
+/* The framework's link hover: the highlight fills behind the text, which stays ink. */
+.source-link:hover { background: var(--energy); color: var(--ink); }
 
 .finding-bar {
-  min-height: 54px;
+  min-height: var(--panel-header-height);
   padding: 8px 20px 8px 24px;
   display: flex;
   align-items: center;
@@ -949,29 +973,26 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 .document-resizer { height: 100%; }
 .document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
+/* A stack of rows, not a row of columns: publishers, then the document at a
+   version with what it takes to read it, then the caveat when there is one.
+   This header used to hold two things side by side, which is why it was a row;
+   its children are now the rows themselves. */
 .document-header {
-  min-height: 72px;
   padding: 12px 24px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   border-bottom: 1px solid var(--line-light);
 }
 
 /* Comparing, the same header has half the width to say the same five things in.
    The title steps down so it stops wrapping under its own caret. */
-.document-grid.compare .document-header { padding: 10px 16px; gap: 12px; }
+.document-grid.compare .document-header { padding: 10px 16px; gap: 6px; }
 .document-grid.compare .document-title { font-size: 17px; }
 .document-grid.compare .document-version { font-size: 10px; }
 
 
-.document-lab {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
 .document-title { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 600; }
 
 /* The title is the control that changes the document. It carries no button
@@ -1018,6 +1039,15 @@ body.sidebar-collapsed .sidebar-resizer {
   gap: 6px 10px;
   color: var(--muted);
   font-size: 11px;
+}
+
+/* Comparing, this half is narrow enough that everything crowds the right edge
+   and wraps ragged. Spread it instead: the passage walk at the left of the
+   half, what changes the view at its right. At full width the right-aligned
+   cluster reads better, so the rule is scoped to compare. */
+.document-grid.compare .document-meta {
+  flex: 1;
+  justify-content: space-between;
 }
 .document-version { font-family: var(--mono); font-size: 11px; }
 .document-focus-toggle {
@@ -1628,4 +1658,134 @@ body.no-behaviours .sidebar-export { display: none; }
    which never sets it -- is untouched: measured drift 0 at every width. */
 @media (max-width: 400px) {
   body[data-local-data] .local-data-note { display: none; }
+}
+
+/* A document the index read in translation says so in a band under its header,
+   across the panel and above the text it is about.
+
+   Rust marks it. That is a deliberate departure, taken by the operator and
+   recorded here: the framework reserves --fail for status, and a machine
+   translation is a caveat rather than a failure, but rust is the palette's only
+   warm colour and the operator asked for this notice to read as a warning
+   rather than blend into the header.
+
+   The rust is the band's left rule, not its words. As 11px text on
+   --chrome-deep it measured 4.07:1 on daylight and 3.53:1 on umber, under the
+   4.5:1 AA asks of text. As a rule it is a non-text mark, which needs 3:1, and
+   clears it in both. The words are --ink: 10.95:1 on daylight, 10.07:1 on
+   umber. Left-aligned like every other line of the reader, with the rule taking
+   2px of the left padding so the words keep their place. */
+.document-translation {
+  margin: 0;
+  padding: 6px 24px 6px 22px;
+  border-left: 2px solid var(--fail);
+  border-bottom: 1px solid var(--line-light);
+  background: var(--chrome-deep);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* The mark that opens a passage's original. A glyph, not an icon: the framework
+   carries no icon library and no emoji, and the character reads as "writing" to
+   anyone who can read the original it opens. */
+.original-open {
+  /* The glyph is drawn, not written: the reader anchors citations by the text
+     content of a block (findPassageBlocks), so a character added to the block
+     would change the text a stored quote is matched against. The button's
+     accessible name is its aria-label. */
+  margin-left: 5px;
+  padding: 0 3px;
+  border: 0;
+  border-bottom: 2px solid var(--energy);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.original-open::after { content: "文"; }
+.original-open:hover { background: var(--energy); color: var(--ink); }
+
+/* The original itself, in the top layer like the key's notes, placed under the
+   glyph that opened it. */
+.original-note {
+  position: fixed;
+  inset: auto;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(60vh, 460px);
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.original-note::backdrop { background: transparent; }
+
+.original-note-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 11px;
+}
+
+.original-note-body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+/* The header's rows: publishers, then the document being read at a version,
+   then the caveat if there is one. Each panel carries its own set, so comparing
+   asks the same two questions twice, once per side, in the same places. */
+.provider-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line-light);
+}
+
+.provider-tab {
+  padding: 5px 10px 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+
+.provider-tab:hover { color: var(--ink); }
+.provider-tab[aria-pressed="true"] {
+  border-bottom-color: var(--energy);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.document-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.document-identity { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.document-identity .document-version {
+  margin-left: 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
 }

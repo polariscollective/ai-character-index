@@ -41,6 +41,13 @@ def documents_payload(store, cells=None):
     index_store.install_registry(store)
     return {
         "generatedFrom": ["supabase: aci_spec_versions"],
+        # No judged_version_ids, so no document here carries a `judged` flag.
+        # Built for a publication, every version comes from one of its cells,
+        # and publish.py refuses a cell no run answered, so the flag would say
+        # nothing new. It follows that the reader's "Not judged yet" and the
+        # MCP's NOT_JUDGED note are reachable only from a payload built with
+        # the set, which publish builds none of today; the reader fixture is
+        # where both are exercised.
         "documents": index_store.documents(
             store, index_store.published_spec_version_ids(store, cells=cells)),
     }

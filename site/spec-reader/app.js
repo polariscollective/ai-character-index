@@ -227,6 +227,11 @@ const state = {
   sidebarCollapsed: false,
   compareFirst: 50,
   comparePair: null,   // [idA, idB]; null = the first two documents
+  /* The document that was on the right the last time the reader compared.
+   * Leaving compare keeps the left-hand document and drops the right one from
+   * the screen; coming back to a different second document than the one you
+   * chose would undo a choice the reader made rather than restore it. */
+  compareRight: null,
 };
 
 const elements = {
@@ -250,6 +255,9 @@ const elements = {
   keyNote: document.querySelector("#key-note"),
   keyNoteTitle: document.querySelector("#key-note-title"),
   keyNoteBody: document.querySelector("#key-note-body"),
+  originalNote: document.querySelector("#original-note"),
+  originalNoteLabel: document.querySelector("#original-note-label"),
+  originalNoteBody: document.querySelector("#original-note-body"),
   template: document.querySelector("#document-template"),
 };
 
@@ -694,15 +702,24 @@ function setupSidebarResizer() {
  * panes overflowed the page. Which two is the reader's choice once there are more
  * than two to choose from. */
 
-/* Compare is a two-document view. With exactly two documents registered there is
- * nothing to choose and the picker stays hidden; with more, the reader picks the two.
- * An unknown or duplicated id in ?compare-with= falls back to the first two, so a
- * stale link still renders something coherent. */
+/* Compare is a two-document view, and each side is chosen on its own.
+ *
+ * A pair naming the same id twice is kept rather than corrected, because the
+ * operator asked that any document be placeable on either side. Two versions of
+ * one document were never the case at issue: an id carries its version, so
+ * openai--model-spec@2025-12-18 and @2026-08-18 are two ids and always paired.
+ * What this allows is the identical document on both sides, which is a reader
+ * lining up one text against itself -- and, before this, a choice the reader
+ * made that the reader silently overrode by swapping the sides.
+ *
+ * An id the payload does not carry is another matter -- a stale ?compare-with=
+ * link, or a publication that no longer holds that version -- and falls back to
+ * what a comparison opens on, so the view renders something either way. */
 function comparePair() {
   const ids = state.payload.documents.map(doc => doc.id);
   const [a, b] = state.comparePair || [];
   const first = ids.includes(a) ? a : ids[0];
-  const second = ids.includes(b) && b !== first ? b : ids.find(id => id !== first);
+  const second = ids.includes(b) ? b : defaultComparison(first);
   return [first, second];
 }
 
@@ -1781,7 +1798,226 @@ function revealHashTarget() {
   if (heading && panel) revealInternalTarget(panel, heading, false);
 }
 
-function renderDocument(doc) {
+/* A document the index read in translation.
+ *
+ * What the panel judged is the translation, so that is what the reader renders
+ * and what a citation quotes. The original is carried beside it, passage by
+ * passage, and the note in the header says whose translation the judgements are
+ * about. A value these maps do not carry prints as it stands: a note naming a
+ * translator nobody has named before is worth more than one that says nothing. */
+const LANGUAGE_NAMES = { zh: "Chinese", en: "English", fr: "French", es: "Spanish" };
+const TRANSLATOR_NAMES = {
+  "claude-opus-5": "Claude Opus 5",
+  "claude-fable-5": "Claude Fable 5",
+};
+
+const languageName = code => LANGUAGE_NAMES[code] || code;
+
+/* Who translated it is free text on an insert-only column, not a model id. The
+   one translated document the index carries names two models and the parts the
+   second left untouched, so looking the whole field up as a key matched nothing
+   and printed raw ids into a sentence the public reads. Every known id is
+   replaced wherever it appears instead. An id we do not know still passes
+   through as written, which is what it did before, and the column cannot be
+   rewritten to suit us: aci_spec_versions takes inserts and nothing else. */
+function translatorNames(by) {
+  return Object.entries(TRANSLATOR_NAMES).reduce(
+    (said, [id, name]) => said.split(id).join(name), by || "");
+}
+
+/* The band names who did the work and stops there. The column may go on to list
+   which parts a reviser never reached, which is a sentence of section names in a
+   strip meant to be read at a glance, so the reader cuts the list at "except".
+   What cannot be cut with it is the claim the exceptions qualify. A reviser that
+   skipped part of a document did not revise the document, and a translator with
+   parts excepted did not translate all of it, so whenever anything is cut the
+   band says "in part": on the last "<verb> by" before the cut ("revised in part
+   by", "reviewed in part by"), or on the attribution itself where there is none
+   ("in part by"). Shorter, and still true.
+
+   Returns the attribution as the band says it, "by" included, because where "in
+   part" goes depends on what was cut. */
+function shortenTranslator(by) {
+  const cut = by.search(/\bexcept\b/i);
+  if (cut < 0) return `by ${by}`;
+  const kept = by.slice(0, cut).replace(/[\s,;:]+$/, "");
+  const clause = [...kept.matchAll(/\b\w+ (by)\b/gi)].at(-1);
+  if (!clause) return `in part by ${kept}`;
+  const at = clause.index + clause[0].length - clause[1].length;
+  return `by ${kept.slice(0, at)}in part ${kept.slice(at)}`;
+}
+
+/* `judged` is the document's own flag. Only a documents payload built with
+   judged_version_ids carries it, and publish builds none today, so a published
+   document has no flag at all; every document of a publication comes from a
+   cell some run judged, so the last sentence is true there. A document marked
+   `judged: false` sits above "Not judged yet", and saying the index judged it
+   would contradict that note on the same screen. */
+function translationNote(translation, judged) {
+  const by = shortenTranslator(translatorNames(translation.by));
+  // A review is worth saying; its absence is the ordinary case for a machine
+  // translation and saying so every time buys nothing but length.
+  return `Machine translation from ${languageName(translation.from)} ${by}`
+       + `${translation.reviewed ? ", reviewed by a person" : ""}.`
+       + (judged === false ? "" : " The index judged this translation.");
+}
+
+/* Each passage's original, reachable from the passage itself.
+ *
+ * The payload pairs translation with original in document order, both cut the
+ * same way by cite.py. The reader cannot name a rendered block with a locator --
+ * its own numbering counts headings and cuts lists differently -- so the two
+ * lists are walked together instead. A pair matches the block that carries its
+ * text, or the block that opens it: an example is one passage, while the reader
+ * renders its caption and its dialogue as two blocks, and the caption is where
+ * the mark belongs. Blocks the pairs do not cover, headings above all, are
+ * stepped over and consume nothing. */
+function attachOriginals(panel, doc) {
+  const pairs = doc.original;
+  if (!pairs?.length || !doc.translation) return;
+  const label = `${languageName(doc.translation.from)} original`;
+  let next = 0;
+  panel.querySelectorAll(".document-body [data-block]").forEach(block => {
+    if (next >= pairs.length) return;
+    const text = normalize(block.textContent);
+    if (!text) return;
+    const pair = normalize(pairs[next].text);
+    if (pair !== text && !pair.startsWith(text)) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "original-open";
+    button.dataset.original = pairs[next].original;
+    button.dataset.originalLang = doc.translation.from;
+    button.dataset.originalLabel = label;
+    button.setAttribute("aria-label", `Show the ${label} of this passage`);
+    button.title = `Show the ${label}`;
+    block.append(button);
+    next += 1;
+  });
+}
+
+/* One popover for every mark on the page, like the key's notes: opening it
+ * again from another passage refills it, and light dismiss and Escape come from
+ * the browser. A browser without popovers gets marks that do nothing, so the
+ * marks are removed rather than left inert. */
+function setupOriginalNotes(panel) {
+  const note = elements.originalNote;
+  if (!note || typeof note.showPopover !== "function") {
+    panel.querySelectorAll(".original-open").forEach(button => button.remove());
+    return;
+  }
+  panel.querySelector(".document-body").addEventListener("click", event => {
+    const button = event.target.closest(".original-open");
+    if (!button) return;
+    elements.originalNoteLabel.textContent = button.dataset.originalLabel;
+    elements.originalNoteBody.textContent = button.dataset.original;
+    elements.originalNoteBody.lang = button.dataset.originalLang;
+    if (note.matches(":popover-open")) note.hidePopover();
+    note.showPopover();
+    placeUnder(note, button);
+  });
+}
+
+/* A version label as a reader would say it: "14th of August 2026".
+ *
+ * The label is the date the publisher gave the document, and it is stored as
+ * one string because that is what a locator carries. A day of 00 says the
+ * publisher dated the month and no more, which is how Alibaba dates its Model
+ * Spec, so the label says the month and no more. Anything that is not a date in
+ * that shape passes through untouched: a publisher who labels a release "v3" is
+ * not wrong, and rewriting it would be this reader inventing a date. */
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+
+function ordinal(day) {
+  const tens = day % 100;
+  if (tens >= 11 && tens <= 13) return `${day}th`;
+  return `${day}${["th", "st", "nd", "rd"][day % 10] || "th"}`;
+}
+
+function versionLabel(version) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(version || "");
+  if (!parts) return version || "";
+  const [, year, month, day] = parts;
+  const name = MONTHS[Number(month) - 1];
+  if (!name) return version;
+  return day === "00" ? `${name} ${year}` : `${ordinal(Number(day))} of ${name} ${year}`;
+}
+
+/* Publishers, and what each publishes.
+ *
+ * The payload carries documents; a reader thinks in labs first and documents
+ * second, which is why the header asks the two questions in two rows. Order is
+ * the payload's for labs, and newest first within a lab: a version label sorts
+ * as a string because it is a date, and the index has said so since the first
+ * locator was written. */
+function labsOf(documents = state.payload?.documents || []) {
+  const labs = [];
+  for (const doc of documents) if (!labs.includes(doc.lab)) labs.push(doc.lab);
+  return labs;
+}
+
+function documentsOfLab(lab, documents = state.payload?.documents || []) {
+  return documents
+    .filter(doc => doc.lab === lab)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)));
+}
+
+/** The newest document a lab has in this publication. */
+function latestOfLab(lab) {
+  return documentsOfLab(lab)[0] || null;
+}
+
+/* What the second panel opens on.
+ *
+ * Anthropic's newest, or OpenAI's when Anthropic's is already the one being
+ * read. An opening pair is one the reader did not choose, so it shows two
+ * different texts. The identical document on both sides is still allowed as the
+ * reader's explicit choice, and kept when made (see comparePair). Against a
+ * payload carrying neither lab, the first document that is not the one on the
+ * left, so a comparison opens on something rather than refusing.
+ */
+const COMPARISON_ORDER = ["Anthropic", "OpenAI"];
+
+function defaultComparison(leftId) {
+  const preferred = COMPARISON_ORDER
+    .map(lab => latestOfLab(lab))
+    .filter(Boolean)
+    .find(doc => doc.id !== leftId);
+  if (preferred) return preferred.id;
+  return (state.payload?.documents || []).find(doc => doc.id !== leftId)?.id || null;
+}
+
+/* One button per publisher, the panel's own. Choosing a publisher shows its
+ * newest document, which is the version a reader means unless they say
+ * otherwise; the row below is where they say otherwise.
+ *
+ * Buttons in a labelled group, not tabs. A tablist promises arrow keys, a roving
+ * tabindex and a panel each tab controls, and this row keeps none of those
+ * promises: each publisher is a stop of its own, and Enter or Space chooses it.
+ * The pressed one is the publisher being read. Comparing, both groups would be
+ * announced as "Publisher", so each is named for its side. */
+const PUBLISHER_GROUP_LABELS = ["Publisher, left document", "Publisher, right document"];
+
+function renderProviderTabs(panel, doc, side = 0) {
+  const group = panel.querySelector(".provider-tabs");
+  if (!group) return;
+  group.setAttribute("aria-label",
+    state.comparing ? PUBLISHER_GROUP_LABELS[side] || "Publisher" : "Publisher");
+  group.replaceChildren(...labsOf().map(lab => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "provider-tab";
+    button.dataset.lab = lab;
+    button.textContent = lab;
+    button.setAttribute("aria-pressed", String(lab === doc.lab));
+    return button;
+  }));
+}
+
+/* `side` is the panel's position, 0 on the left, which is what names a control
+ * when two panels carry the same ones. */
+function renderDocument(doc, side = 0) {
   const panel = elements.template.content.firstElementChild.cloneNode(true);
   const markdownContext = {
     headings: buildHeadingIndex(doc.markdown),
@@ -1789,9 +2025,9 @@ function renderDocument(doc) {
     usedHeadingIds: new Map(),
   };
   panel.dataset.documentId = doc.id;
-  panel.querySelector(".document-lab").textContent = doc.lab;
+  renderProviderTabs(panel, doc, side);
   panel.querySelector(".document-name").textContent = doc.title;
-  panel.querySelector(".document-version").textContent = `Version ${doc.version}`;
+  panel.querySelector(".document-version").textContent = versionLabel(doc.version);
   // Each panel points at its own source. That is the whole reason this link left
   // the row above: up there it could only ever name one of two documents, and
   // when comparing it gave up and said "Sources".
@@ -1803,10 +2039,17 @@ function renderDocument(doc) {
   panel.querySelectorAll(".tier-toggle").forEach(button => {
     button.setAttribute("aria-pressed", String(Boolean(state.bands?.has(button.dataset.tier))));
   });
+  const translation = panel.querySelector(".document-translation");
+  if (doc.translation) {
+    translation.textContent = translationNote(doc.translation, doc.judged);
+    translation.hidden = false;
+  }
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
+  attachOriginals(panel, doc);
   setupSectionFocus(panel);
   setupInternalLinks(panel);
   setupPassageDisclosure(panel);
+  setupOriginalNotes(panel);
   return panel;
 }
 
@@ -1930,9 +2173,18 @@ function updatePanelMeta(panel, doc) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
       .reduce((total, behaviour) => total + (behaviour.coverage?.[doc.id]?.panelFiltered || 0), 0);
+    // "Not judged yet" is selected by the document's own `judged` flag. Only a
+    // documents payload built with judged_version_ids carries it, and publish
+    // builds none today, so a published document always takes one of the other
+    // two branches; the reader fixture is what reaches this one.
     panel.querySelector(".document-body").insertAdjacentHTML(
       "afterbegin",
-      filtered > 0
+      doc.judged === false
+        ? `<div class="zero-coverage" role="note">
+            <strong>Not judged yet.</strong>
+            <span>No panel has scored this document, so it shows no passages. That is not a finding about the document.</span>
+          </div>`
+        : filtered > 0
         ? `<div class="zero-coverage" role="note">
             <strong>No passages in the selected tiers.</strong>
             <span>${filtered} scored ${filtered === 1 ? "passage sits" : "passages sit"} in tiers toggled off -- turn one back on above to see them.</span>
@@ -2019,7 +2271,12 @@ function openSpecPicker(button) {
   const picker = elements.specPicker;
   if (!picker || typeof picker.showPopover !== "function") return;
 
-  picker.replaceChildren(...(state.payload?.documents || []).map(doc => {
+  // This publisher's documents, newest first. The publisher itself is chosen in
+  // the row above, so a list of every document in the index would be a second
+  // way to do what the tabs already do, and a longer one.
+  const lab = (state.payload?.documents || [])
+    .find(doc => doc.id === current)?.lab;
+  picker.replaceChildren(...documentsOfLab(lab).map(doc => {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "spec-choice";
@@ -2028,10 +2285,9 @@ function openSpecPicker(button) {
     option.setAttribute("aria-selected", String(doc.id === current));
     const name = document.createElement("span");
     name.className = "spec-choice-lab";
-    name.textContent = doc.lab;
+    name.textContent = doc.title;
     const detail = document.createElement("small");
-    const version = (doc.version || "").replaceAll("-", ".");
-    detail.textContent = version ? `${doc.title}, ${version}` : doc.title;
+    detail.textContent = versionLabel(doc.version);
     option.append(name, detail);
     option.addEventListener("click", () => {
       picker.hidePopover();
@@ -2079,20 +2335,27 @@ function placeUnder(popover, anchor) {
   popover.style.top = `${Math.round(top)}px`;
 }
 
-/* Picking a document that is already on the other side swaps them rather than
- * refusing: comparing a document with itself is the one selection with no meaning. */
+/* Each side is chosen on its own, and a document may be put on both.
+ *
+ * Choosing the document already on the other side used to swap the two. Two
+ * versions of one specification were never affected: an id carries its version,
+ * so the same document at two dates is two ids and was always a valid pair. What
+ * the swap overrode was the identical document on both sides, which is kept now
+ * because putting it there is the reader's explicit choice (see comparePair). */
 function setComparePair(side, id) {
   const [a, b] = comparePair();
   const next = side === "a" ? [id, b] : [a, id];
-  if (next[0] === next[1]) next[side === "a" ? 1 : 0] = side === "a" ? a : b;
   state.comparePair = next;
+  // Remembered so that leaving compare and coming back restores the pair the
+  // reader chose rather than the one the reader was given.
+  state.compareRight = next[1];
   syncURL();
   rebuildReader();
 }
 
 function rebuildReader() {
   elements.documentReader.classList.toggle("compare", state.comparing);
-  const panels = visibleDocuments().map(renderDocument);
+  const panels = visibleDocuments().map((doc, side) => renderDocument(doc, side));
   const children = state.comparing
     ? panels.flatMap((panel, i) => (i < panels.length - 1 ? [panel, createDocumentResizer()] : [panel]))
     : panels;
@@ -2125,7 +2388,7 @@ function collectAnchors() {
       panel.querySelector(".passage-count").textContent =
         !payloadBehaviours().length ? "No behaviours under test"
         : !highlightsActive() ? "No behaviours selected"
-        : "No passages in this spec";
+        : "No passages";
     }
   });
   if (!panels().includes(state.activePanel)) state.activePanel = panels()[0] || null;
@@ -2224,6 +2487,26 @@ elements.documentReader.addEventListener("click", event => {
   focusPassage(panel, (panel._passageIndex || 0) + delta);
 });
 
+/* Choosing a publisher, in the panel that asked. Delegated like the tier
+ * toggles, because every rebuild re-clones the headers these buttons live in.
+ *
+ * The rebuild takes the focused button away with the header, which would drop a
+ * keyboard user at the top of the page, so focus goes back to the same publisher
+ * in the same panel afterwards. The panel is found by position rather than by
+ * document id: comparing, both sides may carry the same document. */
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".provider-tab");
+  if (!button) return;
+  const panel = button.closest(".document-panel");
+  const side = panels().indexOf(panel);
+  const lab = button.dataset.lab;
+  const latest = latestOfLab(lab);
+  if (latest && latest.id !== panel?.dataset.documentId) chooseSpec(panel, latest.id);
+  panels()[side]
+    ?.querySelector(`.provider-tab[data-lab="${CSS.escape(lab)}"]`)
+    ?.focus({ preventScroll: true });
+});
+
 /* Comparison is one mode over both panels, so its switch is in the band both
  * panels share rather than repeated in each of their headers.
  *
@@ -2232,10 +2515,17 @@ elements.documentReader.addEventListener("click", event => {
  * before. Either way the reader stays with the text they were looking at. */
 elements.compareToggle.addEventListener("click", () => {
   const first = panels()[0]?.dataset.documentId;
+  if (state.comparing) state.compareRight = comparePair()[1] || state.compareRight;
   state.comparing = !state.comparing;
   if (state.comparing && first) {
-    const other = state.payload.documents.find(doc => doc.id !== first);
-    if (other) state.comparePair = [first, other.id];
+    // The side you chose last time, if the payload still carries it; otherwise
+    // the opening default. Not refused for being the document already on the
+    // left: putting one document on both sides is a choice the reader is
+    // allowed to make, so it is a choice worth restoring.
+    const remembered = state.payload.documents.some(doc => doc.id === state.compareRight)
+      ? state.compareRight
+      : defaultComparison(first);
+    if (remembered) state.comparePair = [first, remembered];
   } else if (!state.comparing && first) {
     state.selectedSpec = first;
   }

@@ -50,6 +50,21 @@ test("a judged behaviour reports its brief, its boundary and both states", async
   });
 });
 
+/* The notes must come from the same build as the payload beside them. On a
+ * development deployment that is the newest publication, published or not. */
+test("a development deployment reads the notes of an unpublished build", async () => {
+  const { urls, fetchImpl } = stub([judged], [{ behaviour_slug: "judged-one" }]);
+  process.env.ACI_SERVES_DEVELOPMENT = "true";
+  try {
+    await behaviourNotes(fetchImpl);
+  } finally {
+    delete process.env.ACI_SERVES_DEVELOPMENT;
+  }
+  const publications = urls.filter(url => url.includes("aci_publications"));
+  assert.ok(publications.length > 0, "the notes resolve a publication");
+  assert.doesNotMatch(publications[0], /is_public/);
+});
+
 test("a display definition is never reported as the judges' brief", async () => {
   const { fetchImpl } = stub([described], []);
   const note = (await behaviourNotes(fetchImpl))["described-only"];

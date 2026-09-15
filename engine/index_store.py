@@ -48,14 +48,101 @@ def install_registry(store):
     cite.use_registry(*spec_registry(store))
 
 
-def documents(store, spec_version_ids=None):
+def _sections(markdown, spec_id, version, by_anchor):
+    """Every section of a document, with the passages it holds.
+
+    [(section, [(¶ index, locator, text)])], one entry per heading, including a
+    heading with no passage under it. Cut the way the judges' passages are cut --
+    engine/panel/harness.py's `passages`: the same sections, the same blocks, the
+    same filter for a block that is only a repeated heading. A citation and a
+    paired original must name the same thing, so the two are cut by one set of
+    rules.
+    """
+    lines = markdown.splitlines()
+    sections = cite.parse_sections(lines)
+    titles = {cite.normalize(section.path_str.split(" > ")[-1]) for section in sections}
+    out = []
+    for section in sections:
+        ref = f"#{section.anchor}" if (by_anchor and section.anchor) else section.path_str
+        passages = []
+        for index, raw in enumerate(
+                cite.segment_blocks(lines, section.start, section.end), 1):
+            text = cite.normalize(raw)
+            if text.strip() and text not in titles:
+                passages.append((index, f"{spec_id}@{version} > {ref} > ¶{index}", text))
+        out.append((section, passages))
+    return out
+
+
+def _shape(entry):
+    """What two languages must share at one section: its heading level and the ¶
+    indices of its passages. Titles cannot be compared, being in two languages."""
+    section, passages = entry
+    return section.level, [index for index, _, _ in passages]
+
+
+def _described(entry):
+    if entry is None:
+        return "no section"
+    section, passages = entry
+    held = ", ".join(f"¶{index}" for index, _, _ in passages) or "no passages"
+    return f"'{section.path_str}' (heading level {section.level}, {held})"
+
+
+def _pairing(version, spec, document_id):
+    """Every passage of a translation beside the same passage of its original.
+
+    The pairing is the order of the two texts, which is sound only while both cut
+    the same way. Equal totals do not show that they do. cite.py joins a fence to
+    a preceding `**Example**` caption and to no other, so a Chinese `**示例**`
+    caption leaves its fence a block apart; one merged paragraph elsewhere brings
+    the totals level again, and every pair in between opens the wrong original
+    with a straight face.
+
+    So the two are held to each other section by section: the same headings at
+    the same levels, in the same order, and in each section the same passages at
+    the same ¶ indices. The first section where they part is named. A registered
+    version cannot be edited, so this fails the build rather than publishing a
+    pairing nobody could trust.
+    """
+    by_anchor = spec.get("locator_style") == "anchor"
+    translated = _sections(version["markdown"], spec["id"], version["version"], by_anchor)
+    original = _sections(version["original_markdown"], spec["id"], version["version"],
+                         by_anchor)
+    for position in range(max(len(translated), len(original))):
+        mine = translated[position] if position < len(translated) else None
+        theirs = original[position] if position < len(original) else None
+        if mine is None or theirs is None or _shape(mine) != _shape(theirs):
+            raise SystemExit(
+                f"{document_id}: the translation and its original part at heading "
+                f"{position + 1}: the translation has {_described(mine)}, and the "
+                f"original has {_described(theirs)}. Pairing past it would put "
+                "passages beside other passages' originals. The original and its "
+                "translation must keep the same structure: the same headings at the "
+                "same levels, and the same blocks in each section, in the same order.")
+    return [{"locator": locator, "text": text, "original": source}
+            for (_, mine), (_, theirs) in zip(translated, original)
+            for (_, locator, text), (_, _, source) in zip(mine, theirs)]
+
+
+def documents(store, spec_version_ids=None, judged_version_ids=None):
     """The `documents` entries of the reader payload, markdown included.
 
     Ordered by document id, `<spec id>@<version>`.
+
+    A version registered with an original carries its translation's provenance
+    and the original passage by passage, so the reader can say whose translation
+    it is showing and put each paragraph's source beside it.
+
+    `judged_version_ids` is the set a run has actually judged. A version outside
+    it is marked `judged: false`, which is a different claim from an empty
+    coverage record: "no panel has read this" and "a panel read this and found
+    nothing" must not render as the same sentence. Left None, nothing is said.
     """
     labs = {row["id"]: row for row in _rows(store, "aci_labs")}
     specs = {row["id"]: row for row in _rows(store, "aci_specs")}
     versions = _rows(store, "aci_spec_versions")
+    reviews = _rows(store, "aci_translation_reviews")
     if spec_version_ids is not None:
         wanted = set(spec_version_ids)
         versions = [v for v in versions if v["id"] in wanted]
@@ -80,6 +167,20 @@ def documents(store, spec_version_ids=None):
         if version["source_url"]:
             document["sourceUrl"] = version["source_url"]
         document["markdown"] = version["markdown"]
+        if version.get("original_markdown"):
+            document["translation"] = {
+                "from": version["original_language"],
+                "by": version["translated_by"],
+                # A reading by a person and a reading by a model are different
+                # evidence; only the first earns the reader's "reviewed by a
+                # person", so only the first counts here.
+                "reviewed": any(review["spec_version_id"] == version["id"]
+                                and review["reviewer_kind"] == "person"
+                                for review in reviews),
+            }
+            document["original"] = _pairing(version, spec, document["id"])
+        if judged_version_ids is not None:
+            document["judged"] = version["id"] in judged_version_ids
         out.append(document)
     return sorted(out, key=lambda d: d["id"])
 
