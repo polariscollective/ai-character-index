@@ -2024,6 +2024,41 @@ function translationNote(translation, judged) {
        + (judged === false ? "" : " The index judged this translation.");
 }
 
+/* A viewer may dismiss a translated document's notice. The choice is kept in this
+ * browser for that document version only, so another translated document, or a
+ * new version of this one, shows its notice. Where storage is refused, savedFlag
+ * reads false and the notice shows, the safe direction for a disclosure. */
+function translationDismissedKey(documentId) {
+  return `aci-translation-dismissed:${documentId}`;
+}
+
+/* The notice, or once it is dismissed the short "Translated" label beside Show
+ * original, which is what still says the text is a translation. */
+function showTranslationNotice(panel) {
+  const band = panel.querySelector(".document-translation");
+  const flag = panel.querySelector(".translation-flag");
+  const translated = Boolean(band?.querySelector(".translation-text")?.textContent);
+  const dismissed = translated && savedFlag(translationDismissedKey(panel.dataset.documentId));
+  if (band) band.hidden = !translated || dismissed;
+  if (flag) flag.hidden = !dismissed;
+}
+
+/* The × closes the notice at once: every panel showing this document, since an
+ * identical pair shows it twice, and no other. The band sits above the text's
+ * scroll box, so the reader's place in the text is untouched; focus goes to the
+ * label that remains, since the button it was on has gone. */
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".translation-dismiss");
+  if (!button) return;
+  const panel = button.closest(".document-panel");
+  const id = panel?.dataset.documentId;
+  if (!id) return;
+  saveFlag(translationDismissedKey(id), true);
+  panels().filter(item => item.dataset.documentId === id).forEach(showTranslationNotice);
+  panel.querySelector(".translation-flag")?.focus({ preventScroll: true });
+  requestAnimationFrame(updateRails);
+});
+
 /* Each passage's original, reachable from the passage itself.
  *
  * The payload pairs translation with original in document order, both cut the
@@ -2241,11 +2276,12 @@ function renderDocument(doc, side = 0) {
   panel.querySelectorAll(".tier-toggle").forEach(button => {
     button.setAttribute("aria-pressed", String(Boolean(state.bands?.has(button.dataset.tier))));
   });
-  const translation = panel.querySelector(".document-translation");
   if (doc.translation) {
-    translation.textContent = translationNote(doc.translation, doc.judged);
-    translation.hidden = false;
+    const note = translationNote(doc.translation, doc.judged);
+    panel.querySelector(".document-translation .translation-text").textContent = note;
+    panel.querySelector(".translation-flag").title = note;
   }
+  showTranslationNotice(panel);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
   attachOriginals(panel, doc);
   setupSectionFocus(panel);

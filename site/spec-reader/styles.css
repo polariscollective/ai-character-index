@@ -1803,7 +1803,10 @@ body.no-behaviours .sidebar-export { display: none; }
    2px of the left padding so the words keep their place. */
 .document-translation {
   margin: 0;
-  padding: 6px 24px 6px 22px;
+  padding: 6px 12px 6px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   border-left: 2px solid var(--fail);
   border-bottom: 1px solid var(--line-light);
   background: var(--chrome-deep);
@@ -1812,6 +1815,31 @@ body.no-behaviours .sidebar-export { display: none; }
   line-height: 1.4;
   text-align: left;
 }
+/* The display above would otherwise beat the hidden attribute. */
+.document-translation[hidden] { display: none; }
+.translation-text { flex: 1; min-width: 0; }
+/* The notice's close control: a plain ×, in the band's own ink, centred at its
+   right end. The negative margins keep the band no taller for it. */
+.translation-dismiss {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.translation-dismiss:hover { background: var(--energy); color: var(--ink); }
+/* What remains once the notice is dismissed, beside Show original. */
+.translation-flag { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.translation-flag[hidden] { display: none; }
 
 /* The mark that opens a passage's original. A glyph, not an icon: the framework
    carries no icon library and no emoji, and the character reads as "writing" to
