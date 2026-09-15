@@ -323,6 +323,31 @@ The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions
 The database only gained while `develop` was built; the cleanup migration it lists
 follows the merge.
 
+### A seat can be judged by a recorded substitute
+
+**Added because a judge cannot answer one behaviour on one document.** `fable`
+returns `finish_reason=content_filter` with empty output on
+`harm-avoidance-to-third-parties` against both versions of the OpenAI Model Spec,
+`@2025-12-18` and `@2026-08-18`: four attempts on each cell in run `aef5e906`,
+none answered. Upstream met the same refusal on the same cell and seated `opus`
+instead; `_opus_note` in `panel-config.json` records it for `runlog-v3.jsonl`.
+Without a way to say so, those cells could never be published, and dropping the
+seat would judge them with two models where every other cell has three.
+
+A substitution is a row of `aci_seat_substitutions`: the cell of the run it
+happened in, the seat, the model that judged in its place, and a plain sentence
+saying why. The row is the whole of the permission. The publication trigger holds
+a cell to the panel with its recorded substitutions applied, exact equality as
+before, so a substitute nobody recorded is refused like any stranger in a seat,
+and so is a cell judged by both the seat and its substitute. `publish.py` refuses
+by the same rule before writing, and counts depths over the seats as substituted.
+
+It is not hidden. The builder files the substitute's verdicts in the seat's place
+and writes `substitutions: [{seat, substitute, reason}]` on that cell's coverage
+entry and no other, so every other cell's bytes are unchanged. The reader's
+behaviour note says it in a sentence beside the document, and the MCP answers
+carry the same array.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
