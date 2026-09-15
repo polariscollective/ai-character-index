@@ -105,6 +105,47 @@ def require_depths(store, cells, panel):
             + "\nRetry the run's failed calls, then build again.")
 
 
+def require_declared_substitutes(store, cells, config, panel_name, panel):
+    """Refuse a publication any of whose cells carries a recorded substitution
+    the panel's own configuration does not declare for that seat.
+
+    `choose_cells` already gives a recorded substitution's seat to its
+    substitute when matching a run to the panel -- that only asks whether the
+    cell was recorded, not whether the panel allows the pair. This is the
+    second gate: the seat's substitute must be on `panel-config.json`'s
+    `substitutes` list for that panel and that seat. A substitution for a seat
+    outside the panel is not this function's business; choose_cells already
+    leaves those alone.
+    """
+    recorded = seat_substitutions.recorded(
+        store, run_id=[c["run_id"] for c in cells],
+        behaviour_slug=[c["behaviour_slug"] for c in cells],
+        spec_version_id=[c["spec_version_id"] for c in cells])
+    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+
+    problems = []
+    for cell in cells:
+        key = (cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"])
+        for row in recorded.get(key, ()):
+            seat = row["seat"]
+            if seat not in panel:
+                continue
+            if seat_substitutions.declared(config, panel_name, seat, row["substitute"]):
+                continue
+            order = config.get("substitutes", {}).get(panel_name, {}).get(seat, [])
+            allowed = (f"{seat} may be substituted by " + ", then ".join(order)
+                       if order else f"{seat} may not be substituted")
+            version = versions[cell["spec_version_id"]]
+            problems.append(
+                f"{cell['behaviour_slug']} x {version['spec_id']}@{version['version']} "
+                f"records {seat} substituted by {row['substitute']}, which "
+                f"{panel_name} does not declare: {allowed}.")
+    if problems:
+        raise SystemExit(
+            "these cells carry a substitution the panel does not declare:\n  "
+            + "\n  ".join(problems))
+
+
 def choose_cells(store, behaviours, spec_versions, panel, rubric):
     """One run per cell, or a refusal naming every cell that has no answer.
 
@@ -200,6 +241,7 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     panel = panel_seats(config, panel_name)
     versions = document_versions(store, document_ids)
     cells = choose_cells(store, behaviours, versions, panel, rubric)
+    require_declared_substitutes(store, cells, config, panel_name, panel)
     require_depths(store, cells, panel)
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)

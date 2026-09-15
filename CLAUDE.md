@@ -348,6 +348,24 @@ entry and no other, so every other cell's bytes are unchanged. The reader's
 behaviour note says it in a sentence beside the document, and the MCP answers
 carry the same array.
 
+Which model may take a seat is declared now, not only recorded. `panel-config.json`
+carries a `substitutes` block, one ordered list per panel per seat:
+`frontier_fast`'s `fable` seat declares `opus`, then `kimi`. Opus is first because
+upstream met the same refusal and seated it there, recorded in `_opus_note`. Kimi
+follows because on 15 September 2026, judging the Alibaba Model Spec, every
+Anthropic model was refused on input: fable through Anthropic's own API, and
+fable, opus and sonnet through OpenRouter. Kimi, fable's panel mate in
+`frontier_primary`, took the seat instead. A substitute is used only when the
+seat's own model cannot answer a cell at all, and each use is still recorded in
+`aci_seat_substitutions` with a reason.
+
+Trying the declared order, opus before kimi, is policy for whoever records a
+substitution, not a rule the code enforces: nothing stops a reason naming kimi
+where opus was never tried. What the code enforces is that the substitute is on
+the declared list at all. `publish.py` refuses to build a publication when a
+selected cell carries a recorded substitution the panel does not declare for
+that seat, naming the cell and the declared order.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

@@ -212,6 +212,52 @@ class SubstitutionTest(unittest.TestCase):
         self.assertIn("aci_seat_substitutions", str(refused.exception))
 
 
+class DeclaredSubstitutesTest(unittest.TestCase):
+    """publish.py's second gate on a recorded substitution: recorded is not
+    enough, it must be declared for that seat by this panel's own
+    configuration (panel-config.json's `substitutes` block)."""
+
+    CELL = {"run_id": "r1", "behaviour_slug": HARM, "spec_version_id": "v2"}
+    CONFIG = {"substitutes": {"frontier_fast": {"fable": ["opus", "kimi"]}}}
+
+    def store(self, seat, substitute):
+        return FakeStore(
+            aci_seat_substitutions=[substitution("r1", seat=seat, substitute=substitute)],
+            aci_spec_versions=[V1, V2])
+
+    def test_the_first_declared_substitute_is_accepted(self):
+        publish.require_declared_substitutes(
+            self.store("fable", "opus"), [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+
+    def test_the_second_declared_substitute_is_accepted_too(self):
+        publish.require_declared_substitutes(
+            self.store("fable", "kimi"), [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+
+    def test_an_undeclared_substitute_is_refused_and_names_the_declared_order(self):
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_declared_substitutes(
+                self.store("fable", "gpt"), [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+        message = str(refused.exception)
+        self.assertIn(f"{HARM} x model-spec@2025-12-18", message)
+        self.assertIn("fable may be substituted by opus, then kimi", message)
+
+    def test_a_seat_with_no_declared_substitutes_is_refused(self):
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_declared_substitutes(
+                self.store("deepseek", "glm"), [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+        self.assertIn("deepseek may not be substituted", str(refused.exception))
+
+    def test_a_substitution_for_a_seat_outside_the_panel_is_not_this_function_s_business(self):
+        """`choose_cells` already ignores it; this gate must not re-refuse it."""
+        publish.require_declared_substitutes(
+            self.store("kimi", "kimi-k2"), [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+
+    def test_no_recorded_substitution_at_all_passes(self):
+        publish.require_declared_substitutes(
+            FakeStore(aci_seat_substitutions=[], aci_spec_versions=[V1, V2]),
+            [self.CELL], self.CONFIG, "frontier_fast", PANEL)
+
+
 class DocumentVersionsTest(unittest.TestCase):
     def test_the_versions_named_are_the_versions_published(self):
         older = {"id": "v0", "spec_id": "constitution", "version": "2025-05-01"}

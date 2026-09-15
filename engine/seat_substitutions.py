@@ -40,6 +40,18 @@ def recorded(store, **filters):
     return {key: sorted(rows, key=lambda row: row["seat"]) for key, rows in out.items()}
 
 
+def declared(config, panel_name, seat, substitute):
+    """Whether `panel_name`'s own configuration names `substitute` as a
+    declared stand-in for `seat`, in the panel's `"substitutes"` block.
+
+    This is the second gate on a recorded row: `recorded()` says a substitute
+    judged a cell, this says the panel allows that pair. Order in the
+    declared list is policy -- which name is tried first -- not something
+    this checks: any position on the list is declared.
+    """
+    return substitute in config.get("substitutes", {}).get(panel_name, {}).get(seat, [])
+
+
 def seats(panel, substitutions=()):
     """The panel as one cell was seated, sorted: each substituted seat replaced by
     its substitute, every other seat as configured.

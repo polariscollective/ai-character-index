@@ -319,6 +319,12 @@ export default function Readme() {
           merge, and the portal composes and publishes with it once{" "}
           <code>display.panel</code> names it. It is a code change, not a button.
         </p>
+        <p>
+          When a judge cannot answer a cell at all, the panel&apos;s declared
+          substitute takes its seat, and the index shows it. For{" "}
+          <code>fable</code>, that is <code>opus</code> first, then{" "}
+          <code>kimi</code>.
+        </p>
       </Section>
 
       <Section id="cost">
