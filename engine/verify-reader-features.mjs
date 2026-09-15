@@ -400,6 +400,70 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(pageErrors.length === 0, "copying: no console errors", pageErrors.join("; "));
 }
 
+/* A translated document's notice can be dismissed. The × closes the band at once,
+ * the choice is kept for that document version in this browser, and the document
+ * still says it is a translation: a short "Translated" label beside Show original,
+ * which does not grow the header's row. Another translated document keeps its
+ * notice, and comparing, each panel follows its own document. The keys are cleared
+ * afterwards, so the checks that follow still see the band. */
+{
+  const otherTranslated = fixtureDocs.find(doc => doc.translation && doc.id !== DOC_TRANSLATED)?.id;
+  const clearDismissals = () => page.evaluate(ids => ids.filter(Boolean)
+    .forEach(id => localStorage.removeItem(`aci-translation-dismissed:${id}`)), [DOC_TRANSLATED, otherTranslated]);
+  const readNotice = () => page.evaluate(() => [...document.querySelectorAll(".document-panel")].map(panel => {
+    const band = panel.querySelector(".document-translation");
+    const dismiss = band?.querySelector(".translation-dismiss");
+    const flag = panel.querySelector(".translation-flag");
+    return {
+      id: panel.dataset.documentId,
+      bandShown: Boolean(band && !band.hidden && band.getBoundingClientRect().height > 0),
+      dismiss: dismiss ? { label: dismiss.getAttribute("aria-label"), title: dismiss.title,
+                           text: dismiss.textContent.trim() } : null,
+      flagShown: Boolean(flag && !flag.hidden && flag.getBoundingClientRect().height > 0),
+      flagText: flag?.textContent.trim() ?? null,
+      identityRow: Math.round(panel.querySelector(".document-row").getBoundingClientRect().height * 10) / 10,
+      scrollTop: Math.round(panel.querySelector(".document-scroll").scrollTop),
+    };
+  }));
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await at("");
+  await clearDismissals();
+  await at(`?spec=${DOC_TRANSLATED}`);
+  let [panel] = await readNotice();
+  check(panel.bandShown && !panel.flagShown && panel.dismiss?.label === "Dismiss translation notice"
+      && panel.dismiss.title === panel.dismiss.label && panel.dismiss.text === "×",
+    "a translated document's notice carries a × labelled Dismiss translation notice", JSON.stringify(panel));
+  const before = panel;
+  await page.click(".document-translation .translation-dismiss");
+  await page.waitForTimeout(200);
+  [panel] = await readNotice();
+  const stored = await page.evaluate(id => localStorage.getItem(`aci-translation-dismissed:${id}`), DOC_TRANSLATED);
+  check(!panel.bandShown && panel.flagShown && panel.flagText === "Translated"
+      && panel.identityRow === before.identityRow && panel.scrollTop === before.scrollTop && stored === "1",
+    "the × hides the notice, keeps the reader's place, leaves a Translated label without growing the row,"
+      + " and saves the choice for that document", JSON.stringify({ before, after: panel, stored }));
+
+  await at(`?spec=${DOC_TRANSLATED}`);
+  [panel] = await readNotice();
+  check(!panel.bandShown && panel.flagShown, "after a reload the notice stays dismissed for that document",
+    JSON.stringify(panel));
+
+  if (otherTranslated) {
+    await at(`?spec=${otherTranslated}`);
+    [panel] = await readNotice();
+    check(panel.bandShown && !panel.flagShown, "another translated document still shows its notice",
+      JSON.stringify(panel));
+    await at(`?compare=1&compare-with=${DOC_TRANSLATED},${otherTranslated}`);
+    const pair = await readNotice();
+    check(pair.length === 2 && !pair[0].bandShown && pair[0].flagShown && pair[1].bandShown && !pair[1].flagShown,
+      "comparing, each panel's notice follows its own document", JSON.stringify(pair));
+  }
+  check(pageErrors.length === 0, "translation notice: no console errors", pageErrors.join("; "));
+  await clearDismissals();
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
+
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
 await at("");

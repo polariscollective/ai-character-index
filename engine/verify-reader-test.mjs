@@ -644,8 +644,9 @@ if (behaviours.length === 0) {
     "so neither band check below is vacuous");
 
   await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
+  // The notice's words, without the control that dismisses it.
   const note = await page.$eval(".document-translation", el => ({
-    text: el.textContent,
+    text: (el.querySelector(".translation-text") ?? el).textContent,
     hidden: el.hidden,
   }));
   report(
@@ -728,7 +729,7 @@ if (behaviours.length === 0) {
   // the unjudged one leaves out.
   await readView(`${base}?spec=${encodeURIComponent(judgedTranslation.id)}`);
   const judgedNote = await page.$eval(".document-translation", el => ({
-    text: el.textContent,
+    text: (el.querySelector(".translation-text") ?? el).textContent,
     hidden: el.hidden,
   }));
   report(
