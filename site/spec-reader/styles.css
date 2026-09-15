@@ -444,9 +444,28 @@ body.resizing-columns {
 
 .behaviour-list { flex: 1; min-height: 0; overflow: auto; padding: 8px 0 18px; }
 .behaviour-group { border-bottom: 1px solid var(--line-light); }
+/* A group's heading row: its name, and at the right the depth column's scale, said
+   once here rather than beside every figure. The right padding lines the label up
+   with the figures' right edge: the list's 10px, the note button's 18px and 8px
+   margin, and the label's own 12px. */
+.behaviour-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 15px 48px 7px 25px;
+}
+.depth-head {
+  flex: none;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
 .behaviour-group h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  padding: 15px 25px 7px;
+  padding: 0;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -551,6 +570,18 @@ body.resizing-columns {
   font-family: var(--mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+/* Read by a screen reader, drawn for no one. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .behaviour-option.checked .name { color: var(--ink); }
 

@@ -72,6 +72,7 @@ try {
 }
 eval(extractConst("DEPTH_WORDS"));
 eval(extractFn("function depthSummaryLine(doc, depth) {"));
+eval(extractFn("function depthSpoken(depths) {"));
 eval(extractFn("function payloadBehaviours() {"));
 eval(extractFn("function visibleDocuments() {"));
 eval(extractFn("function updateBehaviourDepths() {"));
@@ -146,13 +147,19 @@ function show(documents, behaviour, { comparing = false } = {}) {
   behaviourNotes = { [behaviour.slug]: NOTE };
 }
 
+/* The figure is bare: the sidebar states the scale once, at the top of the column.
+ * What a screen reader hears beside the name is the spoken form, which carries the
+ * scale on every value, because the column's header is not read with it. */
 function figure(slug) {
   const description = { textContent: "" };
+  const spoken = { textContent: "" };
   const cell = { dataset: { behaviourDepth: slug }, textContent: "", title: "",
-                 closest: () => ({ querySelector: () => description }) };
+                 closest: () => ({ querySelector: selector =>
+                   (selector === ".depth-spoken" ? spoken : description) }) };
   cells = [cell];
   updateBehaviourDepths();
-  return { text: cell.textContent, title: cell.title, description: description.textContent };
+  return { text: cell.textContent, title: cell.title, description: description.textContent,
+           spoken: spoken.textContent };
 }
 
 function note(slug) {
@@ -192,7 +199,8 @@ check("the figure beside a behaviour is a dash for a curation's integer",
       () => figure("helpfulness"),
       { text: "–",
         title: "Claude’s Constitution 2026-01-20: no depth given.",
-        description: "Claude’s Constitution 2026-01-20: no depth given." });
+        description: "Claude’s Constitution 2026-01-20: no depth given.",
+        spoken: "no depth given" });
 check("the note says no depth was given, and lists no judge",
       () => note("helpfulness"),
       { shown: true, depth: ["Claude’s Constitution 2026-01-20: no depth given."] });
@@ -200,6 +208,8 @@ check("the note says no depth was given, and lists no judge",
 show(LEGACY_DOCUMENTS, LEGACY_HELPFULNESS, { comparing: true });
 check("comparing, both documents of the grandfathered publication show a dash",
       () => figure("helpfulness").text, "– / –");
+check("comparing, a behaviour with no depth on either document is spoken as none given",
+      () => figure("helpfulness").spoken, "no depth given");
 check("comparing, the note names both documents with no depth given",
       () => note("helpfulness").depth,
       ["Claude’s Constitution 2026-01-20: no depth given.",
@@ -207,20 +217,23 @@ check("comparing, the note names both documents with no depth given",
 
 /* ---- a publication the current builder writes still renders its depths ---- */
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS);
-check("the figure is the panel's mean",
+check("the figure is the panel's bare mean; its title and spoken form say out of 4",
       () => figure("helpfulness"),
       { text: "2.7",
-        title: "Claude’s Constitution 2026-01-20: 2.7 of 4, prescribed.",
-        description: "Claude’s Constitution 2026-01-20: 2.7 of 4, prescribed." });
-check("the note gives the mean and every judge's depth and rationale",
+        title: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
+        description: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
+        spoken: "depth 2.7 out of 4" });
+check("the note's sentence gives the mean out of 4, and every judge's depth and rationale",
       () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 of 4, prescribed.",
+      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
        ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
         "sol: 2. Discussed in general terms."]]);
 
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
 check("comparing, a mean of zero shows as 0.0 and not as a dash",
       () => figure("helpfulness").text, "2.7 / 0.0");
+check("comparing, each document's depth is spoken with its scale",
+      () => figure("helpfulness").spoken, "depth 2.7 out of 4 and 0.0 out of 4");
 
 /* ---- a seat another model judged is said beside its document ---- */
 const SEATED_DEPTH = {
@@ -242,10 +255,10 @@ const SUBSTITUTED_HELPFULNESS = {
 show(JUDGED_DOCUMENTS, SUBSTITUTED_HELPFULNESS, { comparing: true });
 check("comparing, the note names the substitute on its own document and nowhere else",
       () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 of 4, prescribed.",
+      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
        ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
         "sol: 2. Discussed in general terms."],
-       "Model Spec 2025-12-18: 2.0 of 4, discussed.",
+       "Model Spec 2025-12-18: 2.0 out of 4, discussed.",
        "On Model Spec 2025-12-18, opus judged in place of fable: "
          + "fable's output was content-filtered on every attempt.",
        ["deepseek: 2.", "opus: 2.", "sol: 2."]]);

@@ -808,7 +808,12 @@ function renderBehaviourList() {
   const selected = new Set(state.selectedSlugs);
   elements.behaviourList.innerHTML = groups.map(group => `
     <section class="behaviour-group texture-${group.texture}">
-      <h2>${escapeHTML(group.name)}</h2>
+      <!-- The depth column's scale, said once at its top rather than beside every
+           figure; each figure's spoken form carries it for a screen reader. -->
+      <div class="behaviour-group-head">
+        <h2>${escapeHTML(group.name)}</h2>
+        <span class="depth-head">Depth, out of 4</span>
+      </div>
       <ul>
         ${group.behaviours.map(behaviour => {
           const checked = selected.has(behaviour.slug);
@@ -826,7 +831,8 @@ function renderBehaviourList() {
               <span class="behaviour-box" aria-hidden="true"></span>
               <span class="number">${String(behaviour.id).padStart(2, "0")}</span>
               <span class="name">${escapeHTML(behaviour.name)}</span>
-              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}"></span>
+              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}" aria-hidden="true"></span>
+              <span class="depth-spoken visually-hidden"></span>
             </label>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
@@ -861,7 +867,12 @@ function renderBehaviourList() {
  *
  * The mean of the panel's depths on the 0 to 4 scale, one figure per document on
  * screen, so comparing two documents puts two figures side by side. A cell with
- * no depth shows a dash: zero is a finding, a dash is the absence of one. */
+ * no depth shows a dash: zero is a finding, a dash is the absence of one.
+ *
+ * The figures are bare. The scale is said once, at the top of the column, in each
+ * group's heading ("Depth, out of 4"): "3.7 / 4" beside every name read poorly,
+ * and comparing already puts " / " between two documents' figures. A sentence
+ * that gives one depth on its own says the scale in that sentence. */
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
 /* The depth the index's panel gave a behaviour on a document, or null. Every read of
@@ -883,8 +894,18 @@ function panelDepth(behaviour, documentId) {
  * text, not three copies of the same wording. */
 function depthSummaryLine(doc, depth) {
   if (!depth) return `${doc.title} ${doc.version}: no depth given.`;
-  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} of 4, `
+  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} out of 4, `
     + `${DEPTH_WORDS[Math.round(depth.mean)]}.`;
+}
+
+/* The figures as a screen reader hears them beside the behaviour's name. The
+ * column's header, which gives sighted readers the scale, is not read with each
+ * value, so every value is spoken with its scale. */
+function depthSpoken(depths) {
+  if (!depths.some(Boolean)) return "no depth given";
+  return `depth ${depths
+    .map(depth => (depth ? `${depth.mean.toFixed(1)} out of 4` : "not given"))
+    .join(" and ")}`;
 }
 
 function updateBehaviourDepths() {
@@ -900,6 +921,9 @@ function updateBehaviourDepths() {
     cell.title = summary;
     const description = cell.closest(".behaviour-option-row")?.querySelector(".depth-description");
     if (description) description.textContent = summary;
+    // The figure is aria-hidden; this is the part of the checkbox's name that says it.
+    const spoken = cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken");
+    if (spoken) spoken.textContent = depthSpoken(depths);
   });
 }
 
