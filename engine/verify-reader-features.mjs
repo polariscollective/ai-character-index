@@ -19,6 +19,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -462,6 +463,58 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(pageErrors.length === 0, "translation notice: no console errors", pageErrors.join("; "));
   await clearDismissals();
   await page.setViewportSize({ width: 1280, height: 720 });
+}
+
+/* Every paragraph carries the locator the engine gives it, not only the passages a
+ * behaviour cites. The proof: every fixture passage, resolved the way the reader
+ * resolves it, lands on a block whose locator is the passage's own. Then the
+ * shapes where the rendered blocks and the engine's blocks part company: a list
+ * item and its nested items are one engine block, an example caption and its
+ * fence are one, a bare fence is numbered like a paragraph, and a heading is none.
+ * The expected locators are the engine's, from harness.passages() on the fixture. */
+{
+  const source = await resolverSource();
+  const totals = { passages: 0, mismatches: 0, unresolved: 0 };
+  const details = [];
+  for (const doc of fixtureDocs) {
+    const passages = keepSet.flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || []);
+    if (!passages.length) continue;
+    await at(`?spec=${encodeURIComponent(doc.id)}&behavior=`);
+    const proof = await proveDocument(page, passages, source);
+    totals.passages += proof.passages;
+    totals.mismatches += proof.mismatches;
+    totals.unresolved += proof.unresolved;
+    details.push(`${doc.id}: ${proof.passages} passages, ${proof.mismatches} mismatches,`
+      + ` ${proof.unresolved} unresolved ${JSON.stringify(proof.examples)}`);
+  }
+  check(totals.passages > 0 && totals.mismatches === 0 && totals.unresolved === 0,
+    "every fixture passage's block carries the passage's own locator", details.join("; "));
+
+  await at(`?spec=${DOC_ID}&behavior=`);
+  const located = await page.evaluate(() => {
+    const blocks = [...document.querySelectorAll(".document-body [data-block]")];
+    const find = (selector, text) => blocks.find(block => block.matches(selector) && block.textContent.includes(text));
+    const locator = block => (block ? block.dataset.locator ?? null : "not rendered");
+    return {
+      uncited: locator(find("p", "A blank line ends a block.")),
+      parentItem: locator(find("li", "A second item with a nested list under it")),
+      nestedItem: locator(find("li", "The nested content belongs to the item above")),
+      caption: locator(find("p", "a caption, followed by its fence")),
+      captionFence: locator(find("pre", "The fenced content belongs to the caption above it.")),
+      fence: locator(find("pre", "This is not a heading.")),
+      heading: locator(find("h2", "Blocks")),
+    };
+  });
+  const corpus = "acme--corpus@2026-01-01";
+  check(located.uncited === `${corpus} > #blocks > ¶1`,
+    "a paragraph no passage cites carries the engine's locator for it", JSON.stringify(located));
+  check(located.parentItem === `${corpus} > #lists > ¶3` && located.nestedItem === located.parentItem,
+    "a list item and its nested items carry the item's one locator", JSON.stringify(located));
+  check(located.caption === `${corpus} > #examples > ¶2` && located.captionFence === located.caption,
+    "an example caption and its fence carry one locator", JSON.stringify(located));
+  check(located.fence === `${corpus} > #fences > ¶2` && located.heading === null,
+    "a bare fence is numbered as the engine numbers it, and a heading carries no locator",
+    JSON.stringify(located));
 }
 
 // =============================================================================
