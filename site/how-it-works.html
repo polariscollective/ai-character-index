@@ -115,6 +115,12 @@
   section.m li::before { content: ""; position: absolute; top: .78em; left: 4px;
                          width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
   section.m li b { font-weight: 600; }
+  /* Steps to follow in order are numbered: the bullet's indent, with the number
+     where the chartreuse circle would be. */
+  section.m ol { max-width: 66ch; margin: 8px 0 16px; padding-left: 24px; }
+  section.m ol > li { padding-left: 4px; }
+  section.m ol > li::before { content: none; }
+  section.m ol > li::marker { color: var(--ink2); font-weight: 600; }
   code { font-family: var(--mono); font-size: 13px; color: var(--ink2);
          background: var(--lift); border: 1px solid var(--hair); padding: 0 4px; border-radius: 4px; }
   pre { max-width: 66ch; margin: 16px 0; padding: 16px; overflow-x: auto;
@@ -308,7 +314,11 @@
 
   /* ---------- the citation block ---------- */
   .cite-block { position: relative; margin: 0 0 16px; max-width: 66ch; }
-  .cite-block pre { margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
+  /* The figure holds the 66ch measure. The page's own pre cap is 66ch too, but
+     counted in the pre's 13px mono, which left the box narrower than its figure
+     and the button floating outside it. */
+  .cite-block pre { max-width: none;
+                    margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
                     border-radius: 4px; background: var(--lift); font-family: var(--mono);
                     font-size: 13px; line-height: 1.6; white-space: pre-wrap;
                     word-break: break-word; }
@@ -357,6 +367,49 @@
   </div>
 
   <div id="said-page" hidden></div>
+
+  <!-- The address is written out whole, not built from location.origin as the MCP
+       page builds it: Claude and ChatGPT reach a connector from their own servers,
+       so the public address is the only one worth copying from here. -->
+  <section class="m" id="your-assistant">
+    <h2>Use the index from your AI assistant</h2>
+    <p class="lead">Claude or ChatGPT can answer your questions about these documents from the
+    index itself, rather than from memory.</p>
+    <p>This works through MCP, the Model Context Protocol: a standard way to let an assistant look
+    things up in another service while it answers you. Connected to the index, your assistant can
+    quote the exact passages each lab&rsquo;s document gives on a behaviour, with their locators.
+    It only reads, and needs no account or key. Copy this address:</p>
+    <figure class="cite-block">
+      <pre id="mcp-url">https://ai-character-index.vercel.app/api/mcp</pre>
+      <button type="button" data-copy="mcp-url">Copy</button>
+    </figure>
+    <p><b>In Claude</b>, on claude.ai or the desktop app, on any plan as of September 2026 (the
+    free plan allows one connector):</p>
+    <ol>
+      <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
+      <li>Choose <b>+</b>, then <b>Add custom connector</b>.</li>
+      <li>Paste the address and choose <b>Add</b>. If it asks for a name, call it AI Character
+      Index; if it asks how people sign in, choose <b>No sign-in</b>.</li>
+      <li>In a conversation, open the <b>+</b> button, then <b>Connectors</b>, and check that AI
+      Character Index is switched on.</li>
+    </ol>
+    <p>On a Team or Enterprise plan, an owner adds it once under <b>Organization settings</b>,
+    <b>Connectors</b>, and you then choose <b>Connect</b> beside it.</p>
+    <p><b>In ChatGPT</b> on the web, you need developer mode, which OpenAI lists for Plus, Pro,
+    Business, Enterprise and Education accounts as of September 2026. Turn it on under
+    <b>Settings</b>, <b>Security and login</b>, then open
+    <a href="https://chatgpt.com/plugins" target="_blank" rel="noopener">Plugins</a>, choose the
+    plus button and paste the address as the MCP server URL, with no authentication. In a
+    conversation, pick <b>Developer mode</b> from the plus menu.</p>
+    <p>Then ask, for instance:</p>
+    <ul>
+      <li>What does OpenAI&rsquo;s Model Spec say about sycophancy? Quote the passages.</li>
+      <li>Where do Anthropic&rsquo;s constitution and Alibaba&rsquo;s model spec differ on user
+      autonomy?</li>
+    </ul>
+    <p>The <a href="/mcp">MCP page</a> lists the index&rsquo;s three tools, and the setup for
+    Claude Code and other clients.</p>
+  </section>
 
   <section class="m">
     <h2>The idea</h2>
