@@ -243,7 +243,7 @@ await at(`?compare=1`);
     "?compare=1 renders the chosen two documents",
     `${out.panels} panels, ${resizers} resizers`);
   check(out.toggle === "true", "compare toggle reflects ?compare=1");
-  check(out.link === "Original",
+  check(out.link === "Show original",
     "each pane links its own document rather than a shared 'Sources'", out.link);
 }
 await at("?embedded=1");
@@ -345,11 +345,14 @@ console.log("== Reader: compare is a two-document choice ==");
   check(c.a === DOC_B && c.b === DOC_ID,
     "?compare-with= restores the pair from a shared link", `${c.a} / ${c.b}`);
 
-  // Choosing the document already on the other side swaps rather than duplicating.
+  // Choosing the document already on the other side puts it on both sides. It
+  // used to swap the two instead, which quietly undid the choice the reader had
+  // just made; the operator asked that either side take any document, including
+  // the one already opposite.
   await pick("a", DOC_ID);
   c = await compareState();
-  check(c.a === DOC_ID && c.b !== DOC_ID,
-    "picking the other side's document swaps them instead of duplicating", `${c.a} / ${c.b}`);
+  check(c.a === DOC_ID && c.b === DOC_ID,
+    "picking the other side's document puts it on both sides", `${c.a} / ${c.b}`);
 
   // A stale or nonsense pair degrades to the first two documents rather than breaking.
   await load(base, "?compare=1&compare-with=nope,alsonope");

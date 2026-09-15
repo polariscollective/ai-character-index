@@ -769,7 +769,7 @@ body.resizing-columns {
 }
 
 .workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.compare-toggle, .source-link {
+.compare-toggle {
   min-height: 34px;
   padding: 8px 14px;
   border: 1px solid var(--muted);
@@ -780,6 +780,23 @@ body.resizing-columns {
   text-decoration: none;
   cursor: pointer;
   transition: background-color .15s ease, color .15s ease;
+}
+
+/* A link, not a button. It leaves the site for the publisher's own copy, which
+   is what a link does; the pill it used to wear made it read as one of the
+   controls that change what this page shows. */
+.source-link {
+  padding: 1px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-color: var(--energy);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color .15s ease;
 }
 .compare-toggle { display: inline-flex; align-items: center; gap: 8px; }
 .compare-toggle[aria-pressed="true"] { border-color: transparent; background: var(--accent); color: var(--on-accent); }
@@ -852,7 +869,9 @@ body.sidebar-collapsed .sidebar-resizer {
 
 .split-icon { width: 12px; height: 12px; display: inline-block; border: 1px solid currentColor; }
 .split-icon::after { content: ""; display: block; width: 1px; height: 100%; margin: 0 auto; background: currentColor; }
-.source-link:hover, .compare-toggle:hover { background: var(--energy); color: var(--ink); border-color: transparent; }
+.compare-toggle:hover { background: var(--energy); color: var(--ink); border-color: transparent; }
+/* The framework's link hover: the highlight fills behind the text, which stays ink. */
+.source-link:hover { background: var(--energy); color: var(--ink); }
 
 .finding-bar {
   min-height: 54px;
@@ -1015,6 +1034,15 @@ body.sidebar-collapsed .sidebar-resizer {
   gap: 6px 10px;
   color: var(--muted);
   font-size: 11px;
+}
+
+/* Comparing, this half is narrow enough that everything crowds the right edge
+   and wraps ragged. Spread it instead: the passage walk at the left of the
+   half, what changes the view at its right. At full width the right-aligned
+   cluster reads better, so the rule is scoped to compare. */
+.document-grid.compare .document-meta {
+  flex: 1;
+  justify-content: space-between;
 }
 .document-version { font-family: var(--mono); font-size: 11px; }
 .document-focus-toggle {
@@ -1637,12 +1665,14 @@ body.no-behaviours .sidebar-export { display: none; }
    read as a warning rather than blend into the header. --warn gold does not
    pass AA as text on paper, so the choice was --fail or nothing loud at all. */
 .document-translation {
-  flex-basis: 100%;
   margin: 0;
+  padding: 6px 24px;
+  border-bottom: 1px solid var(--line-light);
+  background: var(--chrome-deep);
   color: var(--fail);
   font-size: 11px;
   line-height: 1.4;
-  text-align: right;
+  text-align: center;
 }
 
 /* The mark that opens a passage's original. A glyph, not an icon: the framework

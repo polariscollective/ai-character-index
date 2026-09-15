@@ -704,12 +704,17 @@ function setupSidebarResizer() {
 
 /* Compare is a two-document view, and each side is chosen on its own.
  *
- * A pair naming the same document twice is kept rather than corrected: two
- * versions of one document are two documents, and the same version on both
- * sides is a reader's business, not a mistake to fix behind them. An id the
- * payload does not carry is another matter -- a stale ?compare-with= link, or a
- * publication that no longer holds that version -- and falls back to what a
- * comparison opens on, so the view renders something coherent either way. */
+ * A pair naming the same id twice is kept rather than corrected, because the
+ * operator asked that any document be placeable on either side. Two versions of
+ * one document were never the case at issue: an id carries its version, so
+ * openai--model-spec@2025-12-18 and @2026-08-18 are two ids and always paired.
+ * What this allows is the identical document on both sides, which is a reader
+ * lining up one text against itself -- and, before this, a choice the reader
+ * made that the reader silently overrode by swapping the sides.
+ *
+ * An id the payload does not carry is another matter -- a stale ?compare-with=
+ * link, or a publication that no longer holds that version -- and falls back to
+ * what a comparison opens on, so the view renders something either way. */
 function comparePair() {
   const ids = state.payload.documents.map(doc => doc.id);
   const [a, b] = state.comparePair || [];
@@ -1807,8 +1812,10 @@ const languageName = code => LANGUAGE_NAMES[code] || code;
 
 function translationNote(translation) {
   const by = TRANSLATOR_NAMES[translation.by] || translation.by;
-  return `Machine translation from ${languageName(translation.from)} by ${by}, `
-       + `${translation.reviewed ? "reviewed by a person" : "not reviewed by a person"}. `
+  // A review is worth saying; its absence is the ordinary case for a machine
+  // translation and saying so every time buys nothing but length.
+  return `Machine translation from ${languageName(translation.from)} by ${by}`
+       + `${translation.reviewed ? ", reviewed by a person" : ""}. `
        + "The index judged this translation.";
 }
 
@@ -1866,6 +1873,32 @@ function setupOriginalNotes(panel) {
     note.showPopover();
     placeUnder(note, button);
   });
+}
+
+/* A version label as a reader would say it: "14th of August 2026".
+ *
+ * The label is the date the publisher gave the document, and it is stored as
+ * one string because that is what a locator carries. A day of 00 says the
+ * publisher dated the month and no more, which is how Alibaba dates its Model
+ * Spec, so the label says the month and no more. Anything that is not a date in
+ * that shape passes through untouched: a publisher who labels a release "v3" is
+ * not wrong, and rewriting it would be this reader inventing a date. */
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+
+function ordinal(day) {
+  const tens = day % 100;
+  if (tens >= 11 && tens <= 13) return `${day}th`;
+  return `${day}${["th", "st", "nd", "rd"][day % 10] || "th"}`;
+}
+
+function versionLabel(version) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(version || "");
+  if (!parts) return version || "";
+  const [, year, month, day] = parts;
+  const name = MONTHS[Number(month) - 1];
+  if (!name) return version;
+  return day === "00" ? `${name} ${year}` : `${ordinal(Number(day))} of ${name} ${year}`;
 }
 
 /* Publishers, and what each publishes.
@@ -1938,7 +1971,7 @@ function renderDocument(doc) {
   panel.dataset.documentId = doc.id;
   renderProviderTabs(panel, doc);
   panel.querySelector(".document-name").textContent = doc.title;
-  panel.querySelector(".document-version").textContent = doc.version;
+  panel.querySelector(".document-version").textContent = versionLabel(doc.version);
   // Each panel points at its own source. That is the whole reason this link left
   // the row above: up there it could only ever name one of two documents, and
   // when comparing it gave up and said "Sources".
@@ -2194,7 +2227,7 @@ function openSpecPicker(button) {
     name.className = "spec-choice-lab";
     name.textContent = doc.title;
     const detail = document.createElement("small");
-    detail.textContent = doc.version;
+    detail.textContent = versionLabel(doc.version);
     option.append(name, detail);
     option.addEventListener("click", () => {
       picker.hidePopover();
@@ -2294,7 +2327,7 @@ function collectAnchors() {
       panel.querySelector(".passage-count").textContent =
         !payloadBehaviours().length ? "No behaviours under test"
         : !highlightsActive() ? "No behaviours selected"
-        : "No passages in this spec";
+        : "No passages";
     }
   });
   if (!panels().includes(state.activePanel)) state.activePanel = panels()[0] || null;

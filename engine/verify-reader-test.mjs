@@ -583,7 +583,7 @@ if (behaviours.length === 0) {
   report(
     !note.hidden
       && note.text.includes("Machine translation from Chinese by Claude Opus 5")
-      && note.text.includes("not reviewed by a person"),
+      && note.text.includes("The index judged this translation"),
     "translated · the header says whose translation was judged",
     note.text,
   );
@@ -642,6 +642,24 @@ if (behaviours.length === 0) {
     "translated · an unjudged document says so",
     unjudged.slice(0, 90),
   );
+}
+
+/* One document on both sides of a comparison.
+ *
+ * The pair used to be deduplicated, and choosing the document already opposite
+ * swapped the two sides instead. The operator asked for the opposite rule: any
+ * document may sit on either side, including the same one twice. It is a
+ * decision rather than an oversight, so it is pinned here -- an id carries its
+ * version, so this is the identical text twice and not two versions of one
+ * document, which was always a valid pair. */
+{
+  const [first] = documents;
+  await readView(`${base}?compare=1&compare-with=${encodeURIComponent(first.id)},${encodeURIComponent(first.id)}`);
+  const ids = await page.evaluate(() =>
+    [...document.querySelectorAll(".document-panel")].map(panel => panel.dataset.documentId));
+  report(ids.length === 2 && ids.every(id => id === first.id),
+         "compare · the same document may sit on both sides",
+         ids.join(" | "));
 }
 
 /* 404 audit: every path the page asks for must exist. There used to be one
