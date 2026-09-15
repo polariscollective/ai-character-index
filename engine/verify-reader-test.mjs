@@ -517,7 +517,9 @@ if (behaviours.length === 0) {
     || !markdown.includes(passage.role));
   const written = (markdown.match(/^#### /gm) || []).length;
   const hint = (await page.textContent("#download-hint")).trim();
-  const expectedHint = `${exported.length} behaviours, ${citations.length} passages, both specs`;
+  const expectedHint = `${exported.length} ${exported.length === 1 ? "behaviour" : "behaviours"}`
+    + `, ${citations.length} ${citations.length === 1 ? "passage" : "passages"}`
+    + `, ${documents.length} ${documents.length === 1 ? "document" : "documents"}`;
   report(
     missing.length === 0
       && written === citations.length

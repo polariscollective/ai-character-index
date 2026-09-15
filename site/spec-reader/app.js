@@ -1,5 +1,5 @@
 /*
- * Spec reader -- both specifications in full with a behaviour menu laid over them.
+ * Spec reader -- every specification in full with a behaviour menu laid over them.
  * The behaviour set and its per-passage citations come from a panel run
  * (engine/panel/build_site_data.py), served by /api/reader/payload and resolved
  * from a ?publication=<uuid> pin or the current publication (see loadBehaviours);
@@ -754,7 +754,7 @@ function renderBehaviourList() {
     elements.behaviourList.innerHTML = `
       <div class="behaviour-empty">
         <strong>No behaviours under test yet.</strong>
-        <p>Both specifications are shown here in full, with no passages highlighted.
+        <p>Every specification is shown here in full, with no passages highlighted.
         Behaviours appear in this menu once their passage mappings are published to this reader.</p>
       </div>`;
     updateExportControl();
@@ -875,8 +875,8 @@ function updateBehaviourCount() {
  * pasted into a review, diffed against a later spec version, or annotated by hand. So it
  * carries the whole citation and not just the quote: the definition the passage was read
  * against, the locator that pins it to a section of a pinned spec version, and the role
- * sentence saying why it was picked. Both specifications are written out whichever one is
- * open, because a behaviour's coverage is the pair -- and a spec that maps nothing to it
+ * sentence saying why it was picked. Every specification is written out whichever one is
+ * open, because a behaviour's coverage is the whole set -- and a spec that maps nothing to it
  * is a finding of the index, so it is named and stated rather than left out. */
 
 function paddedNumber(behaviour) {
@@ -902,9 +902,11 @@ function updateExportControl() {
     return;
   }
   const passages = selectedPassageTotal();
+  const documents = state.payload?.documents || [];
   elements.downloadHint.textContent =
     `${behaviours.length} ${behaviours.length === 1 ? "behaviour" : "behaviours"}`
-    + `, ${passages} ${passages === 1 ? "passage" : "passages"}, both specs`;
+    + `, ${passages} ${passages === 1 ? "passage" : "passages"}`
+    + `, ${documents.length} ${documents.length === 1 ? "document" : "documents"}`;
 }
 
 /* The reader's own date, not UTC: an export made in the evening is dated the day it was
@@ -1015,8 +1017,8 @@ function updateFindingBar(overlaps = null) {
     const loaded = payloadBehaviours().length;
     elements.findingBehaviour.textContent = loaded ? "No behaviours selected" : "No behaviour under test";
     elements.findingDefinition.textContent = loaded
-      ? "Both specifications are shown in full. Tick a behaviour in the menu to highlight the passages that bear on it."
-      : "Reading both specifications in full -- nothing is highlighted until a behaviour is published to this reader.";
+      ? "Every specification is shown in full. Tick a behaviour in the menu to highlight the passages that bear on it."
+      : "Reading every specification in full -- nothing is highlighted until a behaviour is published to this reader.";
     return;
   }
 
