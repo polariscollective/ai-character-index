@@ -90,6 +90,20 @@ async function loadBehaviourNotes() {
   }
 }
 
+/* The specification text, from the publication the payload resolved to.
+ *
+ * Documents are per publication and their ids carry a version, so a draft's
+ * payload beside the current publication's documents matches nothing: every
+ * tier reads 0 and the reader settles on a document the draft does not carry,
+ * which is what fetching them unpinned did. Read after loadBehaviours and from
+ * state.payloadSource rather than from the URL, so a pin that fell back reads
+ * the current publication's documents with its payload. */
+async function loadDocuments() {
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  return loadJSON(
+    pinned ? `${DOCUMENTS_URL}?publication=${encodeURIComponent(pinned)}` : DOCUMENTS_URL);
+}
+
 /* The note a reader opens beside a behaviour. It answers the question an
  * unexpected label raises -- where does this behaviour stop -- which the reader
  * could not answer at all: the passage popover says what the judges decided,
@@ -2735,13 +2749,13 @@ async function loadJSON(url) {
 async function initialize() {
   renderBehaviourList();
   try {
-    const [documents, behaviours] = await Promise.all([
-      loadJSON(DOCUMENTS_URL),
-      loadBehaviours(),
-    ]);
-    // Beside the payload, not before it: a note that fails to load must not stop
-    // the reader rendering, so it is awaited and its failure swallowed.
-    await loadBehaviourNotes();
+    // The payload first: which publication it resolved to decides where the
+    // documents and the behaviour notes are read from, so all three describe the
+    // same publication.
+    const behaviours = await loadBehaviours();
+    // The notes beside the documents, not before them: a note that fails to load
+    // must not stop the reader rendering, so its failure is swallowed.
+    const [documents] = await Promise.all([loadDocuments(), loadBehaviourNotes()]);
     state.rawBehaviours = behaviours.behaviours || [];
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();

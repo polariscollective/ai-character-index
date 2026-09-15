@@ -1,0 +1,87 @@
+{
+ "generatedFrom": [
+  "tests/fixtures/reader/draft (synthetic)"
+ ],
+ "provenance": {
+  "method": "fixture",
+  "rubric": "v5",
+  "panel_config": "fixture-draft",
+  "panel": [
+   "a",
+   "b",
+   "c"
+  ],
+  "judges_seen_in_data": [
+   "a",
+   "b",
+   "c"
+  ],
+  "runDate": "2026-08-18",
+  "scoring": "per passage: sum over judges of defining=3/core=2/related=1/neither=0"
+ },
+ "behaviours": [
+  {
+   "id": 1,
+   "slug": "draft-behaviour",
+   "name": "Draft behaviour",
+   "definition": "The document should say when it does not know.",
+   "category": "Behaviours under test",
+   "coverage": {
+    "nadir--charter@2026-08-18": {
+     "depth": {
+      "mean": 3.0,
+      "judges": {
+       "a": {
+        "depth": 3,
+        "rationale": "Rules, no examples."
+       },
+       "b": {
+        "depth": 3,
+        "rationale": "Rules, no examples."
+       },
+       "c": {
+        "depth": 3,
+        "rationale": "Rules, no examples."
+       }
+      }
+     },
+     "passages": [
+      {
+       "id": "charter-draft-behaviour-1",
+       "locator": "charter@2026-08-18 > #candour > ¶1",
+       "quote": "The assistant says what it means, and says plainly when it does not know.",
+       "role": "Model determined relevance (score 6/6):\n✓ a: core\n✓ b: core\n✓ c: core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    },
+    "nadir--charter@2026-06-01": {
+     "depth": null,
+     "passages": [
+      {
+       "id": "charter-june-draft-behaviour-1",
+       "locator": "charter@2026-06-01 > #candour > ¶1",
+       "quote": "The assistant says what it means.",
+       "role": "Model determined relevance (score 5/6):\n✓ a: core\n✓ b: core\n✓ c: adjacent",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 1
+       },
+       "score": 5
+      }
+     ]
+    }
+   }
+  }
+ ]
+}
