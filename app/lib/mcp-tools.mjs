@@ -214,7 +214,9 @@ export function retrievePassages({ publication, payload, documents }, args = {})
       + `${[...specById.keys()].join(", ")}`);
   }
 
-  const strength = args.strength || "core";
+  // Every band unless the caller narrows it, as the spec reader opens on every
+  // band. Each passage carries its strength, so a client can still filter.
+  const strength = args.strength || "related";
   if (!TIERS.includes(strength)) {
     throw new ToolError(`strength must be one of: ${TIERS.join(", ")}`);
   }
