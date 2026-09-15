@@ -347,6 +347,21 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
     next: !document.querySelector(".next-passage").disabled,
   }));
   check(prevNext.prev && prevNext.next, "prev/next passage buttons enabled with anchors present");
+  // Reading one document, the full sentence is the counter everyone sees; the
+  // short N/M form is compare mode's, where the row has half the width.
+  const counters = await page.evaluate(() => {
+    const full = document.querySelector(".passage-count");
+    const short = document.querySelector(".passage-count-short");
+    const box = full.getBoundingClientRect();
+    return {
+      full: full.textContent,
+      fullShown: box.width > 1 && box.height > 1 && getComputedStyle(full).clip === "auto",
+      shortShown: short ? getComputedStyle(short).display !== "none" : null,
+    };
+  });
+  check(counters.fullShown && /^\d+ of \d+ passages$/.test(counters.full) && counters.shortShown === false,
+    "one document: the full passage counter shows, and the compact one does not",
+    JSON.stringify(counters));
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 await page.click("#clear-behaviours");
@@ -649,7 +664,33 @@ await at("?compare=1");
       const rowRect = documentRow.getBoundingClientRect();
       const nRect = nav.getBoundingClientRect();
       const lRect = legend.getBoundingClientRect();
+      // The compact counter: "3/12" after the arrows, while "3 of 12 passages"
+      // stays the counter a screen reader reads.
+      const counter = panel.querySelector(".passage-count-short");
+      const full = panel.querySelector(".passage-count");
+      const next = panel.querySelector(".next-passage").getBoundingClientRect();
+      const cRect = counter?.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const anchors = panel._anchors || [];
+      const position = anchors.length ? `${panel._passageIndex + 1}/${anchors.length}` : "0/0";
       return {
+        counter: counter ? {
+          text: counter.textContent,
+          position,
+          // Visible: a box with area that the browser draws, not clipped away
+          // the way the full counter is in compare mode.
+          visible: cRect.width > 0 && cRect.height > 0 && counter.checkVisibility({ visibilityProperty: true })
+            && getComputedStyle(counter).clip === "auto",
+          inside: cRect.left >= headerRect.left && cRect.right <= headerRect.right
+            && cRect.top >= headerRect.top && cRect.bottom <= headerRect.bottom,
+          afterArrows: cRect.left - next.right,
+          centreDiff: (cRect.top + cRect.bottom) / 2 - (next.top + next.bottom) / 2,
+          spoken: full.textContent,
+          spokenMatches: anchors.length
+            ? full.textContent === `${panel._passageIndex + 1} of ${anchors.length} passages`
+            : !/\d/.test(full.textContent),
+          hiddenFromScreenReaders: counter.getAttribute("aria-hidden") === "true",
+        } : null,
         documentId: panel.dataset.documentId,
         hasBand: !panel.querySelector(".document-translation").hidden,
         // Left edge against the header's own content-left (its border box
@@ -675,6 +716,20 @@ await at("?compare=1");
       measured.map(p => `${p.documentId} left ${p.leftDiff.toFixed(1)}px, nav below ${p.navBelowIdentity.toFixed(1)}px,`
         + ` legend below ${p.legendBelowIdentity.toFixed(1)}px, centre diff ${p.centreDiff.toFixed(1)}px`)
         .join("; "));
+    // The passage counter came back in compare mode, compact: visible in both
+    // panels, on the arrows' row and to their right, saying where the walk is.
+    const counterDetail = measured.map(p => `${p.documentId} ${JSON.stringify(p.counter)}`).join("; ");
+    check(measured.every(p => p.counter?.visible && p.counter.inside),
+      `compare ${width}x${height}: the passage counter is visible in both panels, not clipped`,
+      counterDetail);
+    check(measured.every(p => p.counter && p.counter.afterArrows >= 0 && p.counter.afterArrows <= 12
+        && Math.abs(p.counter.centreDiff) <= 3),
+      `compare ${width}x${height}: the counter sits on the arrows' row, just to their right`,
+      counterDetail);
+    check(measured.every(p => p.counter && p.counter.text === p.counter.position
+        && p.counter.spokenMatches && p.counter.hiddenFromScreenReaders),
+      `compare ${width}x${height}: the counter reads N/M for the passage position,`
+        + " and the full sentence stays what a screen reader hears", counterDetail);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }

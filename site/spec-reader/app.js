@@ -2429,6 +2429,8 @@ function collectAnchors() {
         !payloadBehaviours().length ? "No behaviours under test"
         : !highlightsActive() ? "No behaviours selected"
         : "No passages";
+      const short = panel.querySelector(".passage-count-short");
+      if (short) short.textContent = "0/0";
     }
   });
   if (!panels().includes(state.activePanel)) state.activePanel = panels()[0] || null;
@@ -2438,11 +2440,16 @@ function panels() {
   return [...elements.documentReader.querySelectorAll(".document-panel")];
 }
 
+/* Two forms of one count. The sentence is what a screen reader hears everywhere
+ * and what a sighted reader sees on one document; comparing, the header has half
+ * the width and shows the short form after the arrows instead. */
 function updatePassageCount(panel) {
   const total = panel._anchors?.length || 0;
   if (!total) return;
   panel.querySelector(".passage-count").textContent =
     `${panel._passageIndex + 1} of ${total} passages`;
+  const short = panel.querySelector(".passage-count-short");
+  if (short) short.textContent = `${panel._passageIndex + 1}/${total}`;
 }
 
 function updateRails() {
