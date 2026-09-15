@@ -49,7 +49,7 @@ The two reader walkers serve `tests/fixtures/reader/` through `reader-routes.mjs
 
 ## provenance
 
-`verify_supabase_provenance.py` checks one publication: the newest public one, or the one `--publication=<uuid>` names, a draft included. It holds each stored payload to its digest, rebuilds the publication from its own cells, composes every boundary a judge would be sent, and re-resolves every locator the publication cites. The grandfathered publication is held to `published-artefacts.sha256.json` instead of being rebuilt. It needs credentials, and runs as `--publication=<uuid>` when a publication is built rather than on a schedule: the Supabase service role key is not a GitHub secret.
+`verify_supabase_provenance.py` checks one publication: the newest public one, or the one `--publication=<uuid>` names, a draft included. It holds each stored payload to its digest, rebuilds the publication from its own cells, composes every boundary a judge would be sent, and re-resolves every locator the publication cites. It needs credentials, and runs as `--publication=<uuid>` when a publication is built rather than on a schedule: the Supabase service role key is not a GitHub secret.
 
 ## notion-sync/ (Phase 3)
 
