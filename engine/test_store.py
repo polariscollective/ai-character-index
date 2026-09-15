@@ -1,7 +1,10 @@
 """Store tests. The transport is injected, so nothing here touches a network."""
+import io
 import json
 import sys
 import unittest
+import urllib.error
+from contextlib import redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -9,7 +12,12 @@ from store import Store, StoreError
 
 
 class FakeTransport:
-    """Records requests and replays canned responses."""
+    """Records requests and replays canned responses.
+
+    A response may be a raised exception instead of a (status, payload) pair,
+    which is how a test plays back a transient failure: `urlopen` itself
+    raises rather than returning a status.
+    """
 
     def __init__(self, responses=None):
         self.calls = []
@@ -19,13 +27,17 @@ class FakeTransport:
         self.calls.append({"method": method, "url": url,
                            "headers": headers, "body": body})
         if self.responses:
-            return self.responses.pop(0)
+            response = self.responses.pop(0)
+            if isinstance(response, BaseException):
+                raise response
+            return response
         return 200, b"[]"
 
 
 class StoreTest(unittest.TestCase):
-    def store(self, transport):
-        return Store("https://example.supabase.co", "KEY", transport=transport)
+    def store(self, transport, sleep=None):
+        return Store("https://example.supabase.co", "KEY",
+                    transport=transport, sleep=sleep)
 
     def test_select_builds_a_postgrest_query(self):
         t = FakeTransport([(200, b'[{"id": "anthropic"}]')])
@@ -95,6 +107,82 @@ class StoreTest(unittest.TestCase):
             self.store(t).insert("aci_spec_versions", [{"markdown": "x"}])
         self.assertIn("403", str(caught.exception))
         self.assertIn("permission denied", str(caught.exception))
+
+    # -- Retry: a request that failed before it could reach the database --
+    #
+    # A `URLError` that is not an `HTTPError` -- a TLS handshake timeout, a
+    # refused or reset connection, a DNS failure -- means `urlopen` never
+    # completed sending the request, so it is retried whatever the method.
+    # A failure while reading the response (a raw `TimeoutError`, or a
+    # `502`/`503`/`504` HTTP status) may already have reached the database,
+    # so it is retried only for an idempotent method: GET, PATCH, DELETE.
+    # A POST is never retried past the point of sending, since retrying an
+    # insert could duplicate a row.
+
+    def test_a_get_retries_a_handshake_timeout_and_then_returns_the_rows(self):
+        t = FakeTransport([
+            urllib.error.URLError("_ssl.c:993: The handshake operation timed out"),
+            urllib.error.URLError("_ssl.c:993: The handshake operation timed out"),
+            (200, b'[{"id": "anthropic"}]'),
+        ])
+        sleeps = []
+        rows = self.store(t, sleep=sleeps.append).select("aci_labs", {"limit": "1"})
+        self.assertEqual(rows, [{"id": "anthropic"}])
+        self.assertEqual(len(t.calls), 3)
+        self.assertEqual(sleeps, [2, 4])
+
+    def test_a_post_retries_a_url_error_before_the_connection_completed(self):
+        t = FakeTransport([
+            urllib.error.URLError("Connection refused"),
+            (200, b""),
+        ])
+        self.store(t, sleep=lambda seconds: None).insert(
+            "aci_judgements", [{"locator": "1"}])
+        self.assertEqual(len(t.calls), 2)
+        self.assertEqual(t.calls[0]["method"], "POST")
+
+    def test_a_post_is_not_retried_after_a_timeout_reading_the_response(self):
+        t = FakeTransport([TimeoutError("timed out")])
+        with self.assertRaises(TimeoutError):
+            self.store(t, sleep=lambda seconds: None).insert(
+                "aci_judgements", [{"locator": "1"}])
+        self.assertEqual(len(t.calls), 1)
+
+    def test_a_patch_retries_a_503_and_then_succeeds(self):
+        t = FakeTransport([(503, b'{"message":"upstream unavailable"}'),
+                           (200, b"")])
+        self.store(t, sleep=lambda seconds: None).update(
+            "aci_judge_calls", {"id": "abc"}, {"status": "done"})
+        self.assertEqual(len(t.calls), 2)
+
+    def test_a_400_is_not_retried(self):
+        t = FakeTransport([(400, b'{"message":"bad request"}')])
+        with self.assertRaises(StoreError):
+            self.store(t, sleep=lambda seconds: None).update(
+                "aci_judge_calls", {"id": "abc"}, {"status": "done"})
+        self.assertEqual(len(t.calls), 1)
+
+    def test_the_last_error_is_raised_once_retries_are_exhausted(self):
+        t = FakeTransport([urllib.error.URLError("Connection refused")] * 5)
+        sleeps = []
+        with self.assertRaises(urllib.error.URLError):
+            self.store(t, sleep=sleeps.append).select("aci_labs", {"limit": "1"})
+        self.assertEqual(len(t.calls), 5)
+        self.assertEqual(sleeps, [2, 4, 8, 16])
+
+    def test_a_retry_log_line_carries_no_key_or_header_value(self):
+        t = FakeTransport([urllib.error.URLError("Connection refused"),
+                           (200, b"[]")])
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            self.store(t, sleep=lambda seconds: None).select(
+                "aci_labs", {"limit": "1"})
+        logged = stderr.getvalue()
+        self.assertIn("GET", logged)
+        self.assertIn("aci_labs", logged)
+        self.assertNotIn("KEY", logged)
+        self.assertNotIn("Bearer", logged)
+        self.assertNotIn("apikey", logged)
 
 
 if __name__ == "__main__":
