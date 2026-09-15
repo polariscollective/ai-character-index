@@ -582,7 +582,12 @@ if (behaviours.length === 0) {
   }));
   report(
     !note.hidden
-      && note.text.includes("Machine translation from Chinese by Claude Opus 5")
+      // Both models named, both as names: the one translated document the index
+      // carries was written by one model and revised by another, and the field
+      // that says so is a sentence rather than a model id. Asserting the simple
+      // case is what let raw ids through into the band in the first place.
+      && note.text.includes(
+        "Machine translation from Chinese by Claude Opus 5, revised by Claude Fable 5")
       && note.text.includes("The index judged this translation"),
     "translated · the header says whose translation was judged",
     note.text,

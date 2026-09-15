@@ -1806,12 +1806,27 @@ function revealHashTarget() {
  * about. A value these maps do not carry prints as it stands: a note naming a
  * translator nobody has named before is worth more than one that says nothing. */
 const LANGUAGE_NAMES = { zh: "Chinese", en: "English", fr: "French", es: "Spanish" };
-const TRANSLATOR_NAMES = { "claude-opus-5": "Claude Opus 5" };
+const TRANSLATOR_NAMES = {
+  "claude-opus-5": "Claude Opus 5",
+  "claude-fable-5": "Claude Fable 5",
+};
 
 const languageName = code => LANGUAGE_NAMES[code] || code;
 
+/* Who translated it is free text on an insert-only column, not a model id. The
+   one translated document the index carries names two models and the parts the
+   second left untouched, so looking the whole field up as a key matched nothing
+   and printed raw ids into a sentence the public reads. Every known id is
+   replaced wherever it appears instead. An id we do not know still passes
+   through as written, which is what it did before, and the column cannot be
+   rewritten to suit us: aci_spec_versions takes inserts and nothing else. */
+function translatorNames(by) {
+  return Object.entries(TRANSLATOR_NAMES).reduce(
+    (said, [id, name]) => said.split(id).join(name), by || "");
+}
+
 function translationNote(translation) {
-  const by = TRANSLATOR_NAMES[translation.by] || translation.by;
+  const by = translatorNames(translation.by);
   // A review is worth saying; its absence is the ordinary case for a machine
   // translation and saying so every time buys nothing but length.
   return `Machine translation from ${languageName(translation.from)} by ${by}`
