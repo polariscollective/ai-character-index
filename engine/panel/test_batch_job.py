@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "engine" / "spec-cite"))
 import cite                      # noqa: E402
 import index as fixture          # noqa: E402
 import batch_job                 # noqa: E402
+from store import StoreError     # noqa: E402
 
 RUN = "run-1"
 SPEC_VERSION = "corpus"
@@ -44,11 +45,19 @@ class FakeStore:
             "aci_behaviours": [],
         }
         self.updates = []
+        self.insert_calls = []
 
     def select(self, table, params=None):
-        return [dict(r) for r in self.tables.get(table, [])]
+        rows = [dict(r) for r in self.tables.get(table, [])]
+        for column, value in (params or {}).items():
+            if column == "select" or not isinstance(value, str) or not value.startswith("eq."):
+                continue
+            want = value[len("eq."):]
+            rows = [r for r in rows if str(r.get(column)) == want]
+        return rows
 
     def insert(self, table, rows, chunk=1000):
+        self.insert_calls.append((table, chunk, len(rows)))
         self.tables.setdefault(table, []).extend(rows)
 
     def update(self, table, match, patch):
@@ -75,6 +84,19 @@ def depth_row(n, status="pending"):
 def zero_reply(passage_count):
     return lambda **kwargs: ("\n".join(f"[{i}]: 0" for i in range(1, passage_count + 1)),
                              {"prompt_tokens": 10, "completion_tokens": 5}, "stop", 0.1)
+
+
+class DuplicateOnceStore(FakeStore):
+    """A store whose judgements insert lands on the server -- the rows are
+    there afterwards -- but whose caller sees a 23505 duplicate-key failure
+    instead of a response, the way a lost network reply would look."""
+
+    def insert(self, table, rows, chunk=1000):
+        super().insert(table, rows, chunk=chunk)
+        if table == "aci_judgements":
+            raise StoreError(
+                'POST aci_judgements -> 409: duplicate key value violates unique '
+                'constraint "aci_judgements_call_id_locator_key" (23505)')
 
 
 class BatchJobTest(unittest.TestCase):
@@ -143,6 +165,77 @@ class BatchJobTest(unittest.TestCase):
         report = self.go(store, concurrency=1)
         self.assertEqual(report["attempted"], 0)
         self.assertEqual(len(store.tables["aci_judgements"]), before)
+
+    def test_a_call_whose_judgements_are_already_stored_finishes_without_paying_again(self):
+        store = FakeStore([call_row(1, "sol")])
+        store.tables["aci_judgements"] = batch_job.judge_call.judgements(
+            "call-1", self.passages, {i + 1: 2 for i in range(len(self.passages))})
+        called = []
+
+        def boom(**kwargs):
+            called.append(1)
+            return good_reply(len(self.passages))(**kwargs)
+
+        report = self.go(store, model=boom, concurrency=1)
+        self.assertEqual(called, [])
+        self.assertEqual(report["done"], 1)
+        self.assertEqual(store.insert_calls, [])
+        call = next(c for c in store.tables["aci_judge_calls"] if c["id"] == "call-1")
+        self.assertEqual(call["status"], "done")
+        self.assertIsNone(call["error"])
+        self.assertEqual(len(store.tables["aci_judgements"]), len(self.passages))
+
+    def test_a_call_with_a_partial_set_stored_becomes_error_without_calling_the_model(self):
+        store = FakeStore([call_row(1, "sol")])
+        full = batch_job.judge_call.judgements(
+            "call-1", self.passages, {i + 1: 2 for i in range(len(self.passages))})
+        store.tables["aci_judgements"] = full[:5]
+        called = []
+
+        def boom(**kwargs):
+            called.append(1)
+            return good_reply(len(self.passages))(**kwargs)
+
+        report = self.go(store, model=boom, concurrency=1)
+        self.assertEqual(called, [])
+        self.assertEqual(report["failed"], 1)
+        call = next(c for c in store.tables["aci_judge_calls"] if c["id"] == "call-1")
+        self.assertEqual(call["status"], "error")
+        self.assertIn(f"5 of {len(self.passages)}", call["error"])
+        self.assertIn("compose a new run", call["error"])
+        self.assertEqual(len(store.tables["aci_judgements"]), 5)
+
+    def test_a_call_that_previously_failed_ends_done_with_its_error_cleared(self):
+        store = FakeStore([call_row(1, "sol", error="Invalid Anthropic API Key")])
+        report = self.go(store, concurrency=1)
+        self.assertEqual(report["done"], 1)
+        call = next(c for c in store.tables["aci_judge_calls"] if c["id"] == "call-1")
+        self.assertEqual(call["status"], "done")
+        self.assertIsNone(call["error"])
+
+    def test_a_duplicate_key_insert_leaves_the_call_done_and_does_not_crash_the_run(self):
+        store = DuplicateOnceStore([call_row(1, "sol")])
+        report = self.go(store, concurrency=1)
+        self.assertEqual(report["done"], 1)
+        self.assertEqual(report["failed"], 0)
+        call = next(c for c in store.tables["aci_judge_calls"] if c["id"] == "call-1")
+        self.assertEqual(call["status"], "done")
+        self.assertIsNone(call["error"])
+        self.assertEqual(len(store.tables["aci_judgements"]), len(self.passages))
+
+    def test_a_call_with_more_than_a_thousand_passages_is_inserted_in_one_post(self):
+        passages = [(f"loc-{i}", "Section", f"text {i}") for i in range(1500)]
+        store = FakeStore([call_row(1, "sol")])
+        report = batch_job.run(store, RUN, call_model=good_reply(len(passages)),
+                               registry=self.registry,
+                               passages_for=lambda spec, version: passages,
+                               concurrency=1)
+        self.assertEqual(report["done"], 1)
+        judgement_inserts = [c for c in store.insert_calls if c[0] == "aci_judgements"]
+        self.assertEqual(len(judgement_inserts), 1)
+        _table, chunk, n = judgement_inserts[0]
+        self.assertEqual(n, 1500)
+        self.assertGreaterEqual(chunk, 1500)
 
     def test_the_run_is_finished_with_its_cost_summed_from_its_calls(self):
         store = FakeStore([call_row(1, "sol")])

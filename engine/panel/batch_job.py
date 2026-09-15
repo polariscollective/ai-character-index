@@ -40,7 +40,7 @@ import index_store               # noqa: E402
 import judge_call                # noqa: E402
 import bands                     # noqa: E402
 import depth_call                # noqa: E402
-from store import Store          # noqa: E402
+from store import Store, StoreError  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "harness.py")
 h = importlib.util.module_from_spec(_spec)
@@ -169,6 +169,23 @@ def run(store, run_id, call_model=None, registry=None, passages_for=None,
     return report
 
 
+def stored_count(store, call_id):
+    """How many judgements are already written for this call.
+
+    One small read, filtered on `call_id`, never the whole table: a relaunch
+    checks this before paying for the model again, and the insert path
+    re-checks it after a duplicate-key failure to tell a landed write from a
+    partial one.
+    """
+    return len(store.select("aci_judgements", {"call_id": f"eq.{call_id}"}))
+
+
+def partial_stored_error(stored, total):
+    return (f"this call holds {stored} of {total} judgements from an earlier "
+            f"attempt and cannot be completed in place (the job has insert-only "
+            f"access to aci_judgements): compose a new run for this cell.")
+
+
 def one_call(store, call, run_row, registry, passages_for, versions,
              call_model, config, report, lock):
     store.update("aci_judge_calls", {"id": call["id"]},
@@ -178,6 +195,32 @@ def one_call(store, call, run_row, registry, passages_for, versions,
 
     version = versions[call["spec_version_id"]]
     passages = passages_for(version["spec_id"], version["version"])
+
+    stored = stored_count(store, call["id"])
+    if stored == len(passages):
+        # A relaunch of a call whose earlier attempt stored every judgement but
+        # died before the done PATCH (step 4 succeeded, step 5 never ran). The
+        # reply is fully on record: finish the call without paying for the
+        # model again. Whatever meter the row already carries is kept as is --
+        # the crashed attempt's usage was never written, and none is invented.
+        store.update("aci_judge_calls", {"id": call["id"]}, {
+            "status": "done", "error": None, "finished_at": now(),
+            "passages": len(passages)})
+        with lock:
+            report["done"] += 1
+        return
+    if stored:
+        # A partial set from an earlier attempt. The job cannot delete the
+        # stray rows (insert-only) and cannot tell which passages are missing
+        # without risking a second duplicate, so it does not call the model
+        # again and does not touch aci_judgements.
+        store.update("aci_judge_calls", {"id": call["id"]}, {
+            "status": "error", "finished_at": now(),
+            "error": partial_stored_error(stored, len(passages))})
+        with lock:
+            report["failed"] += 1
+        return
+
     rubric = run_row["rubric"]
     system, user = judge_call.compose(call["behaviour_slug"], rubric, registry, passages)
     provider, model_id = h.resolve(call["model"], config)
@@ -214,9 +257,32 @@ def one_call(store, call, run_row, registry, passages_for, versions,
             report["failed"] += 1
         return
 
-    store.insert("aci_judgements",
-                 judge_call.judgements(call["id"], passages, verdicts))
-    store.update("aci_judge_calls", {"id": call["id"]}, dict(meter, status="done"))
+    rows = judge_call.judgements(call["id"], passages, verdicts)
+    try:
+        # One POST whatever the passage count, so a death mid-insert can never
+        # again leave "some but not all" of a call's judgements stored.
+        store.insert("aci_judgements", rows, chunk=max(len(rows), 1))
+    except StoreError as failed_insert:
+        if "23505" not in str(failed_insert):
+            raise
+        # The insert may have landed before its response was lost -- that is
+        # exactly what a 409 duplicate on this table means. Re-count rather
+        # than assume either outcome.
+        landed = stored_count(store, call["id"])
+        if landed == len(passages):
+            store.update("aci_judge_calls", {"id": call["id"]},
+                         dict(meter, status="done", error=None))
+            with lock:
+                report["done"] += 1
+            return
+        store.update("aci_judge_calls", {"id": call["id"]}, dict(meter, **{
+            "status": "error", "error": partial_stored_error(landed, len(passages))}))
+        with lock:
+            report["failed"] += 1
+        return
+
+    store.update("aci_judge_calls", {"id": call["id"]},
+                 dict(meter, status="done", error=None))
     with lock:
         report["done"] += 1
 
