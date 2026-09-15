@@ -4,8 +4,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { currentPublication, isPublicationId, publicationColumn, readerResponse,
-         SERVES_DEVELOPMENT } from "../publications.mjs";
+import { currentPublication, isPublicationId, publicationColumn, publicationRow,
+         readerResponse, SERVES_DEVELOPMENT } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
@@ -92,6 +92,16 @@ test("a pin asks for that publication", async () => {
   // A pin reaches a draft: previewing what is about to be published is the
   // whole point of having a draft at all.
   assert.doesNotMatch(calls[0].url, /is_public/);
+});
+
+/* A surface that cites a build has to know whether anyone published it: served
+ * a draft, by a pin or by a development deployment, a citation calling it the
+ * index's data would be a false claim made by the page. */
+test("the publication's identity says whether it was published", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID, published_at: "2026-09-10", is_public: false }]);
+  const row = await publicationRow(ID, fetchImpl);
+  assert.match(calls[0].url, /select=[^&]*is_public/);
+  assert.equal(row.is_public, false);
 });
 
 test("the key travels in both headers and never in the body", async () => {

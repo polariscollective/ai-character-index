@@ -108,8 +108,12 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
  * and the digests that say the bytes have not moved since.
  */
 export async function publicationRow(id, fetchImpl = fetch) {
+  // is_public travels with the identity because a surface that cites a build has
+  // to know whether anyone published it: on a development deployment this row
+  // can be a draft, and a citation that called it the index's published data
+  // would be a false claim made by the page rather than by anyone.
   const columns = "id,published_at,published_by,notes,panel,rubric,grandfathered,"
-                + "payload_sha256,documents_sha256";
+                + "is_public,payload_sha256,documents_sha256";
   const query = id
     ? `id=eq.${id}&select=${columns}`
     : `select=${columns}&${currentPublication()}`;
