@@ -172,6 +172,32 @@ await at(`?publication=${DRAFT_PUBLICATION}`);
   check(errors.length === 0, "a pinned draft: no console errors", errors.join("; "));
 }
 
+/* A quote that carries its example's code after a short bold intro, flattened into
+ * one string, the shape six passages of the Alibaba publication have. The reader
+ * renders the intro and the fence as two blocks, so the quote resolves on the intro
+ * and the fence is highlighted as its continuation. The draft carries one. */
+await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
+  + "&behavior=draft-behaviour&tiers=defining,core,related");
+{
+  const seen = await page.evaluate(() => {
+    const status = document.querySelector("#reader-status");
+    const anchor = [...document.querySelectorAll("[data-passage-id]")]
+      .find(block => /Keep the boundary/.test(block.textContent));
+    let code = anchor?.nextElementSibling;
+    while (code && !code.classList.contains("code-block")) code = code.nextElementSibling;
+    return {
+      unresolved: status.classList.contains("visible") ? status.textContent : "",
+      anchored: Boolean(anchor),
+      codeHighlighted: Boolean(code?.classList.contains("passage")),
+    };
+  });
+  check(seen.unresolved === "" && seen.anchored,
+    "a quote carrying its example's code after the intro resolves, with no unresolved anchors",
+    JSON.stringify(seen));
+  check(seen.codeHighlighted,
+    "the example's code block is highlighted as that passage's continuation", JSON.stringify(seen));
+}
+
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
 await at("");
