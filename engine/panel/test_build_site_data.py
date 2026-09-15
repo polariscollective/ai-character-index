@@ -1,6 +1,7 @@
 """The behaviour payload: which behaviours, filed under which document, carrying
 what. The database is not touched: the pure functions main() composes are."""
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -67,6 +68,71 @@ class BuildTest(unittest.TestCase):
                                              PANEL, DISPLAY)
         self.assertEqual([len(animal["coverage"][d]["passages"]) for d in (OLD, NEW)], [1, 1])
         self.assertEqual([strict["coverage"][d]["passages"] for d in (OLD, NEW)], [[], []])
+
+
+FILTERED = "fable's output was content-filtered on every attempt."
+SWAP = [{"seat": "fable", "substitute": "opus", "reason": FILTERED}]
+
+
+def row(model, document, **extra):
+    return {"behaviour": "b", "locator": f"{document} > #x > ¶1", "model": model,
+            "verdict": 2, "relevant": 1, "parsed": True, "rubric": "v5"} | extra
+
+
+class SubstitutionTest(unittest.TestCase):
+    """A cell judged with a recorded substitute is built from the substitute's
+    verdicts in the seat's place, and says so. A cell without one is exactly what
+    it was, down to the bytes."""
+
+    SUBSTITUTIONS = {("b", OLD): SWAP}
+
+    def test_the_substitute_votes_in_the_seat_s_place_on_its_cell(self):
+        self.assertTrue(bs.admits(row("opus", OLD), "v5", PANEL, self.SUBSTITUTIONS))
+        self.assertFalse(bs.admits(row("fable", OLD), "v5", PANEL, self.SUBSTITUTIONS))
+        self.assertTrue(bs.admits(row("sol", OLD), "v5", PANEL, self.SUBSTITUTIONS))
+
+    def test_a_substitution_reaches_no_other_cell(self):
+        self.assertFalse(bs.admits(row("opus", NEW), "v5", PANEL, self.SUBSTITUTIONS))
+        self.assertTrue(bs.admits(row("fable", NEW), "v5", PANEL, self.SUBSTITUTIONS))
+        self.assertFalse(bs.admits(row("opus", OLD, behaviour="c"), "v5", PANEL,
+                                   self.SUBSTITUTIONS))
+
+    def test_the_rubric_and_the_parse_still_decide_first(self):
+        self.assertFalse(bs.admits(row("opus", OLD, rubric="v3"), "v5", PANEL,
+                                   self.SUBSTITUTIONS))
+        self.assertFalse(bs.admits(row("opus", OLD, parsed=False), "v5", PANEL,
+                                   self.SUBSTITUTIONS))
+        self.assertTrue(bs.admits(row("sol", NEW), "v5", PANEL))
+
+    def test_a_substitution_is_filed_under_its_own_cell_of_its_own_run(self):
+        """A run can carry a substitution on a cell a publication took from another
+        run. That cell was judged by the panel, and must not be read as seated."""
+        versions = {"v-old": {"spec_id": "openai--model-spec", "version": "2025-12-18"},
+                    "v-new": {"spec_id": "openai--model-spec", "version": "2026-08-18"}}
+        cells = [{"run_id": "r1", "behaviour_slug": "b", "spec_version_id": "v-old"},
+                 {"run_id": "r2", "behaviour_slug": "b", "spec_version_id": "v-new"}]
+        recorded = {("r1", "b", "v-old"): SWAP, ("r1", "b", "v-new"): SWAP}
+        self.assertEqual(bs.cell_substitutions(recorded, cells, versions),
+                         {("b", OLD): SWAP})
+
+    def test_a_substituted_cell_carries_the_substitution_and_the_substitute_s_verdicts(self):
+        votes = {("b", f"{OLD} > #x > ¶1"): {"sol": 2, "opus": 3, "deepseek": 2},
+                 ("b", f"{NEW} > #x > ¶1"): {"sol": 3, "fable": 2, "deepseek": 2}}
+        [built] = bs.build_behaviours(BRAVO, votes, TEXT, [OLD, NEW], {}, PANEL, DISPLAY,
+                                      self.SUBSTITUTIONS)
+        old = built["coverage"][OLD]
+        self.assertEqual(old["substitutions"], SWAP)
+        self.assertEqual(old["passages"][0]["verdicts"], {"deepseek": 2, "opus": 3, "sol": 2})
+        self.assertIn("Claude Opus 4.8", old["passages"][0]["role"])
+        self.assertNotIn("substitutions", built["coverage"][NEW])
+
+    def test_a_cell_without_a_substitution_is_byte_identical(self):
+        before = bs.build_behaviours(BRAVO, VOTES, TEXT, [OLD, NEW], {}, PANEL, DISPLAY)
+        after = bs.build_behaviours(BRAVO, VOTES, TEXT, [OLD, NEW], {}, PANEL, DISPLAY,
+                                    {("elsewhere", OLD): SWAP})
+        serialise = lambda built: json.dumps(built, indent=1, ensure_ascii=False)  # noqa: E731
+        self.assertEqual(serialise(after), serialise(before))
+        self.assertEqual(list(after[0]["coverage"][OLD]), ["depth", "passages"])
 
 
 if __name__ == "__main__":

@@ -20,6 +20,12 @@ a rule that lives in the code that happens to write the row is not a rule.
 
 The panel is the configuration's display panel, the one the index publishes, and
 every cell must also carry a depth from each of its run's judges.
+
+"Exactly the panel" means the panel as the cell was seated. A judge that cannot
+answer a cell at all is replaced there, and `aci_seat_substitutions` records it;
+a cell is then held to the panel with that seat given to its substitute, which is
+the rule the trigger applies. A substitute nobody recorded is refused like any
+other stranger in a seat.
 """
 
 import argparse
@@ -37,6 +43,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
 
 import index_store               # noqa: E402
+import seat_substitutions        # noqa: E402
 from store import Store          # noqa: E402
 
 # How each builder serialises, which is what its digest describes. They differ,
@@ -70,15 +77,27 @@ def panel_seats(config, name):
     return sorted(seats)
 
 
-def require_depths(store, cells):
+def require_depths(store, cells, panel):
     """Refuse a publication any of whose cells lacks a depth from every judge of
-    its run, naming them all at once."""
+    its run, naming them all at once.
+
+    Every judge means the panel as the cell was seated. A depth from the seat is
+    not a depth from its substitute: the cell's verdicts are the substitute's, so
+    its depth must be too."""
     given = index_store.cell_depths(store, cells)
+    recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+
+    def complete(cell):
+        depth = given.get((cell["behaviour_slug"], cell["spec_version_id"]))
+        seated = seat_substitutions.seats(panel, recorded.get(
+            (cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]), ()))
+        return depth is not None and sorted(depth["judges"]) == seated
+
     missing = sorted(
         f"{c['behaviour_slug']} x {versions[c['spec_version_id']]['spec_id']}"
         f"@{versions[c['spec_version_id']]['version']}"
-        for c in cells if (c["behaviour_slug"], c["spec_version_id"]) not in given)
+        for c in cells if not complete(c))
     if missing:
         raise SystemExit(
             "these cells have no depth from every judge of their run:\n  "
@@ -94,9 +113,16 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     three are not the same claim, and a publication that mixed them would compare
     labs on unequal evidence -- which is what the bench inherited from before this
     rule does, and why it is the one grandfathered exemption.
+
+    The panel is compared as each cell of each run was seated: a recorded
+    substitution gives its seat to the substitute for that cell of that run and
+    nowhere else.
     """
     runs = {run["id"]: run for run in store.select("aci_runs")}
     want = sorted(panel)
+    recorded = seat_substitutions.recorded(
+        store, behaviour_slug=behaviours,
+        spec_version_id=[version["id"] for version in spec_versions])
 
     done = {}
     for call in store.select("aci_judge_calls"):
@@ -111,7 +137,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
             answers = [
                 runs[run_id] for (run_id, b, v), models in done.items()
                 if b == slug and v == version["id"]
-                and sorted(models) == want
+                and sorted(models) == seat_substitutions.seats(
+                    want, recorded.get((run_id, b, v), ()))
                 and runs[run_id]["rubric"] == rubric
             ]
             if not answers:
@@ -125,7 +152,9 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
             "no run judged these cells with exactly this panel "
             f"({', '.join(want)}), rubric {rubric}:\n  "
             + "\n  ".join(unanswered)
-            + "\nCompose and run the missing calls, or publish a smaller grid.")
+            + "\nCompose and run the missing calls, or publish a smaller grid. A cell "
+            "a seat cannot answer is judged by a substitute only once "
+            "aci_seat_substitutions records it for that cell of that run.")
     return cells
 
 
@@ -171,7 +200,7 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     panel = panel_seats(config, panel_name)
     versions = document_versions(store, document_ids)
     cells = choose_cells(store, behaviours, versions, panel, rubric)
-    require_depths(store, cells)
+    require_depths(store, cells, panel)
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)
     documents, documents_sha256 = build("documents", cells, behaviours)

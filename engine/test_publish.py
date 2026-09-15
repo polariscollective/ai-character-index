@@ -22,11 +22,23 @@ import publish                     # noqa: E402
 
 
 class FakeStore:
+    """Tables in memory. The two PostgREST filters the engine sends, `eq.` and
+    `in.(...)`, are honoured, so a filter written wrongly narrows to nothing here
+    as it would against the database."""
+
     def __init__(self, **tables):
         self.tables = tables
 
     def select(self, table, params=None):
-        return self.tables.get(table, [])
+        rows = self.tables.get(table, [])
+        for column, condition in (params or {}).items():
+            operator, _, value = condition.partition(".")
+            if operator == "eq":
+                rows = [row for row in rows if str(row.get(column)) == value]
+            elif operator == "in":
+                wanted = {v.strip('"') for v in value[1:-1].split(",")}
+                rows = [row for row in rows if str(row.get(column)) in wanted]
+        return rows
 
 
 PANEL = ["deepseek", "fable", "sol"]
@@ -39,9 +51,10 @@ def calls(run_id, slug, version_id, models, status="done"):
              "model": model, "status": status} for model in models]
 
 
-def store(runs, judge_calls, versions=(V1, V2)):
+def store(runs, judge_calls, versions=(V1, V2), substitutions=()):
     return FakeStore(aci_runs=runs, aci_judge_calls=judge_calls,
-                     aci_spec_versions=list(versions))
+                     aci_spec_versions=list(versions),
+                     aci_seat_substitutions=list(substitutions))
 
 
 class ChooseCellsTest(unittest.TestCase):
@@ -123,6 +136,82 @@ class ChooseCellsTest(unittest.TestCase):
         self.assertEqual(len(cells), 1)
 
 
+HARM = "harm-avoidance-to-third-parties"
+SEATED = ["deepseek", "opus", "sol"]
+FILTERED = "fable's output was content-filtered on every attempt."
+
+
+def substitution(run_id, slug=HARM, version_id="v2", seat="fable", substitute="opus"):
+    return {"run_id": run_id, "behaviour_slug": slug, "spec_version_id": version_id,
+            "seat": seat, "substitute": substitute, "reason": FILTERED,
+            "added_by": "test", "added_at": "2026-09-15"}
+
+
+class SubstitutionTest(unittest.TestCase):
+    """A judge that cannot answer a cell at all is replaced there, and the
+    replacement is recorded. The recorded row is what makes the substitute a seat:
+    the same three models without it are refused, exactly as the trigger refuses
+    them."""
+
+    RUN = {"id": "r1", "rubric": "v5", "created_at": "2026-09-15"}
+
+    def test_a_cell_judged_with_a_recorded_substitute_is_taken(self):
+        s = store([self.RUN], calls("r1", HARM, "v2", SEATED),
+                  substitutions=[substitution("r1")])
+        cells = publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+        self.assertEqual(cells, [{"behaviour_slug": HARM, "spec_version_id": "v2",
+                                  "run_id": "r1"}])
+
+    def test_a_substitute_nobody_recorded_is_not_the_panel(self):
+        s = store([self.RUN], calls("r1", HARM, "v2", SEATED))
+        with self.assertRaises(SystemExit) as refused:
+            publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+        self.assertIn(f"{HARM} x model-spec@2025-12-18", str(refused.exception))
+
+    def test_a_substitution_answers_for_its_own_cell_only(self):
+        s = store([self.RUN],
+                  calls("r1", HARM, "v1", SEATED) + calls("r1", HARM, "v2", SEATED),
+                  substitutions=[substitution("r1", version_id="v2")])
+        with self.assertRaises(SystemExit) as refused:
+            publish.choose_cells(s, [HARM], [V1, V2], PANEL, "v5")
+        self.assertIn(f"{HARM} x constitution@2026-01-20", str(refused.exception))
+        self.assertNotIn(f"{HARM} x model-spec", str(refused.exception))
+
+    def test_a_substitution_answers_for_its_own_run_only(self):
+        """The same cell judged again is a new asking, held to the panel."""
+        s = store([self.RUN, {"id": "r2", "rubric": "v5", "created_at": "2026-09-16"}],
+                  calls("r2", HARM, "v2", SEATED),
+                  substitutions=[substitution("r1")])
+        with self.assertRaises(SystemExit):
+            publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+
+    def test_once_substituted_the_seat_itself_is_not_the_panel(self):
+        """The trigger holds the cell to the panel as seated, so a run where the
+        seat answered after all does not match the recorded substitution."""
+        s = store([self.RUN], calls("r1", HARM, "v2", PANEL),
+                  substitutions=[substitution("r1")])
+        with self.assertRaises(SystemExit):
+            publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+
+    def test_the_seat_and_its_substitute_together_are_four_judges(self):
+        s = store([self.RUN], calls("r1", HARM, "v2", PANEL + ["opus"]),
+                  substitutions=[substitution("r1")])
+        with self.assertRaises(SystemExit):
+            publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+
+    def test_a_substitution_for_a_seat_this_panel_does_not_have_changes_nothing(self):
+        s = store([self.RUN], calls("r1", HARM, "v2", PANEL),
+                  substitutions=[substitution("r1", seat="kimi", substitute="kimi-k2")])
+        [cell] = publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "r1")
+
+    def test_the_refusal_says_a_substitution_can_be_recorded(self):
+        s = store([self.RUN], calls("r1", HARM, "v2", SEATED))
+        with self.assertRaises(SystemExit) as refused:
+            publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+        self.assertIn("aci_seat_substitutions", str(refused.exception))
+
+
 class DocumentVersionsTest(unittest.TestCase):
     def test_the_versions_named_are_the_versions_published(self):
         older = {"id": "v0", "spec_id": "constitution", "version": "2025-05-01"}
@@ -148,20 +237,40 @@ class PanelTest(unittest.TestCase):
 class DepthsTest(unittest.TestCase):
     CELL = {"run_id": "r1", "behaviour_slug": "helpfulness", "spec_version_id": "v1"}
 
-    def store(self, depth_statuses):
+    def store(self, depth_statuses, models=PANEL, substitutions=()):
         return FakeStore(
             aci_judge_calls=[{"id": f"c-{m}", **calls("r1", "helpfulness", "v1", [m])[0]}
-                             for m in PANEL],
+                             for m in models],
             aci_depths=[{"call_id": f"c-{m}", "status": s, "depth": 2, "rationale": ""}
-                        for m, s in zip(PANEL, depth_statuses)],
-            aci_spec_versions=[V1, V2])
+                        for m, s in zip(models, depth_statuses)],
+            aci_spec_versions=[V1, V2],
+            aci_seat_substitutions=list(substitutions))
 
     def test_a_cell_with_every_depth_passes(self):
-        publish.require_depths(self.store(["done", "done", "done"]), [self.CELL])
+        publish.require_depths(self.store(["done", "done", "done"]), [self.CELL], PANEL)
 
     def test_a_cell_missing_a_depth_is_refused_and_named(self):
         with self.assertRaises(SystemExit) as refused:
-            publish.require_depths(self.store(["done", "error", "done"]), [self.CELL])
+            publish.require_depths(self.store(["done", "error", "done"]), [self.CELL], PANEL)
+        self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+    def test_a_substituted_cell_needs_a_depth_from_its_substitute(self):
+        recorded = [substitution("r1", slug="helpfulness", version_id="v1")]
+        publish.require_depths(
+            self.store(["done", "done", "done"], SEATED, recorded), [self.CELL], PANEL)
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_depths(
+                self.store(["done", "error", "done"], SEATED, recorded), [self.CELL], PANEL)
+        self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+    def test_a_depth_from_the_seat_does_not_stand_in_for_its_substitute(self):
+        """Depth completeness is counted over the seats as substituted. Three
+        depths from the panel as configured are not three depths from the panel
+        this cell was judged by."""
+        recorded = [substitution("r1", slug="helpfulness", version_id="v1")]
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_depths(
+                self.store(["done", "done", "done"], PANEL, recorded), [self.CELL], PANEL)
         self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
 
 

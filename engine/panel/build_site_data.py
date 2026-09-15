@@ -30,6 +30,12 @@ its set; no human verdict is read. A passage is filed under the document its
 locator names: the head of a locator, `<spec id>@<version>`, is the document's
 id. Each cell carries the depth its run's judges gave it.
 
+A cell a seat could not answer, and whose substitute `aci_seat_substitutions`
+records, is built from the substitute's verdicts in that seat's place, and its
+coverage entry carries `substitutions`: [{seat, substitute, reason}]. No other
+cell carries the key, so a payload with no substitution is byte-identical to one
+built before substitutions existed.
+
 --out is required and is where the payload goes. There is no timestamped file and
 no manifest: a local build was how a run got pinned by ?data=, and a publication
 is what pins one now.
@@ -52,6 +58,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
+sys.path.insert(0, str(ROOT / "engine"))
+import seat_substitutions         # noqa: E402
 
 MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
                "gpt-mini": "GPT-5 mini", "haiku": "Claude Haiku 4.5", "qwen-small": "Qwen3-32B"}
@@ -107,6 +115,38 @@ def unknown_slug_message(unknown_keys, registry_path):
             f"({registry_path}) -- every runlog key must be a slug")
 
 
+def cell_of(row):
+    """(behaviour slug, document id) of a runlog row: the document is the head of
+    its locator, as build_behaviours files it."""
+    return row["behaviour"], row["locator"].split(" > ", 1)[0]
+
+
+def admits(row, rubric, panel, substitutions=None):
+    """Pure: whether a runlog row votes in the payload. Its rubric must be the
+    build's, its reply must have parsed, and its model must hold a seat of the
+    panel as its cell was seated -- a recorded substitute in its seat's place on
+    that cell, and on no other."""
+    if row.get("rubric", "v1") != rubric or not row.get("parsed", True):
+        return False
+    seated = seat_substitutions.seats(panel, (substitutions or {}).get(cell_of(row), ()))
+    return row["model"] in seated
+
+
+def cell_substitutions(recorded, cells, versions):
+    """Pure: {(slug, document id): substitutions} for the cells a payload carries.
+
+    `recorded` is keyed by run, and only the run a cell was taken from counts. A
+    run can hold a substitution on a cell the publication answered from another
+    run, where the panel judged it as configured."""
+    out = {}
+    for cell in cells:
+        rows = recorded.get((cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]))
+        if rows:
+            version = versions[cell["spec_version_id"]]
+            out[(cell["behaviour_slug"], f"{version['spec_id']}@{version['version']}")] = rows
+    return out
+
+
 def keeps_citation(score, n_votes, panel_size, threshold=1):
     """Pure: stray-vote guard -- scales to panel size so a 1-judge panel is legal.
     The score cut honours display.threshold (default 1: keep everything scored)."""
@@ -150,12 +190,14 @@ def display_behaviours(keep, registry):
     return sorted(rows, key=lambda row: (row["category"], row["name"]))
 
 
-def build_behaviours(behaviours, votes, text, document_ids, depths, panel, display):
+def build_behaviours(behaviours, votes, text, document_ids, depths, panel, display,
+                     substitutions=None):
     """The payload's behaviours.
 
     `votes` is {(slug, locator): {model: verdict}}, `text` {locator: passage text},
-    `depths` {(slug, document id): depth}. A passage belongs to the document whose
-    id heads its locator."""
+    `depths` {(slug, document id): depth}, `substitutions` {(slug, document id):
+    [{seat, substitute, reason}]}. A passage belongs to the document whose id heads
+    its locator."""
     sym = {3: "✓✓", 2: "✓", 1: "~", 0: "✗"}
     word = {3: "defining", 2: "core", 1: "related", 0: "not relevant"}
     out = []
@@ -189,6 +231,10 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
                 })
             cits.sort(key=lambda c: (-c["score"], c["locator"]))
             cov[document_id] = {"depth": depths.get((b["slug"], document_id)), "passages": cits}
+            # Only where there is one: an absent key keeps every other cell's bytes.
+            seated = (substitutions or {}).get((b["slug"], document_id))
+            if seated:
+                cov[document_id]["substitutions"] = seated
         out.append({"id": len(out) + 1, "slug": b["slug"], "name": b["name"],
                     "definition": b["definition"], "category": b["category"],
                     "coverage": cov})
@@ -266,6 +312,10 @@ def main(argv=None):
         cells = [c for c in store.select("aci_publication_cells")
                  if publication and c["publication_id"] == publication["id"]]
     log_rows = index_store.published_runlog_rows(store, cells=cells)
+    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+    substitutions = cell_substitutions(
+        seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells]),
+        cells, versions)
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()
@@ -275,7 +325,7 @@ def main(argv=None):
         runlog_keys.add(d["behaviour"])
         runlog_models.add(d["model"])   # pre-filter, so a zero can name them
         runlog_rubrics.add(d.get("rubric", "v1"))
-        if d.get("rubric", "v1") != rubric or not d.get("parsed", True) or d["model"] not in panel:
+        if not admits(d, rubric, panel, substitutions):
             continue
         votes[(d["behaviour"], d["locator"])][d["model"]] = d.get("verdict", 0)
         max_verdict = max(max_verdict, d.get("verdict", 0))
@@ -284,7 +334,6 @@ def main(argv=None):
         sys.exit(unknown_slug_message(unknown_keys, registry_path))
 
     # One document per published version; its id heads every locator into it.
-    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
     published = [versions[i] for i in index_store.published_spec_version_ids(store, cells=cells)]
     document_ids = [f"{v['spec_id']}@{v['version']}" for v in published]
     text = {}
@@ -296,7 +345,7 @@ def main(argv=None):
 
     behaviours = display_behaviours(DISPLAY["behaviours"], registry)
     out_behaviours = build_behaviours(behaviours, votes, text, document_ids, depths,
-                                      panel, DISPLAY)
+                                      panel, DISPLAY, substitutions)
     seats = sorted({m for b_ in out_behaviours for cov in b_["coverage"].values()
                     for p in cov["passages"] for m in p.get("verdicts", {})})
     # The substitution note records WHY a provider failed on a given cell -- something
