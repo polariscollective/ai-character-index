@@ -146,18 +146,47 @@ def require_declared_substitutes(store, cells, config, panel_name, panel):
             + "\n  ".join(problems))
 
 
+def _depth_complete_keys(store, matched):
+    """The keys of `matched` whose every done call also carries a done depth.
+
+    Read with the store's filtered selects, scoped to exactly the calls the
+    candidate runs hold -- a publication's candidate set is a handful of
+    cells, not the whole history of judge calls, so nothing here reads a
+    table whole.
+    """
+    ids = sorted({call["id"] for calls in matched.values() for call in calls})
+    if not ids:
+        return set()
+    params = {"call_id": "in.(" + ",".join(f'"{i}"' for i in ids) + ")",
+              "status": "eq.done"}
+    done_depths = {row["call_id"] for row in store.select("aci_depths", params)}
+    return {key for key, calls in matched.items()
+            if all(call["id"] in done_depths for call in calls)}
+
+
 def choose_cells(store, behaviours, spec_versions, panel, rubric):
     """One run per cell, or a refusal naming every cell that has no answer.
 
-    The newest run that judged the cell with exactly this panel, every call done.
-    "Exactly" is the whole point: a cell judged by six models and a cell judged by
-    three are not the same claim, and a publication that mixed them would compare
-    labs on unequal evidence -- which is what the bench inherited from before this
-    rule does, and why it is the one grandfathered exemption.
+    The newest run that can actually be published for the cell: it judged the
+    cell with exactly this panel, every call done, and every one of those
+    calls carries a done depth. A run whose depths are still pending can never
+    be published, so preferring it over a complete older run could only trade
+    a publishable answer for one that blocks the build.
+
+    "Exactly" is the whole point: a cell judged by six models and a cell judged
+    by three are not the same claim, and a publication that mixed them would
+    compare labs on unequal evidence -- which is what the bench inherited from
+    before this rule does, and why it is the one grandfathered exemption.
 
     The panel is compared as each cell of each run was seated: a recorded
     substitution gives its seat to the substitute for that cell of that run and
     nowhere else.
+
+    A cell nothing judged with this panel at all is refused here, naming every
+    such cell at once. A cell some run did judge, but none of those runs has
+    every depth done, is still returned -- choosing the newest of them -- and
+    left for `require_depths` to refuse by name, because that is the guard
+    whose message explains what to do about it.
     """
     runs = {run["id"]: run for run in store.select("aci_runs")}
     want = sorted(panel)
@@ -165,29 +194,36 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
         store, behaviour_slug=behaviours,
         spec_version_id=[version["id"] for version in spec_versions])
 
-    done = {}
+    calls_by_key = {}
     for call in store.select("aci_judge_calls"):
         if call["status"] != "done":
             continue
         key = (call["run_id"], call["behaviour_slug"], call["spec_version_id"])
-        done.setdefault(key, set()).add(call["model"])
+        calls_by_key.setdefault(key, []).append(call)
+
+    matched = {
+        key: calls for key, calls in calls_by_key.items()
+        if runs[key[0]]["rubric"] == rubric
+        and sorted({call["model"] for call in calls}) == seat_substitutions.seats(
+            want, recorded.get(key, ()))
+    }
+    publishable = _depth_complete_keys(store, matched)
+
+    by_cell = {}
+    for key in matched:
+        run_id, slug, version_id = key
+        by_cell.setdefault((slug, version_id), []).append(key)
 
     cells, unanswered = [], []
     for slug in sorted(behaviours):
         for version in spec_versions:
-            answers = [
-                runs[run_id] for (run_id, b, v), models in done.items()
-                if b == slug and v == version["id"]
-                and sorted(models) == seat_substitutions.seats(
-                    want, recorded.get((run_id, b, v), ()))
-                and runs[run_id]["rubric"] == rubric
-            ]
-            if not answers:
+            keys = by_cell.get((slug, version["id"]), [])
+            if not keys:
                 unanswered.append(f"{slug} x {version['spec_id']}@{version['version']}")
                 continue
-            newest = max(answers, key=lambda run: run["created_at"])
+            best = max(keys, key=lambda k: (k in publishable, runs[k[0]]["created_at"]))
             cells.append({"behaviour_slug": slug, "spec_version_id": version["id"],
-                          "run_id": newest["id"]})
+                          "run_id": best[0]})
     if unanswered:
         raise SystemExit(
             "no run judged these cells with exactly this panel "

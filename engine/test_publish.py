@@ -47,8 +47,9 @@ V2 = {"id": "v2", "spec_id": "model-spec", "version": "2025-12-18"}
 
 
 def calls(run_id, slug, version_id, models, status="done"):
-    return [{"run_id": run_id, "behaviour_slug": slug, "spec_version_id": version_id,
-             "model": model, "status": status} for model in models]
+    return [{"id": f"{run_id}-{model}", "run_id": run_id, "behaviour_slug": slug,
+             "spec_version_id": version_id, "model": model, "status": status}
+            for model in models]
 
 
 def store(runs, judge_calls, versions=(V1, V2), substitutions=()):
@@ -212,6 +213,73 @@ class SubstitutionTest(unittest.TestCase):
         self.assertIn("aci_seat_substitutions", str(refused.exception))
 
 
+def call_ids(rows):
+    return [row["id"] for row in rows]
+
+
+def depth_rows(call_ids, status="done"):
+    return [{"call_id": call_id, "status": status, "depth": 2, "rationale": ""}
+            for call_id in call_ids]
+
+
+def store_with_depths(runs, judge_calls, depths, versions=(V1, V2), substitutions=()):
+    return FakeStore(aci_runs=runs, aci_judge_calls=judge_calls, aci_depths=depths,
+                     aci_spec_versions=list(versions),
+                     aci_seat_substitutions=list(substitutions))
+
+
+class ChooseCellsPrefersPublishableRunsTest(unittest.TestCase):
+    """`choose_cells` no longer takes merely the newest run that judged a cell:
+    a run whose depths are still pending can never be published, so choosing
+    it over a complete older run could only block the build."""
+
+    def test_a_newer_run_with_depths_pending_loses_to_an_older_complete_one(self):
+        old_calls = calls("old", "helpfulness", "v1", PANEL)
+        new_calls = calls("new", "helpfulness", "v1", PANEL)
+        s = store_with_depths(
+            [{"id": "old", "rubric": "v5", "created_at": "2026-08-01"},
+             {"id": "new", "rubric": "v5", "created_at": "2026-09-01"}],
+            old_calls + new_calls,
+            depth_rows(call_ids(old_calls))
+            + depth_rows(call_ids(new_calls), status="pending"))
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "old")
+
+    def test_when_both_runs_are_fully_done_the_newer_still_wins(self):
+        old_calls = calls("old", "helpfulness", "v1", PANEL)
+        new_calls = calls("new", "helpfulness", "v1", PANEL)
+        s = store_with_depths(
+            [{"id": "old", "rubric": "v5", "created_at": "2026-08-01"},
+             {"id": "new", "rubric": "v5", "created_at": "2026-09-01"}],
+            old_calls + new_calls,
+            depth_rows(call_ids(old_calls)) + depth_rows(call_ids(new_calls)))
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "new")
+
+    def test_a_lone_run_with_depths_pending_still_refuses_downstream(self):
+        """`choose_cells` has nothing better to offer, so it still returns the
+        cell; `require_depths` is the guard left to refuse it, and it must
+        name the cell."""
+        run_calls = calls("r1", "helpfulness", "v1", PANEL)
+        s = store_with_depths(
+            [{"id": "r1", "rubric": "v5", "created_at": "2026-09-01"}],
+            run_calls, depth_rows(call_ids(run_calls), status="pending"))
+        cells = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        with self.assertRaises(SystemExit) as refused:
+            publish.require_depths(s, cells, PANEL)
+        self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+    def test_a_substituted_cell_with_every_depth_done_is_still_chosen(self):
+        run_calls = calls("r1", HARM, "v2", SEATED)
+        s = store_with_depths(
+            [{"id": "r1", "rubric": "v5", "created_at": "2026-09-15"}],
+            run_calls, depth_rows(call_ids(run_calls)),
+            substitutions=[substitution("r1")])
+        cells = publish.choose_cells(s, [HARM], [V2], PANEL, "v5")
+        self.assertEqual(cells, [{"behaviour_slug": HARM, "spec_version_id": "v2",
+                                  "run_id": "r1"}])
+
+
 class DeclaredSubstitutesTest(unittest.TestCase):
     """publish.py's second gate on a recorded substitution: recorded is not
     enough, it must be declared for that seat by this panel's own
@@ -285,7 +353,7 @@ class DepthsTest(unittest.TestCase):
 
     def store(self, depth_statuses, models=PANEL, substitutions=()):
         return FakeStore(
-            aci_judge_calls=[{"id": f"c-{m}", **calls("r1", "helpfulness", "v1", [m])[0]}
+            aci_judge_calls=[{**calls("r1", "helpfulness", "v1", [m])[0], "id": f"c-{m}"}
                              for m in models],
             aci_depths=[{"call_id": f"c-{m}", "status": s, "depth": 2, "rationale": ""}
                         for m, s in zip(models, depth_statuses)],
