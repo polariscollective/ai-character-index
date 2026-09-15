@@ -250,6 +250,9 @@ const elements = {
   keyNote: document.querySelector("#key-note"),
   keyNoteTitle: document.querySelector("#key-note-title"),
   keyNoteBody: document.querySelector("#key-note-body"),
+  originalNote: document.querySelector("#original-note"),
+  originalNoteLabel: document.querySelector("#original-note-label"),
+  originalNoteBody: document.querySelector("#original-note-body"),
   template: document.querySelector("#document-template"),
 };
 
@@ -1781,6 +1784,81 @@ function revealHashTarget() {
   if (heading && panel) revealInternalTarget(panel, heading, false);
 }
 
+/* A document the index read in translation.
+ *
+ * What the panel judged is the translation, so that is what the reader renders
+ * and what a citation quotes. The original is carried beside it, passage by
+ * passage, and the note in the header says whose translation the judgements are
+ * about. A value these maps do not carry prints as it stands: a note naming a
+ * translator nobody has named before is worth more than one that says nothing. */
+const LANGUAGE_NAMES = { zh: "Chinese", en: "English", fr: "French", es: "Spanish" };
+const TRANSLATOR_NAMES = { "claude-opus-5": "Claude Opus 5" };
+
+const languageName = code => LANGUAGE_NAMES[code] || code;
+
+function translationNote(translation) {
+  const by = TRANSLATOR_NAMES[translation.by] || translation.by;
+  return `Machine translation from ${languageName(translation.from)} by ${by}, `
+       + `${translation.reviewed ? "reviewed by a person" : "not reviewed by a person"}. `
+       + "The index judged this translation.";
+}
+
+/* Each passage's original, reachable from the passage itself.
+ *
+ * The payload pairs translation with original in document order, both cut the
+ * same way by cite.py. The reader cannot name a rendered block with a locator --
+ * its own numbering counts headings and cuts lists differently -- so the two
+ * lists are walked together instead. A pair matches the block that carries its
+ * text, or the block that opens it: an example is one passage, while the reader
+ * renders its caption and its dialogue as two blocks, and the caption is where
+ * the mark belongs. Blocks the pairs do not cover, headings above all, are
+ * stepped over and consume nothing. */
+function attachOriginals(panel, doc) {
+  const pairs = doc.original;
+  if (!pairs?.length || !doc.translation) return;
+  const label = `${languageName(doc.translation.from)} original`;
+  let next = 0;
+  panel.querySelectorAll(".document-body [data-block]").forEach(block => {
+    if (next >= pairs.length) return;
+    const text = normalize(block.textContent);
+    if (!text) return;
+    const pair = normalize(pairs[next].en);
+    if (pair !== text && !pair.startsWith(text)) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "original-open";
+    button.dataset.original = pairs[next].zh;
+    button.dataset.originalLang = doc.translation.from;
+    button.dataset.originalLabel = label;
+    button.setAttribute("aria-label", `Show the ${label} of this passage`);
+    button.title = `Show the ${label}`;
+    block.append(button);
+    next += 1;
+  });
+}
+
+/* One popover for every mark on the page, like the key's notes: opening it
+ * again from another passage refills it, and light dismiss and Escape come from
+ * the browser. A browser without popovers gets marks that do nothing, so the
+ * marks are removed rather than left inert. */
+function setupOriginalNotes(panel) {
+  const note = elements.originalNote;
+  if (!note || typeof note.showPopover !== "function") {
+    panel.querySelectorAll(".original-open").forEach(button => button.remove());
+    return;
+  }
+  panel.querySelector(".document-body").addEventListener("click", event => {
+    const button = event.target.closest(".original-open");
+    if (!button) return;
+    elements.originalNoteLabel.textContent = button.dataset.originalLabel;
+    elements.originalNoteBody.textContent = button.dataset.original;
+    elements.originalNoteBody.lang = button.dataset.originalLang;
+    if (note.matches(":popover-open")) note.hidePopover();
+    note.showPopover();
+    placeUnder(note, button);
+  });
+}
+
 function renderDocument(doc) {
   const panel = elements.template.content.firstElementChild.cloneNode(true);
   const markdownContext = {
@@ -1803,10 +1881,17 @@ function renderDocument(doc) {
   panel.querySelectorAll(".tier-toggle").forEach(button => {
     button.setAttribute("aria-pressed", String(Boolean(state.bands?.has(button.dataset.tier))));
   });
+  const translation = panel.querySelector(".document-translation");
+  if (doc.translation) {
+    translation.textContent = translationNote(doc.translation);
+    translation.hidden = false;
+  }
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
+  attachOriginals(panel, doc);
   setupSectionFocus(panel);
   setupInternalLinks(panel);
   setupPassageDisclosure(panel);
+  setupOriginalNotes(panel);
   return panel;
 }
 
@@ -1932,7 +2017,12 @@ function updatePanelMeta(panel, doc) {
       .reduce((total, behaviour) => total + (behaviour.coverage?.[doc.id]?.panelFiltered || 0), 0);
     panel.querySelector(".document-body").insertAdjacentHTML(
       "afterbegin",
-      filtered > 0
+      doc.judged === false
+        ? `<div class="zero-coverage" role="note">
+            <strong>Not judged yet.</strong>
+            <span>No panel has scored this document, so it shows no passages. That is not a finding about the document.</span>
+          </div>`
+        : filtered > 0
         ? `<div class="zero-coverage" role="note">
             <strong>No passages in the selected tiers.</strong>
             <span>${filtered} scored ${filtered === 1 ? "passage sits" : "passages sit"} in tiers toggled off -- turn one back on above to see them.</span>

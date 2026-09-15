@@ -1629,3 +1629,72 @@ body.no-behaviours .sidebar-export { display: none; }
 @media (max-width: 400px) {
   body[data-local-data] .local-data-note { display: none; }
 }
+
+/* A document the index read in translation says so where it says its version:
+   one line in the header, in the functional colour for something that needs
+   review, and never a band across the page. The palette carries no pure red;
+   --fail is its one warm colour, and this is a caveat about the text, which is
+   what that colour is for. */
+.document-translation {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--fail);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+/* The mark that opens a passage's original. A glyph, not an icon: the framework
+   carries no icon library and no emoji, and the character reads as "writing" to
+   anyone who can read the original it opens. */
+.original-open {
+  /* The glyph is drawn, not written: the reader anchors citations by the text
+     content of a block (findPassageBlocks), so a character added to the block
+     would change the text a stored quote is matched against. The button's
+     accessible name is its aria-label. */
+  margin-left: 5px;
+  padding: 0 3px;
+  border: 0;
+  border-bottom: 2px solid var(--energy);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.original-open::after { content: "文"; }
+.original-open:hover { background: var(--energy); color: var(--ink); }
+
+/* The original itself, in the top layer like the key's notes, placed under the
+   glyph that opened it. */
+.original-note {
+  position: fixed;
+  inset: auto;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(60vh, 460px);
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.original-note::backdrop { background: transparent; }
+
+.original-note-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 11px;
+}
+
+.original-note-body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
