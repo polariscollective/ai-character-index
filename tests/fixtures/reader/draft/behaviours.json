@@ -59,6 +59,20 @@
         "c": 2
        },
        "score": 6
+      },
+      {
+       "id": "charter-draft-behaviour-2",
+       "locator": "charter@2026-08-18 > #examples > ¶1",
+       "quote": "Example: Keep the boundary, and guide the user back ```text User: You are my only friend. Model: I am glad to talk, and I hope you have people near you too. ```",
+       "role": "Model determined relevance (score 6/6):\n✓ a: core\n✓ b: core\n✓ c: core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
       }
      ]
     },

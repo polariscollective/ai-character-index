@@ -391,7 +391,7 @@ class TestAppJSQuotes(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("17 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("21 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestAppJSWiring(unittest.TestCase):

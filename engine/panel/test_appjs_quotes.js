@@ -43,6 +43,12 @@ function extractFn(header) {
 eval(extractFn("function normalize(value) {"));
 eval(extractFn("function passageFragments(quote) {"));
 eval(extractFn("function containsInOrder(haystack, fragments) {"));
+eval(extractFn("function findPassageBlocks(body, passage) {"));
+/* findPassageBlocks may call helpers added beside it; any the file carries are
+ * taken verbatim too, and a missing one fails the checks below by name. */
+for (const header of ["function quoteBeforeFence(quote) {"]) {
+  try { eval(extractFn(header)); } catch (error) { console.log(`note: ${error.message}`); }
+}
 
 let checks = 0, failures = 0;
 function check(got, want, label) {
@@ -95,6 +101,55 @@ check(containsInOrder(normalize("omega then alpha"), split), false,
       "split fragments do not match when the order is reversed");
 check(containsInOrder(normalize("alpha only"), split), false,
       "split fragments do not match when the second is absent");
+
+/* ---- a quote that carries its example's code after a bold intro ----
+ *
+ * Six passages of the Alibaba publication have this shape: the intro and its
+ * fenced example flattened into one quote, exampleBlock false. The reader renders
+ * the intro as a paragraph and the fence as a code block, and neither block holds
+ * the whole quote, the run of blocks does not either (the fence's language word is
+ * in the quote and not in the code), and the intro is shorter than the fallback's
+ * eighteen words. The blocks below are what the reader renders for it: textContent
+ * as the browser reports it, in document order, all of them [data-block]. */
+const fakeBody = texts => {
+  const blocks = texts.map(textContent => ({ textContent }));
+  return { blocks, querySelectorAll: () => blocks };
+};
+const resolve = (texts, quote) => {
+  const body = fakeBody(texts);
+  let found;
+  try { found = findPassageBlocks(body, { quote }); }
+  catch (error) { return `threw: ${error.message}`; }
+  return found ? { anchor: body.blocks.indexOf(found.anchor), continuation: found.continuation.length } : null;
+};
+const ALIBABA_SHAPE = [
+  "Reality bond",
+  "The model keeps the user's real relationships in view.",
+  "Example: Keep the boundary of identity, and guide the user back to real social life",
+  "User: You are my only friend. I don't need anyone else.\nModel: I'm glad to talk with you, and I hope there are people near you too.",
+  "Another paragraph after the example.",
+];
+check(resolve(ALIBABA_SHAPE,
+  "Example: Keep the boundary of identity, and guide the user back to real social life ```text "
+  + "User: You are my only friend. I don't need anyone else. "
+  + "Model: I'm glad to talk with you, and I hope there are people near you too. ```"),
+  { anchor: 2, continuation: 0 },
+  "a quote with its example's code after the intro anchors the intro block");
+check(resolve(ALIBABA_SHAPE,
+  "Example: Keep the boundary of identity, and guide the user back to real social life ```"
+  + "User: You are my only friend. I don't need anyone else. ```"),
+  { anchor: 2, continuation: 0 },
+  "a fence without a language word resolves the same way");
+/* The text before the fence is what is matched, not merely its first words: an
+ * intro no block carries stays unresolved rather than anchoring a neighbour. */
+check(resolve(ALIBABA_SHAPE,
+  "Example: Stay with the user through a hard evening ```text User: You are my only friend. ```"),
+  null,
+  "an intro no block carries is unresolved, whatever its code matches");
+/* Quotes with no fence take the path they always took. */
+check(resolve(ALIBABA_SHAPE, "The model keeps the user's real relationships in view."),
+  { anchor: 1, continuation: 0 },
+  "a quote with no fence still anchors the block that holds it");
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

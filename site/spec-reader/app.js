@@ -1365,9 +1365,24 @@ function containsInOrder(haystack, fragments) {
   return true;
 }
 
+/* A quote can carry its example's code after a bold intro, flattened into one
+ * string ("Example: <title> ```text User: … ```"), while the reader renders the
+ * intro as a paragraph and the fence as a code block. Neither block holds the
+ * whole quote; the run of the two does not either, because the fence's language
+ * word is in the quote and not in the code; and an intro shorter than the
+ * fallback's eighteen words runs the fallback's opening into the code. So a quote
+ * with a fence is resolved on the text before it, and annotatePassages highlights
+ * the fence as the intro's continuation, as it does for an exampleBlock passage.
+ * A quote that opens with its fence has nothing before it and is matched whole. */
+function quoteBeforeFence(quote) {
+  const at = quote.indexOf("```");
+  return at > 0 && normalize(quote.slice(0, at)) ? quote.slice(0, at) : quote;
+}
+
 function findPassageBlocks(body, passage) {
-  const needle = normalize(passage.quote);
-  const fragments = passageFragments(passage.quote);
+  const quote = quoteBeforeFence(passage.quote);
+  const needle = normalize(quote);
+  const fragments = passageFragments(quote);
   const blocks = [...body.querySelectorAll("[data-block]")];
   const exact = blocks.find(block => containsInOrder(normalize(block.textContent), fragments));
   if (exact) return { anchor: exact, continuation: [] };
@@ -1551,7 +1566,9 @@ function annotatePassages(panel, doc) {
       }
       record(found.anchor, behaviour, passage, true);
       found.continuation.forEach(extra => record(extra, behaviour, passage, false));
-      if (passage.exampleBlock) {
+      // An exampleBlock passage, or a quote resolved on the intro before its fence
+      // (quoteBeforeFence): either way the code block after the anchor is its example.
+      if (passage.exampleBlock || quoteBeforeFence(passage.quote) !== passage.quote) {
         const example = followingExampleBlock(found.anchor);
         if (example) record(example, behaviour, passage, false);
       }
