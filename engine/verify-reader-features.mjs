@@ -389,6 +389,30 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
   check(atHome === "200" && Number(atEnd) > Number(atHome),
     "sidebar resizer: keyboard Home/End resize", `${atHome} -> ${atEnd}`);
 }
+{
+  // The sidebar's own header row and the reader's finding bar sit side by
+  // side, so their bottom rules have to fall on the same line -- expanded or
+  // collapsed (the arrow button, not a class swapped in by the walker), at a
+  // wide and a narrow desktop width.
+  const dividerBottoms = () => page.evaluate(() => ({
+    sidebar: document.querySelector(".sidebar-intro").getBoundingClientRect().bottom,
+    finding: document.querySelector(".finding-bar").getBoundingClientRect().bottom,
+  }));
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    await page.setViewportSize({ width, height });
+    await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+    const expanded = await dividerBottoms();
+    await page.click("#sidebar-toggle");
+    await page.waitForTimeout(200);
+    const collapsed = await dividerBottoms();
+    const diffExpanded = Math.abs(expanded.sidebar - expanded.finding);
+    const diffCollapsed = Math.abs(collapsed.sidebar - collapsed.finding);
+    check(diffExpanded <= 1 && diffCollapsed <= 1,
+      `sidebar/finding-bar dividers align at ${width}x${height}, expanded and collapsed`,
+      `expanded diff ${diffExpanded.toFixed(2)}px, collapsed diff ${diffCollapsed.toFixed(2)}px`);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
 await at("?compare=1");
 {
   const widths = () => page.evaluate(() =>

@@ -18,6 +18,10 @@
   /* What the menu leaves behind when it folds: enough for the button that
      brings it back, and nothing else. */
   --sidebar-rail: 40px;
+  /* The sidebar's own header and the reader's finding bar sit side by side,
+     so their bottom rules have to fall on the same line: one token, not two
+     paddings kept in sync by hand. */
+  --panel-header-height: 54px;
 }
 
 /* The framework's core tokens, written into the roles this reader already had.
@@ -388,7 +392,8 @@ body.resizing-columns {
    note that sends a reviewer here, not standing over the menu they came to use --
    the sidebar's whole height is worth more as behaviours than as an explanation read once. */
 .sidebar-intro {
-  padding: 15px 25px 14px;
+  min-height: var(--panel-header-height);
+  padding: 0 25px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -858,7 +863,7 @@ body.sidebar-collapsed .sidebar-run {
   }
 
   body.sidebar-collapsed .sidebar-intro {
-    padding: 15px 0 14px;
+    padding: 0;
     justify-content: center;
   }
 }
@@ -874,7 +879,7 @@ body.sidebar-collapsed .sidebar-resizer {
 .source-link:hover { background: var(--energy); color: var(--ink); }
 
 .finding-bar {
-  min-height: 54px;
+  min-height: var(--panel-header-height);
   padding: 8px 20px 8px 24px;
   display: flex;
   align-items: center;
