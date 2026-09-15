@@ -1581,16 +1581,92 @@ function passageLabels(marks, passageId) {
   return `
     <span class="passage-head">
       ${chips}
+      ${COPY_ICONS}
       <button type="button" class="passage-why" aria-expanded="false" aria-controls="${panelId}"
         aria-label="Why was this passage selected?" data-tip="Why was this passage selected?">?</button>
     </span>
-    <span class="passage-rationale" id="${panelId}" role="note" hidden>${reasons}</span>
+    <span class="passage-rationale" id="${panelId}" role="note" hidden>${reasons}<span class="passage-link" hidden></span></span>
   `;
+}
+
+/* Copy a passage's locator, or a link that opens the reader at it.
+ *
+ * Two icons in the passage's head, drawn inline: the framework carries no icon
+ * library, and the user asked for icons rather than words, so they are SVG in
+ * the markup and nothing is loaded for them. A text snippet for the locator, a
+ * chain for the link. They stay out of sight until the pointer is over the block
+ * or focus is inside it (see .passage-copy). */
+const COPY_ICONS = `
+      <button type="button" class="passage-copy" data-copy="locator"
+        aria-label="Copy locator" title="Copy locator"><svg viewBox="0 0 16 16" aria-hidden="true"
+        focusable="false"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none"
+        stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 8.5h6M5 11h3.5" fill="none"
+        stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+      <button type="button" class="passage-copy" data-copy="link"
+        aria-label="Copy link" title="Copy link"><svg viewBox="0 0 16 16" aria-hidden="true"
+        focusable="false"><path d="M6.8 9.2a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-.9.9M9.2 6.8a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l.9-.9"
+        fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>`;
+
+/* What a copy says, done and refused. */
+const COPY_SAID = {
+  locator: ["Locator copied", "The clipboard was refused. The locator is selected: press copy."],
+  link: ["Link copied", "The clipboard was refused. The link is selected: press copy."],
+};
+
+async function copyFromPassage(button) {
+  const block = button.closest("[data-passage-id]");
+  const locator = (block?.dataset.locators || "").split("\n")[0];
+  if (!locator) return;
+  const kind = button.dataset.copy === "link" ? "link" : "locator";
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const text = kind === "link" ? passageLink(location.href, locator, pinned) : locator;
+  const status = document.getElementById("copy-status");
+  const say = sentence => {
+    if (!status) return;
+    status.textContent = "";          // the same words twice are still announced twice
+    status.textContent = sentence;
+  };
+  try {
+    await navigator.clipboard.writeText(text);
+    say(COPY_SAID[kind][0]);
+  } catch {
+    /* A refused clipboard is not a dead end: open the passage's note and select
+       what would have been copied, so the usual keyboard copy works. */
+    const note = block.querySelector(".passage-rationale");
+    if (!note) return;
+    if (note.hidden) {
+      note.hidden = false;
+      block.querySelector(".passage-why")?.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(updateRails);
+    }
+    let target = [...note.querySelectorAll(".passage-locator")].find(item => item.textContent === locator);
+    if (kind === "link") {
+      target = note.querySelector(".passage-link");
+      target.textContent = text;
+      target.hidden = false;
+    }
+    if (!target) return;
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    say(COPY_SAID[kind][1]);
+  }
 }
 
 /* Opening a rationale changes the height of the block it sits in, so the rail marks -- which
  * are positioned from block offsets -- have to be measured again once it has laid out. */
 function setupPassageDisclosure(panel) {
+  panel.querySelector(".document-body").addEventListener("click", event => {
+    const copy = event.target.closest(".passage-copy");
+    if (copy) {
+      copyFromPassage(copy);
+      return;
+    }
+    // Where there is no pointer to hover with, a tapped passage shows its icons.
+    event.target.closest("[data-passage-id]")?.classList.add("touched");
+  });
   panel.querySelector(".document-body").addEventListener("click", event => {
     const button = event.target.closest(".passage-why");
     if (!button) return;
@@ -1610,7 +1686,7 @@ function clearHighlights(panel) {
   body.querySelectorAll(".passage-head, .passage-rationale").forEach(part => part.remove());
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
-    block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current");
+    block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current", "touched");
     ["passageId", "documentId", "passageNumber", "role", "behaviours", "locators"]
       .forEach(key => { delete block.dataset[key]; });
     ["--tint", "--tint-strong", "--gutter", "--gutter-size", "--gutter-pos",

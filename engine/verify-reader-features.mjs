@@ -263,6 +263,143 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     `${JSON.stringify(seen)} ${pageErrors.join("; ")}`);
 }
 
+/* Copying a passage's locator, or a link to it. Two small icon buttons in the
+ * highlighted block's head, drawn as inline SVG with no icon library and no glyph,
+ * hidden until the pointer is over the block or focus is inside it. A copy is said
+ * politely for a screen reader. A refused clipboard is not a dead end: what would
+ * have been copied is selected in the passage's note instead. A copied link
+ * reopens the reader at the passage it was copied from, and a pinned reader's link
+ * keeps its publication. */
+{
+  const stubClipboard = refuse => page.evaluate(refuse => {
+    window.__copied = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async text => {
+        if (refuse) throw new Error("refused");
+        window.__copied.push(text);
+      } },
+    });
+  }, refuse);
+  const copyButton = kind => page.locator(`[data-passage-id] .passage-copy[data-copy="${kind}"]`).first();
+  const readIcons = () => page.evaluate(() => {
+    const block = document.querySelector("[data-passage-id]");
+    const scroll = block.closest(".document-scroll").getBoundingClientRect();
+    const head = block.querySelector(".passage-head").getBoundingClientRect();
+    const status = document.querySelector("#copy-status");
+    return {
+      locator: (block.dataset.locators || "").split("\n")[0],
+      buttons: [...block.querySelectorAll(".passage-copy")].map(button => {
+        const box = button.getBoundingClientRect();
+        const style = getComputedStyle(button);
+        return {
+          label: button.getAttribute("aria-label"),
+          title: button.title,
+          svg: Boolean(button.querySelector("svg")),
+          text: button.textContent.trim(),
+          opacity: Math.round(Number(style.opacity) * 100) / 100,
+          inHead: box.top >= head.top - 1 && box.bottom <= head.bottom + 1,
+          clearOfRail: box.right <= scroll.right - 14,
+          motion: style.transitionDuration,
+        };
+      }),
+      status: status?.textContent ?? null,
+      polite: status?.getAttribute("aria-live") === "polite",
+      copied: window.__copied || [],
+      selected: String(getSelection()),
+      noteOpen: !block.querySelector(".passage-rationale")?.hidden,
+    };
+  });
+  const awayFromPassages = async () => { await page.mouse.move(2, 700); await page.waitForTimeout(350); };
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+  await awayFromPassages();
+  let seen = await readIcons();
+  check(seen.buttons.map(button => button.label).join(",") === "Copy locator,Copy link"
+      && seen.buttons.every(button => button.title === button.label && button.svg && button.text === ""
+        && button.inHead && button.clearOfRail),
+    "a passage carries Copy locator and Copy link as labelled inline-SVG icons in its head, clear of the rail",
+    JSON.stringify(seen.buttons));
+  check(seen.buttons.length === 2 && seen.buttons.every(button => button.opacity === 0),
+    "the copy icons are hidden while the pointer is elsewhere", JSON.stringify(seen.buttons));
+
+  await page.locator("[data-passage-id]").first().hover();
+  await page.waitForTimeout(350);
+  seen = await readIcons();
+  check(seen.buttons.length === 2 && seen.buttons.every(button => button.opacity > 0 && button.opacity < 1),
+    "over the block the copy icons fade in, lightly", JSON.stringify(seen.buttons));
+
+  await awayFromPassages();
+  await copyButton("locator").focus();
+  await page.waitForTimeout(350);
+  const focused = await page.evaluate(() => {
+    const style = getComputedStyle(document.activeElement);
+    return { opacity: Number(style.opacity), ring: `${style.outlineWidth} ${style.outlineStyle}`,
+             sibling: Number(getComputedStyle(document.activeElement.nextElementSibling).opacity) };
+  });
+  check(focused.opacity === 1 && focused.ring === "2px solid" && focused.sibling > 0,
+    "a keyboard user reaches the copy icons, with the focus ring, and focus shows them both",
+    JSON.stringify(focused));
+
+  await stubClipboard(false);
+  await page.locator("[data-passage-id]").first().hover();
+  await copyButton("locator").click();
+  await page.waitForTimeout(200);
+  seen = await readIcons();
+  check(seen.copied[0] === seen.locator && seen.status === "Locator copied" && seen.polite,
+    "Copy locator copies the passage's locator, and says so politely", JSON.stringify(seen));
+  await copyButton("link").click();
+  await page.waitForTimeout(200);
+  seen = await readIcons();
+  const link = seen.copied[1];
+  check(Boolean(link) && new URL(link).searchParams.get("passage") === seen.locator
+      && seen.status === "Link copied",
+    "Copy link copies a link naming that passage, and says so", JSON.stringify(seen));
+
+  await page.goto(link, { waitUntil: "networkidle" });
+  await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  const reopened = await page.evaluate(() =>
+    (document.querySelector("[data-passage-id].current")?.dataset.locators || "").split("\n"));
+  check(reopened.includes(seen.locator), "the copied link reopens the reader at the same passage",
+    `${link} -> ${JSON.stringify(reopened)}`);
+
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+  await stubClipboard(true);
+  await page.locator("[data-passage-id]").first().hover();
+  await copyButton("locator").click();
+  await page.waitForTimeout(200);
+  seen = await readIcons();
+  check(seen.selected === seen.locator && seen.noteOpen && /press/i.test(seen.status || ""),
+    "a refused clipboard selects the locator in the opened note instead, and says how to copy it",
+    JSON.stringify(seen));
+  await copyButton("link").click();
+  await page.waitForTimeout(200);
+  seen = await readIcons();
+  let selectedLink = null;
+  try { selectedLink = new URL(seen.selected).searchParams.get("passage"); } catch {}
+  check(selectedLink === seen.locator && /press/i.test(seen.status || ""),
+    "a refused clipboard selects the link in the note instead", JSON.stringify(seen));
+
+  await at(`?publication=${DRAFT_PUBLICATION}&behavior=draft-behaviour&tiers=defining,core,related`);
+  await stubClipboard(false);
+  await page.locator("[data-passage-id]").first().hover();
+  await copyButton("link").click();
+  await page.waitForTimeout(200);
+  seen = await readIcons();
+  check(new URL(seen.copied[0] || "http://x/").searchParams.get("publication") === DRAFT_PUBLICATION,
+    "a pinned reader's copied link keeps its publication", JSON.stringify(seen.copied));
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+  seen = await readIcons();
+  check(seen.buttons.length === 2 && seen.buttons.every(button => button.motion === "0s"),
+    "with reduced motion the copy icons do not fade", JSON.stringify(seen.buttons));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  check(pageErrors.length === 0, "copying: no console errors", pageErrors.join("; "));
+}
+
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
 await at("");
