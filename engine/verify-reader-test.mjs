@@ -175,6 +175,14 @@ async function expectView(url, expected, label) {
 // given, one list item per judge.
 const DEPTH_NOTE_HEADING = "How deeply the documents on screen cover it";
 
+// A seat another model judged is said in the same section, one sentence per
+// substitution, for each document on screen whose cell carries one. Expected from
+// the fixture, so a cell with none must say none.
+const substitutionSentences = (behaviour, docs) => docs.flatMap(document =>
+  (behaviour.coverage[document.id]?.substitutions || []).map(({ seat, substitute, reason }) =>
+    `On ${document.title} ${document.version}, ${substitute} judged in place of ${seat}: ${reason}`));
+const saidSubstitutions = note => note.paragraphs.filter(p => p.includes(" judged in place of "));
+
 async function readDepthNote(slug) {
   await page.click(`[data-behaviour-note="${slug}"]`);
   await page.waitForTimeout(150);
@@ -305,6 +313,15 @@ if (behaviours.length === 0) {
     );
   }
 
+  // The substitution checks below compare what the note says with what the fixture
+  // carries, and would pass on a fixture carrying none.
+  report(
+    behaviours.some(behaviour => Object.values(behaviour.coverage)
+      .some(cell => cell.substitutions?.length)),
+    "the fixture carries a cell judged with a substitute",
+    "so the substitution checks are not vacuous",
+  );
+
   // Depth beside each behaviour: the panel's mean for the document on screen, a
   // dash where no depth was given. A dash and a zero are different claims.
   for (const behaviour of behaviours) {
@@ -340,6 +357,14 @@ if (behaviours.length === 0) {
           && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(`${judge}:`))),
         `${behaviour.slug} · ${document.id} · depth note`,
         `headings: ${note.headings.join(" | ")}; judges: ${note.judgeItems.join(" | ")}`,
+      );
+
+      // And where a seat was judged by a substitute, the note says so in a sentence.
+      const said = saidSubstitutions(note);
+      report(
+        JSON.stringify(said) === JSON.stringify(substitutionSentences(behaviour, [document])),
+        `${behaviour.slug} · ${document.id} · substitutions`,
+        said.join(" | ") || "none said",
       );
     }
   }
@@ -381,6 +406,13 @@ if (behaviours.length === 0) {
         }),
       `${behaviour.slug} · compare · depth note`,
       `headings: ${note.headings.join(" | ")}; paragraphs: ${note.paragraphs.length}`,
+    );
+
+    const said = saidSubstitutions(note);
+    report(
+      JSON.stringify(said) === JSON.stringify(substitutionSentences(behaviour, paneDocs)),
+      `${behaviour.slug} · compare · substitutions`,
+      said.join(" | ") || "none said",
     );
   }
 

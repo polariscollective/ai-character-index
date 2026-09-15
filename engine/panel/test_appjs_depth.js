@@ -222,5 +222,38 @@ show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
 check("comparing, a mean of zero shows as 0.0 and not as a dash",
       () => figure("helpfulness").text, "2.7 / 0.0");
 
+/* ---- a seat another model judged is said beside its document ---- */
+const SEATED_DEPTH = {
+  mean: 2,
+  judges: { deepseek: { depth: 2, rationale: "" }, opus: { depth: 2, rationale: "" },
+            sol: { depth: 2, rationale: "" } },
+};
+const SUBSTITUTED_HELPFULNESS = {
+  id: 1, slug: "helpfulness", name: "Helpfulness",
+  coverage: {
+    "anthropic--constitution@2026-01-20": { depth: PANEL_DEPTH, passages: [] },
+    "openai--model-spec@2025-12-18": {
+      depth: SEATED_DEPTH, passages: [],
+      substitutions: [{ seat: "fable", substitute: "opus",
+                        reason: "fable's output was content-filtered on every attempt." }],
+    },
+  },
+};
+show(JUDGED_DOCUMENTS, SUBSTITUTED_HELPFULNESS, { comparing: true });
+check("comparing, the note names the substitute on its own document and nowhere else",
+      () => note("helpfulness").depth,
+      ["Claude’s Constitution 2026-01-20: 2.7 of 4, prescribed.",
+       ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
+        "sol: 2. Discussed in general terms."],
+       "Model Spec 2025-12-18: 2.0 of 4, discussed.",
+       "On Model Spec 2025-12-18, opus judged in place of fable: "
+         + "fable's output was content-filtered on every attempt.",
+       ["deepseek: 2.", "opus: 2.", "sol: 2."]]);
+
+SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions = "fable";
+check("a substitutions field that is not a list says nothing and throws nothing",
+      () => note("helpfulness").depth.filter(line => String(line).includes("in place of")),
+      []);
+
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

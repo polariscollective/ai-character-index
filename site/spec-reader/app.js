@@ -154,6 +154,16 @@ function openBehaviourNote(button) {
       const p = document.createElement("p");
       p.textContent = depthSummaryLine(doc, depth);   // never innerHTML: rationale is model output
       body.append(p);
+      /* A judge that could not answer this cell at all was replaced here, and the
+       * database published the cell only because the substitution was recorded.
+       * The judges listed below then name the substitute, which is true; this says
+       * why, beside the document it happened on and no other. */
+      const substitutions = behaviour?.coverage?.[doc.id]?.substitutions;
+      (Array.isArray(substitutions) ? substitutions : []).forEach(({ seat, substitute, reason }) => {
+        const said = document.createElement("p");
+        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${reason}`;
+        body.append(said);
+      });
       if (depth) {
         const judges = document.createElement("ul");
         judges.className = "behaviour-note-depth-judges";

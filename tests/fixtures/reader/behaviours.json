@@ -84,7 +84,7 @@
         "depth": 1,
         "rationale": "Named only."
        },
-       "c": {
+       "d": {
         "depth": 1,
         "rationale": "Named only."
        }
@@ -103,6 +103,13 @@
         "b": 2
        },
        "score": 4
+      }
+     ],
+     "substitutions": [
+      {
+       "seat": "c",
+       "substitute": "d",
+       "reason": "c returned no output for this document on every attempt."
       }
      ]
     }
