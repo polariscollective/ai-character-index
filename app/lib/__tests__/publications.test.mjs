@@ -65,6 +65,25 @@ test("only the word true opens a deployment to development builds", () => {
   assert.doesNotMatch(currentPublication({ [SERVES_DEVELOPMENT]: "true" }), /is_public/);
 });
 
+/* The production deployment is not a place where this can be turned on. A
+ * variable set there by mistake would show every unread build to the public,
+ * so the platform's own answer about where it is running wins. */
+test("production ignores the variable however it is set", () => {
+  const on = { [SERVES_DEVELOPMENT]: "true" };
+  assert.match(currentPublication({ ...on, VERCEL_ENV: "production" }), /is_public=is\.true/);
+  assert.match(currentPublication({ ...on, NODE_ENV: "production" }), /is_public=is\.true/);
+  // A preview deployment is not production, and neither is a laptop.
+  assert.doesNotMatch(currentPublication({ ...on, VERCEL_ENV: "preview" }), /is_public/);
+  assert.doesNotMatch(currentPublication({ ...on, VERCEL_ENV: "development" }), /is_public/);
+  assert.doesNotMatch(currentPublication(on), /is_public/);
+  // Vercel's answer wins over the build's: a preview build runs with
+  // NODE_ENV=production, and a preview is exactly where this is wanted.
+  assert.doesNotMatch(
+    currentPublication({ ...on, VERCEL_ENV: "preview", NODE_ENV: "production" }),
+    /is_public/,
+  );
+});
+
 test("a pin asks for that publication", async () => {
   const { calls, fetchImpl } = stub([{ documents: { ok: 1 } }]);
   await publicationColumn("documents", ID, fetchImpl);

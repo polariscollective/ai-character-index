@@ -134,6 +134,14 @@ const NO_COVERAGE =
   "No passages at this strength. Absence of coverage is an index finding, not "
   + "missing data.";
 
+/* The same sentence would be a false claim about a document no panel has read.
+ * "Nothing here governs that behaviour" is a finding; "nobody has looked" is
+ * not, and an answer that cannot tell them apart invites a caller to publish
+ * the second as the first. */
+const NOT_JUDGED =
+  "No panel has judged this document, so the index holds no passages for it. "
+  + "That is not a finding about the document.";
+
 /** Four fields, and the judges in the rubric's own vocabulary. */
 function shapePassage(passage) {
   const judges = {};
@@ -266,7 +274,11 @@ export function retrievePassages({ publication, payload, documents }, args = {})
         depth: panelDepth(behaviour, cell.modelSpecId),
         ...(substitutions ? { substitutions } : {}),
         passages: cell.passages.map(shapePassage),
-        ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
+        // Two silences, and they are different claims: a panel read this
+        // document and found nothing, or no panel has read it at all.
+        ...(cell.passages.length ? {} : {
+          note: specById.get(cell.modelSpecId)?.judged === false ? NOT_JUDGED : NO_COVERAGE,
+        }),
       };
     }),
     next_cursor: rest.length

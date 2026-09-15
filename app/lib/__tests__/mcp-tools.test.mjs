@@ -40,7 +40,9 @@ const snapshot = () => ({
 test("list_model_specs names every document with its counts", () => {
   const answer = listModelSpecs(snapshot());
   assert.equal(answer.publication.id, "3114dd65-c6f2-5cb3-bf98-af5b314381c3");
-  assert.deepEqual(answer.model_specs.map(spec => spec.id), ["acme--corpus@2026-01-01", "acme--second@2026-02-01"]);
+  assert.deepEqual(answer.model_specs.map(spec => spec.id),
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01"]);
 
   const [corpus] = answer.model_specs;
   assert.equal(corpus.lab, "Acme");
@@ -162,9 +164,11 @@ test("cells follow the order of the arguments, passages strongest first", () => 
 test("omitting model_spec_ids reads every specification", () => {
   const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
-                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01"]);
   assert.deepEqual(answer.model_specs_read.map(spec => spec.id),
-                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01"]);
 });
 
 test("an empty cell says so rather than disappearing", () => {
@@ -174,6 +178,19 @@ test("an empty cell says so rather than disappearing", () => {
   const [cell] = answer.results;
   assert.deepEqual(cell.passages, []);
   assert.match(cell.note, /Absence of coverage is an index finding/);
+});
+
+/* The same emptiness, two different claims. A document a panel has read and
+ * found nothing in is a finding of the index; a document nobody has judged is
+ * not, and the answer must not let a caller mistake the second for the first. */
+test("a document no panel has judged says that, not that its silence is a finding", () => {
+  const answer = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--translated@2026-03-01"],
+  });
+  const [cell] = answer.results;
+  assert.deepEqual(cell.passages, []);
+  assert.match(cell.note, /No panel has judged this document/);
+  assert.doesNotMatch(cell.note, /index finding/);
 });
 
 test("a retrieved cell carries its depth", () => {
@@ -247,8 +264,9 @@ test("a curation's integer is not reported as the depth the panel gave", () => {
 
 test("a retrieved cell of the grandfathered publication carries no depth", () => {
   const answer = retrievePassages(grandfathered(), { behaviours: BOTH });
-  assert.equal(answer.results.length, 4);
-  assert.deepEqual(answer.results.map(cell => cell.depth), [null, null, null, null]);
+  assert.equal(answer.results.length, 6, "two behaviours over three documents");
+  assert.deepEqual(answer.results.map(cell => cell.depth),
+                   [null, null, null, null, null, null]);
 });
 
 test("a depth counts only as an object with a finite mean, and a mean of zero counts", () => {
@@ -308,7 +326,7 @@ test("an unknown strength is refused", () => {
 
 test("everything fits in one page when the budget is large", () => {
   const answer = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
-  assert.equal(answer.results.length, 4);
+  assert.equal(answer.results.length, 6, "two behaviours over three documents");
   assert.equal(answer.next_cursor, null);
   assert.deepEqual(answer.remaining, { cells: 0, passages: 0 });
 });
@@ -324,7 +342,7 @@ test("a page stops on a whole cell and names the next one", () => {
     publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
     behaviour: "defined-behaviour", model_spec_id: "acme--second@2026-02-01",
   });
-  assert.deepEqual(answer.remaining, { cells: 3, passages: 5 });
+  assert.deepEqual(answer.remaining, { cells: 5, passages: 5 });
 });
 
 test("no cell is ever split", () => {
@@ -399,10 +417,11 @@ test("an empty cell rides along instead of starting a page of its own", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour"], strength: "core", limit: 3,
   });
-  // acme--corpus@2026-01-01 holds three, acme--second@2026-02-01 holds none: the empty one costs
-  // nothing and its note stays with the page that reached it.
+  // acme--corpus@2026-01-01 holds three; the other two hold none. An empty cell
+  // costs nothing and its note stays with the page that reached it.
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
-                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01"]);
   assert.equal(answer.next_cursor, null);
 });
 

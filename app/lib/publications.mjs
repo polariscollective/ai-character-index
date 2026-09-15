@@ -36,7 +36,13 @@ export function isPublicationId(value) {
 export const SERVES_DEVELOPMENT = "ACI_SERVES_DEVELOPMENT";
 
 export function servesDevelopment(env = process.env) {
-  return env[SERVES_DEVELOPMENT] === "true";
+  if (env[SERVES_DEVELOPMENT] !== "true") return false;
+  // And never on the production deployment, whatever it carries. One variable
+  // set by mistake there would put every unread build in front of the public,
+  // with nobody pressing anything: the switch that shows a draft must not be
+  // reachable by a typo in a settings page. The platform says where it is.
+  const where = env.VERCEL_ENV || env.NODE_ENV;
+  return where !== "production";
 }
 
 /** The query fragment that picks the current publication. */
