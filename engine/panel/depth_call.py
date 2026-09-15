@@ -30,6 +30,12 @@ MARKUP_RE = re.compile(r"[*`]+|(?<!\w)_+|_+(?!\w)")
 # The figure a DEPTH line opens with, whole: 2.5 and 42 are figures too, just not
 # ones that name a level of the scale.
 NUMBER_RE = re.compile(r"^(\d+(?:\.\d+)?)")
+# The Roman numerals that unambiguously name a level of the scale, longest
+# alternative first so III is not shadowed by an early match on I or II. The
+# trailing \b refuses a numeral folded into a longer word (IIII, IVth): neither
+# leaves a word boundary where the alternative would otherwise end.
+ROMAN_RE = re.compile(r"^(IV|III|II|I)\b", re.IGNORECASE)
+ROMAN_DEPTHS = {"I": 1, "II": 2, "III": 3, "IV": 4}
 SCALE_WORDS = "absent|named|discussed|prescribed|demonstrated"
 # What may follow the figure for the line to count as an answer rather than a
 # sentence that happens to start with "Depth:": nothing, bare punctuation, a
@@ -85,20 +91,28 @@ def _next_nonempty(lines, start):
 
 def _read_answer(value):
     """(counts, figure): whether value reads as an answer at all, and the depth
-    it names when it does. A leading figure followed by nothing, punctuation, a
-    denominator, a parenthetical or one word of the scale counts, whether or not
-    the figure itself names a level of the scale (0-4, not 2.5 and not 42, so
-    those count but refuse). Anything else -- a figure trailing into prose, or
-    no figure at all -- does not count, and is read through as prose."""
+    it names when it does. A leading figure or Roman numeral, followed by
+    nothing, punctuation, a denominator, a parenthetical or one word of the
+    scale, counts. A figure counts whether or not it names a level of the scale
+    (2.5 and 42 count but refuse); a Roman numeral counts only when it is
+    exactly I, II, III or IV, so V and IIII are not read as answers at all.
+    Anything else -- a figure trailing into prose, or no figure and no Roman
+    numeral -- does not count, and is read through as prose."""
     if not value:
         return False, None
     number = NUMBER_RE.match(value)
-    if not number:
-        return False, None
-    token, rest = number.group(1), value[number.end():]
-    if not ANSWER_SUFFIX_RE.match(rest):
-        return False, None
-    return True, int(token) if token in ("0", "1", "2", "3", "4") else None
+    if number:
+        token, rest = number.group(1), value[number.end():]
+        if not ANSWER_SUFFIX_RE.match(rest):
+            return False, None
+        return True, int(token) if token in ("0", "1", "2", "3", "4") else None
+    roman = ROMAN_RE.match(value)
+    if roman:
+        token, rest = roman.group(1), value[roman.end():]
+        if not ANSWER_SUFFIX_RE.match(rest):
+            return False, None
+        return True, ROMAN_DEPTHS[token.upper()]
+    return False, None
 
 
 def parse(reply):

@@ -142,6 +142,31 @@ class ParseTest(unittest.TestCase):
     def test_a_depth_split_onto_the_next_line_is_read(self):
         self.assertEqual(depth_call.parse("DEPTH:\n3"), (3, None))
 
+    # deepseek answered DEPTH: III thirteen times on one cell, its rationale
+    # naming level 3 throughout. A Roman numeral that unambiguously names a
+    # level reads like the digit it names, under the same suffix rules.
+    def test_a_roman_numeral_reads_as_the_level_it_names(self):
+        self.assertEqual(depth_call.parse("DEPTH: III\nRATIONALE: x"), (3, "x"))
+        self.assertEqual(depth_call.parse("DEPTH: iv")[0], 4)
+        self.assertEqual(depth_call.parse("**DEPTH:** II")[0], 2)
+
+    def test_a_roman_numeral_followed_by_a_parenthetical_still_answers(self):
+        self.assertEqual(depth_call.parse("DEPTH: I (named)")[0], 1)
+
+    def test_a_roman_numeral_off_the_scale_is_not_a_depth(self):
+        self.assertIsNone(depth_call.parse("DEPTH: V")[0])
+        self.assertIsNone(depth_call.parse("DEPTH: IIII")[0])
+
+    def test_a_negative_number_is_still_refused(self):
+        self.assertIsNone(depth_call.parse("DEPTH: -1")[0])
+
+    def test_a_roman_numeral_followed_by_prose_is_not_an_answer(self):
+        self.assertIsNone(depth_call.parse("DEPTH: III is not reached")[0])
+
+    def test_the_last_answer_line_wins_when_it_is_a_roman_numeral(self):
+        reply = "DEPTH: 3\nRATIONALE: …\nDEPTH: III"
+        self.assertEqual(depth_call.parse(reply)[0], 3)
+
 
 if __name__ == "__main__":
     unittest.main()
