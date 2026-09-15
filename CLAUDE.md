@@ -44,6 +44,11 @@ dated work. Until then the constraint that forbids this is written into the
 database, with the historic publication as its single exemption. See
 `docs/superpowers/specs/2026-09-10-index-artifacts-to-supabase-design.md`.
 
+Since then: the public publication as of September 2026, `07958c5e`, is not
+grandfathered. Every one of its cells was judged by `frontier_fast`, with recorded
+substitutions, so the site no longer shows this bench. The inherited publication
+and its exemption remain in the database until the cleanup migration.
+
 ### `panel-config.json`'s note about opus describes a different run
 
 **Not fixed.**
@@ -69,6 +74,9 @@ so in those words rather than claiming nobody has written what the behaviour
 means, which is what a two-state reading of the registry made it say first --
 defined and judged are independent, and this row is the combination that reads
 like a contradiction.
+
+Since then: the strict variant has left the reader. See `The index was reshaped
+before it was judged again`.
 
 ### The behaviour registrar wrote to a directory that no longer existed
 
@@ -166,6 +174,9 @@ property of running from a bare clone.
 [`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index)
 keeps it, and it is still the repository to clone to run the tool yourself.
 
+Since then: `engine/local_run.py` judges a document with one key and no database.
+See `A clone can judge again, with no database`.
+
 ### The reader opens on the first document it is given
 
 `app.js` defaulted `selectedSpec` to the string `"anthropic"`, which assumed a lab
@@ -234,9 +245,11 @@ shape the documentation asks for, hit it immediately.
 
 The upstream project takes contributions as pull requests against a repository
 anyone can clone. This fork cannot: the artifacts are in Supabase, judging costs
-money, and nobody outside has credentials. `site/propose.html` is what replaced
-it — two forms writing to `aci_submissions`, a private bucket and a Slack
-webhook.
+money, and nobody outside has credentials. `/how-it-works`
+(`site/how-it-works.html`) is what replaced it: two forms, opened in a dialog and
+posted to `/api/submit`, writing to `aci_submissions`, a private bucket and a
+Slack webhook. `site/propose.html`, where the forms first lived, now only
+redirects there.
 
 What it deliberately does not do is act. A public route that could start a run
 would be a public route that spends money, so a proposal is recorded and read,

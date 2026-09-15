@@ -1,10 +1,12 @@
 # How we assess coverage -- methodology page copy
 
-> Editable working copy of the "How we assess coverage" section published on the
-> methodology page (`site/methodology.html`, live at
-> ai-character-index.pages.dev/methodology). Edit this file freely and ask for it
-> to be synced; the HTML is the published source. If an edit changes the rubric's
-> substance (anchors, boundary tests, rules), it should also land in
+> The "How we assess coverage" section as the upstream methodology page published
+> it (ai-character-index.pages.dev/methodology). It is a record, not a description
+> of this index: as of September 2026 `site/methodology.html` only redirects to
+> `/how-it-works`, the term-list search below is retired, and the index is judged
+> by one panel, `frontier_fast`, over four documents, each judge giving a 0 to 4
+> depth and the publication carrying the mean. If an edit changes the rubric's
+> substance (anchors, boundary tests, rules), it belongs in
 > `methodology/spec-coverage-depth-rubric.md`, the rubric's canonical source.
 
 Coverage answers one question, per behaviour and per lab: **what does the lab's

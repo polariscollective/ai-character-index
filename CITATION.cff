@@ -5,20 +5,25 @@ message: >-
   it using the metadata below. The index is a dataset that changes, so cite
   the publication you read: every build has an identifier and a date, and the
   site offers a ready-made citation carrying both. The specifications the
-  index reads are third-party works released under CC0 and should be cited to
-  their own publishers, not to this project.
+  index reads are third-party works and should be cited to their own
+  publishers, not to this project.
 type: dataset
 
-# The authors of the index and of the data. Polaris Collective maintains the
-# project and runs the deployment, and is deliberately not listed here: the
-# coverage this index publishes was produced by the runs below, and adding a
-# maintainer to the authors of a dataset it did not judge would misattribute
-# it. That changes when a publication carries runs of our own.
+# The authors of the index and of the data. Andrés Cotton and Matt Stults
+# created the index and its method (the rubric, the scale, the prompt and the
+# citation grammar, referenced below) and wrote most of the behaviour briefs.
+# Polaris Collective maintains the project, runs the deployment and runs the
+# judging: as of September 2026 the public publication carries runs of its
+# own, so it is an author of the dataset. Each publication also computes its
+# own credit from the runs and briefs it carries, and the site's citation of a
+# build reads it from there.
 authors:
   - given-names: Andrés
     family-names: Cotton
   - given-names: Matt
     family-names: Stults
+  - name: Polaris Collective
+    website: 'https://polariscollective.org'
 
 contact:
   - name: Polaris Collective
@@ -26,9 +31,10 @@ contact:
 
 abstract: >-
   A structured index of where published AI behaviour specifications
-  address particular model behaviours, built by an LLM panel of judges
-  that scores candidate passages from each specification and records
-  every citation with a locator resolving to verbatim spec text.
+  address particular model behaviours. A panel of LLM judges reads each
+  specification whole, marks the passages that bear on each behaviour and
+  gives the document a 0 to 4 depth, and every citation is recorded with a
+  locator resolving to verbatim spec text.
 
 # This fork, which is what the URL below serves. The original stands alone and
 # is the one to clone: https://github.com/AndresCotton/ai-character-index
@@ -43,3 +49,19 @@ keywords:
   - model specifications
   - behaviour coverage
   - LLM evaluation
+
+# The method, credited on its own line: it is the same whoever runs it.
+references:
+  - type: software
+    title: AI Character Index
+    abstract: >-
+      The original, standalone AI Character Index, and the method this index
+      runs: the depth rubric and its scale, the judging prompt and the
+      citation grammar.
+    authors:
+      - given-names: Andrés
+        family-names: Cotton
+      - given-names: Matt
+        family-names: Stults
+    repository-code: 'https://github.com/AndresCotton/ai-character-index'
+    url: 'https://ai-character-index.pages.dev'

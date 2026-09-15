@@ -1,39 +1,48 @@
-# site/ — two static surfaces, no build step, data via committed JSON payloads
+# site/: the public pages and the reader, served by the Next.js application
 
-> Current-state doc: describes what exists now, not what should exist.
+> Current-state doc: describes what exists now, not what should exist. Brought current in September 2026.
 
 ## Purpose
 
-The public presentation layer: renders engine-generated JSON payloads into static pages. Plain HTML + vanilla JS everywhere — the reader app is an ES module (`<script type="module" src="./app.js">`), while `methodology.html` uses an inline classic script; `index.html` is a minimal redirect to the reader, which is the landing surface. No framework, no build step (the Astro stack PLAN.md recommended was never adopted). Deploys to Cloudflare Pages via `.github/workflows/deploy.yml` on merges that touch `site/**`, or manually via `pnpm deploy:site`.
+The public presentation layer. Plain HTML and vanilla JS, with no framework and no build step of its own: `predev` and `prebuild` in `package.json` copy `site/` into the gitignored `public/`, and the Next.js application serves it from there. The application is deployed on Vercel at https://ai-character-index.vercel.app, which builds on a push. `next.config.mjs` gives the prose pages names (`/how-it-works`, `/mcp`) and hands `/` and `/spec-reader/` their index files.
+
+No data lives here. The reader and the pages fetch it from the application's routes, which read the current public publication out of Supabase: `/api/reader/documents`, `/api/reader/payload`, `/api/reader/behaviours` and `/api/reader/publication`. A `?publication=` pin reaches any publication, public or draft.
 
 ## Contents
 
 | Path | What it is |
 |---|---|
-| `index.html` | Minimal redirect to `spec-reader/`. The core-page prototype it carried is retired; its design history lives in `design/`. |
-| `methodology.html` | Static prose page. Describes coverage assessment: the LLM panel procedure as operative, the fixed term-list search as the predecessor that produced behaviours 1–3. |
-| `spec-reader/` | The spec reader: both specifications in full with a behaviour menu over them (checklist, multi-select, compare view), each citation carrying raw per-judge verdicts scored client-side into tiers (defining / core / related band toggles). Spec text from its own `data/documents.json` (built by `engine/build-spec-reader-data.py`); behaviour data from its own `data/behaviours.json` (built by `engine/panel/build_site_data.py`), resolved ?data=<name> pin -> `data/manifest.json` latest -> the shipped fallback. `data/` also holds the calibration variants (v3w-fresh / v4a / v4a-ds / v5 / v5-1) and the band-filtered keep-set (`behaviours-v5-reader.json`) side by side, each loadable as a `?data=` pin. |
-| `README.md` | Layer status; lists the two tabs. |
+| `index.html` | Minimal redirect to `spec-reader/`, which is the landing surface. The core-page prototype it carried is retired; its design history lives in `design/`. |
+| `how-it-works.html` | Served at `/how-it-works`. What the index is and which documents it reads, how passages are judged and depths given, what it does not tell you, how to cite a passage or the index (its citation block reads `/api/reader/publication`), Andrés Cotton's original tool, and running it yourself. It carries both proposal forms, a new model spec and a new behaviour, in a dialog opened from a button in each section; both forms post to `/api/submit`. |
+| `mcp.html` | Served at `/mcp`. How to connect to the public MCP endpoint, `/api/mcp`: streamable HTTP, no account, three read-only tools. |
+| `methodology.html` | A redirect to `/how-it-works`, kept because links to it are already shared. It no longer carries prose. |
+| `propose.html` | A redirect to `/how-it-works`, kept for the same reason. The proposal forms moved to `how-it-works.html`. |
+| `spec-reader/` | The spec reader: the documents of the current publication, a behaviour menu that highlights the passages judged to bear on each behaviour, each judge's verdict scored client-side into defining, core and related bands, and the depth the panel gave each document. It has its own `README.md`. |
+| `README.md` | Short layer status. |
 
 ## Relationships
 
-- All dynamic content arrives as committed JSON under the reader's `data/`; the deploy's `paths: site/**` filter works precisely because payloads live inside `site/`.
-- Producer map: `engine/build-spec-reader-data.py` → `spec-reader/data/documents.json` (spec text; its `behaviours` key still derives from the frozen `data/coverage.json` but no surface renders it); `engine/panel/build_site_data.py` → the reader's behaviour payloads (timestamped runs + `manifest.json`, both gitignored, plus the tracked `behaviours.json` fallback), and with `--threshold=4 --solid-threshold=6` the keep-set variant (`behaviours-v5-reader.json`).
-- `engine/verify-reader-test.mjs` / `verify-reader-features.mjs` are the E2E tests of this surface (repo-wide, `engine/panel/test_panel.py` covers the panel pipeline): they boot Chrome against the page and assert every renderable passage anchors (the client renders nothing below the related cut, so the committed keep-set is the count oracle), and `verify-reader-features.mjs` additionally exercises the URL/DOM-state features and the user-data path; they hardcode the DOM selectors used here.
-- `index.html` is a minimal redirect to the reader; the retired prototype's design history lives in `design/`.
+- Producers: `engine/build-spec-reader-data.py` builds the documents payload and `engine/panel/build_site_data.py` the behaviour payload. `engine/publish.py` materialises both into a row of `aci_publications`, and `app/api/reader/` serves the public one.
+- The proposal forms on `how-it-works.html` post to `app/api/submit/`, which records a proposal in `aci_submissions`, stores its document in a private bucket and tells Slack. It registers and judges nothing.
+- `engine/verify-reader-test.mjs` and `engine/verify-reader-features.mjs` boot Chrome against `site/`, answering the reader's routes from `tests/fixtures/reader/` rather than the database; CI's browser job runs both. The `engine/panel/test_appjs_*.js` harnesses test `spec-reader/app.js` without a browser.
 
 ## Dependency map
 
 ```mermaid
 graph LR
-  docpayload["spec-reader/data/documents.json"] --> reader["spec-reader/"]
-  payload["spec-reader/data/behaviours.json (+ variants, manifest latest)"] --> reader
+  db["Supabase: aci_publications"] --> routes["/api/reader/*"]
+  routes --> reader["spec-reader/"]
+  routes -->|"/api/reader/publication"| how["how-it-works.html"]
   index["index.html (redirect)"] --> reader
-  methodology["methodology.html (static prose)"]
-  reader -->|nav links| methodology
+  methodology["methodology.html (redirect)"] --> how
+  propose["propose.html (redirect)"] --> how
+  how -->|"proposal forms"| submit["/api/submit"]
+  mcp["mcp.html"] -.->|"describes"| endpoint["/api/mcp"]
+  reader -->|"nav links"| how
+  reader -->|"nav links"| mcp
 ```
 
 ## As-is observations
 
-- `methodology.html` describes the term-list method while the operative procedure is the LLM panel; nothing tells readers which method produced which published records (behaviours 1–3: term-list; panel-scored records live in `spec-reader/`).
-- The verifiers' DOM-selector coupling means a markup refactor silently invalidates the only E2E checks.
+- No page of the site states the depth rubric in full. `how-it-works.html` gives the ends of the scale, and the rubric itself is `methodology/spec-coverage-depth-rubric.md`.
+- The verifiers hardcode the reader's DOM selectors, so a markup refactor can silently invalidate the only end-to-end checks.
