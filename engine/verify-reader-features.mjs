@@ -198,6 +198,71 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     "the example's code block is highlighted as that passage's continuation", JSON.stringify(seen));
 }
 
+/* A link to a passage opens the reader at it. The locator names its document by
+ * its head, so the reader opens that document whatever ?spec= says, ticks a
+ * behaviour that cites the passage and turns on the band it sits in, and puts
+ * the passage in view, focused and current for the arrows. The link is not
+ * sticky: the first thing the reader does afterwards drops it from the URL. The
+ * passage chosen is related, on a document other than the one ?spec= names, for
+ * a behaviour the URL does not tick, so the link has all three to do. */
+{
+  const linked = keepSet.find(behaviour => behaviour.slug === UNDEFINED)
+    .coverage["acme--second@2026-02-01"].passages[0];
+  const readLink = () => page.evaluate(() => {
+    const panel = document.querySelector(".document-panel");
+    const current = panel?.querySelector("[data-passage-id].current");
+    const scroll = panel?.querySelector(".document-scroll").getBoundingClientRect();
+    const box = current?.getBoundingClientRect();
+    const status = document.querySelector("#reader-status");
+    return {
+      document: panel?.dataset.documentId ?? null,
+      ticked: [...document.querySelectorAll("[data-behaviour]")]
+        .filter(input => input.checked).map(input => input.dataset.behaviour),
+      tiers: new URL(location.href).searchParams.get("tiers"),
+      currentLocators: current?.dataset.locators?.split("\n") ?? [],
+      inView: Boolean(box && box.top >= scroll.top - 1 && box.bottom <= scroll.bottom + 1),
+      focused: Boolean(current && current.contains(document.activeElement)),
+      shownLocator: current?.querySelector(".passage-locator")?.textContent ?? null,
+      status: status.classList.contains("visible") ? status.textContent : "",
+      urlPassage: new URL(location.href).searchParams.get("passage"),
+    };
+  });
+
+  await at(`?passage=${encodeURIComponent(linked.locator)}&spec=${DOC_ID}`
+    + `&behavior=${DEFINED}&tiers=defining,core`);
+  await page.waitForTimeout(700);   // the passage is scrolled to smoothly
+  let seen = await readLink();
+  check(seen.document === "acme--second@2026-02-01",
+    "a ?passage= link opens the document its locator names, over ?spec=", JSON.stringify(seen));
+  check(seen.ticked.includes(UNDEFINED) && (seen.tiers || "").split(",").includes("related"),
+    "a ?passage= link ticks a behaviour citing the passage and turns on its band", JSON.stringify(seen));
+  check(seen.currentLocators.includes(linked.locator) && seen.inView && seen.focused,
+    "the linked passage is current for the arrows, in view and focused", JSON.stringify(seen));
+  check(seen.shownLocator === linked.locator,
+    "the passage's note shows its locator", JSON.stringify(seen.shownLocator));
+  check(seen.status === "" && seen.urlPassage === linked.locator && pageErrors.length === 0,
+    "a link that resolves says nothing, and stays in the URL until the reader moves on",
+    `${JSON.stringify(seen)} ${pageErrors.join("; ")}`);
+
+  await page.click(`.behaviour-option:has([data-behaviour="${DEFINED}"])`);
+  await page.waitForTimeout(250);
+  check(new URL(page.url()).searchParams.get("passage") === null,
+    "ticking a behaviour afterwards drops ?passage= from the URL", page.url());
+
+  await at(`?passage=${encodeURIComponent(linked.locator)}`);
+  await page.waitForTimeout(700);
+  await page.locator(".next-passage").first().click();
+  await page.waitForTimeout(250);
+  check(new URL(page.url()).searchParams.get("passage") === null,
+    "stepping to another passage drops ?passage= from the URL too", page.url());
+
+  await at(`?passage=${encodeURIComponent("nowhere--nothing@2026-01-01 > #gone > ¶9")}&spec=${DOC_ID}`);
+  seen = await readLink();
+  check(/not in this publication/.test(seen.status) && seen.document === DOC_ID && pageErrors.length === 0,
+    "a ?passage= the publication does not carry says so, and the reader opens as usual",
+    `${JSON.stringify(seen)} ${pageErrors.join("; ")}`);
+}
+
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
 await at("");

@@ -19,6 +19,9 @@ Default is all three, with related drawn softer than core; an explicit `?tiers=`
 ever renders.
 - `?related=W` -- weight of a "related" vote when scoring (core is always 2)
   [default 1; try 0.5 or 0]
+- `?passage=<locator>` (URL-encoded) -- opens the reader at that passage: the
+  document its locator names, a behaviour citing it and its band; dropped from the
+  URL once you move on.
 - legacy `?threshold=<score>` links map once at load to a tier-band selection
   (`legacyThresholdBands` in app.js); `?solid=` is no longer read.
 Scores are recomputed client-side from each citation's raw per-model verdicts, on
