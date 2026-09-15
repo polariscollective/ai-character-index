@@ -567,6 +567,82 @@ if (behaviours.length === 0) {
   );
 }
 
+/* A document the index read in translation carries its original beside it, and
+ * says so. The fixture's third document is the one with a `translation`; the
+ * other two prove the feature reaches no document that does not ask for it. */
+{
+  const translated = documents.find(document => document.translation);
+  const plain = documents.find(document => !document.translation);
+
+  await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
+  const note = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !note.hidden
+      && note.text.includes("Machine translation from Chinese by Claude Opus 5")
+      && note.text.includes("not reviewed by a person"),
+    "translated · the header says whose translation was judged",
+    note.text,
+  );
+
+  const marks = await page.locator(".original-open").count();
+  report(marks === translated.original.length, "translated · one mark per passage",
+         `${marks}/${translated.original.length}`);
+
+  // Each mark carries the original of the passage it sits in, which is what makes
+  // the pairing worth anything: marks that all carried the document's first
+  // original would pass a count and say nothing true. Read from the DOM rather
+  // than by clicking each one, because a mark inside a section focus mode has
+  // collapsed is not clickable -- correctly, since its text is not on screen
+  // either.
+  const carried = await page.evaluate(() => [...document.querySelectorAll(".original-open")]
+    .map(button => button.dataset.original));
+  report(
+    carried.length === translated.original.length
+      && carried.every((zh, i) => zh === translated.original[i].zh),
+    "translated · each mark carries its own passage's original",
+    `${carried.length} marks, ${carried.filter((zh, i) => zh === translated.original[i]?.zh).length} paired`,
+  );
+
+  // And the first of them opens, which is the part a reader does.
+  await page.locator(".original-open").first().click();
+  await page.waitForSelector("#original-note:popover-open");
+  const opened = await page.evaluate(() => ({
+    label: document.querySelector("#original-note-label").textContent,
+    body: document.querySelector("#original-note-body").textContent,
+    lang: document.querySelector("#original-note-body").lang,
+  }));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  report(
+    opened.body === translated.original[0].zh
+      && opened.lang === translated.translation.from
+      && opened.label === "Chinese original",
+    "translated · a mark opens the original beside it",
+    `${opened.label} (${opened.lang}): ${opened.body.slice(0, 24)}`,
+  );
+
+  await readView(`${base}?spec=${encodeURIComponent(plain.id)}`);
+  const clean = await page.evaluate(() => ({
+    noteHidden: document.querySelector(".document-translation").hidden,
+    marks: document.querySelectorAll(".original-open").length,
+  }));
+  report(clean.noteHidden && clean.marks === 0, "untranslated · no note and no marks",
+         `${clean.marks} marks`);
+
+  // Judged and unjudged are different claims. A document no panel has read must
+  // not say that its silence is a finding about the document.
+  await readView(`${base}?behavior=${behaviours[0].slug}&spec=${encodeURIComponent(translated.id)}`);
+  const unjudged = await page.$eval(".zero-coverage", el => el.textContent.replace(/\s+/g, " ").trim());
+  report(
+    unjudged.includes("Not judged yet") && !unjudged.includes("index finding"),
+    "translated · an unjudged document says so",
+    unjudged.slice(0, 90),
+  );
+}
+
 /* 404 audit: every path the page asks for must exist. There used to be one
  * exception, the manifest, whose absence was the fresh-clone state the reader
  * fell through; the chain that needed it is gone. */

@@ -1631,10 +1631,14 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 
 /* A document the index read in translation says so where it says its version:
-   one line in the header, in the functional colour for something that needs
-   review, and never a band across the page. The palette carries no pure red;
-   --fail is its one warm colour, and this is a caveat about the text, which is
-   what that colour is for. */
+   one line in the header, never a band across the page.
+
+   The colour is a deliberate departure, taken by the operator and recorded
+   here. The framework reserves --fail for status -- failures, violations,
+   errors -- and a machine translation is a caveat, not a failure. It is also
+   the palette's only warm colour, and the operator asked for this notice to
+   read as a warning rather than blend into the header. --warn gold does not
+   pass AA as text on paper, so the choice was --fail or nothing loud at all. */
 .document-translation {
   flex-basis: 100%;
   margin: 0;
