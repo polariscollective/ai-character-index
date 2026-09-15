@@ -436,6 +436,25 @@ class TestAppJSDepth(unittest.TestCase):
         self.assertIn("24 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSCiteBlocks(unittest.TestCase):
+    """The reader's copy of the engine's paragraph grammar, held to the engine:
+    for each fixture document, in the anchor and the path locator style, every
+    locator documentLocators gives is the one harness.passages() gives, in the
+    same order. Skips (not fails) without `node`."""
+
+    HARNESS = HERE / "test_appjs_citeblocks.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_reader_locators_are_the_engines(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=180)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("10 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSLocator(unittest.TestCase):
     """The passage link in app.js: a locator's head, the document it names (a
     full document id or an older head without its lab), and a ?passage= link

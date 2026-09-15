@@ -1280,15 +1280,190 @@ function isSpecialLine(lines, index) {
   );
 }
 
-function renderMarkdown(markdown, context) {
+/* The engine's paragraph grammar, for locators.
+ *
+ * A passage's locator is the engine's: engine/spec-cite/cite.py cuts a document
+ * into sections and blocks, and engine/panel/harness.py::passages numbers each
+ * section's blocks and leaves out any that only repeats a heading, as a contents
+ * list does. The reader gives every block the locator the engine would give it,
+ * so a copy or a link names what a citation names. This is a copy of that grammar,
+ * held to the engine locator for locator by engine/panel/test_appjs_citeblocks.js,
+ * which runs it; a second grammar that only looked right would drift. The
+ * expressions are cite.py's.
+ *
+ * Lines are split as renderMarkdown splits them, so a block's line numbers are the
+ * reader's. Python's splitlines also breaks on a bare \r and a few rarer
+ * separators; no document of the index carries one, as of September 2026. */
+const CITE_HEADING = /^(#{1,6})\s+(.*?)\s*(?:\{#([A-Za-z0-9_-]+)(?:\s+authority=\S+)?\})?\s*$/;
+const CITE_FENCE = /^(```|~~~)/;
+const CITE_LIST_ITEM = /^([-*+]|\d+[.)])\s+/;
+const CITE_FOOTNOTE = /\[\^[^\]]+\]/g;
+const CITE_XREF = /\[\?\]\((#[A-Za-z0-9_-]+)\)/g;
+const CITE_LINK = /\[([^\]]+)\]\([^)]+\)/g;
+
+/* cite.normalize: a block's text once its syntax is gone. */
+function citeNormalize(text) {
+  return text
+    .replace(CITE_FOOTNOTE, "")
+    .replace(CITE_XREF, "$1")
+    .replace(CITE_LINK, "$1")
+    .replace(CITE_LIST_ITEM, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/* cite.parse_sections: every heading outside a fence opens a section that runs to
+ * the next heading of any level, named by its anchor and by its heading path. */
+function citeSections(lines) {
+  const sections = [];
+  let stack = [];
+  let inFence = null;
+  lines.forEach((line, i) => {
+    const fence = line.match(CITE_FENCE);
+    if (fence) {
+      if (inFence === null) inFence = fence[1];
+      else if (line.startsWith(inFence)) inFence = null;
+      return;
+    }
+    if (inFence) return;
+    const heading = line.match(CITE_HEADING);
+    if (!heading || line.startsWith("#!")) return;
+    const level = heading[1].length;
+    const title = heading[2].replace(/\s+/g, " ").trim();
+    sections.forEach(section => { if (section.end === null) section.end = i; });
+    stack = stack.filter(([depth]) => depth < level);
+    stack.push([level, title]);
+    sections.push({ anchor: heading[3] || null, path: stack.map(([, name]) => name), start: i + 1, end: null });
+  });
+  sections.forEach(section => { if (section.end === null) section.end = lines.length; });
+  return sections;
+}
+
+/* cite.segment_blocks, with the lines each block spans: a blank line ends a block,
+ * each top-level list item starts one, a fence is one, and a fence after an
+ * **Example** caption joins the caption's block. */
+function citeBlocks(lines, start, end) {
+  const blocks = [];
+  let current = [];
+  let first = -1;
+  let last = -1;
+  const flush = () => {
+    if (current.length) blocks.push({ raw: current.join("\n"), first, last });
+    current = [];
+  };
+  let i = start;
+  while (i < end) {
+    const line = lines[i];
+    const fence = line.match(CITE_FENCE);
+    if (fence) {
+      flush();
+      const fenced = [line];
+      const opened = i;
+      i += 1;
+      while (i < end) {
+        fenced.push(lines[i]);
+        if (lines[i].startsWith(fence[1])) break;
+        i += 1;
+      }
+      const closed = Math.min(i, end - 1);
+      const previous = blocks[blocks.length - 1];
+      if (previous && /^\*\*Example\*\*/.test(previous.raw)) {
+        previous.raw = `${previous.raw}\n\n${fenced.join("\n")}`;
+        previous.last = closed;
+      } else {
+        blocks.push({ raw: fenced.join("\n"), first: opened, last: closed });
+      }
+      i += 1;
+      continue;
+    }
+    if (!line.trim()) {
+      flush();
+    } else if (CITE_LIST_ITEM.test(line)) {
+      flush();
+      current.push(line);
+      first = i;
+      last = i;
+    } else {
+      if (!current.length) first = i;
+      current.push(line);
+      last = i;
+    }
+    i += 1;
+  }
+  flush();
+  return blocks;
+}
+
+/* harness.passages: the locator of every block of a document that the engine
+ * numbers and keeps, with the lines it spans, in document order. A block counts
+ * towards its section's numbering even where it is left out. */
+function documentLocators(markdown, head, byAnchor) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const sections = citeSections(lines);
+  const titles = new Set(sections.map(section =>
+    citeNormalize(section.path.join(" > ").split(" > ").pop())));
+  const located = [];
+  for (const section of sections) {
+    const ref = byAnchor && section.anchor ? `#${section.anchor}` : section.path.join(" > ");
+    citeBlocks(lines, section.start, section.end).forEach((block, i) => {
+      const text = citeNormalize(block.raw);
+      if (text && !titles.has(text)) {
+        located.push({ locator: `${head} > ${ref} > ¶${i + 1}`, first: block.first, last: block.last });
+      }
+    });
+  }
+  return located;
+}
+
+/* Whether a document's sections are named by anchor or by heading path. The engine
+ * reads it from the document's registry row, which the reader is not sent, so it
+ * is read off the locators the document's passages carry; a document no passage
+ * cites is anchored when its headings carry anchors. Both rules agree with every
+ * document of the index, as of September 2026. */
+function locatesByAnchor(doc) {
+  const cited = (state.rawBehaviours || [])
+    .flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || []);
+  if (cited.length) return cited.some(passage => (passage.locator.split(" > ")[1] || "").startsWith("#"));
+  return doc.markdown.split("\n").some(line => Boolean(line.match(CITE_HEADING)?.[3]));
+}
+
+/* Each rendered block takes the locator of the engine block its first source line
+ * falls in. That is what makes the shapes where the two cut differently agree: a
+ * list item and the nested items the reader renders as items of their own, an
+ * example caption and the fence the engine attaches to it, a paragraph that runs
+ * into a quote. A heading falls in no block. A quote or an admonition carries the
+ * locator of the block its first line opens, as the paragraphs inside it carry
+ * theirs: a passage citing a whole "!!! meta" commentary is anchored to the
+ * admonition itself, and its first line is the one the engine's block begins on. */
+function attachLocators(panel, doc) {
+  const located = documentLocators(doc.markdown, doc.id, locatesByAnchor(doc));
+  if (!located.length) return;
+  panel.querySelectorAll(".document-body [data-line]").forEach(block => {
+    if (/^H[1-6]$/.test(block.tagName)) return;
+    const line = Number(block.dataset.line);
+    let low = 0;
+    let high = located.length - 1;
+    let hit = null;
+    while (low <= high) {
+      const middle = (low + high) >> 1;
+      if (located[middle].first <= line) { hit = located[middle]; low = middle + 1; }
+      else high = middle - 1;
+    }
+    if (hit && line <= hit.last) block.dataset.locator = hit.locator;
+  });
+}
+
+function renderMarkdown(markdown, context, lineOffset = 0) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const output = [];
   let blockNumber = 0;
-  const blockAttr = () => `data-block="${++blockNumber}"`;
+  // Each block says which source line it starts on, for its locator (attachLocators).
+  const blockAttr = line => `data-block="${++blockNumber}" data-line="${lineOffset + line}"`;
   const usedHeadingIds = context?.usedHeadingIds || new Map();
 
   for (let index = 0; index < lines.length;) {
     const line = lines[index];
+    const first = index;
     if (!line.trim()) {
       index += 1;
       continue;
@@ -1303,7 +1478,7 @@ function renderMarkdown(markdown, context) {
       const id = anchor
         ? ` id="${escapeHTML(scopedAnchor(context.idPrefix, uniqueAnchor))}"`
         : "";
-      output.push(`<h${heading.level} ${blockAttr()}${id}>${inlineMarkdown(heading.text, context)}</h${heading.level}>`);
+      output.push(`<h${heading.level} ${blockAttr(first)}${id}>${inlineMarkdown(heading.text, context)}</h${heading.level}>`);
       index += 1;
       continue;
     }
@@ -1319,7 +1494,7 @@ function renderMarkdown(markdown, context) {
         index += 1;
       }
       index += 1;
-      output.push(`<pre class="code-block" ${blockAttr()} data-language="${escapeHTML(language)}">${renderCodeBlock(content.join("\n"), context)}</pre>`);
+      output.push(`<pre class="code-block" ${blockAttr(first)} data-language="${escapeHTML(language)}">${renderCodeBlock(content.join("\n"), context)}</pre>`);
       continue;
     }
 
@@ -1332,9 +1507,9 @@ function renderMarkdown(markdown, context) {
         index += 1;
       }
       output.push(`
-        <aside class="admonition" ${blockAttr()}>
+        <aside class="admonition" ${blockAttr(first)}>
           <div class="admonition-label">${inlineMarkdown(admonition[2] || admonition[1], context)}</div>
-          ${renderMarkdown(content.join("\n"), context)}
+          ${renderMarkdown(content.join("\n"), context, lineOffset + first + 1)}
         </aside>
       `);
       continue;
@@ -1346,7 +1521,7 @@ function renderMarkdown(markdown, context) {
         content.push(lines[index].replace(/^>\s?/, ""));
         index += 1;
       }
-      output.push(`<blockquote ${blockAttr()}>${renderMarkdown(content.join("\n"), context)}</blockquote>`);
+      output.push(`<blockquote ${blockAttr(first)}>${renderMarkdown(content.join("\n"), context, lineOffset + first)}</blockquote>`);
       continue;
     }
 
@@ -1358,7 +1533,7 @@ function renderMarkdown(markdown, context) {
       while (index < lines.length) {
         const item = lines[index].match(/^\s*([-*+]|\d+\.)\s+(.+)$/);
         if (!item || /\d+\./.test(item[1]) !== ordered) break;
-        items.push(`<li ${blockAttr()}>${inlineMarkdown(item[2], context)}</li>`);
+        items.push(`<li ${blockAttr(index)}>${inlineMarkdown(item[2], context)}</li>`);
         index += 1;
       }
       output.push(`<${tag}>${items.join("")}</${tag}>`);
@@ -1371,7 +1546,7 @@ function renderMarkdown(markdown, context) {
         tableLines.push(lines[index]);
         index += 1;
       }
-      output.push(`<pre class="raw-table" ${blockAttr()}>${escapeHTML(tableLines.join("\n"))}</pre>`);
+      output.push(`<pre class="raw-table" ${blockAttr(first)}>${escapeHTML(tableLines.join("\n"))}</pre>`);
       continue;
     }
 
@@ -1387,7 +1562,7 @@ function renderMarkdown(markdown, context) {
       paragraph.push(lines[index].trim());
       index += 1;
     }
-    output.push(`<p ${blockAttr()}>${inlineMarkdown(paragraph.join(" "), context)}</p>`);
+    output.push(`<p ${blockAttr(first)}>${inlineMarkdown(paragraph.join(" "), context)}</p>`);
   }
 
   return output.join("\n");
@@ -2283,6 +2458,7 @@ function renderDocument(doc, side = 0) {
   }
   showTranslationNotice(panel);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
+  attachLocators(panel, doc);
   attachOriginals(panel, doc);
   setupSectionFocus(panel);
   setupInternalLinks(panel);
