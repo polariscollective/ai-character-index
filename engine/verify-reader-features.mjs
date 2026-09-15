@@ -517,6 +517,120 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     JSON.stringify(located));
 }
 
+/* Copy icons and links for every paragraph, not only the passages a behaviour
+ * cites. A paragraph no passage cites shows the same two icons while the pointer
+ * is over it, in the gutter at its right, clear of its text and of the rail; a
+ * cited passage keeps its icons in its head. A link to an uncited paragraph opens
+ * its document, puts the paragraph in view, focuses it and outlines it briefly,
+ * and ticks nothing; from there the keyboard reaches its icons. */
+{
+  const corpus = "acme--corpus@2026-01-01";
+  const uncited = `${corpus} > #blocks > ¶1`;
+  const blockSelector = `.document-body [data-locator="${uncited}"]`;
+  const stubClipboard = () => page.evaluate(() => {
+    window.__copied = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async text => { window.__copied.push(text); } },
+    });
+  });
+  const readBlock = () => page.evaluate(selector => {
+    const block = document.querySelector(selector);
+    const scroll = block.closest(".document-scroll").getBoundingClientRect();
+    const box = block.getBoundingClientRect();
+    return {
+      buttons: [...block.querySelectorAll(":scope > .block-copy .passage-copy")].map(button => {
+        const icon = button.getBoundingClientRect();
+        return {
+          label: button.getAttribute("aria-label"),
+          svg: Boolean(button.querySelector("svg")),
+          opacity: Math.round(Number(getComputedStyle(button).opacity) * 100) / 100,
+          inGutter: icon.left >= box.right,
+          clearOfRail: icon.right <= scroll.right - 14,
+        };
+      }),
+      status: document.querySelector("#copy-status")?.textContent ?? null,
+      copied: window.__copied || [],
+    };
+  }, blockSelector);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const started = Date.now();
+  await at(`?spec=${DOC_ID}&behavior=`);
+  const opened = Date.now() - started;
+  await stubClipboard();
+  await page.mouse.move(2, 700);
+  await page.waitForTimeout(300);
+  await page.locator(blockSelector).hover();
+  await page.waitForTimeout(350);
+  let seen = await readBlock();
+  check(seen.buttons.map(button => button.label).join(",") === "Copy locator,Copy link"
+      && seen.buttons.every(button => button.svg && button.opacity > 0 && button.opacity < 1
+        && button.inGutter && button.clearOfRail),
+    "over a paragraph no passage cites, the copy icons fade in, in the gutter clear of its text and the rail",
+    JSON.stringify(seen.buttons));
+
+  await page.locator(`${blockSelector} .passage-copy[data-copy="locator"]`).click();
+  await page.waitForTimeout(200);
+  await page.locator(`${blockSelector} .passage-copy[data-copy="link"]`).click();
+  await page.waitForTimeout(200);
+  seen = await readBlock();
+  const link = seen.copied[1];
+  check(seen.copied[0] === uncited && Boolean(link) && new URL(link).searchParams.get("passage") === uncited
+      && seen.status === "Link copied",
+    "an uncited paragraph's icons copy its locator and a link to it", JSON.stringify(seen.copied));
+
+  await page.locator(".document-body h2", { hasText: "Blocks" }).first().hover();
+  await page.waitForTimeout(250);
+  const headingIcons = await page.evaluate(() =>
+    document.querySelectorAll(".document-body :is(h1, h2, h3, h4, h5, h6) .block-copy").length);
+  check(headingIcons === 0, "a heading carries no copy icons", `${headingIcons} in headings`);
+
+  await at(`?spec=${DOC_ID}&behavior=${DEFINED}&tiers=defining,core,related`);
+  await page.locator("[data-passage-id]").first().hover();
+  await page.waitForTimeout(300);
+  const anchor = await page.evaluate(() => {
+    const block = document.querySelector("[data-passage-id]");
+    return { head: block.querySelectorAll(".passage-head .passage-copy").length,
+             gutter: block.querySelectorAll(":scope > .block-copy").length };
+  });
+  check(anchor.head === 2 && anchor.gutter === 0,
+    "a cited passage keeps its icons in its head, and gets none in the gutter", JSON.stringify(anchor));
+
+  await page.goto(link, { waitUntil: "networkidle" });
+  await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  const linked = await page.evaluate(selector => {
+    const block = document.querySelector(selector);
+    const scroll = block?.closest(".document-scroll").getBoundingClientRect();
+    const box = block?.getBoundingClientRect();
+    const status = document.querySelector("#reader-status");
+    return {
+      found: Boolean(block),
+      focused: Boolean(block) && document.activeElement === block,
+      outlined: block?.classList.contains("linked-block") ?? false,
+      inView: Boolean(box && box.height > 0 && box.top >= scroll.top - 1 && box.bottom <= scroll.bottom + 1),
+      ticked: [...document.querySelectorAll("[data-behaviour]")]
+        .filter(input => input.checked).map(input => input.dataset.behaviour),
+      status: status.classList.contains("visible") ? status.textContent : "",
+    };
+  }, blockSelector);
+  check(linked.found && linked.focused && linked.outlined && linked.inView && linked.status === "",
+    "a link to an uncited paragraph opens it in view, focused and outlined", JSON.stringify(linked));
+  check(linked.ticked.join(",") === keepSet[0].slug,
+    "a link to an uncited paragraph ticks nothing beyond the reader's default", JSON.stringify(linked.ticked));
+  await page.keyboard.press("Tab");
+  const tabbed = await page.evaluate(() => ({
+    label: document.activeElement?.getAttribute("aria-label") ?? null,
+    inBlock: Boolean(document.activeElement?.closest(".block-copy")),
+  }));
+  check(tabbed.label === "Copy locator" && tabbed.inBlock,
+    "from the linked paragraph, the keyboard reaches its copy icons", JSON.stringify(tabbed));
+
+  check(opened < 5000, "opening a document with every block located stays quick", `${opened} ms to first render`);
+  check(pageErrors.length === 0, "block copy: no console errors", pageErrors.join("; "));
+}
+
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
 await at("");

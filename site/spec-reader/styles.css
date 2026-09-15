@@ -1554,6 +1554,45 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 .passage-link[hidden] { display: none; }
 
+/* A paragraph's own copy icons, when no passage cites it (setupBlockCopy): one pair,
+   stacked in the gutter at the paragraph's right, clear of its text and inside the
+   rail, which sits at the scroll box's far edge. Out of sight until the pointer is
+   over the paragraph or focus is in it, as a passage's are. */
+.holds-copy { position: relative; }
+.block-copy {
+  position: absolute;
+  top: 0;
+  right: -30px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.block-copy .passage-copy { margin: 0; }
+.holds-copy:hover > .block-copy .passage-copy,
+.holds-copy:focus-within > .block-copy .passage-copy { opacity: .55; }
+.holds-copy .block-copy .passage-copy:hover,
+.holds-copy .block-copy .passage-copy:focus-visible { opacity: 1; color: var(--ink); }
+@media (hover: none) {
+  .holds-copy.touched > .block-copy .passage-copy,
+  .linked-block > .block-copy .passage-copy { opacity: .55; }
+}
+/* What a refused clipboard selects under a paragraph with no note to open. */
+.block-copy-fallback {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+/* The paragraph a link opened on, for a moment: a chartreuse outline, the
+   framework's active mark, not a behaviour's colour. */
+.linked-block {
+  outline: 2px solid var(--energy);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
 .passage-rationale {
   display: block;
   margin: 0 0 7px;
