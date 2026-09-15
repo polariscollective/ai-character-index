@@ -27,6 +27,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      # The shared registry lives in polaris-seed, not in the project the job
+      # runs in: polaris-tf grants the deploy account write access there only,
+      # and dev's Cloud Run agent read access to it.
+      REGISTRY: europe-west1-docker.pkg.dev/genial-broker-499211-s1/polaris-docker
     steps:
       - name: Check out the branch
         uses: actions/checkout@v4
@@ -47,7 +52,7 @@ jobs:
 
       - name: Build and push
         run: |
-          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/polaris-docker/ai-character-index-runner:${{ github.sha }}"
+          IMAGE="$REGISTRY/ai-character-index-runner:${{ github.sha }}"
           gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
           docker build -t "$IMAGE" .
           docker push "$IMAGE"

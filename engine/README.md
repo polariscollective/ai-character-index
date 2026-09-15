@@ -1,88 +1,56 @@
 # engine/
 
-The automation that keeps the index alive. Design in [PLAN.md §1.2](../PLAN.md).
+The code that judges the index, builds what it publishes, and checks both. The index itself lives in the `aci_` tables of the `evals` Supabase project, not here. The system map is [SYSTEM.md](../SYSTEM.md).
 
 ## spec-watch/
 
-`pull-latest.sh` pulls the latest published specs from the labs' GitHub repos into [`specs/`](../specs/). Run manually for now:
-
-```sh
-./engine/spec-watch/pull-latest.sh
-```
-
-Requires an authenticated `gh` CLI. Known issue: the OpenAI upstream `docs/` release archives (dated HTML snapshots, 1.7-2.6 MB each) exceed the GitHub contents API's 1 MB inline limit, so the script's fetch of them yields 0-byte files; the empty artifacts have been removed from the repo and fixing the fetch is an open closeout-list item. In Phase 3 this becomes a weekly GitHub Action that opens a PR when a spec changed, plus an issue listing which behaviours cite the changed sections and need re-verification.
+`pull-latest.sh` predates the migration and no longer runs: it reads `cite.BUNDLED_SPECS`, which `cite.py` no longer defines, and writes into [`specs/`](../specs/), which no longer holds the spec texts. A new document or version is registered through the admin portal, which writes `aci_spec_versions`. Nothing detects when a lab publishes a new version.
 
 ## spec-cite/
 
-`cite.py` resolves and verifies the precise spec citations defined in [`specs/CITATION.md`](../specs/CITATION.md) (`spec@version › section › ¶paragraph › sentence`). Every quote stored anywhere in the project (`data/coverage.json`, the site payloads) must be the output of `resolve` for a pinned locator:
+`cite.py` resolves and verifies the locators defined in [`specs/CITATION.md`](../specs/CITATION.md). The head of a locator names the document and its version, `<lab>--<document>@<version>`. `cite.py` registers nothing at import time: a caller installs a registry through `use_registry`, from the database (`index_store.install_registry`) or from a fixture. The command line installs the database's, so it needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`:
 
 ```sh
-python3 engine/spec-cite/cite.py outline model-spec              # section tree + anchors
-python3 engine/spec-cite/cite.py show "constitution > Being honest"   # numbered ¶/s
-python3 engine/spec-cite/cite.py resolve "model-spec@2025-12-18 > #avoid_sycophancy > ¶2 s1"
-python3 engine/spec-cite/cite.py find model-spec "some remembered phrase"   # text → locator
+python3 engine/spec-cite/cite.py outline anthropic--constitution                  # section tree + anchors
+python3 engine/spec-cite/cite.py show "anthropic--constitution > Being broadly ethical > Being honest"   # numbered ¶/s
+python3 engine/spec-cite/cite.py resolve "anthropic--constitution@2026-01-20 > Being broadly ethical > Being honest > ¶18 s1-4"
+python3 engine/spec-cite/cite.py find anthropic--constitution "some remembered phrase"   # text to locator
 ```
 
-Locators are re-resolved in CI on every PR: `.github/workflows/ci.yml` runs the `tests/` suite, which re-resolves every published locator through `cite.py`, and `tests/test_coverage_json.py` additionally byte-compares every quote in the frozen ledger. Combined with spec-watch, that is what keeps coverage claims verifiable over time.
+CI tests the parser offline against `tests/fixtures/parser-corpus.md`. `verify_supabase_provenance.py` re-resolves every locator a publication cites against the stored text.
 
 ### User specs (bring your own document)
 
-`cite.py` also resolves locators into your own spec document, without editing the tool: drop a manifest at `specs/user/specs.json` (gitignored — the manifest and any documents stored with it stay local and unpushed):
-
-```json
-{
-  "my-spec": {
-    "2026-08-18": {"path": "specs/user/my-spec.md", "default": true}
-  }
-}
-```
-
-Every command then accepts the registered names alongside the bundled specs — `cite.py outline my-spec`, `cite.py resolve "my-spec@2026-08-18 > Some Section > ¶2 s1"`, etc. Paths resolve relative to the repo root (absolute paths also work); versions are ISO dates, as in locators. The `"default"` flag is optional when a spec has exactly one version, and at most one version per spec may carry it (two or more fail loudly at manifest load). A multi-version spec with no default still loads — the error is deferred until the spec is actually loaded without an `@version` pin, when `cite.py` exits listing the `my-spec@<version>` choices. Bundled names (`constitution`, `model-spec`) cannot be redefined — a manifest that tries, or that is malformed, fails loudly at load; an absent manifest is the normal bundled-only state. Blast radius of that loud failure: the panel pipeline imports `cite` at module-import time (via `harness.py`), so a malformed local manifest fails EVERY panel CLI and both panel test suites at startup — fix or delete the manifest (or point `SPEC_CITE_USER_SPECS` elsewhere) to recover; the bundled-spec tools fail the same way for the same reason. `SPEC_CITE_USER_SPECS=<file>` overrides the manifest location (how the test suite exercises this without touching `specs/`). This is a private citation workflow: the index's published coverage still cites only the bundled mirrors.
+The user manifest (`specs/user/specs.json`, `SPEC_CITE_USER_SPECS`) went with the bundled registry, although `cite.py`'s docstring still describes it. To judge a document of your own, give its markdown file to `engine/local_run.py` (below).
 
 ## panel/
 
-HEAD
-The LLM panel judging pipeline: whole-spec judging calls, verdict parsing, the rollout driver, and the `site/spec-reader/` payload builder. Config is read lazily (`panel-config.json` at use time, injectable for tests); whole-doc judging runs the v5 rubric prompt by default (`panel/prompts/v5.txt`, byte-identical to the calibration source), with the v3 prompts composable through named slots behind `--rubric=`. See [`panel/README.md`](panel/README.md) for mechanics and reproduction; `python3 engine/panel/test_panel.py` runs its offline tests (no network, no keys). The canonical runlog that produces the shipped panel payload is committed data (`engine/panel/runlog-v5.jsonl` -- the v5 full bench on the 9-point scale, documented in [`panel/runlog-v5.md`](panel/runlog-v5.md); the v3-era `runlog-v3.jsonl` stays committed with its own record); `python3 engine/panel/verify_panel_provenance.py` proves the shipped payload rebuilds from it byte-identically (one documented allowance: the builder's build-date stamp).
+The judging pipeline: prompt composition and verdict parsing (`harness.py`, `judge_call.py`, `depth_call.py`), composing a run (`compose_run.py`), executing it (`batch_job.py`), the reader's tier bands (`bands.py`) and the behaviour payload builder (`build_site_data.py`). The index judges with one panel, `frontier_fast`, under rubric v5 (`panel/prompts/v5.txt`), and each judge gives every cell a 0 to 4 depth (`panel/prompts/depth-v1.txt`). See [`panel/README.md`](panel/README.md); `python3 engine/panel/test_panel.py` runs its offline tests (no network, no keys).
 
-## generate_behaviour_constants.py
+## job.py, publish.py and local_run.py
 
-[`data/behaviours.json`](../data/README.md) is the single behaviour registry (every behaviour in every set, keyed by slug). The derived copies of that identity regenerate from it -- never edit them by hand:
+`job.py` is what the judging image runs. It reads its own `aci_jobs` row and dispatches on `ACI_JOB_MODE`: `compose` prices a run and writes its calls, `judge` executes them through `panel/batch_job.py`, and `publish` builds a publication through `publish.py`, as a draft that is not public. The portal starts it as a Cloud Run job through `polaris-batch-trigger`, or as a local subprocess when `ACI_PYTHON` is set outside production. As of September 2026 jobs are run locally, because `deploy-runner.yml` has not once succeeded: it fails at Google Cloud authentication.
 
-```sh
-python3 engine/generate_behaviour_constants.py           # rewrite the constants in place
-python3 engine/generate_behaviour_constants.py --check   # exit 1 with a diff on drift
-```
-
-Rewritten constants: `BEHAVIOURS` in `build-spec-reader-data.py`, and the `title` fields of `panel/behaviours.json` (its keys are registry slugs -- the panel runlogs are keyed by the same slugs -- and the committed key order is preserved). Only the constant blocks are touched; surrounding bytes are preserved. `display.behaviours` in `panel/panel-config.json` is curated configuration, not generated: the panel payload builder validates every entry against the registry at build time, so a renamed or unknown slug fails loudly. `tests/test_behaviour_registry.py` is the drift gate.
+`local_run.py` judges one markdown document against one behaviour with one key, `OPENROUTER_API_KEY`, and no database. It uses the same composer, parser and prompt as the job, and writes raw results to the gitignored `artefacts/`.
 
 ## site builders and checks
 
-The reader renders from generated payloads, never from hand-edited JSON:
+A publication's two payloads are built by `publish.py` for the cells it selects and stored on its `aci_publications` row; `/api/reader/payload` and `/api/reader/documents` serve them from there. Both builders read the database:
 
 ```sh
-python3 engine/build-spec-reader-data.py   # frozen data/coverage.json + specs/ -> site/spec-reader/data/documents.json
-python3 engine/panel/build_site_data.py --threshold=4 --solid-threshold=6 --run-date=2026-08-17 --out=behaviours-v5-reader.json   # rebuild the band keep-set (band-boundary build of the v5 run)
-node engine/verify-reader-test.mjs         # the reader: every behaviour x spec view against the keep-set + nav presence/resolution + fallback/manifest state (needs Chrome)
+python3 engine/panel/build_site_data.py --out=PATH [--cells=PATH]    # the behaviour payload
+python3 engine/build-spec-reader-data.py [--out=PATH] [--cells=PATH]  # the documents payload
+node engine/verify-reader-test.mjs          # every behaviour x document view of the reader (needs Chrome)
+node engine/verify-reader-features.mjs      # the reader's URL and DOM features, a draft pin included (needs Chrome)
+node engine/verify-portal.mjs [url]         # the admin portal, read-only, against a running server with credentials
 ```
 
-The reader (`site/spec-reader/`) renders the spec text from `documents.json` and
-its behaviour set from `data/behaviours.json`, resolved ?data=<name> pin ->
-`manifest.json` latest -> the shipped fallback; `behaviours-v5-reader.json` is
-the band keep-set -- exactly what the client can render, since nothing below the
-related cut ever displays -- kept as the walker's passage-count oracle and a
-loadable `?data=` variant. `data/coverage.json` is frozen: nothing writes it, and
-while the builder still derives `documents.json`'s `behaviours` key from it, no
-surface renders that key.
+The two reader walkers serve `tests/fixtures/reader/` through `reader-routes.mjs` in place of the database routes, so they need no credentials and CI runs them. The portal walker reads the database, so no workflow runs it.
 
-## data validation
+## provenance
 
-Every file in [`data/`](../data/) is validated against the JSON Schemas in [`data/schema/`](../data/schema/), plus the cross-file rules from [`data/README.md`](../data/README.md): no **published** coverage verdict without a citation, no coverage record pointing at a lab that `labs.json` doesn't define, no coverage record reference to a behaviour id the registry's index set doesn't define, and every `panel-cell-curation.json` cell's slug present in the registry with at most one cell per slug × lab.
-
-```sh
-python3 engine/validate_data.py          # uses jsonschema when installed, stdlib fallback otherwise
-python3 engine/test_validate_data.py     # the gate's own tests: committed data passes, mutations fail
-```
+`verify_supabase_provenance.py` checks one publication: the newest public one, or the one `--publication=<uuid>` names, a draft included. It holds each stored payload to its digest, rebuilds the publication from its own cells, composes every boundary a judge would be sent, and re-resolves every locator the publication cites. The grandfathered publication is held to `published-artefacts.sha256.json` instead of being rebuilt. It needs credentials. `.github/workflows/provenance.yml` runs it daily, although as of September 2026 the workflow receives none and fails.
 
 ## notion-sync/ (Phase 3)
 
-An empty placeholder today (`.gitkeep` only; nothing syncs yet). When built, it will pull the Notion databases behind the in-scope data files -- per PLAN.md §3, the Coverage DB feeding `data/coverage.json` -- via the official Notion API, normalize into [`data/`](../data/), and open a PR when anything changed. Merging that PR is the push-to-production step -- no unreviewed change ever reaches the site. The evals track (the "Evals by Behaviour" database) is not a sync target: eval-discovery is out of scope per the owner ruling (deliverable = model spec reader only).
+An empty placeholder (`.gitkeep` only; nothing syncs). The Notion-to-pull-request design in PLAN.md assumed git was where data became official, which the move to Supabase ended.

@@ -47,6 +47,52 @@ function payloadUrl(id) {
   return id ? `${PAYLOAD_URL}?publication=${encodeURIComponent(id)}` : PAYLOAD_URL;
 }
 
+/* A link to one passage: ?passage=<locator>. The locator is the citation the
+ * export already prints, and its head names the document it points into, so the
+ * link needs nothing else to open the reader at it (see openPassageLink). */
+const PASSAGE_PARAM = "passage";
+
+/* "openai--model-spec@2026-08-18 > #levels_of_authority > ¶2" -> its document. */
+function locatorHead(locator) {
+  return String(locator || "").split(" > ")[0].trim();
+}
+
+/* The document a locator's head names. A head is the document id; locators
+ * written before ids carried their lab end the id instead ("second@2026-02-01"
+ * for "acme--second@2026-02-01"), and still find it. */
+function documentForLocator(documents, locator) {
+  const head = locatorHead(locator);
+  if (!head) return null;
+  return documents.find(doc => doc.id === head)
+    || documents.find(doc => String(doc.id).endsWith(`--${head}`))
+    || null;
+}
+
+/* A link that opens the reader at a passage. Only the passage travels, and the
+ * publication when the reader is pinned to one: the rest of the view is the
+ * reader's who copied it, and the link chooses what it needs when it opens. */
+function passageLink(href, locator, publication) {
+  const url = new URL(href);
+  url.search = "";
+  url.hash = "";
+  if (publication) url.searchParams.set("publication", publication);
+  url.searchParams.set(PASSAGE_PARAM, locator);
+  return url.toString();
+}
+
+function passageFromSearch(search) {
+  return new URLSearchParams(search).get(PASSAGE_PARAM);
+}
+
+/* The link opened the reader once. Once the reader moves on, stepping to
+ * another passage included, it no longer describes the page. */
+function dropPassageParam() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has(PASSAGE_PARAM)) return;
+  params.delete(PASSAGE_PARAM);
+  history.replaceState(null, "", `${location.pathname}?${params}${location.hash}`);
+}
+
 /* Resolves the payload AND records which source won, in state.payloadSource:
  * {origin: "pin"|"current", name, requested}. `requested` is set only when a pin was
  * asked for and not served, which is exactly the case worth flagging. */
@@ -399,6 +445,9 @@ function syncURL() {
   }
   if (state.embedded) params.set("embedded", "1");
   else params.delete("embedded");
+  // A passage link is kept only while the reader is still where it opened; any
+  // choice written here after that is a view of the reader's own.
+  if (!state.keepPassageParam) params.delete(PASSAGE_PARAM);
   history.replaceState(null, "", `${location.pathname}?${params}${location.hash}`);
   if (state.embedded) {
     window.parent.postMessage(
@@ -733,7 +782,8 @@ function setupSidebarResizer() {
 function comparePair() {
   const ids = state.payload.documents.map(doc => doc.id);
   const [a, b] = state.comparePair || [];
-  const first = ids.includes(a) ? a : ids[0];
+  // With no pair chosen, the left panel is the document the reader opened on.
+  const first = ids.includes(a) ? a : ids.includes(state.selectedSpec) ? state.selectedSpec : ids[0];
   const second = ids.includes(b) ? b : defaultComparison(first);
   return [first, second];
 }
@@ -808,7 +858,12 @@ function renderBehaviourList() {
   const selected = new Set(state.selectedSlugs);
   elements.behaviourList.innerHTML = groups.map(group => `
     <section class="behaviour-group texture-${group.texture}">
-      <h2>${escapeHTML(group.name)}</h2>
+      <!-- The depth column's scale, said once at its top rather than beside every
+           figure; each figure's spoken form carries it for a screen reader. -->
+      <div class="behaviour-group-head">
+        <h2>${escapeHTML(group.name)}</h2>
+        <span class="depth-head">Depth, out of 4</span>
+      </div>
       <ul>
         ${group.behaviours.map(behaviour => {
           const checked = selected.has(behaviour.slug);
@@ -826,7 +881,8 @@ function renderBehaviourList() {
               <span class="behaviour-box" aria-hidden="true"></span>
               <span class="number">${String(behaviour.id).padStart(2, "0")}</span>
               <span class="name">${escapeHTML(behaviour.name)}</span>
-              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}"></span>
+              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}" aria-hidden="true"></span>
+              <span class="depth-spoken visually-hidden"></span>
             </label>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
@@ -861,7 +917,12 @@ function renderBehaviourList() {
  *
  * The mean of the panel's depths on the 0 to 4 scale, one figure per document on
  * screen, so comparing two documents puts two figures side by side. A cell with
- * no depth shows a dash: zero is a finding, a dash is the absence of one. */
+ * no depth shows a dash: zero is a finding, a dash is the absence of one.
+ *
+ * The figures are bare. The scale is said once, at the top of the column, in each
+ * group's heading ("Depth, out of 4"): "3.7 / 4" beside every name read poorly,
+ * and comparing already puts " / " between two documents' figures. A sentence
+ * that gives one depth on its own says the scale in that sentence. */
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
 /* The depth the index's panel gave a behaviour on a document, or null. Every read of
@@ -883,8 +944,18 @@ function panelDepth(behaviour, documentId) {
  * text, not three copies of the same wording. */
 function depthSummaryLine(doc, depth) {
   if (!depth) return `${doc.title} ${doc.version}: no depth given.`;
-  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} of 4, `
+  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} out of 4, `
     + `${DEPTH_WORDS[Math.round(depth.mean)]}.`;
+}
+
+/* The figures as a screen reader hears them beside the behaviour's name. The
+ * column's header, which gives sighted readers the scale, is not read with each
+ * value, so every value is spoken with its scale. */
+function depthSpoken(depths) {
+  if (!depths.some(Boolean)) return "no depth given";
+  return `depth ${depths
+    .map(depth => (depth ? `${depth.mean.toFixed(1)} out of 4` : "not given"))
+    .join(" and ")}`;
 }
 
 function updateBehaviourDepths() {
@@ -900,6 +971,9 @@ function updateBehaviourDepths() {
     cell.title = summary;
     const description = cell.closest(".behaviour-option-row")?.querySelector(".depth-description");
     if (description) description.textContent = summary;
+    // The figure is aria-hidden; this is the part of the checkbox's name that says it.
+    const spoken = cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken");
+    if (spoken) spoken.textContent = depthSpoken(depths);
   });
 }
 
@@ -1500,22 +1574,99 @@ function passageLabels(marks, passageId) {
         : ""}
       <span class="passage-reason-role">${passage.adjacent ? "Related, " : ""}${
         applyInlineFormatting(escapeHTML(passage.role))}</span>
+      <span class="passage-locator">${escapeHTML(passage.locator)}</span>
     </span>
   `).join("");
   const panelId = `${passageId}-why`;
   return `
     <span class="passage-head">
       ${chips}
+      ${COPY_ICONS}
       <button type="button" class="passage-why" aria-expanded="false" aria-controls="${panelId}"
         aria-label="Why was this passage selected?" data-tip="Why was this passage selected?">?</button>
     </span>
-    <span class="passage-rationale" id="${panelId}" role="note" hidden>${reasons}</span>
+    <span class="passage-rationale" id="${panelId}" role="note" hidden>${reasons}<span class="passage-link" hidden></span></span>
   `;
+}
+
+/* Copy a passage's locator, or a link that opens the reader at it.
+ *
+ * Two icons in the passage's head, drawn inline: the framework carries no icon
+ * library, and the user asked for icons rather than words, so they are SVG in
+ * the markup and nothing is loaded for them. A text snippet for the locator, a
+ * chain for the link. They stay out of sight until the pointer is over the block
+ * or focus is inside it (see .passage-copy). */
+const COPY_ICONS = `
+      <button type="button" class="passage-copy" data-copy="locator"
+        aria-label="Copy locator" title="Copy locator"><svg viewBox="0 0 16 16" aria-hidden="true"
+        focusable="false"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none"
+        stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 8.5h6M5 11h3.5" fill="none"
+        stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+      <button type="button" class="passage-copy" data-copy="link"
+        aria-label="Copy link" title="Copy link"><svg viewBox="0 0 16 16" aria-hidden="true"
+        focusable="false"><path d="M6.8 9.2a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-.9.9M9.2 6.8a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l.9-.9"
+        fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>`;
+
+/* What a copy says, done and refused. */
+const COPY_SAID = {
+  locator: ["Locator copied", "The clipboard was refused. The locator is selected: press copy."],
+  link: ["Link copied", "The clipboard was refused. The link is selected: press copy."],
+};
+
+async function copyFromPassage(button) {
+  const block = button.closest("[data-passage-id]");
+  const locator = (block?.dataset.locators || "").split("\n")[0];
+  if (!locator) return;
+  const kind = button.dataset.copy === "link" ? "link" : "locator";
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const text = kind === "link" ? passageLink(location.href, locator, pinned) : locator;
+  const status = document.getElementById("copy-status");
+  const say = sentence => {
+    if (!status) return;
+    status.textContent = "";          // the same words twice are still announced twice
+    status.textContent = sentence;
+  };
+  try {
+    await navigator.clipboard.writeText(text);
+    say(COPY_SAID[kind][0]);
+  } catch {
+    /* A refused clipboard is not a dead end: open the passage's note and select
+       what would have been copied, so the usual keyboard copy works. */
+    const note = block.querySelector(".passage-rationale");
+    if (!note) return;
+    if (note.hidden) {
+      note.hidden = false;
+      block.querySelector(".passage-why")?.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(updateRails);
+    }
+    let target = [...note.querySelectorAll(".passage-locator")].find(item => item.textContent === locator);
+    if (kind === "link") {
+      target = note.querySelector(".passage-link");
+      target.textContent = text;
+      target.hidden = false;
+    }
+    if (!target) return;
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    say(COPY_SAID[kind][1]);
+  }
 }
 
 /* Opening a rationale changes the height of the block it sits in, so the rail marks -- which
  * are positioned from block offsets -- have to be measured again once it has laid out. */
 function setupPassageDisclosure(panel) {
+  panel.querySelector(".document-body").addEventListener("click", event => {
+    const copy = event.target.closest(".passage-copy");
+    if (copy) {
+      copyFromPassage(copy);
+      return;
+    }
+    // Where there is no pointer to hover with, a tapped passage shows its icons.
+    event.target.closest("[data-passage-id]")?.classList.add("touched");
+  });
   panel.querySelector(".document-body").addEventListener("click", event => {
     const button = event.target.closest(".passage-why");
     if (!button) return;
@@ -1535,8 +1686,8 @@ function clearHighlights(panel) {
   body.querySelectorAll(".passage-head, .passage-rationale").forEach(part => part.remove());
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
-    block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current");
-    ["passageId", "documentId", "passageNumber", "role", "behaviours"]
+    block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current", "touched");
+    ["passageId", "documentId", "passageNumber", "role", "behaviours", "locators"]
       .forEach(key => { delete block.dataset[key]; });
     ["--tint", "--tint-strong", "--gutter", "--gutter-size", "--gutter-pos",
       "--gutter-width", "--bh-primary"]
@@ -1623,6 +1774,11 @@ function annotatePassages(panel, doc) {
     block.dataset.role = marks
       .flatMap(mark => mark.anchored.map(passage => passage.role))
       .join(" · ");
+    // One per line: a locator carries " > " and "·" is prose here, so neither can
+    // separate them. What a ?passage= link finds its passage by.
+    block.dataset.locators = marks
+      .flatMap(mark => mark.anchored.map(passage => passage.locator))
+      .join("\n");
     block._railTint = railTint(marks);
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
   });
@@ -1868,6 +2024,41 @@ function translationNote(translation, judged) {
        + (judged === false ? "" : " The index judged this translation.");
 }
 
+/* A viewer may dismiss a translated document's notice. The choice is kept in this
+ * browser for that document version only, so another translated document, or a
+ * new version of this one, shows its notice. Where storage is refused, savedFlag
+ * reads false and the notice shows, the safe direction for a disclosure. */
+function translationDismissedKey(documentId) {
+  return `aci-translation-dismissed:${documentId}`;
+}
+
+/* The notice, or once it is dismissed the short "Translated" label beside Show
+ * original, which is what still says the text is a translation. */
+function showTranslationNotice(panel) {
+  const band = panel.querySelector(".document-translation");
+  const flag = panel.querySelector(".translation-flag");
+  const translated = Boolean(band?.querySelector(".translation-text")?.textContent);
+  const dismissed = translated && savedFlag(translationDismissedKey(panel.dataset.documentId));
+  if (band) band.hidden = !translated || dismissed;
+  if (flag) flag.hidden = !dismissed;
+}
+
+/* The × closes the notice at once: every panel showing this document, since an
+ * identical pair shows it twice, and no other. The band sits above the text's
+ * scroll box, so the reader's place in the text is untouched; focus goes to the
+ * label that remains, since the button it was on has gone. */
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".translation-dismiss");
+  if (!button) return;
+  const panel = button.closest(".document-panel");
+  const id = panel?.dataset.documentId;
+  if (!id) return;
+  saveFlag(translationDismissedKey(id), true);
+  panels().filter(item => item.dataset.documentId === id).forEach(showTranslationNotice);
+  panel.querySelector(".translation-flag")?.focus({ preventScroll: true });
+  requestAnimationFrame(updateRails);
+});
+
 /* Each passage's original, reachable from the passage itself.
  *
  * The payload pairs translation with original in document order, both cut the
@@ -1985,6 +2176,23 @@ function latestOfLab(lab) {
  */
 const COMPARISON_ORDER = ["Anthropic", "OpenAI"];
 
+/* The lab a visitor with no ?spec= opens on, when the publication carries it.
+ *
+ * A preference with a fallback, not an assumption: the reader once defaulted to
+ * the id "anthropic" and rendered nothing against a payload without it, so a
+ * payload without this lab still opens on its first document. Matched on the head
+ * of the document id, which names the lab the same way in every publication
+ * (<lab>--<document>@<version>), and the newest version of it wins. */
+const PREFERRED_LAB = "anthropic";
+
+function openingDocument(documents, requested) {
+  if (documents.some(doc => doc.id === requested)) return requested;
+  const preferred = documents
+    .filter(doc => String(doc.id).startsWith(`${PREFERRED_LAB}--`))
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)))[0];
+  return (preferred || documents[0])?.id ?? null;
+}
+
 function defaultComparison(leftId) {
   const preferred = COMPARISON_ORDER
     .map(lab => latestOfLab(lab))
@@ -2068,11 +2276,12 @@ function renderDocument(doc, side = 0) {
   panel.querySelectorAll(".tier-toggle").forEach(button => {
     button.setAttribute("aria-pressed", String(Boolean(state.bands?.has(button.dataset.tier))));
   });
-  const translation = panel.querySelector(".document-translation");
   if (doc.translation) {
-    translation.textContent = translationNote(doc.translation, doc.judged);
-    translation.hidden = false;
+    const note = translationNote(doc.translation, doc.judged);
+    panel.querySelector(".document-translation .translation-text").textContent = note;
+    panel.querySelector(".translation-flag").title = note;
   }
+  showTranslationNotice(panel);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
   attachOriginals(panel, doc);
   setupSectionFocus(panel);
@@ -2556,6 +2765,7 @@ elements.documentReader.addEventListener("click", event => {
   const panel = step.closest(".document-panel");
   const delta = step.classList.contains("next-passage") ? 1 : -1;
   focusPassage(panel, (panel._passageIndex || 0) + delta);
+  dropPassageParam();
 });
 
 /* Choosing a publisher, in the panel that asked. Delegated like the tier
@@ -2619,8 +2829,8 @@ document.addEventListener("keydown", event => {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   // The panel the reader last stepped through, or the only one there is.
   const panel = state.activePanel || panels()[0];
-  if (event.key === "j") focusPassage(panel, (panel?._passageIndex || 0) + 1);
-  if (event.key === "k") focusPassage(panel, (panel?._passageIndex || 0) - 1);
+  if (event.key === "j") { focusPassage(panel, (panel?._passageIndex || 0) + 1); dropPassageParam(); }
+  if (event.key === "k") { focusPassage(panel, (panel?._passageIndex || 0) - 1); dropPassageParam(); }
 });
 
 window.addEventListener("resize", () => {
@@ -2782,6 +2992,69 @@ async function loadJSON(url) {
 }
 
 
+/* What a ?passage= link needs before the panels are drawn: the document its
+ * locator names (over ?spec= and the default), a behaviour citing the passage
+ * ticked if none already is, and the band it sits in turned on. The band is
+ * scored as the reader scores it, with every band on, because the link may name
+ * one the rest of the URL left off. A locator the publication carries no passage
+ * for changes nothing, and revealPassageLink says so. */
+function openPassageLink(locator) {
+  if (!locator) return null;
+  const doc = documentForLocator(state.payload.documents, locator);
+  const cites = behaviour => (behaviour.coverage?.[doc?.id]?.passages || [])
+    .some(passage => passage.locator === locator);
+  const citing = doc ? (state.rawBehaviours || []).filter(cites) : [];
+  if (!citing.length) return { locator, resolved: false };
+
+  const bands = state.bands;
+  state.bands = new Set(TIERS);
+  const band = applyPanelThreshold({ behaviours: structuredClone(citing) }).behaviours
+    .flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || [])
+    .find(passage => passage.locator === locator)?.band;
+  state.bands = bands;
+  if (!band) return { locator, resolved: false };
+
+  state.selectedSpec = doc.id;
+  if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
+  if (!citing.some(behaviour => state.selectedSlugs.includes(behaviour.slug))) {
+    const chosen = new Set([...state.selectedSlugs, citing[0].slug]);
+    state.selectedSlugs = payloadBehaviours().map(behaviour => behaviour.slug)
+      .filter(slug => chosen.has(slug));
+  }
+  if (!state.bands.has(band)) {
+    state.bands.add(band);
+    state.payload.behaviours =
+      applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
+  }
+  return { locator, documentId: doc.id, resolved: true };
+}
+
+/* The passage itself, once drawn: current for the arrows, scrolled to and
+ * focused. Where it cannot be reached, the reader status says so in a sentence
+ * and the reader stays as it opened. */
+function revealPassageLink(linked) {
+  const say = sentence => {
+    elements.readerStatus.classList.add("visible");
+    elements.readerStatus.textContent = sentence;
+  };
+  if (!linked.resolved) {
+    say(`The passage this link names is not in this publication: ${linked.locator}. `
+      + "The reader has opened as it would without the link.");
+    return;
+  }
+  const panel = panels().find(item => item.dataset.documentId === linked.documentId);
+  const index = (panel?._anchors || [])
+    .findIndex(anchor => (anchor.dataset.locators || "").split("\n").includes(linked.locator));
+  if (index < 0) {
+    say(`The passage this link names could not be found in the document: ${linked.locator}.`);
+    return;
+  }
+  focusPassage(panel, index, true);
+  const anchor = panel._anchors[index];
+  anchor.setAttribute("tabindex", "-1");
+  anchor.focus({ preventScroll: true });
+}
+
 async function initialize() {
   renderBehaviourList();
   try {
@@ -2813,21 +3086,26 @@ async function initialize() {
     if (requested.length) state.selectedSlugs = requested;
     else if (!params.has("behavior") && loaded.length) state.selectedSlugs = [loaded[0].slug];
 
-    const requestedSpec = params.get("spec");
-    state.selectedSpec =
-      state.payload.documents.some(document => document.id === requestedSpec)
-        ? requestedSpec
-        : (state.payload.documents[0]?.id ?? null);
+    // ?spec= when the payload carries it, else the preferred lab's newest document,
+    // else the first document (openingDocument).
+    state.selectedSpec = openingDocument(state.payload.documents, params.get("spec"));
     state.comparing = params.get("compare") === "1";
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
+    // A link to a passage chooses the document, a behaviour and a band before
+    // anything is drawn, and is followed to the passage once the panels are.
+    const linked = openPassageLink(params.get(PASSAGE_PARAM));
     elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     renderBehaviourList();
+    state.keepPassageParam = Boolean(linked?.resolved);
     syncURL();
+    state.keepPassageParam = false;
     rebuildReader();
     // A link into a heading is followed once, when the page opens on it.
     requestAnimationFrame(revealHashTarget);
+    // Two frames: after the one in which applyHighlights collects the passages.
+    if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
   } catch (error) {
     elements.readerStatus.classList.add("visible");
     elements.readerStatus.textContent = "The cached spec documents or the reader's behaviour set could not be loaded. Serve this directory over HTTP and reload.";

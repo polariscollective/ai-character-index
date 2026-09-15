@@ -1,9 +1,9 @@
 # research/ — the canonical behaviour list
 
-> Current-state doc: describes what exists now, not what should exist. Brought current with the Phase-2 stack (#28–#34) and the reader consolidation.
+> Current-state doc, as of September 2026: describes what exists now, not what should exist.
 
 ## Purpose
-Defines the behaviours the index measures (`core-behaviour-list.md`). The per-behaviour sweep records that used to live under `sweeps/` are retired with the publish path, and the coverage ledger they fed (`data/coverage.json`) is frozen. Candidate-pool provenance (`sources/`) and the evidence-discovery sweep stages 1–3 were retired by the scope ruling (2026-08-19).
+Defines the behaviours the index measures (`core-behaviour-list.md`). The per-behaviour sweep records that used to live under `sweeps/` are retired with the publish path, and the coverage ledger they fed is frozen, now as the `aci_coverage` table. Candidate-pool provenance (`sources/`) and the evidence-discovery sweep stages 1–3 were retired by the scope ruling (2026-08-19).
 
 ## Contents
 | Path | Holds |
@@ -12,16 +12,16 @@ Defines the behaviours the index measures (`core-behaviour-list.md`). The per-be
 | `archive/behaviours-to-track.md` | Earlier draft, superseded 2026-07-10; 13 rows with older numbering/titles |
 
 ## Relationships
-`core-behaviour-list.md` is prose, not machine-parsed: its definitions and facets reach the system by being hand-synced into the behaviour registry (`data/behaviours.json`), which drives the panel judge prompts and the reader builder's derived constants. The quotes in the frozen `data/coverage.json` were taken from the `specs/` mirrors via `specs/CITATION.md` + `engine/spec-cite/cite.py`; CI keeps re-resolving them (`tests/test_coverage_json.py`). `site/index.html` is a redirect to the reader and reads nothing from `data/`. The preserved cross-spec strict-reading judgment (the only analysis of its kind in the repo) lives in the repo-root `archive/general-welfare-strict-reading/`.
+`core-behaviour-list.md` is prose, not machine-parsed: its definitions and facets reach the system only by hand, as rows of the behaviour registry `aci_behaviours`, which feeds the panel's judge prompts and the reader's behaviour names. The quotes in the frozen ledger were taken from the spec mirrors via `specs/CITATION.md` + `engine/spec-cite/cite.py`, and the ledger was migrated from `data/coverage.json` into `aci_coverage`, which the cleanup migration drops. `site/index.html` is a redirect to the reader. The preserved cross-spec strict-reading judgment (the only analysis of its kind in the repo) lives in the repo-root `archive/general-welfare-strict-reading/`.
 
 ## Dependency map
 ```mermaid
 graph LR
-  CBL["core-behaviour-list.md"] -->|hand-synced definitions + facets| REG["data/behaviours.json (registry)"]
-  REG -->|judge prompts, derived constants| PANEL["engine/panel/ + site/"]
-  SPECS["specs/ mirrors"] -->|verbatim quotes (frozen)| DATA["data/coverage.json"]
+  CBL["core-behaviour-list.md"] -->|hand-copied definitions + facets| REG["aci_behaviours (registry)"]
+  REG -->|judge prompts, behaviour names| PANEL["engine/panel/ + site/"]
+  SPECS["spec texts"] -->|verbatim quotes (frozen)| DATA["aci_coverage (frozen ledger)"]
 ```
 
 ## As-is observations
-- `data/coverage.json` covers only behaviours 1–3 (6 rows) and is frozen. Behaviour identity is registry-driven (`data/behaviours.json`); `data/evals.json` was retired by the scope ruling.
+- The frozen ledger covers only behaviours 1–3 (6 rows, as migrated from `data/coverage.json`). Behaviour identity lives in `aci_behaviours`; `data/evals.json` was retired by the scope ruling.
 - `methodology/mentee-project-archetypes.md` states `core-behaviour-list.md` is stale vs Notion for rows 11–13 (Notion has an "Interaction with others" group absent here).

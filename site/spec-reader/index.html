@@ -99,6 +99,9 @@
       </button>
 
       <div id="reader-status" class="reader-status" role="status"></div>
+      <!-- What a copy button did, said once for a screen reader: the icons say
+           nothing visible when they are pressed. -->
+      <p id="copy-status" class="visually-hidden" aria-live="polite"></p>
       <div id="document-reader" class="document-grid" tabindex="-1"></div>
     </section>
   </main>
@@ -141,6 +144,9 @@
               </button>
             </h2>
             <a class="source-link" href="#" target="_blank" rel="noopener">Show original</a>
+            <!-- What still says the document is a translation once its notice is
+                 dismissed; its title carries the notice's words. -->
+            <span class="translation-flag" tabindex="-1" hidden>Translated</span>
           </div>
           <div class="document-meta">
             <span class="passage-nav">
@@ -174,7 +180,9 @@
       </header>
       <!-- Under the header's rule rather than inside it: the caveat is about the
            text below, not one more field of the document's identity. -->
-      <p class="document-translation" role="note" hidden></p>
+      <p class="document-translation" role="note" hidden><span class="translation-text"></span><button
+        type="button" class="translation-dismiss" aria-label="Dismiss translation notice"
+        title="Dismiss translation notice">×</button></p>
       <div class="document-scroll">
         <div class="passage-rail" role="navigation" aria-label="Highlighted passages in this document"></div>
         <div class="document-body"></div>

@@ -115,6 +115,12 @@
   section.m li::before { content: ""; position: absolute; top: .78em; left: 4px;
                          width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
   section.m li b { font-weight: 600; }
+  /* Steps to follow in order are numbered: the bullet's indent, with the number
+     where the chartreuse circle would be. */
+  section.m ol { max-width: 66ch; margin: 8px 0 16px; padding-left: 24px; }
+  section.m ol > li { padding-left: 4px; }
+  section.m ol > li::before { content: none; }
+  section.m ol > li::marker { color: var(--ink2); font-weight: 600; }
   code { font-family: var(--mono); font-size: 13px; color: var(--ink2);
          background: var(--lift); border: 1px solid var(--hair); padding: 0 4px; border-radius: 4px; }
   pre { max-width: 66ch; margin: 16px 0; padding: 16px; overflow-x: auto;
@@ -308,7 +314,11 @@
 
   /* ---------- the citation block ---------- */
   .cite-block { position: relative; margin: 0 0 16px; max-width: 66ch; }
-  .cite-block pre { margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
+  /* The figure holds the 66ch measure. The page's own pre cap is 66ch too, but
+     counted in the pre's 13px mono, which left the box narrower than its figure
+     and the button floating outside it. */
+  .cite-block pre { max-width: none;
+                    margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
                     border-radius: 4px; background: var(--lift); font-family: var(--mono);
                     font-size: 13px; line-height: 1.6; white-space: pre-wrap;
                     word-break: break-word; }
@@ -351,33 +361,95 @@
   <div class="m-head">
     <div class="m-title">How it works</div>
     <p class="m-sub">The labs publish documents saying how their models should behave:
-    Anthropic&rsquo;s constitution, OpenAI&rsquo;s model spec. They are long, and what they say
-    about any one thing is scattered through them. This index reads them for you, one behaviour at
+    Anthropic&rsquo;s constitution, OpenAI&rsquo;s and Alibaba&rsquo;s model specs. They are long,
+    and what they say about any one thing is scattered through them. This index reads them for you, one behaviour at
     a time, and shows you every passage that bears on it, quoted and located.</p>
   </div>
 
   <div id="said-page" hidden></div>
 
+  <!-- The address is written out whole, not built from location.origin as the MCP
+       page builds it: Claude and ChatGPT reach a connector from their own servers,
+       so the public address is the only one worth copying from here. -->
+  <section class="m" id="your-assistant">
+    <h2>Use the index from your AI assistant</h2>
+    <p class="lead">Claude or ChatGPT can answer your questions about these documents from the
+    index itself, rather than from memory.</p>
+    <p>This works through MCP, the Model Context Protocol: a standard way to let an assistant look
+    things up in another service while it answers you. Connected to the index, your assistant can
+    quote the exact passages each lab&rsquo;s document gives on a behaviour, with their locators.
+    It only reads, and needs no account or key. Copy this address:</p>
+    <figure class="cite-block">
+      <pre id="mcp-url">https://ai-character-index.vercel.app/api/mcp</pre>
+      <button type="button" data-copy="mcp-url">Copy</button>
+    </figure>
+    <p><b>In Claude</b>, on claude.ai or the desktop app, on any plan as of September 2026 (the
+    free plan allows one connector):</p>
+    <ol>
+      <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
+      <li>Choose <b>+</b>, then <b>Add custom connector</b>.</li>
+      <li>Paste the address and choose <b>Add</b>. If it asks for a name, call it AI Character
+      Index; if it asks how people sign in, choose <b>No sign-in</b>.</li>
+      <li>In a conversation, open the <b>+</b> button, then <b>Connectors</b>, and check that AI
+      Character Index is switched on.</li>
+    </ol>
+    <p>On a Team or Enterprise plan, an owner adds it once under <b>Organization settings</b>,
+    <b>Connectors</b>, and you then choose <b>Connect</b> beside it.</p>
+    <p><b>In ChatGPT</b> on the web, you need developer mode, which OpenAI lists for Plus, Pro,
+    Business, Enterprise and Education accounts as of September 2026. Turn it on under
+    <b>Settings</b>, <b>Security and login</b>, then open
+    <a href="https://chatgpt.com/plugins" target="_blank" rel="noopener">Plugins</a>, choose the
+    plus button and paste the address as the MCP server URL, with no authentication. In a
+    conversation, pick <b>Developer mode</b> from the plus menu.</p>
+    <p>Then ask, for instance:</p>
+    <ul>
+      <li>What does OpenAI&rsquo;s Model Spec say about sycophancy? Quote the passages.</li>
+      <li>Where do Anthropic&rsquo;s constitution and Alibaba&rsquo;s model spec differ on user
+      autonomy?</li>
+    </ul>
+    <p>The <a href="/mcp">MCP page</a> lists the index&rsquo;s three tools, and the setup for
+    Claude Code and other clients.</p>
+  </section>
+
   <section class="m">
     <h2>The idea</h2>
-    <p>A specification is a document a lab publishes saying how its models should behave.
-    Anthropic&rsquo;s constitution and OpenAI&rsquo;s model spec are the two this index reads.
-    They run to tens of thousands of words, and what either says about any one subject is spread
-    across them.</p>
+    <p>A specification is a document a lab publishes saying how its models should behave. As of
+    September 2026 the index reads four: Claude&rsquo;s Constitution (2026-01-20), the OpenAI
+    Model Spec in two versions (2025-12-18 and 2026-08-18), and the Alibaba Model Spec
+    (2026-04-00). They run to tens of thousands of words, and what any of them says about one
+    subject is spread across it.</p>
+    <p>Each version is a document of its own, named <code>&lt;lab&gt;--&lt;document&gt;@&lt;version&gt;</code>,
+    so the two OpenAI versions are judged and cited separately. The Alibaba Model Spec is
+    published in Chinese: the index reads an English machine translation of it, made by Claude
+    Opus 5 and revised in part by Claude Fable 5, and the reader keeps the original beside every
+    passage.</p>
     <p>A behaviour is one thing such a document might commit a model to, written down so that it
     can be looked for. Deferring to a user&rsquo;s own decisions about their own life is a
-    behaviour. So is refusing to assert what the model believes to be false.</p>
-    <p>The index puts the two together. Several frontier models read a whole document against one
-    written description of a behaviour, and mark every passage in it: this is where the document
-    establishes the behaviour, this only touches on it, this is unrelated. One model&rsquo;s
-    opinion about a paragraph is an opinion. Several models agreeing, given the same description
-    and the same document, is closer to a finding, and the reader shows you how many stood behind
-    each passage rather than averaging them away.</p>
+    behaviour. So is refusing to assert what the model believes to be false. As of September 2026
+    the index carries thirteen, grouped in four sections: Autonomy, oversight and authority; Harm
+    and safety; Helpfulness and judgement; Honesty and epistemics.</p>
+    <p>The index puts the two together. Three frontier models read a whole document against one
+    written description of a behaviour: GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2, the panel
+    called <code>frontier_fast</code>, judging under rubric v5. Each marks every passage in it:
+    this is the document&rsquo;s fullest statement of the behaviour, this establishes it, this
+    bears on it without establishing it, this is unrelated. One model&rsquo;s opinion about a
+    paragraph is an opinion. Several models agreeing, given the same description and the same
+    document, is closer to a finding, and the reader shows you how each judge voted on each
+    passage rather than averaging them away.</p>
+    <p>Each judge then gives the document one depth for the behaviour, on a scale from 0, absent,
+    to 4, rules with worked examples. The index publishes the mean of the three.</p>
+    <p>Sometimes a judge cannot answer at all, because a content filter withholds its output.
+    Then a model declared in advance for that seat judges in its place, and the substitution is
+    recorded with its reason. Claude Fable 5&rsquo;s seat declares Claude Opus 4.8 first and
+    Kimi K3 second. As of September 2026, Opus holds that seat on harm avoidance to third parties
+    in both OpenAI versions, and Kimi holds it on every behaviour of the Alibaba Model Spec, where
+    every Anthropic model was refused. The reader says so in the behaviour&rsquo;s note.</p>
     <p>What comes out is a coverage map. In the <a href="/spec-reader/">spec reader</a> you tick a
-    behaviour and every passage that bears on it lights up in both documents at once, shaded by
-    how squarely the document commits to it. Click a passage to see each reader&rsquo;s verdict on
-    it and the quote itself. Beside every behaviour there is an <b>i</b> giving the description it
-    was judged against, because a verdict means little without the question that produced it. The
+    behaviour and every passage that bears on it lights up in the document you are reading, or in
+    two side by side when you compare them. Passages fall in three bands: defining, core and
+    related. All three are shown by default, related drawn softer, and each band can be switched
+    off. Click a passage to see each judge&rsquo;s verdict on it and the quote itself. Beside every
+    behaviour there is an <b>i</b> giving the description it was judged against, because a verdict means little without the question that produced it. The
     export takes the passages you ticked away as a file.</p>
   </section>
 
@@ -388,7 +460,7 @@
   <section class="m">
     <h2>Propose a new model spec</h2>
     <p class="lead">A model spec is a document a laboratory publishes saying how its models
-    should behave, the way Anthropic&rsquo;s constitution and OpenAI&rsquo;s model spec do. If
+    should behave, the way Anthropic&rsquo;s constitution and the OpenAI and Alibaba model specs do. If
     there is one the index should be reading, send it here.</p>
     <p><b>Send the text itself, not only a link.</b> The index quotes documents word for word and
     pins every citation to the exact version it read, so it keeps its own copy rather than
@@ -417,10 +489,13 @@
     trust, tone, transparency and error correction. &ldquo;Honesty, meaning the model does not
     assert what it believes to be false, not whether it volunteers everything it knows&rdquo;
     collects the passages you meant.</p>
-    <p>Whichever you send, a person reads it. We read every proposal ourselves, decide whether it
-    belongs, and pay for the run out of our own credits. If it goes in, we write and tell you, and
-    it appears in the reader for everyone. We cannot promise to run everything; if we decide
-    against it, we will say so rather than leave you waiting.</p>
+    <p>Whichever you send, a person reads it. Sending a proposal records it and does nothing else:
+    the form registers nothing, judges nothing and publishes nothing. We read every proposal
+    ourselves and decide whether it belongs. If it does, one of us retypes it into the
+    index&rsquo;s portal and pays for the run out of our own credits, we write and tell you, and it
+    appears in the reader for everyone once a publication carrying it is made public. We cannot
+    promise to run everything; if we decide against it, we will say so rather than leave you
+    waiting.</p>
 
     <p><button type="button" class="open-propose" id="open-propose-behaviour"
     data-kind="behaviour">Propose a new behaviour</button></p>
@@ -432,19 +507,24 @@
     <p>It reports what a document says, not what a model does. A specification covering a
     behaviour thoroughly is not evidence that the model follows it. That is a different
     measurement, and the citations here are meant to feed it.</p>
-    <p>It is also not a scoreboard. Two documents addressing a behaviour differently is usually
-    two organisations having made different choices, not one of them failing.</p>
+    <p>It is also not a scoreboard. When two labs&rsquo; documents address a behaviour
+    differently, that is usually two organisations having made different choices, not one of them
+    failing. A depth measures how much a document gives an evaluation to work with, not how much
+    its lab cares.</p>
+    <p>On the Alibaba Model Spec it reports what the English translation says. The judges read the
+    translation, and the original is in the reader to check it against.</p>
   </section>
 
   <section class="m">
     <h2>Citing what you find</h2>
     <p>Every passage carries a locator, and the locator is the point of the whole exercise:</p>
-    <pre><code>constitution@2026-01-20 &gt; Being honest &gt; &para;18 s1-4
-model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
-    <p>It names the document, the version it was read at, the section, and the sentences. Because
-    the version is part of it, a locator keeps pointing at the same words after the lab reissues
-    the document. Anyone can resolve one back to the text, including us: a scheduled job
-    re-resolves every published citation against the stored document and fails loudly if a single
+    <pre><code>anthropic--constitution@2026-01-20 &gt; Being broadly ethical &gt; Being honest &gt; &para;18 s1-4
+openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
+    <p>It names the lab and the document, the version it was read at, the section, and the
+    sentences. The head of every locator is the document&rsquo;s own name, and because the
+    version is part of that name, a locator keeps pointing at the same words after the lab
+    reissues the document: a reissue is a new document, as the two OpenAI versions are. Anyone
+    can resolve one back to the text, including us: a scheduled job re-resolves every published citation against the stored document and fails loudly if a single
     quote has moved.</p>
     <p>The reader&rsquo;s export writes the quote and its locator together, so what you paste into
     an article is the sentence and where it came from.</p>
@@ -461,13 +541,17 @@ model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     same numbers you read.</p>
     <p><b>The authors are read off the build, not kept in a list.</b> Every run records who
     produced its verdicts and every behaviour records who wrote it, so a publication computes its
-    own credit from what it actually carries. A build made of somebody&rsquo;s runs names them
-    whether or not anyone remembered to. The method is credited separately and does not change:
-    the scale, the prompt and the citation grammar are Andr&eacute;s Cotton&rsquo;s and Matt
-    Stults&rsquo;s work, whoever runs it.</p>
-    <p><b>Cite the specification to its publisher, not to us.</b> The documents are Anthropic&rsquo;s
-    and OpenAI&rsquo;s, released under CC0, and they should be cited to Anthropic and to OpenAI.
-    What is ours to be cited for is the coverage: which passages address which behaviour, and how
+    own credit from what it actually carries. The dataset is credited to whoever ran the judging:
+    as of September 2026, Polaris Collective. A build made of somebody&rsquo;s runs names them
+    whether or not anyone remembered to. The method is credited on its own line and does not
+    change: the rubric, the scale, the prompt and the citation grammar are Andr&eacute;s
+    Cotton&rsquo;s and Matt Stults&rsquo;s work, whoever runs it, and so are most of the behaviour
+    briefs.</p>
+    <p><b>Cite the specification to its publisher, not to us.</b> Claude&rsquo;s Constitution is
+    Anthropic&rsquo;s, the Model Spec is OpenAI&rsquo;s, and the Alibaba Model Spec is
+    Alibaba&rsquo;s; Anthropic and OpenAI release theirs under CC0. A quote from the Alibaba Model
+    Spec comes from the index&rsquo;s English translation, so say so when you use one. What is
+    ours to be cited for is the coverage: which passages address which behaviour, and how
     squarely.</p>
     <p>The repository carries a
     <a href="https://github.com/polariscollective/ai-character-index/blob/main/CITATION.cff"
@@ -507,7 +591,8 @@ model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
     <p>Point it at a document of your own: your organisation&rsquo;s policy, a draft nobody has
-    published, a competitor&rsquo;s. It never leaves your machine.</p>
+    published, a competitor&rsquo;s. Nothing is sent to us: the document goes only to the model
+    providers you call.</p>
 
     <h3>Or ours</h3>
     <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
@@ -529,7 +614,8 @@ python3 -m http.server 8080 --directory site</code></pre>
     every verdict with its locator and the text it judged, the document as the panel saw it, and
     what each call cost. They diff like the original&rsquo;s do. The README says what each file
     holds.</p>
-    <p>The one thing a local run does not give you is this site. A published index, with its
+    <p>A local run gives you the passages and every judge&rsquo;s verdict on them. It does not ask
+    for the 0 to 4 depth, and it does not give you this site. A published index, with its
     citations frozen and its coverage map in the reader, is what the hosted half exists for.</p>
   </section>
   </div>
@@ -576,7 +662,7 @@ python3 -m http.server 8080 --directory site</code></pre>
         <span>Where does it stop</span>
         <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
         <span class="hint">The most useful field on this form. Name the neighbouring thing your
-        behaviour is <i>not</i>, so that a passage about that neighbour does not get counted.
+        behaviour is not, so that a passage about that neighbour does not get counted.
         Without it the result is broader than you meant and harder to trust.</span>
       </label>
       <label>
@@ -809,10 +895,14 @@ if (citeText) {
           + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
     })
     .catch(() => {
-      /* Say what is missing rather than leave a loading line that never resolves. */
+      /* Say what is missing rather than leave a loading line that never resolves.
+         Same credit as the live line: the data set to whoever judged it, the
+         method on its own line. The publication id is the part that could not
+         be read, so it is left out rather than guessed. */
       citeText.textContent =
-        "Cotton, A., & Stults, M. (2026). AI Character Index [Data set]. "
-        + "Polaris Collective. " + location.origin + "/spec-reader/";
+        "Polaris Collective (2026). AI Character Index [Data set]. "
+        + location.origin + "/spec-reader/"
+        + "\nMethod: Andrés Cotton, Matt Stults, https://github.com/AndresCotton/ai-character-index";
     });
 }
 

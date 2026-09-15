@@ -444,9 +444,28 @@ body.resizing-columns {
 
 .behaviour-list { flex: 1; min-height: 0; overflow: auto; padding: 8px 0 18px; }
 .behaviour-group { border-bottom: 1px solid var(--line-light); }
+/* A group's heading row: its name, and at the right the depth column's scale, said
+   once here rather than beside every figure. The right padding lines the label up
+   with the figures' right edge: the list's 10px, the note button's 18px and 8px
+   margin, and the label's own 12px. */
+.behaviour-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 15px 48px 7px 25px;
+}
+.depth-head {
+  flex: none;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
 .behaviour-group h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  padding: 15px 25px 7px;
+  padding: 0;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -551,6 +570,18 @@ body.resizing-columns {
   font-family: var(--mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+/* Read by a screen reader, drawn for no one. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .behaviour-option.checked .name { color: var(--ink); }
 
@@ -1480,6 +1511,49 @@ body.sidebar-collapsed .sidebar-resizer {
 .passage-why:focus-visible::after { opacity: 1; }
 .passage-why[aria-expanded="true"]::after { content: none; }
 
+/* Copy locator and Copy link, just before the question mark. Out of sight until
+   they are wanted: a light olive when the pointer is over the block or focus is
+   inside it, full on their own hover or focus. Colour and opacity only, over
+   150ms; nothing moves. Where there is no hover, the current passage and a tapped
+   one show them. */
+.passage-copy {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+}
+.passage-copy svg { display: block; width: 14px; height: 14px; }
+.passage-copy[data-copy="locator"] { margin-left: auto; }
+.passage-head .passage-copy ~ .passage-why { margin-left: 0; }
+.passage:hover .passage-copy,
+.passage:focus-within .passage-copy { opacity: .55; }
+/* As specific as the two rules above, and after them, so an icon's own hover or
+   focus wins over the block's. */
+.passage .passage-copy:hover,
+.passage .passage-copy:focus-visible { opacity: 1; color: var(--ink); }
+@media (hover: none) {
+  .passage.current .passage-copy,
+  .passage.touched .passage-copy { opacity: .55; }
+}
+/* What a refused clipboard selects instead of copying the link. */
+.passage-link {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.passage-link[hidden] { display: none; }
+
 .passage-rationale {
   display: block;
   margin: 0 0 7px;
@@ -1608,6 +1682,7 @@ summary:focus-visible, dialog:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .document-scroll { scroll-behavior: auto; }
   .section-heading-button .section-chevron { transition: none; }
+  .passage-copy { transition: none; }
 }
 
 /* ---------- reader test: no behaviour under test ---------- */
@@ -1636,6 +1711,16 @@ body.no-behaviours .sidebar-export { display: none; }
 
 /* panel rationale: model-vote list uses newlines */
 .passage-reason-role { white-space: pre-line; }
+/* The passage's locator under the reason it was cited: data, so mono, and free to
+   break anywhere, since a locator is one long string with few natural breaks. */
+.passage-locator {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 
 /* The list a document's title opens: one entry per registered document, so it
    grows with every spec a reader adds. Comparing, each panel opens its own and
@@ -1718,7 +1803,10 @@ body.no-behaviours .sidebar-export { display: none; }
    2px of the left padding so the words keep their place. */
 .document-translation {
   margin: 0;
-  padding: 6px 24px 6px 22px;
+  padding: 6px 12px 6px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   border-left: 2px solid var(--fail);
   border-bottom: 1px solid var(--line-light);
   background: var(--chrome-deep);
@@ -1727,6 +1815,31 @@ body.no-behaviours .sidebar-export { display: none; }
   line-height: 1.4;
   text-align: left;
 }
+/* The display above would otherwise beat the hidden attribute. */
+.document-translation[hidden] { display: none; }
+.translation-text { flex: 1; min-width: 0; }
+/* The notice's close control: a plain ×, in the band's own ink, centred at its
+   right end. The negative margins keep the band no taller for it. */
+.translation-dismiss {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.translation-dismiss:hover { background: var(--energy); color: var(--ink); }
+/* What remains once the notice is dismissed, beside Show original. */
+.translation-flag { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.translation-flag[hidden] { display: none; }
 
 /* The mark that opens a passage's original. A glyph, not an icon: the framework
    carries no icon library and no emoji, and the character reads as "writing" to
@@ -1828,34 +1941,47 @@ body.no-behaviours .sidebar-export { display: none; }
   flex-wrap: nowrap;
   gap: 2px;
   min-width: 0;
-  /* Scrolls rather than wraps (see .provider-row). The extra pixel below lets the
-     chosen publisher's underline overlap the row's rule instead of being clipped. */
+  /* Scrolls rather than wraps (see .provider-row), and a scrolling box clips what
+     sits outside it. The padding is room for a focused tab's ring, and the
+     negative margins give it back, so the tabs sit where they would without it:
+     on the row's rule, the chosen one's marker overlapping it by a pixel. */
   overflow-x: auto;
-  padding-bottom: 1px;
-  margin-bottom: -1px;
+  padding: 2px 2px 3px;
+  margin: -2px -2px -3px;
   scrollbar-width: none;
 }
 .provider-tabs::-webkit-scrollbar { display: none; }
 
+/* Labels large enough to read at a glance, in a row that does not grow: the room
+   comes out of the tab's own vertical padding, not the row's height. The others
+   are --faint, quieter than the chosen one and still AA on the header's ground
+   (4.71:1 daylight, 4.72:1 umber, against the chosen ink's 13.08:1 and 9.94:1). */
 .provider-tab {
-  padding: 5px 10px 6px;
+  padding: 3px 10px 4px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   margin-bottom: -1px;
   background: transparent;
-  color: var(--muted);
+  color: var(--faint);
   font-family: var(--ui);
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
   cursor: pointer;
   transition: color .15s ease, border-color .15s ease;
 }
 
 .provider-tab:hover { color: var(--ink); }
+/* The chosen publisher, unmistakable: ink at 600 over the framework's chartreuse
+   active marker, which marks and never writes. */
 .provider-tab[aria-pressed="true"] {
   border-bottom-color: var(--energy);
   color: var(--ink);
   font-weight: 600;
 }
+/* The ring just outside the tab, inside the strip's padding, where the strip's
+   scrolling box cannot clip it. */
+.provider-tab:focus-visible { outline-offset: 0; }
 
 .document-row {
   display: flex;

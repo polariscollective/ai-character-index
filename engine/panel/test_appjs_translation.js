@@ -123,5 +123,43 @@ check(note(null, undefined),
       `Machine translation from Chinese.${JUDGED}`,
       "an empty field drops the attribution rather than saying by nobody");
 
+/* ---- dismissing the notice ---- */
+
+/* A viewer may dismiss a document's translation notice, and it stays dismissed
+ * for that viewer on that document version, and on no other. The storage is the
+ * reader's own try/catch helpers: where storage is refused the notice shows, which
+ * is the safe direction for a disclosure. localStorage here is a stand-in, so a
+ * reload is a second read of the same store. */
+var localStorage = (() => {
+  const store = new Map();
+  return { getItem: key => (store.has(key) ? store.get(key) : null),
+           setItem: (key, value) => { store.set(key, String(value)); } };
+})();
+const attempt = run => { try { return run(); } catch (error) { return `threw ${error.message}`; } };
+try { eval(extractFn("function translationDismissedKey(documentId) {")); }
+catch (error) { var translationDismissedKey = () => { throw error; }; }
+eval(extractFn("function savedFlag(key) {"));
+eval(extractFn("function saveFlag(key, value) {"));
+
+const THIS_VERSION = "acme--translated@2026-03-01";
+const NEXT_VERSION = "acme--translated@2026-09-01";
+check(attempt(() => translationDismissedKey(THIS_VERSION)),
+      "aci-translation-dismissed:acme--translated@2026-03-01",
+      "the dismissal is kept per document version id");
+check(attempt(() => translationDismissedKey(NEXT_VERSION) !== translationDismissedKey(THIS_VERSION)),
+      true, "a new version of the document has a key of its own");
+check(attempt(() => savedFlag(translationDismissedKey(THIS_VERSION))), false,
+      "before it is dismissed, the notice shows");
+check(attempt(() => { saveFlag(translationDismissedKey(THIS_VERSION), true);
+                      return savedFlag(translationDismissedKey(THIS_VERSION)); }), true,
+      "once dismissed, a reload reads it dismissed");
+check(attempt(() => savedFlag(translationDismissedKey(NEXT_VERSION))), false,
+      "dismissing one version leaves the next version's notice showing");
+localStorage = { getItem() { throw new Error("storage refused"); },
+                 setItem() { throw new Error("storage refused"); } };
+check(attempt(() => { saveFlag(translationDismissedKey(THIS_VERSION), true);
+                      return savedFlag(translationDismissedKey(THIS_VERSION)); }), false,
+      "where storage is refused, nothing throws and the notice shows");
+
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

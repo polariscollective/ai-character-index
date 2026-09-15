@@ -1,3 +1,5 @@
+> **A dated archive (as of September 2026).** The brief predates PLAN.md (10 July 2026) and this overview describes the repository of 18 August 2026; its statements about the current tree, such as which workflows exist, are out of date.
+
 # vision/ — the originating brief: what the project should feel like and the conceptual proposal it grew from
 
 > As-is snapshot of origin/main @ 72e2e6b (2026-08-18); the documentation set itself is added by this PR. Describes what exists now, not what should exist.

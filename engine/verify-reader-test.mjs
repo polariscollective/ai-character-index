@@ -338,6 +338,18 @@ if (behaviours.length === 0) {
       report(shown === expected, `${behaviour.slug} · ${document.id} · depth`,
              `${shown} (expected ${expected})`);
 
+      // The figure is bare and hidden from screen readers. What they hear beside the
+      // name carries the scale, which a sighted reader gets once, from the column's
+      // header, and a screen reader would not hear with each value.
+      const spoken = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`, cell => ({
+        hidden: cell.getAttribute("aria-hidden") === "true",
+        text: cell.closest(".behaviour-option")?.querySelector(".depth-spoken")?.textContent ?? null,
+      }));
+      const expectedSpoken = depth ? `depth ${depth.mean.toFixed(1)} out of 4` : "no depth given";
+      report(spoken.hidden && spoken.text === expectedSpoken,
+             `${behaviour.slug} · ${document.id} · depth, spoken with its scale`,
+             `${JSON.stringify(spoken)} (expected ${expectedSpoken})`);
+
       // The checkbox describes itself: the description exists, matches the
       // figure's own hover title exactly, and names the document on screen.
       const described = await readDepthDescription(behaviour.slug);
@@ -357,7 +369,9 @@ if (behaviours.length === 0) {
       const expectedJudges = depth ? Object.keys(depth.judges) : [];
       report(
         note.headings.includes(DEPTH_NOTE_HEADING)
-          && note.paragraphs.some(p => p.includes(document.title) && p.includes(expectedFigure))
+          && note.paragraphs.some(p => p.includes(document.title) && p.includes(expectedFigure)
+            // A depth on its own, in a sentence, says its scale in that sentence.
+            && (!depth || p.includes(`${expectedFigure} out of 4`)))
           && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(`${judge}:`))),
         `${behaviour.slug} · ${document.id} · depth note`,
         `headings: ${note.headings.join(" | ")}; judges: ${note.judgeItems.join(" | ")}`,
@@ -386,6 +400,14 @@ if (behaviours.length === 0) {
     }).join(" / ");
     report(shown === expected, `${behaviour.slug} · compare · depth`,
            `${shown} (expected ${expected})`);
+    const spokenCompare = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`, cell =>
+      cell.closest(".behaviour-option")?.querySelector(".depth-spoken")?.textContent ?? null);
+    const paneDepths = documents.slice(0, 2).map(document => behaviour.coverage[document.id]?.depth);
+    const expectedSpokenCompare = paneDepths.some(Boolean)
+      ? `depth ${paneDepths.map(depth => (depth ? `${depth.mean.toFixed(1)} out of 4` : "not given")).join(" and ")}`
+      : "no depth given";
+    report(spokenCompare === expectedSpokenCompare, `${behaviour.slug} · compare · depth, spoken with its scale`,
+           `${spokenCompare} (expected ${expectedSpokenCompare})`);
 
     // In compare mode the description and the note both name both documents on
     // screen -- the same requirement as the single-document view, with two panes
@@ -418,6 +440,40 @@ if (behaviours.length === 0) {
       `${behaviour.slug} · compare · substitutions`,
       said.join(" | ") || "none said",
     );
+  }
+
+  // The scale, once, at the top of the depth column. Each group's heading carries it,
+  // on the heading's own line and flush with the figures below, and the heading is no
+  // taller for it; the figures themselves stay bare. With one document and with two,
+  // where each figure becomes a pair.
+  for (const [mode, url] of [
+    ["one document", `${base}?behavior=${behaviours[0].slug}&spec=${encodeURIComponent(documents[0].id)}`],
+    ["compare", `${base}?behavior=${behaviours[0].slug}&compare=1`],
+  ]) {
+    await readView(url);
+    const heads = await page.evaluate(() => [...document.querySelectorAll(".behaviour-group")].map(group => {
+      const heading = group.querySelector("h2");
+      const head = group.querySelector(".depth-head");
+      const figures = [...group.querySelectorAll(".behaviour-option .depth")]
+        .map(cell => cell.getBoundingClientRect());
+      const box = head?.getBoundingClientRect();
+      const name = heading.getBoundingClientRect();
+      const row = (head?.closest(".behaviour-group-head") ?? heading).getBoundingClientRect();
+      const style = getComputedStyle(heading);
+      return {
+        text: head?.textContent ?? null,
+        sameLine: box ? Math.abs((box.top + box.bottom) / 2 - (name.top + name.bottom) / 2) <= 3 : false,
+        offRight: box && figures.length
+          ? Math.round(Math.max(...figures.map(figure => Math.abs(figure.right - box.right))) * 10) / 10
+          : null,
+        rowHeight: Math.round(row.height * 10) / 10,
+        oneLine: Math.round((15 + 7 + parseFloat(style.lineHeight)) * 10) / 10,
+      };
+    }));
+    report(heads.length > 0 && heads.every(head => head.text === "Depth, out of 4" && head.sameLine
+        && head.offRight !== null && head.offRight <= 2 && head.rowHeight <= head.oneLine + 1),
+      `depth column · ${mode} · the scale is stated once, in the column's header`,
+      JSON.stringify(heads));
   }
 
   // Several behaviours read over the same text. Each must still anchor exactly its own
@@ -588,8 +644,9 @@ if (behaviours.length === 0) {
     "so neither band check below is vacuous");
 
   await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
+  // The notice's words, without the control that dismisses it.
   const note = await page.$eval(".document-translation", el => ({
-    text: el.textContent,
+    text: (el.querySelector(".translation-text") ?? el).textContent,
     hidden: el.hidden,
   }));
   report(
@@ -672,7 +729,7 @@ if (behaviours.length === 0) {
   // the unjudged one leaves out.
   await readView(`${base}?spec=${encodeURIComponent(judgedTranslation.id)}`);
   const judgedNote = await page.$eval(".document-translation", el => ({
-    text: el.textContent,
+    text: (el.querySelector(".translation-text") ?? el).textContent,
     hidden: el.hidden,
   }));
   report(

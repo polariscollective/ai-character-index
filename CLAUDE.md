@@ -44,6 +44,11 @@ dated work. Until then the constraint that forbids this is written into the
 database, with the historic publication as its single exemption. See
 `docs/superpowers/specs/2026-09-10-index-artifacts-to-supabase-design.md`.
 
+Since then: the public publication as of September 2026, `07958c5e`, is not
+grandfathered. Every one of its cells was judged by `frontier_fast`, with recorded
+substitutions, so the site no longer shows this bench. The inherited publication
+and its exemption remain in the database until the cleanup migration.
+
 ### `panel-config.json`'s note about opus describes a different run
 
 **Not fixed.**
@@ -69,6 +74,9 @@ so in those words rather than claiming nobody has written what the behaviour
 means, which is what a two-state reading of the registry made it say first --
 defined and judged are independent, and this row is the combination that reads
 like a contradiction.
+
+Since then: the strict variant has left the reader. See `The index was reshaped
+before it was judged again`.
 
 ### The behaviour registrar wrote to a directory that no longer existed
 
@@ -166,6 +174,9 @@ property of running from a bare clone.
 [`AndresCotton/ai-character-index`](https://github.com/AndresCotton/ai-character-index)
 keeps it, and it is still the repository to clone to run the tool yourself.
 
+Since then: `engine/local_run.py` judges a document with one key and no database.
+See `A clone can judge again, with no database`.
+
 ### The reader opens on the first document it is given
 
 `app.js` defaulted `selectedSpec` to the string `"anthropic"`, which assumed a lab
@@ -179,6 +190,14 @@ focused one. Both are now keyed by the documents the payload carries, and the
 walker turns focus off explicitly where it measures that the reader keeps your
 place, because in focus mode unticking a behaviour removes text rather than only
 its highlights.
+
+It prefers a lab now, and keeps that fallback. With no `?spec=`, the reader opens
+on the newest document of `PREFERRED_LAB` (`anthropic`, matched on the head of
+the document id) when the publication carries one, and on its first document
+when it does not. The fallback stays because the preference is the same
+assumption that once rendered nothing: a payload without the lab, the test
+fixture among them, must still open on something. `?spec=` still wins, and
+`engine/panel/test_appjs_opening.js` holds the three cases.
 
 ### A publication's menu is the selection, not the configuration
 
@@ -226,9 +245,11 @@ shape the documentation asks for, hit it immediately.
 
 The upstream project takes contributions as pull requests against a repository
 anyone can clone. This fork cannot: the artifacts are in Supabase, judging costs
-money, and nobody outside has credentials. `site/propose.html` is what replaced
-it — two forms writing to `aci_submissions`, a private bucket and a Slack
-webhook.
+money, and nobody outside has credentials. `/how-it-works`
+(`site/how-it-works.html`) is what replaced it: two forms, opened in a dialog and
+posted to `/api/submit`, writing to `aci_submissions`, a private bucket and a
+Slack webhook. `site/propose.html`, where the forms first lived, now only
+redirects there.
 
 What it deliberately does not do is act. A public route that could start a run
 would be a public route that spends money, so a proposal is recorded and read,
@@ -320,8 +341,9 @@ version whatever version a call named, so judging an older version after
 registering a newer one would have judged the newer text.
 
 The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions-and-judged-depth-design.md`.
-The database only gained while `develop` was built; the cleanup migration it lists
-follows the merge.
+The database only gained while `develop` was built. `develop` was merged into
+`main` on 15 September 2026, and the cleanup migration the design lists has not
+been written yet; see `Where the fork is heading`.
 
 ### A seat can be judged by a recorded substitute
 
@@ -369,12 +391,26 @@ that seat, naming the cell and the declared order.
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
-judging runs as a Cloud Run job, the site is a Next.js application on Vercel, and
-the index is operated from a portal rather than a terminal. Upstream keeps the
-property this fork gave up, which is running from a bare clone.
+judging runs as a job the portal launches, the site is a Next.js application on
+Vercel, and the index is operated from a portal rather than a terminal. Upstream
+keeps the property this fork gave up, which is running from a bare clone.
 
-What is left: the cleanup migration after `develop` is merged, and retiring the
-provenance record of the grandfathered publication with it.
+`develop` was merged into `main` on 15 September 2026 (PR #1, `119fa63`), Vercel
+deployed it to production, and publication `07958c5e`, thirteen behaviours over
+four documents, is public on https://ai-character-index.vercel.app.
+
+What is left, as of 15 September 2026:
+
+- The cleanup migration, and retiring the provenance record of the grandfathered
+  publication with it. It is not in `polaris-supabase` yet: the newest migration,
+  `20260915140000_aci_documents_credited_to_polaris_collective.sql`, credits
+  documents and publications to Polaris Collective. What the cleanup must do is
+  listed under Cleanup in the 2026-09-14 design.
+- The judging image's deploy. `deploy-runner.yml` has failed on every run, at
+  Google Cloud authentication, so jobs are launched from a local portal with
+  `ACI_PYTHON` set rather than on Cloud Run.
+- The daily provenance check. `provenance.yml` receives empty `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` secrets, so it exits before checking anything.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

@@ -1,5 +1,6 @@
 AI Character Index
 Copyright 2026 Andrés Cotton and Matt Stults
+Modifications copyright 2026 Polaris Collective
 
 This product includes software and written work developed for the
 AI Character Index project.
@@ -10,14 +11,14 @@ This repository is dual-licensed. Which licence applies depends on what
 the file is, not where it sits:
 
   Software   -- Apache License 2.0, see LICENSE
-                .py, .js, .mjs, .html, .css, .sh, .yml, and the build,
-                harness, and verification code under engine/, site/,
-                tests/, and .github/
+                .py, .js, .mjs, .jsx, .html, .css, .sh, .yml, and the
+                application, job, harness, and verification code under
+                app/, engine/, site/, tests/, and .github/
 
   Written    -- Creative Commons Attribution 4.0 International,
   work and     see LICENSE-CC-BY-4.0
-  data         .md, .json, .jsonl, .txt -- the coverage data, judged
-                runlogs, methodology, and documentation
+  data         .md, .json, .jsonl, .txt -- methodology, documentation,
+                fixtures, and the coverage data the index publishes
 
   Exception  -- package.json and other dependency/config manifests are
                 software, and are covered by Apache-2.0 despite the
@@ -25,17 +26,24 @@ the file is, not where it sits:
 
 THIRD-PARTY MATERIAL
 --------------------
-specs/ contains verbatim copies of specifications published by other
-organisations. They are NOT covered by the licences above and remain
-under their publishers' terms:
+The index reads specifications published by other organisations. Their
+texts are held in the index's database, not in this repository; specs/
+keeps the provenance notes of the Anthropic and OpenAI mirrors. The
+specifications are NOT covered by the licences above and remain under
+their publishers' terms:
 
-  specs/claude-constitution/   Claude's Constitution, Anthropic.
-                               Released under CC0 1.0 (public domain
-                               dedication).
+  Claude's Constitution        Anthropic. Released under CC0 1.0
+                               (public domain dedication).
+                               Provenance: specs/claude-constitution/
 
-  specs/openai-model-spec/     OpenAI Model Spec, OpenAI.
-                               Released under CC0 1.0 (public domain
-                               dedication).
+  OpenAI Model Spec            OpenAI. Released under CC0 1.0
+                               (public domain dedication).
+                               Provenance: specs/openai-model-spec/
+
+  Alibaba Model Spec           Alibaba. Published in Chinese; the index
+                               reads an English machine translation of
+                               it. No licence for it is recorded in this
+                               repository.
 
 CC0 imposes no conditions on redistribution and requires no attribution.
 Attribution is given here because the academic and research norms this
@@ -44,6 +52,7 @@ project is built for expect it, not because the licence compels it.
 TRADEMARKS
 ----------
 CC0 dedicates copyright to the public domain; it does not grant rights in
-trademarks. "Anthropic", "Claude", "OpenAI", and "Model Spec" are marks of
-their respective owners. Nothing in this project is endorsed by, affiliated
-with, or produced in cooperation with either organisation.
+trademarks. "Anthropic", "Claude", "OpenAI", "Model Spec", and "Alibaba"
+are marks of their respective owners. Nothing in this project is endorsed
+by, affiliated with, or produced in cooperation with any of these
+organisations.
