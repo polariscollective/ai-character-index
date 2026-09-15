@@ -43,7 +43,6 @@ export default async function Publications({ searchParams }) {
                   <td className="mono">
                     {(row.panel || []).join(", ")}
                     <br />rubric {row.rubric}
-                    {row.grandfathered && <><br />grandfathered</>}
                   </td>
                   <td className="num">{row.cells}</td>
                   <td>

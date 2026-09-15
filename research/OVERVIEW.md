@@ -19,7 +19,7 @@ Defines the behaviours the index measures (`core-behaviour-list.md`). The per-be
 graph LR
   CBL["core-behaviour-list.md"] -->|hand-copied definitions + facets| REG["aci_behaviours (registry)"]
   REG -->|judge prompts, behaviour names| PANEL["engine/panel/ + site/"]
-  SPECS["spec texts"] -->|verbatim quotes (frozen)| DATA["aci_coverage (frozen ledger)"]
+  SPECS["spec texts"] -->|verbatim quotes (frozen)| DATA["aci_judgements (one row per verdict)"]
 ```
 
 ## As-is observations

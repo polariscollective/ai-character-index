@@ -14,7 +14,6 @@ Regression tests for the spec-coverage tooling.
 
 ```sh
 python3 -m unittest discover -s tests        # the tests/ suite (~20s)
-python3 engine/test_coverage_payload.py      # engine/: reader payload builder
 python3 engine/test_validate_data.py         # engine/: data-validation gate
 python3 -m unittest discover -s tests -v     # verbose
 ```
@@ -62,8 +61,7 @@ One test file per subject under test:
   intentional registry change, run the generator and commit both sides.
 
 The engine-side files in the gate live next to the code they pin and are
-documented in `engine/README.md`: `engine/test_coverage_payload.py` and
-`engine/test_validate_data.py`.
+documented in `engine/README.md`: `engine/test_validate_data.py`.
 
 To run one class during a tight edit loop (the goldens take ~20s; the unit
 tests are instant):

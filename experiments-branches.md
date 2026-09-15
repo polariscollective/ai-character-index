@@ -2,7 +2,7 @@
 
 > As-is snapshot of the working copy and branch list (main @ 72e2e6b). Describes what exists now, not what should exist. This document covers satellite territory only; `SYSTEM.md` covers main itself.
 > **Staleness warning:** this inventory is a dated snapshot of one working copy; it silently rots as local branches are deleted or merged, and several entries below have pending deletion rulings on the closeout list. Verify against the live repo before acting on any entry.
-> **Since then (September 2026):** the published data no longer depends on any working copy. The index lives in Supabase, and `engine/published-artefacts.sha256.json` records what it published when the migration was verified. The branch inventory below has not been re-checked.
+> **Since then (September 2026):** the published data no longer depends on any working copy. The index lives in Supabase. The branch inventory below has not been re-checked.
 
 ## Purpose
 

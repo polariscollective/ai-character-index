@@ -10,16 +10,9 @@ so that a draft can be checked before it is made public.
 
 The claims.
 
-    1. The publication row holds the bytes its digests describe. The grandfathered
-       publication is also held to the digests recorded in
-       engine/published-artefacts.sha256.json, at the commit named there: it is
-       what the index published when the migration was verified, and the record
-       describes no other publication.
-    2. Any other publication rebuilds, from its own cells and with the builds
-       publish.py makes, to the digests it stores. The grandfathered publication
-       is reported as not rebuilt, and that is not a failure: the builders were
-       reshaped on purpose after it was published, so no current build reproduces
-       it, and its stored bytes, held to the record, are the oracle.
+    1. The publication row holds the bytes its digests describe.
+    2. The publication rebuilds, from its own cells and with the builds
+       publish.py makes, to the digests it stores.
     3. Every behaviour that carries a boundary reaches the panel carrying it.
        This one exists because a boundary once failed to migrate and nothing
        noticed: the prompt read "none provided" and the panel judged against a
@@ -28,11 +21,16 @@ The claims.
     4. Every locator the publication cites still resolves against the stored text
        of the version it names, and returns the stored quote byte for byte.
 
-Two conventions meet in the fourth, and conflating them makes a check that fails
-on correct data. A panel passage carries citation_quote() applied to the
-normalised text passages() yields; a ledger citation carries the raw span, and a
-locator with no span means the whole section rather than nothing. Each is checked
-through the code that produced it.
+A panel passage carries citation_quote() applied to the normalised text
+passages() yields, so the fourth claim is checked through the code that produced
+it rather than through a second reading of the markdown.
+
+Two things this used to check are gone with what they checked. The grandfathered
+publication was held to engine/published-artefacts.sha256.json instead of being
+rebuilt, and the frozen coverage ledger's citations were re-resolved here. The
+cleanup migration of 16 September 2026 (polaris-supabase,
+20260916090000_aci_cleanup_after_the_one_panel_redesign.sql) archives both out of
+the tables this reads, and both remain in git history.
 """
 
 import argparse
@@ -40,31 +38,18 @@ import hashlib
 import importlib.util
 import json
 import re
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
-import cite            # noqa: E402
 import index_store     # noqa: E402
 import publish         # noqa: E402
 from store import Store, StoreError   # noqa: E402
 
-RECORD = HERE / "published-artefacts.sha256.json"
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
-
-
-def recorded():
-    """The digests of what the index published when the migration was verified.
-
-    These stand in for the committed payloads once those are deleted, and they
-    describe one publication: the grandfathered one.
-    """
-    return json.loads(RECORD.read_text())["published"]
 
 
 failures = []
@@ -74,12 +59,6 @@ def report(ok, label, detail=""):
     print(f"{'OK  ' if ok else 'FAIL'}  {label}" + (f" -- {detail}" if detail else ""))
     if not ok:
         failures.append(label)
-
-
-def note(label, detail):
-    """A check that does not apply to this publication, said plainly rather than
-    passed in silence or failed for the wrong reason."""
-    print(f"NOTE  {label} -- {detail}")
 
 
 def load_module(name, path):
@@ -109,31 +88,18 @@ def cells_of(store, publication):
 
 
 def check_the_published_artefacts_still_carry_their_digests(publication):
-    """The stored columns, held to their own digests; and the grandfathered
-    publication's, to the record as well."""
-    if publication.get("grandfathered"):
-        want = recorded()
-        for name, column in (("payload", "payload_sha256"),
-                             ("documents", "documents_sha256")):
-            got = publication[column]
-            report(got == want[name]["sha256"],
-                   f"the published {name} carries its recorded digest",
-                   "unchanged" if got == want[name]["sha256"]
-                   else f"{got[:16]} against {want[name]['sha256'][:16]}")
-    else:
-        note("the published artefacts are not held to the record",
-             "the record describes the grandfathered publication only; this one is "
-             "held to its own rebuild")
+    """The stored columns, held to their own digests.
 
-    # And the digest describes THESE bytes, which is the claim that makes it worth
-    # anything. Each builder serialises its payload its own way, so each column is
-    # re-serialised the way the builder that wrote it does; a digest that matched
-    # while the column said something else would be a digest of a file nobody
-    # serves.
-    #
-    # This is also what `json` rather than `jsonb` is for. jsonb reorders keys on
-    # the way in, which breaks this equality permanently and silently -- it did,
-    # once, and the tables were recreated.
+    The digest describes THESE bytes, which is the claim that makes it worth
+    anything. Each builder serialises its payload its own way, so each column is
+    re-serialised the way the builder that wrote it does; a digest that matched
+    while the column said something else would be a digest of a file nobody
+    serves.
+
+    This is also what `json` rather than `jsonb` is for. jsonb reorders keys on
+    the way in, which breaks this equality permanently and silently -- it did,
+    once, and the tables were recreated.
+    """
     for name, column in (("payload", "payload_sha256"), ("documents", "documents_sha256")):
         got = hashlib.sha256(
             json.dumps(publication[name], **publish.FORMATS[name]).encode()).hexdigest()
@@ -151,22 +117,7 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
     payload carries: a build that did not pin one took the day it ran, and a
     rebuild on any other day must not.
     """
-    if publication.get("grandfathered"):
-        note("the publication is not rebuilt",
-             "it is grandfathered: the builders were reshaped after it was published, "
-             "so its stored bytes, held to the record, are the oracle")
-        return
     params = publication.get("build_params") or {}
-    # A pre-reshape build_params names its documents `specs` and its panel as the
-    # list of seats rather than the configured panel's name. Neither shape is one
-    # the current build() accepts, so say plainly why the rebuild is refused
-    # rather than let it run and fail on a bare digest mismatch.
-    if "specs" in params or not isinstance(params.get("panel"), str):
-        for name in ("payload", "documents"):
-            report(False, f"the {name} rebuilds from the publication's cells to its stored digest",
-                   "the publication was built by the pre-reshape builder and cannot be "
-                   "rebuilt by the current one")
-        return
     cells = cells_of(store, publication)
     run_date = (params.get("run_date")
                 or (publication["payload"].get("provenance") or {}).get("runDate"))
@@ -182,30 +133,6 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
         want = publication[f"{name}_sha256"]
         report(got == want, label,
                "unchanged" if got == want else f"{got[:16]} against {want[:16]}")
-
-
-def check_the_passage_flags_agree_with_the_reader(publication, scratch):
-    """The builder's adjacent flag and the band the reader computes must agree.
-
-    Its ragged exceptions are enumerated passage by passage in
-    test_reader_v5_labels.js, for the grandfathered payload it was written against.
-    Another payload does not carry them, and would fail on the list rather than on
-    its data; the reader recomputes the flag from the band it draws in any case.
-    """
-    if not publication.get("grandfathered"):
-        note("the passage flags are not held to the reader's bands",
-             "the harness enumerates the grandfathered payload's ragged passages, and "
-             "the reader recomputes the flag from the band it draws")
-        return
-    payload = scratch / "payload.json"
-    payload.write_text(json.dumps(publication["payload"], **publish.FORMATS["payload"]))
-    labels = subprocess.run(
-        ["node", str(HERE / "panel" / "test_reader_v5_labels.js"), str(payload)],
-        capture_output=True, text=True)
-    output = (labels.stdout or labels.stderr).strip().splitlines()
-    report(labels.returncode == 0,
-           "every passage's adjacent flag agrees with the band the reader computes",
-           output[-1] if output else "")
 
 
 def check_panel_passages_still_resolve(store, publication):
@@ -245,33 +172,6 @@ def check_panel_passages_still_resolve(store, publication):
     report(missing == 0 and mismatched == 0,
            "every published passage re-derives from the stored spec text",
            f"{checked} passages, {missing} unresolved, {mismatched} mismatched")
-
-
-def check_ledger_citations_still_resolve(store):
-    """A ledger citation is a raw span. get_span_text must return it exactly."""
-    index_store.install_registry(store)
-    specs = {}
-    checked = mismatched = 0
-    for record in index_store.coverage(store):
-        for citation in record["citations"]:
-            spec, version, ref, span = cite.parse_locator(citation["locator"])
-            key = (spec, version)
-            if key not in specs:
-                specs[key] = cite.load_spec(spec, version)
-            _, sections, lines = specs[key]
-            section = cite.find_section(sections, ref)
-            if span is None:
-                # A locator with no span names the whole section, not nothing.
-                blocks = cite.section_blocks(section, lines)
-                span = (1, None, len(blocks), None)
-            resolved = cite.get_span_text(section, lines, span)
-            expected = (resolved.splitlines()[0]
-                        if citation.get("example_block") else resolved)
-            checked += 1
-            if resolved != citation["quote"] and expected != citation["quote"]:
-                mismatched += 1
-    report(mismatched == 0, "every ledger citation re-resolves against the stored text",
-           f"{checked} citations, {mismatched} mismatched")
 
 
 def check_behaviours_carry_the_judging_entry(store):
@@ -389,18 +289,14 @@ def main(argv=None):
                else "nothing is published")
         return 1
     print(f"Publication {publication['id']}, published {publication['published_at']}, "
-          f"{'public' if publication.get('is_public') else 'a draft'}"
-          f"{', grandfathered' if publication.get('grandfathered') else ''}.\n")
+          f"{'public' if publication.get('is_public') else 'a draft'}.\n")
 
     check_the_published_artefacts_still_carry_their_digests(publication)
     check_the_publication_rebuilds_to_its_digests(store, publication)
-    with tempfile.TemporaryDirectory() as scratch:
-        check_the_passage_flags_agree_with_the_reader(publication, Path(scratch))
     check_behaviours_carry_the_judging_entry(store)
     check_every_defined_behaviour_reaches_the_panel_with_its_scope(store)
     check_the_run_snapshot_says_what_it_judged_against(store, publication)
     check_panel_passages_still_resolve(store, publication)
-    check_ledger_citations_still_resolve(store)
     check_spec_versions_are_insert_only(store)
     if failures:
         print(f"\n{len(failures)} failure(s): {', '.join(failures)}")

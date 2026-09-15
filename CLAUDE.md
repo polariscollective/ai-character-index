@@ -46,8 +46,11 @@ database, with the historic publication as its single exemption. See
 
 Since then: the public publication as of September 2026, `07958c5e`, is not
 grandfathered. Every one of its cells was judged by `frontier_fast`, with recorded
-substitutions, so the site no longer shows this bench. The inherited publication
-and its exemption remain in the database until the cleanup migration.
+substitutions, so the site no longer shows this bench. The cleanup migration,
+`20260916090000_aci_cleanup_after_the_one_panel_redesign.sql` in
+`polaris-supabase`, archives the inherited publication, its run and the exemption
+into an unexposed `aci_archive` schema and removes them from the tables the index
+reads.
 
 ### `panel-config.json`'s note about opus describes a different run
 
@@ -76,7 +79,9 @@ defined and judged are independent, and this row is the combination that reads
 like a contradiction.
 
 Since then: the strict variant has left the reader. See `The index was reshaped
-before it was judged again`.
+before it was judged again`. The cleanup migration,
+`20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`, archives and
+removes its row, with its last call and its curation rows.
 
 ### The behaviour registrar wrote to a directory that no longer existed
 
@@ -157,13 +162,15 @@ links already shared point at it, and renaming it would break them silently.
 ### The database is the only source
 
 The index does not live in this repository. The behaviours, the spec text, the
-judgements, the frozen ledger and the two payloads the reader is served all live
-in the `aci_` tables of the shared `evals` Supabase project. What is committed
-here is code, fixtures, and `engine/published-artefacts.sha256.json`, which
-records what the index published when the migration was verified against it.
+judgements and the two payloads the reader is served all live in the `aci_`
+tables of the shared `evals` Supabase project. What is committed here is code and
+fixtures.
 
-Roughly twenty megabytes of data left the branch and remain in git history at the
-commit that file names.
+Roughly twenty megabytes of data left the branch and remain in git history at
+`085fd2e`. `engine/published-artefacts.sha256.json` recorded their digests, for
+the one publication built from them; it was deleted with that publication in the
+cleanup (`20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`), and is in
+git history too.
 
 ### The clone-and-fork pathway is gone
 
@@ -211,8 +218,9 @@ accident.
 `publish.py` passes the selection explicitly now. A consequence worth stating:
 `general-welfare-impacts-strict` cannot be published this way, because it has no
 cell any panel answered for — its coverage is a re-reading of other behaviours'
-judgements. It is in the inherited publication's menu and will not be in the next
-one until somebody judges it.
+judgements. It was in the inherited publication's menu, and the cleanup migration,
+`20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`, removes the
+behaviour and that publication both.
 
 ### A clone can judge again, with no database
 
@@ -342,8 +350,11 @@ registering a newer one would have judged the newer text.
 
 The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions-and-judged-depth-design.md`.
 The database only gained while `develop` was built. `develop` was merged into
-`main` on 15 September 2026, and the cleanup migration the design lists has not
-been written yet; see `Where the fork is heading`.
+`main` on 15 September 2026, and the cleanup migration the design lists is
+`20260916090000_aci_cleanup_after_the_one_panel_redesign.sql` in
+`polaris-supabase`; see `Where the fork is heading`. It leaves
+`aci_behaviours.set_name` in place, because the portal's registration route still
+writes that column.
 
 ### A seat can be judged by a recorded substitute
 
@@ -399,13 +410,20 @@ keeps the property this fork gave up, which is running from a bare clone.
 deployed it to production, and publication `07958c5e`, thirteen behaviours over
 four documents, is public on https://ai-character-index.vercel.app.
 
-What is left, as of 15 September 2026:
+What is left, as of 16 September 2026:
 
-- The cleanup migration, and retiring the provenance record of the grandfathered
-  publication with it. It is not in `polaris-supabase` yet: the newest migration,
-  `20260915140000_aci_documents_credited_to_polaris_collective.sql`, credits
-  documents and publications to Polaris Collective. What the cleanup must do is
-  listed under Cleanup in the 2026-09-14 design.
+- Applying the cleanup migration,
+  `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`
+  (`polaris-supabase` PR #30), and only once the code that stops reading what it
+  drops is deployed: until then the reader's `/api/reader/publication` route
+  selects `aci_publications.grandfathered`. It copies into an unexposed
+  `aci_archive` schema, then removes, the grandfathered publication, five
+  superseded drafts, six runs, the legacy `constitution` and `model-spec`
+  documents, three unbriefed behaviours, and the `aci_cell_curation` and
+  `aci_coverage` tables, and drops the exemption. `tests/test_schema_after_cleanup.py`
+  fails if code names a dropped table or column again.
+- Dropping `aci_behaviours.set_name`, which the design also lists, once the
+  registration route stops writing it.
 - The judging image's deploy. `deploy-runner.yml` has failed on every run, at
   Google Cloud authentication, so jobs are launched from a local portal with
   `ACI_PYTHON` set rather than on Cloud Run.

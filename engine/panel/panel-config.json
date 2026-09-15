@@ -270,8 +270,8 @@
   "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. Which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
   "rubric": "v5",
   "specs": [
-    "constitution",
-    "model-spec"
+    "anthropic--constitution",
+    "openai--model-spec"
   ],
   "param_quirks_comment": "gpt-5*: max_completion_tokens + reasoning_effort (gpt-5.6: low, else minimal), no temperature. fable/mythos: no temperature. others: temperature=0.",
   "display": {
@@ -285,8 +285,7 @@
       "avoiding-over-and-under-caution",
       "objectivity-on-contested-questions",
       "user-autonomy",
-      "animal-welfare-impacts",
-      "general-welfare-impacts-strict"
+      "animal-welfare-impacts"
     ],
     "_generated_note": "Curated panel-review display list (registry reader-test slugs), hand-maintained; engine/panel/build_site_data.py validates every entry against data/behaviours.json, so a renamed or unknown slug fails the build.",
     "panel": "frontier_fast",
@@ -294,7 +293,7 @@
     "_rubric_note": "The rubric the SHIPPED payload builds from (v5: 0-3 per judge, 9-point cells on the 3-judge panel). Matches top-level `rubric` since the v5 prompt port: whole_doc.py stamps v5 by default (legacy v3 prompts behind --rubric=). build_site_data.py prefers this key.",
     "threshold": 1,
     "solid_threshold": 5,
-    "_activation_note": "The full-bench v5 rollout landed (runlog-v5.jsonl, 2026-08-17): all ten reader-test slugs are listed and the dual-slug mapping in build_site_data.py (animal-welfare-impacts feeds general-welfare-impacts-strict) is active."
+    "_activation_note": "The full-bench v5 rollout landed (runlog-v5.jsonl, 2026-08-17). general-welfare-impacts-strict, whose row build_site_data.py once fed from animal-welfare-impacts, left this list and the database in the cleanup of 16 September 2026 (polaris-supabase 20260916090000_aci_cleanup_after_the_one_panel_redesign.sql). A publication passes its own selection; this list is only the command line's default."
   },
   "_opus_note": "opus substitutes for fable on harm-avoidance-to-third-parties x model-spec only (fable output content-filtered there, 3 attempts); opus rows exist for no other cell."
 }

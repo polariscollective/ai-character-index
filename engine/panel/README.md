@@ -79,11 +79,10 @@ harnesses exercise the reader's `app.js` without a browser.
 serves, or any other with `--publication=<uuid>`, a draft included. It holds each
 stored payload to its digest, rebuilds the publication from its own cells with the
 builds `publish.py` makes, composes every boundary a judge would be sent, and
-re-resolves every cited locator against the stored text. The grandfathered
-publication is held to `engine/published-artefacts.sha256.json` instead of being
-rebuilt. It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, and runs as
-`--publication=<uuid>` when a publication is built rather than on a schedule:
-the service role key is not a GitHub secret.
+re-resolves every cited locator against the stored text. It needs `SUPABASE_URL`
+and `SUPABASE_SERVICE_ROLE_KEY`, and runs as `--publication=<uuid>` when a
+publication is built rather than on a schedule: the service role key is not a
+GitHub secret.
 
 A new panel run is new rows, never an edit: a run freezes what it judged against,
 and a publication names the run that answers each of its cells. To judge a
