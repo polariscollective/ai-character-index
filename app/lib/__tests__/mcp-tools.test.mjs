@@ -108,6 +108,23 @@ test("ToolError is an Error, so the route can tell a caller's mistake from a fau
   assert.ok(new ToolError("bad slug") instanceof Error);
 });
 
+/* A development deployment can serve a draft, and the instructions tell a client
+ * that is_public false means the answer is not the index's published data. That
+ * holds only if every answer carries the flag through, so all three are held to it. */
+test("every tool's answer carries the publication's is_public", () => {
+  const draft = snapshot();
+  draft.publication = { ...draft.publication, is_public: false };
+  const answers = {
+    list_model_specs: listModelSpecs(draft),
+    list_behaviours: listBehaviours(draft),
+    retrieve_passages: retrievePassages(draft, { behaviours: ["defined-behaviour"] }),
+  };
+  for (const [tool, answer] of Object.entries(answers)) {
+    assert.equal(answer.publication?.is_public, false,
+                 `${tool} must say the publication it read is not public`);
+  }
+});
+
 const BOTH = ["defined-behaviour", "undefined-behaviour"];
 
 test("a cell comes back with its passages quoted and located", () => {

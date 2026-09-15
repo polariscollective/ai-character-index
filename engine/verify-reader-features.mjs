@@ -403,7 +403,7 @@ console.log("== Reader: compare is a two-document choice ==");
     "compare renders exactly two panes and one boundary", `${c.panes} panes, ${c.resizers} resizers`);
   check(c.overflow === 0, "compare does not overflow the page", `${c.overflow}px`);
   check(c.pickers === 2, "each pane carries its own document picker", `${c.pickers} pickers`);
-  check(c.a !== c.b, "the two sides are never the same document", `${c.a} / ${c.b}`);
+  check(c.a !== c.b, "the opening pair is two different documents", `${c.a} / ${c.b}`);
 
   {
     await pickerFor("a").click();
@@ -529,6 +529,28 @@ console.log("== Reader: publishers ==");
     seen.panels.map(panel => panel.id).join(" | "));
   check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 1,
     "comparing, focus lands back on the right side's publisher", JSON.stringify(seen.focus));
+
+  // A tier toggle rebuilds both headers too. With one document on both sides its
+  // id cannot say which side pressed the toggle, so focus has to go back by
+  // position, to the side that pressed it.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=${DEFINED}`);
+  for (const side of [1, 0]) {
+    await page.locator(".document-panel").nth(side)
+      .locator('.tier-toggle[data-tier="related"]').focus();
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    const focus = await page.evaluate(() => {
+      const panels = [...document.querySelectorAll(".document-panel")];
+      const focused = document.activeElement;
+      return {
+        tier: focused?.dataset?.tier ?? null,
+        side: panels.indexOf(focused?.closest?.(".document-panel")),
+      };
+    });
+    check(focus.tier === "related" && focus.side === side,
+      `comparing one document twice, a tier toggle pressed on the ${side ? "right" : "left"}`
+        + " keeps focus on that side", JSON.stringify(focus));
+  }
   check(pageErrors.length === 0, "publishers: no console errors", pageErrors.join("; "));
 }
 

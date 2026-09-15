@@ -1853,11 +1853,13 @@ function translatorNames(by) {
    ("in part by"). Shorter, and still true.
 
    Returns the attribution as the band says it, "by" included, because where "in
-   part" goes depends on what was cut. */
+   part" goes depends on what was cut. With nobody left to name, a field that is
+   empty or starts at "except", it returns nothing: "in part by ." credits nobody. */
 function shortenTranslator(by) {
   const cut = by.search(/\bexcept\b/i);
-  if (cut < 0) return `by ${by}`;
+  if (cut < 0) return by.trim() ? `by ${by}` : "";
   const kept = by.slice(0, cut).replace(/[\s,;:]+$/, "");
+  if (!kept.trim()) return "";
   const clause = [...kept.matchAll(/\b\w+ (by)\b/gi)].at(-1);
   if (!clause) return `in part by ${kept}`;
   const at = clause.index + clause[0].length - clause[1].length;
@@ -1874,7 +1876,7 @@ function translationNote(translation, judged) {
   const by = shortenTranslator(translatorNames(translation.by));
   // A review is worth saying; its absence is the ordinary case for a machine
   // translation and saying so every time buys nothing but length.
-  return `Machine translation from ${languageName(translation.from)} ${by}`
+  return `Machine translation from ${languageName(translation.from)}${by ? ` ${by}` : ""}`
        + `${translation.reviewed ? ", reviewed by a person" : ""}.`
        + (judged === false ? "" : " The index judged this translation.");
 }
@@ -2728,14 +2730,17 @@ function toggleBand(tier) {
 }
 
 /* The toggles live in the document headers, which rebuildReader re-clones, so the
- * listener is delegated and focus is put back on the equivalent button afterwards. */
+ * listener is delegated and focus is put back on the equivalent button afterwards.
+ * The panel is found by position rather than by document id, as the publisher row
+ * does: comparing, both sides may carry the same document, and its id would send
+ * focus from a toggle pressed on the right to the one on the left. */
 elements.documentReader.addEventListener("click", (event) => {
   const button = event.target.closest?.(".tier-toggle");
   if (!button || !TIERS.includes(button.dataset.tier)) return;
-  const panelId = button.closest(".document-panel")?.dataset.documentId;
+  const side = panels().indexOf(button.closest(".document-panel"));
   toggleBand(button.dataset.tier);
-  elements.documentReader
-    .querySelector(`.document-panel[data-document-id="${panelId}"] .tier-toggle[data-tier="${button.dataset.tier}"]`)
+  panels()[side]
+    ?.querySelector(`.tier-toggle[data-tier="${button.dataset.tier}"]`)
     ?.focus({ preventScroll: true });
 });
 
