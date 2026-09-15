@@ -3,7 +3,8 @@
 > document carrying every construction `cite.py` recognises; `index.py`, two
 > behaviours, one defined and one not; and `reader/`, the two payloads the
 > reader's routes serve. A fixture is a test input, never a second copy of
-> the index. The published data is verified by `.github/workflows/provenance.yml`.
+> the index. The published data is verified by `verify_supabase_provenance.py
+> --publication=<uuid>`, run when a publication is built.
 
 # tests/
 

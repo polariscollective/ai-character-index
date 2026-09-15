@@ -66,5 +66,5 @@ graph LR
 - Locators are stored with `" > "`; `cite.py` also accepts the grammar's display separator `" › "`.
 - `display.threshold` and `display.solid_threshold` still shape the behaviour payload, but the reader recomputes its bands from each passage's verdicts, so the baked `adjacent` flag is vestigial (see `display._comment` in `panel-config.json`).
 - The pre-migration CLIs still read and write runlog files nothing else uses, and are no longer the path anything takes; `run_rollout.py` ends by suggesting a `build_site_data.py --runlog=` rebuild, which the builder now refuses.
-- `.github/workflows/ci.yml` runs the offline suites and the two reader walkers on every PR. It does not run `test_seat_substitutions.py`, `test_coverage_payload.py`, `panel/test_appjs_locator.js`, `panel/test_appjs_opening.js`, `panel/test_appjs_translation.js` or `panel/test_reader_v5_labels.js`.
+- `.github/workflows/ci.yml` runs the offline suites and the two reader walkers on every PR.
 - Hygiene: `__pycache__/` and `*.pyc` are gitignored; `wholedoc-FAILED-*.txt` outputs are still not.

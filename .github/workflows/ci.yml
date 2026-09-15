@@ -2,14 +2,26 @@ name: CI
 
 # PR-time verification. Two jobs:
 #
-#   offline  -- the full no-network battery: panel + provenance + registry
-#               suites, the tests/ suite (cite goldens, decoupling pins),
-#               the data gate, byte-identity rebuilds, and the node app.js
-#               harnesses. Stdlib python + node only.
+#   offline  -- the full no-network battery: every test_*.py under engine/
+#               and engine/panel/ (unittest discovery, two directories
+#               because engine/panel isn't a package unittest will recurse
+#               into from engine/), the tests/ suite (cite goldens,
+#               decoupling pins), the application library suites, and the
+#               node app.js harnesses -- the last of these run as subprocesses
+#               from inside engine/panel/test_panel.py, so the discovery step
+#               already covers them. Stdlib python + node only.
 #
 #   browser  -- the two Playwright walkers (reader anchoring + reader feature
 #               harness x bundled and user-extended data), which need a
 #               real Chrome.
+#
+# Left out, deliberately: engine/panel/test_reader_v5_labels.js. It checks a
+# publication's passages against three specific, real locators hardcoded as
+# KNOWN_EXCEPTIONS, so it needs an actual published payload -- from Supabase
+# (credentials) or the ~20MB historic payload that left the branch with the
+# migration (see CLAUDE.md) -- neither of which this job has. It still runs
+# from engine/verify_supabase_provenance.py, with credentials, when a
+# publication is built.
 #
 # No paths filter on purpose: a filtered required check never reports on PRs
 # outside its paths, which blocks merging once branch protection requires it.
@@ -36,44 +48,26 @@ jobs:
           node-version: "22"
 
       # The python side is stdlib-only by design, so the runner's preinstalled
-      # python3 is all it needs.
-      - name: Panel and citation suites
-        run: |
-          python3 engine/panel/test_panel.py
-          python3 engine/panel/test_build_site_data.py
-          python3 -m unittest discover -s tests
+      # python3 is all it needs. Two discovery roots, not one: unittest's
+      # discover does not recurse from engine/ into engine/panel/ (neither is
+      # a package -- no __init__.py anywhere in this repo), so each directory
+      # is discovered on its own rather than naming every test_*.py by hand.
+      - name: Engine suites
+        run: python3 -m unittest discover -s engine -p "test_*.py"
 
-      - name: Judging job suites
-        run: |
-          python3 engine/panel/test_judge_call.py
-          python3 engine/panel/test_passages.py
-          python3 engine/panel/test_bands.py
-          python3 engine/panel/test_depth_call.py
-          python3 engine/panel/test_batch_job.py
-          python3 engine/panel/test_compose_run.py
-          python3 engine/test_job.py
-          python3 engine/test_publish.py
-          python3 engine/test_local_run.py
+      # Also runs the node app.js harnesses (test_appjs_fallthrough.js,
+      # _tiers, _quotes, _wiring, _depth, _locator, _opening, _translation):
+      # test_panel.py's TestAppJS* cases subprocess out to node for each.
+      - name: Panel suites (includes the app.js harnesses)
+        run: python3 -m unittest discover -s engine/panel -p "test_*.py"
 
-      - name: Store and index suites
-        run: |
-          python3 engine/test_store.py
-          python3 engine/test_index_store.py
-          python3 engine/test_build_spec_reader_data.py
-          python3 engine/test_verify_supabase_provenance.py
+      - name: Citation and fixture suites
+        run: python3 -m unittest discover -s tests
 
       # node directly, not pnpm: these suites import nothing outside the standard
       # library, so this job needs no install at all.
       - name: Application library suites
         run: node --test app/lib/__tests__/*.test.mjs
-
-      - name: app.js resolution harnesses
-        run: |
-          node engine/panel/test_appjs_fallthrough.js
-          node engine/panel/test_appjs_tiers.js
-          node engine/panel/test_appjs_quotes.js
-          node engine/panel/test_appjs_wiring.js
-          node engine/panel/test_appjs_depth.js
 
   browser:
     runs-on: ubuntu-latest

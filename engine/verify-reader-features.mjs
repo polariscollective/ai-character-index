@@ -19,6 +19,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -462,6 +463,172 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(pageErrors.length === 0, "translation notice: no console errors", pageErrors.join("; "));
   await clearDismissals();
   await page.setViewportSize({ width: 1280, height: 720 });
+}
+
+/* Every paragraph carries the locator the engine gives it, not only the passages a
+ * behaviour cites. The proof: every fixture passage, resolved the way the reader
+ * resolves it, lands on a block whose locator is the passage's own. Then the
+ * shapes where the rendered blocks and the engine's blocks part company: a list
+ * item and its nested items are one engine block, an example caption and its
+ * fence are one, a bare fence is numbered like a paragraph, and a heading is none.
+ * The expected locators are the engine's, from harness.passages() on the fixture. */
+{
+  const source = await resolverSource();
+  const totals = { passages: 0, mismatches: 0, unresolved: 0 };
+  const details = [];
+  for (const doc of fixtureDocs) {
+    const passages = keepSet.flatMap(behaviour => behaviour.coverage?.[doc.id]?.passages || []);
+    if (!passages.length) continue;
+    await at(`?spec=${encodeURIComponent(doc.id)}&behavior=`);
+    const proof = await proveDocument(page, passages, source);
+    totals.passages += proof.passages;
+    totals.mismatches += proof.mismatches;
+    totals.unresolved += proof.unresolved;
+    details.push(`${doc.id}: ${proof.passages} passages, ${proof.mismatches} mismatches,`
+      + ` ${proof.unresolved} unresolved ${JSON.stringify(proof.examples)}`);
+  }
+  check(totals.passages > 0 && totals.mismatches === 0 && totals.unresolved === 0,
+    "every fixture passage's block carries the passage's own locator", details.join("; "));
+
+  await at(`?spec=${DOC_ID}&behavior=`);
+  const located = await page.evaluate(() => {
+    const blocks = [...document.querySelectorAll(".document-body [data-block]")];
+    const find = (selector, text) => blocks.find(block => block.matches(selector) && block.textContent.includes(text));
+    const locator = block => (block ? block.dataset.locator ?? null : "not rendered");
+    return {
+      uncited: locator(find("p", "A blank line ends a block.")),
+      parentItem: locator(find("li", "A second item with a nested list under it")),
+      nestedItem: locator(find("li", "The nested content belongs to the item above")),
+      caption: locator(find("p", "a caption, followed by its fence")),
+      captionFence: locator(find("pre", "The fenced content belongs to the caption above it.")),
+      fence: locator(find("pre", "This is not a heading.")),
+      heading: locator(find("h2", "Blocks")),
+    };
+  });
+  const corpus = "acme--corpus@2026-01-01";
+  check(located.uncited === `${corpus} > #blocks > ¶1`,
+    "a paragraph no passage cites carries the engine's locator for it", JSON.stringify(located));
+  check(located.parentItem === `${corpus} > #lists > ¶3` && located.nestedItem === located.parentItem,
+    "a list item and its nested items carry the item's one locator", JSON.stringify(located));
+  check(located.caption === `${corpus} > #examples > ¶2` && located.captionFence === located.caption,
+    "an example caption and its fence carry one locator", JSON.stringify(located));
+  check(located.fence === `${corpus} > #fences > ¶2` && located.heading === null,
+    "a bare fence is numbered as the engine numbers it, and a heading carries no locator",
+    JSON.stringify(located));
+}
+
+/* Copy icons and links for every paragraph, not only the passages a behaviour
+ * cites. A paragraph no passage cites shows the same two icons while the pointer
+ * is over it, in the gutter at its right, clear of its text and of the rail; a
+ * cited passage keeps its icons in its head. A link to an uncited paragraph opens
+ * its document, puts the paragraph in view, focuses it and outlines it briefly,
+ * and ticks nothing; from there the keyboard reaches its icons. */
+{
+  const corpus = "acme--corpus@2026-01-01";
+  const uncited = `${corpus} > #blocks > ¶1`;
+  const blockSelector = `.document-body [data-locator="${uncited}"]`;
+  const stubClipboard = () => page.evaluate(() => {
+    window.__copied = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async text => { window.__copied.push(text); } },
+    });
+  });
+  const readBlock = () => page.evaluate(selector => {
+    const block = document.querySelector(selector);
+    const scroll = block.closest(".document-scroll").getBoundingClientRect();
+    const box = block.getBoundingClientRect();
+    return {
+      buttons: [...block.querySelectorAll(":scope > .block-copy .passage-copy")].map(button => {
+        const icon = button.getBoundingClientRect();
+        return {
+          label: button.getAttribute("aria-label"),
+          svg: Boolean(button.querySelector("svg")),
+          opacity: Math.round(Number(getComputedStyle(button).opacity) * 100) / 100,
+          inGutter: icon.left >= box.right,
+          clearOfRail: icon.right <= scroll.right - 14,
+        };
+      }),
+      status: document.querySelector("#copy-status")?.textContent ?? null,
+      copied: window.__copied || [],
+    };
+  }, blockSelector);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const started = Date.now();
+  await at(`?spec=${DOC_ID}&behavior=`);
+  const opened = Date.now() - started;
+  await stubClipboard();
+  await page.mouse.move(2, 700);
+  await page.waitForTimeout(300);
+  await page.locator(blockSelector).hover();
+  await page.waitForTimeout(350);
+  let seen = await readBlock();
+  check(seen.buttons.map(button => button.label).join(",") === "Copy locator,Copy link"
+      && seen.buttons.every(button => button.svg && button.opacity > 0 && button.opacity < 1
+        && button.inGutter && button.clearOfRail),
+    "over a paragraph no passage cites, the copy icons fade in, in the gutter clear of its text and the rail",
+    JSON.stringify(seen.buttons));
+
+  await page.locator(`${blockSelector} .passage-copy[data-copy="locator"]`).click();
+  await page.waitForTimeout(200);
+  await page.locator(`${blockSelector} .passage-copy[data-copy="link"]`).click();
+  await page.waitForTimeout(200);
+  seen = await readBlock();
+  const link = seen.copied[1];
+  check(seen.copied[0] === uncited && Boolean(link) && new URL(link).searchParams.get("passage") === uncited
+      && seen.status === "Link copied",
+    "an uncited paragraph's icons copy its locator and a link to it", JSON.stringify(seen.copied));
+
+  await page.locator(".document-body h2", { hasText: "Blocks" }).first().hover();
+  await page.waitForTimeout(250);
+  const headingIcons = await page.evaluate(() =>
+    document.querySelectorAll(".document-body :is(h1, h2, h3, h4, h5, h6) .block-copy").length);
+  check(headingIcons === 0, "a heading carries no copy icons", `${headingIcons} in headings`);
+
+  await at(`?spec=${DOC_ID}&behavior=${DEFINED}&tiers=defining,core,related`);
+  await page.locator("[data-passage-id]").first().hover();
+  await page.waitForTimeout(300);
+  const anchor = await page.evaluate(() => {
+    const block = document.querySelector("[data-passage-id]");
+    return { head: block.querySelectorAll(".passage-head .passage-copy").length,
+             gutter: block.querySelectorAll(":scope > .block-copy").length };
+  });
+  check(anchor.head === 2 && anchor.gutter === 0,
+    "a cited passage keeps its icons in its head, and gets none in the gutter", JSON.stringify(anchor));
+
+  await page.goto(link, { waitUntil: "networkidle" });
+  await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  const linked = await page.evaluate(selector => {
+    const block = document.querySelector(selector);
+    const scroll = block?.closest(".document-scroll").getBoundingClientRect();
+    const box = block?.getBoundingClientRect();
+    const status = document.querySelector("#reader-status");
+    return {
+      found: Boolean(block),
+      focused: Boolean(block) && document.activeElement === block,
+      outlined: block?.classList.contains("linked-block") ?? false,
+      inView: Boolean(box && box.height > 0 && box.top >= scroll.top - 1 && box.bottom <= scroll.bottom + 1),
+      ticked: [...document.querySelectorAll("[data-behaviour]")]
+        .filter(input => input.checked).map(input => input.dataset.behaviour),
+      status: status.classList.contains("visible") ? status.textContent : "",
+    };
+  }, blockSelector);
+  check(linked.found && linked.focused && linked.outlined && linked.inView && linked.status === "",
+    "a link to an uncited paragraph opens it in view, focused and outlined", JSON.stringify(linked));
+  check(linked.ticked.join(",") === keepSet[0].slug,
+    "a link to an uncited paragraph ticks nothing beyond the reader's default", JSON.stringify(linked.ticked));
+  await page.keyboard.press("Tab");
+  const tabbed = await page.evaluate(() => ({
+    label: document.activeElement?.getAttribute("aria-label") ?? null,
+    inBlock: Boolean(document.activeElement?.closest(".block-copy")),
+  }));
+  check(tabbed.label === "Copy locator" && tabbed.inBlock,
+    "from the linked paragraph, the keyboard reaches its copy icons", JSON.stringify(tabbed));
+
+  check(opened < 5000, "opening a document with every block located stays quick", `${opened} ms to first render`);
+  check(pageErrors.length === 0, "block copy: no console errors", pageErrors.join("; "));
 }
 
 // =============================================================================
