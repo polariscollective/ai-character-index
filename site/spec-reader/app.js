@@ -2393,12 +2393,26 @@ function setComparePair(side, id) {
   rebuildReader();
 }
 
+/* Every rebuild discards both panels and clones them afresh, so a panel's place
+ * is kept only by carrying it across: taken per side before the panels go, and
+ * given back to a side still showing the same document. A side whose document
+ * changed opens at its top, and the other side keeps its place.
+ *
+ * The URL's heading is not replayed here. It is revealed once, on load
+ * (initialize): replayed on every rebuild, a contents link followed long ago
+ * scrolled whichever panel first carried that heading back to it, the other
+ * panel included, whenever anything was chosen or toggled. */
 function rebuildReader() {
+  const kept = [...elements.documentReader.querySelectorAll(".document-panel")].map(panel => ({
+    id: panel.dataset.documentId,
+    top: panel.querySelector(".document-scroll")?.scrollTop || 0,
+    passage: panel._anchors?.[panel._passageIndex]?.dataset.passageId ?? null,
+  }));
   elements.documentReader.classList.toggle("compare", state.comparing);
-  const panels = visibleDocuments().map((doc, side) => renderDocument(doc, side));
+  const rendered = visibleDocuments().map((doc, side) => renderDocument(doc, side));
   const children = state.comparing
-    ? panels.flatMap((panel, i) => (i < panels.length - 1 ? [panel, createDocumentResizer()] : [panel]))
-    : panels;
+    ? rendered.flatMap((panel, i) => (i < rendered.length - 1 ? [panel, createDocumentResizer()] : [panel]))
+    : rendered;
   elements.documentReader.replaceChildren(...children);
   {
     elements.documentReader.style.gridTemplateColumns = "";
@@ -2407,7 +2421,22 @@ function rebuildReader() {
 
   applyHighlights();
   updateBehaviourDepths();
-  requestAnimationFrame(revealHashTarget);
+
+  const keepPlace = restoreCursor => rendered.forEach((panel, side) => {
+    const was = kept[side];
+    if (!was || was.id !== panel.dataset.documentId) return;
+    if (restoreCursor && was.passage) {
+      const index = (panel._anchors || []).findIndex(anchor => anchor.dataset.passageId === was.passage);
+      if (index >= 0) focusPassage(panel, index, false);
+    }
+    // Instant: the stylesheet scrolls this box smoothly, and a place given back
+    // should not be travelled to.
+    panel.querySelector(".document-scroll").scrollTo({ top: was.top, behavior: "instant" });
+  });
+  // Now, so the panel is never drawn at its top first; and again after the
+  // frame in which applyHighlights collects the passages and sets the cursor.
+  keepPlace(false);
+  requestAnimationFrame(() => keepPlace(true));
 }
 
 /* Each document counts and walks its own passages.
@@ -2803,6 +2832,8 @@ async function initialize() {
     renderBehaviourList();
     syncURL();
     rebuildReader();
+    // A link into a heading is followed once, when the page opens on it.
+    requestAnimationFrame(revealHashTarget);
   } catch (error) {
     elements.readerStatus.classList.add("visible");
     elements.readerStatus.textContent = "The cached spec documents or the reader's behaviour set could not be loaded. Serve this directory over HTTP and reload.";

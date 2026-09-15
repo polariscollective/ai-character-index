@@ -570,6 +570,103 @@ console.log("== Reader: publishers ==");
 }
 
 // =============================================================================
+console.log("== Reader: a document chosen in a panel opens at its top ==");
+/* A panel's scroll belongs to the document in it. Choosing another document
+ * opens that one at its top, and the other panel stays where its reader is; the
+ * same document drawn again keeps its place. Checked with a contents link
+ * followed first, because the heading it puts in the URL is what the rebuild
+ * used to scroll back to. The Zenith guidelines are long enough to scroll, so a
+ * panel reading 0 there is at its top and not merely unable to move; nothing is
+ * ticked for the switches, so no section is folded away. */
+{
+  const [labA, labB] = [...new Set(fixtureDocs.map(doc => doc.lab))];
+  const newestOf = lab => fixtureDocs.filter(doc => doc.lab === lab)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)))[0].id;
+  const scrolls = () => page.evaluate(() => [...document.querySelectorAll(".document-panel")]
+    .map(panel => {
+      const scroll = panel.querySelector(".document-scroll");
+      return { id: panel.dataset.documentId, top: Math.round(scroll.scrollTop),
+               range: scroll.scrollHeight - scroll.clientHeight };
+    }));
+  const scrollSide = (side, fraction) => page.evaluate(([side, fraction]) => {
+    const scroll = document.querySelectorAll(".document-scroll")[side];
+    scroll.scrollTo({ top: Math.round((scroll.scrollHeight - scroll.clientHeight) * fraction),
+                      behavior: "instant" });
+  }, [side, fraction]);
+  const settle = () => page.waitForTimeout(600);
+  const same = (a, b, range) => Math.abs(a - b) <= Math.max(4, range * 0.02);
+
+  // By keyboard, on the right, after a contents link was followed on the left.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=`);
+  await page.evaluate(() => document.querySelectorAll(".document-panel")[0]
+    .querySelector('.document-body a[href^="#"]').click());
+  await settle();
+  await scrollSide(0, 0.3);
+  await scrollSide(1, 0.7);
+  await settle();
+  let before = await scrolls();
+  await page.locator(".document-panel").nth(1).locator(`.provider-tab[data-lab="${labB}"]`).focus();
+  await page.keyboard.press("Enter");
+  await settle();
+  let after = await scrolls();
+  const hash = await page.evaluate(() => location.hash);
+  check(after[1].id === newestOf(labB) && after[1].range > 200 && after[1].top === 0,
+    "comparing, a publisher chosen by keyboard on the right opens its document at the top",
+    `hash ${hash}; right ${before[1].id} at ${before[1].top} -> ${after[1].id} at ${after[1].top} of ${after[1].range}`);
+  check(after[0].id === before[0].id && same(after[0].top, before[0].top, after[0].range),
+    "comparing, a switch on the right leaves the left panel where its reader is",
+    `left ${before[0].top} -> ${after[0].top} of ${after[0].range}`);
+
+  // By click, on the left.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=`);
+  await scrollSide(0, 0.7);
+  await scrollSide(1, 0.4);
+  await settle();
+  before = await scrolls();
+  await page.locator(".document-panel").nth(0).locator(`.provider-tab[data-lab="${labB}"]`).click();
+  await settle();
+  after = await scrolls();
+  check(after[0].id === newestOf(labB) && after[0].range > 200 && after[0].top === 0,
+    "comparing, a publisher clicked on the left opens its document at the top",
+    `left ${before[0].id} at ${before[0].top} -> ${after[0].id} at ${after[0].top} of ${after[0].range}`);
+  check(after[1].id === before[1].id && same(after[1].top, before[1].top, after[1].range),
+    "comparing, a switch on the left leaves the right panel where its reader is",
+    `right ${before[1].top} -> ${after[1].top} of ${after[1].range}`);
+
+  // One document on screen.
+  await at(`?spec=${DOC_ID}&behavior=`);
+  await scrollSide(0, 0.6);
+  await settle();
+  before = await scrolls();
+  await page.locator(`.provider-tab[data-lab="${labB}"]`).click();
+  await settle();
+  after = await scrolls();
+  check(after[0].id === newestOf(labB) && after[0].range > 200 && after[0].top === 0,
+    "reading one document, a publisher chosen opens its document at the top",
+    `${before[0].id} at ${before[0].top} -> ${after[0].id} at ${after[0].top} of ${after[0].range}`);
+
+  // The same document drawn again keeps its place: a tier toggle rebuilds both
+  // panels, and neither reader should lose the line they were on.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=${DEFINED}`);
+  await scrollSide(0, 0.3);
+  await scrollSide(1, 0.6);
+  await settle();
+  before = await scrolls();
+  await page.locator(".document-panel").nth(1).locator('.tier-toggle[data-tier="related"]').click();
+  await settle();
+  after = await scrolls();
+  check(before.every(side => side.top > 0)
+      && after.every((side, i) => side.id === before[i].id
+        && Math.abs(side.top - before[i].top) <= Math.max(4, side.range * 0.1)),
+    "comparing, a tier toggle keeps both panels where their readers are",
+    before.map((side, i) => `${side.top} -> ${after[i].top} of ${after[i].range}`).join(", "));
+  await page.locator(".document-panel").nth(1).locator('.tier-toggle[data-tier="related"]').click();
+  await settle();
+  check(labA !== labB && pageErrors.length === 0, "switching documents: no console errors",
+    pageErrors.join("; "));
+}
+
+// =============================================================================
 console.log("== Navigation: exactly one entry marks the page you are on ==")
 {
   await load(base, "");
