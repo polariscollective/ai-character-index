@@ -32,9 +32,10 @@ id. Each cell carries the depth its run's judges gave it.
 
 A cell a seat could not answer, and whose substitute `aci_seat_substitutions`
 records, is built from the substitute's verdicts in that seat's place, and its
-coverage entry carries `substitutions`: [{seat, substitute, reason}]. No other
-cell carries the key, so a payload with no substitution is byte-identical to one
-built before substitutions existed.
+coverage entry carries `substitutions`: [{seat, substitute, reason}]. A row
+naming a seat this panel does not have is not shown: it changed no verdict, so
+it names no substitute. No other cell carries the key, so a payload with no
+substitution is byte-identical to one built before substitutions existed.
 
 --out is required and is where the payload goes. There is no timestamped file and
 no manifest: a local build was how a run got pinned by ?data=, and a publication
@@ -132,18 +133,25 @@ def admits(row, rubric, panel, substitutions=None):
     return row["model"] in seated
 
 
-def cell_substitutions(recorded, cells, versions):
+def cell_substitutions(recorded, cells, versions, panel):
     """Pure: {(slug, document id): substitutions} for the cells a payload carries.
 
     `recorded` is keyed by run, and only the run a cell was taken from counts. A
     run can hold a substitution on a cell the publication answered from another
-    run, where the panel judged it as configured."""
+    run, where the panel judged it as configured.
+
+    A row naming a seat this panel does not have is not a substitution this
+    payload's verdicts reflect -- seats() and the publication trigger both ignore
+    it -- so it is dropped here rather than printed as though a substitute had
+    judged in a seat that was never asked. The table is insert-only: a row like
+    this, once shipped, would be shown forever."""
     out = {}
     for cell in cells:
-        rows = recorded.get((cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]))
-        if rows:
+        rows = recorded.get((cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]), ())
+        seated = [row for row in rows if row["seat"] in panel]
+        if seated:
             version = versions[cell["spec_version_id"]]
-            out[(cell["behaviour_slug"], f"{version['spec_id']}@{version['version']}")] = rows
+            out[(cell["behaviour_slug"], f"{version['spec_id']}@{version['version']}")] = seated
     return out
 
 
@@ -315,7 +323,7 @@ def main(argv=None):
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
     substitutions = cell_substitutions(
         seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells]),
-        cells, versions)
+        cells, versions, panel)
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()

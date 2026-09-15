@@ -102,7 +102,7 @@ const handler = createMcpHandler(
         + "panel gave it, 0 to 4; a pair with no depth answers null. Where a judge "
         + "could not answer a pair at all, another model judged it in that seat, "
         + "and the pair carries substitutions naming the seat, the substitute and "
-        + "the reason; the depth and verdicts are then the substitute's.",
+        + "the reason; that seat's verdicts and depth are then the substitute's.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "

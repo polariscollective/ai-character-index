@@ -250,6 +250,20 @@ check("comparing, the note names the substitute on its own document and nowhere 
          + "fable's output was content-filtered on every attempt.",
        ["deepseek: 2.", "opus: 2.", "sol: 2."]]);
 
+SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
+  [{ seat: "fable", substitute: "opus",
+     reason: "fable's output was content-filtered on every attempt" }];
+check("a reason with no closing punctuation ends as a sentence",
+      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
+      "On Model Spec 2025-12-18, opus judged in place of fable: "
+        + "fable's output was content-filtered on every attempt.");
+
+SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
+  [{ seat: "fable", substitute: "opus", reason: "content-filtered every time!" }];
+check("a reason already ending in punctuation is not given a second one",
+      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
+      "On Model Spec 2025-12-18, opus judged in place of fable: content-filtered every time!");
+
 SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions = "fable";
 check("a substitutions field that is not a list says nothing and throws nothing",
       () => note("helpfulness").depth.filter(line => String(line).includes("in place of")),

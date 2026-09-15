@@ -112,8 +112,26 @@ class SubstitutionTest(unittest.TestCase):
         cells = [{"run_id": "r1", "behaviour_slug": "b", "spec_version_id": "v-old"},
                  {"run_id": "r2", "behaviour_slug": "b", "spec_version_id": "v-new"}]
         recorded = {("r1", "b", "v-old"): SWAP, ("r1", "b", "v-new"): SWAP}
-        self.assertEqual(bs.cell_substitutions(recorded, cells, versions),
+        self.assertEqual(bs.cell_substitutions(recorded, cells, versions, PANEL),
                          {("b", OLD): SWAP})
+
+    def test_a_substitution_for_a_seat_this_panel_does_not_have_changes_nothing(self):
+        """A row naming a seat outside the panel is not a substitution this
+        payload's verdicts reflect -- seats() and the publication trigger both
+        ignore it -- so it is dropped rather than printed as though a substitute
+        had judged in a seat nobody asked."""
+        versions = {"v-old": {"spec_id": "openai--model-spec", "version": "2025-12-18"}}
+        cells = [{"run_id": "r1", "behaviour_slug": "b", "spec_version_id": "v-old"}]
+        off_panel = [{"seat": "kimi", "substitute": "kimi-k2", "reason": "irrelevant"}]
+        recorded = {("r1", "b", "v-old"): off_panel}
+        substitutions = bs.cell_substitutions(recorded, cells, versions, PANEL)
+        self.assertEqual(substitutions, {})
+
+        [built] = bs.build_behaviours(BRAVO, VOTES, TEXT, [OLD, NEW], {}, PANEL, DISPLAY,
+                                      substitutions)
+        self.assertNotIn("substitutions", built["coverage"][OLD])
+        self.assertEqual(built["coverage"][OLD]["passages"][0]["verdicts"],
+                         {"deepseek": 2, "fable": 2, "sol": 2})
 
     def test_a_substituted_cell_carries_the_substitution_and_the_substitute_s_verdicts(self):
         votes = {("b", f"{OLD} > #x > ¶1"): {"sol": 2, "opus": 3, "deepseek": 2},

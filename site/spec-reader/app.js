@@ -161,7 +161,9 @@ function openBehaviourNote(button) {
       const substitutions = behaviour?.coverage?.[doc.id]?.substitutions;
       (Array.isArray(substitutions) ? substitutions : []).forEach(({ seat, substitute, reason }) => {
         const said = document.createElement("p");
-        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${reason}`;
+        // The reason is a database column, not composed copy: it may end mid-sentence.
+        const endedReason = /[.!?]$/.test(reason) ? reason : `${reason}.`;
+        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${endedReason}`;
         body.append(said);
       });
       if (depth) {
