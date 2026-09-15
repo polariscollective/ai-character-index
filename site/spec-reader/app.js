@@ -2040,17 +2040,19 @@ function renderDocument(doc, side = 0) {
   // different widths. The translation band is unaffected: it is already a
   // sibling below the whole header, not one of its rows.
   //
-  // Expand all moves to the end of that row rather than staying between the
-  // arrows and the tier toggles: at a panel's narrowest (two panels at
-  // 1024px), keeping it there is what pushed the toggles onto a line of
-  // their own under the arrows -- the toggles need to stay next to the
-  // arrows more than Expand all needs to stay put. Both moves are in the
-  // DOM, not only reordered in CSS, so tab order follows the rows they now
-  // sit in rather than the rows they used to.
+  // On that row the walk is at the left, "N/M" and then the arrows, and what
+  // changes the view is at the right: Expand all, then the band toggles. Those
+  // two are grouped, so where the row is too narrow for both sides (two panels
+  // at 1024px) they wrap below the walk together and stay at the right, rather
+  // than one at a time. The moves are in the DOM, not only reordered in CSS, so
+  // tab order follows the rows they sit in.
   if (state.comparing) {
     const meta = panel.querySelector(".document-meta");
     panel.querySelector(".document-header").append(meta);
-    meta.append(panel.querySelector(".document-focus-toggle"));
+    const actions = document.createElement("span");
+    actions.className = "meta-actions";
+    actions.append(panel.querySelector(".document-focus-toggle"), panel.querySelector(".rail-legend"));
+    meta.append(actions);
   }
   renderProviderTabs(panel, doc, side);
   panel.querySelector(".document-name").textContent = doc.title;

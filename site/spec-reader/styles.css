@@ -1026,19 +1026,28 @@ body.sidebar-collapsed .sidebar-resizer {
    it: the panel is narrow enough there that a shared row crowds and wraps
    ragged. As a header child it takes the header's full content width from
    the column flex's align-items: stretch (see .document-header) rather than
-   from anything set here, and reads left-aligned -- arrows first, then the
-   tier toggles, Expand all moved to trail them (app.js) rather than spread
-   to the row's far edges. That keeps the arrows leading at the header's
-   bottom-left whatever wrapped above: a long title, Show original on one
-   side only, a resizer split leaving the two panels different widths. At
-   full width the right-aligned cluster reads better, so the rule is scoped
-   to compare. */
+   from anything set here. The walk leads at the left, "N/M" and then the
+   arrows; the view controls, Expand all and then the band toggles, sit at
+   the right (.meta-actions). That keeps the walk at the header's bottom-left
+   whatever wrapped above: a long title, Show original on one side only, a
+   resizer split leaving the two panels different widths. At full width the
+   right-aligned cluster reads better, so the rule is scoped to compare. */
 .document-grid.compare .document-meta {
   justify-content: flex-start;
-  /* 8px, not 10: with the short counter after the arrows, two panels at
-     1024px need the arrows, the counter and the three toggles on one row, and
-     the right-hand panel, which also carries the scrollbar, has the least room. */
+  /* 8px, not 10: the right-hand panel, which also carries the scrollbar, has
+     the least room for the walk and the view controls on one line. */
   column-gap: 8px;
+}
+/* The view controls, grouped by app.js in compare mode. Pushed to the right of
+   the row, and where the walk and they do not fit on one line (two panels at
+   1024px) they wrap below it as one group, still at the right. */
+.meta-actions {
+  margin-left: auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px 8px;
 }
 /* At a panel's narrowest -- two panels sharing 1024px, a behaviour with
    passages selected so the arrows read "N of M passages" and the toggles
@@ -1046,11 +1055,11 @@ body.sidebar-collapsed .sidebar-resizer {
    toggles together still overrun the row before Expand all even joins it.
    The sentence "N of M passages" gives way first: present for a screen
    reader, off-screen for everyone else, in compare mode only. Its short form
-   takes its place on screen, "N/M" after the arrows (.passage-count-short),
+   takes its place on screen, "N/M" before the arrows (.passage-count-short),
    because a reader walking two documents still wants to know where the walk
    is. The toggles then trim their own padding and gap, a size step matching
-   the title and version reductions just above, and Expand all wraps below the
-   row where it still does not fit. */
+   the title and version reductions just above, and the view controls wrap
+   below the walk where the row still does not fit. */
 .document-grid.compare .passage-count {
   position: absolute;
   width: 1px;
