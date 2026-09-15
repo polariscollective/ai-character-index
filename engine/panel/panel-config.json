@@ -259,6 +259,15 @@
     ],
     "_itest_note": "single cheap judge for end-to-end integration testing (~2 cents per behaviour); never for published data. Must be a long-context model: whole-doc prompts reach ~65k tokens (qwen-small's 41k context cannot fit them)."
   },
+  "substitutes": {
+    "frontier_fast": {
+      "fable": [
+        "opus",
+        "kimi"
+      ]
+    }
+  },
+  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. Which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
   "rubric": "v5",
   "specs": [
     "constitution",

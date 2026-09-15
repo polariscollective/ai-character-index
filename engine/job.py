@@ -43,14 +43,16 @@ def run_compose(store, params):
     model prices and counts the passages of a document through cite.py. A
     JavaScript copy of either would be a second truth, and the first thing it
     would diverge on is money.
+
+    The panel is the configuration's, never a form's: the index publishes one.
     """
     import compose_run
     # plan() resolves passages through cite.py, which registers nothing at import
     # time: a caller installs the registry or gets a loud error naming this line.
     index_store.install_registry(store)
     run, calls = compose_run.plan(
-        store, params["behaviours"], params["specs"],
-        params.get("panel", "frontier_fast"), params.get("rubric", "v5"),
+        store, params["behaviours"], params["documents"],
+        None, params.get("rubric", "v5"),
         again=bool(params.get("again", False)))
     run["created_by"] = params.get("created_by", "admin portal")
     if not calls:
@@ -59,6 +61,7 @@ def run_compose(store, params):
         return {"run_id": None, "detail": "every cell already has a done call"}
     store.insert("aci_runs", [run])
     store.insert("aci_judge_calls", calls)
+    store.insert("aci_depths", compose_run.depth_rows(calls))
     return {"run_id": run["id"],
             "detail": f"{len(calls)} calls, ${run['estimated_usd']} estimated"}
 
@@ -70,13 +73,14 @@ def run_judge(store, params):
     report = batch_job.run(store, run_id)
     return {"run_id": run_id,
             "detail": f"{report['attempted']} attempted, {report['done']} done, "
-                      f"{report['failed']} failed"}
+                      f"{report['failed']} failed; depths {report['depths']['done']} done, "
+                      f"{report['depths']['failed']} failed"}
 
 
 def run_publish(store, params):
     index_store.install_registry(store)
     row, cells = publish_mode.publish(
-        store, params["behaviours"], params["specs"], params["panel"],
+        store, params["behaviours"], params["documents"],
         params.get("rubric", "v5"), params.get("created_by", "admin portal"),
         params.get("notes", ""), params.get("run_date"))
     return {"publication_id": row["id"],

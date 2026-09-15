@@ -1,17 +1,19 @@
 /* Composing a run, reading its price, launching it, watching it. */
-import { behaviours, jobs, panels, runs, specifications } from "../../lib/admin-data.mjs";
-import { launchRefusal } from "../../lib/runs.mjs";
+import { behaviours, displayPanel, jobs, runs, specifications } from "../../lib/admin-data.mjs";
+import { documentChoices } from "../../lib/documents.mjs";
+import { launchRefusal, mergeCounts } from "../../lib/runs.mjs";
 import { Choices, Cost, Jobs, Outcome, State, When } from "../parts.jsx";
 
 /* What pressing launch does, named for the state the run is in. It is one act
-   underneath: the job takes every call of the run that is not done. */
-const LAUNCH = { pending: "launch", cancelled: "resume", done: "retry failed calls" };
+   underneath: the job takes every call and depth of the run that is not done. */
+const LAUNCH = { pending: "launch", cancelled: "resume", done: "retry calls and depths" };
 
 export default async function Runs({ searchParams }) {
   const params = await searchParams;
-  const [rows, behaviourRows, specs, panelRows, jobRows] = await Promise.all([
-    runs(25), behaviours(), specifications(), panels(), jobs(10),
+  const [rows, behaviourRows, specs, jobRows] = await Promise.all([
+    runs(25), behaviours(), specifications(), jobs(10),
   ]);
+  const panel = displayPanel();
 
   return (
     <>
@@ -38,7 +40,8 @@ export default async function Runs({ searchParams }) {
             <tbody>
               {rows.map(run => {
                 const done = run.by_status.done || 0;
-                const failed = (run.by_status.error || 0);
+                const failed = (run.by_status.error || 0) + (run.depth_status.error || 0);
+                const work = mergeCounts(run.by_status, run.depth_status);
                 return (
                   <tr key={run.id} id={run.id}>
                     <td>
@@ -52,6 +55,12 @@ export default async function Runs({ searchParams }) {
                     <td className="mono">{run.rubric}</td>
                     <td className="num">
                       {done}/{run.calls}
+                      {run.depths > 0 && (
+                        <>
+                          <br />
+                          <span className="mono">depth {run.depth_status.done || 0}/{run.depths}</span>
+                        </>
+                      )}
                       {failed > 0 && (
                         <>
                           <br />
@@ -70,7 +79,7 @@ export default async function Runs({ searchParams }) {
                     </td>
                     <td className="num"><Cost run={run} /></td>
                     <td>
-                      {launchRefusal(run, run.by_status) === null && (
+                      {launchRefusal(run, work) === null && (
                         <form method="post" action="/api/admin/runs"
                               style={{ display: "inline" }}>
                           <input type="hidden" name="verb" value="launch" />
@@ -117,28 +126,15 @@ export default async function Runs({ searchParams }) {
             }))}
           />
           <Choices
-            name="specs"
+            name="documents"
             legend="Documents"
-            hint="The newest version of each, which is what the composer reads."
-            options={specs.map(spec => ({
-              value: spec.id,
-              label: `${spec.short_title} (${spec.versions[0]?.version ?? "no version"})`,
-            }))}
+            hint="Each version is its own document, judged as itself."
+            options={documentChoices(specs)}
           />
-          <label>
-            <span>Panel</span>
-            <select name="panel" defaultValue="frontier_fast">
-              {panelRows.map(panel => (
-                <option key={panel.name} value={panel.name}>
-                  {panel.name}: {panel.seats.join(", ")}
-                </option>
-              ))}
-            </select>
-            <span className="hint">
-              One call per seat per cell. A panel of three over ten behaviours and
-              two documents is sixty calls.
-            </span>
-          </label>
+          <p className="why" style={{ margin: "0 0 14px" }}>
+            Judged by {panel.seats.join(", ")} ({panel.name}), the one panel the index
+            publishes. One call per judge per cell, and a depth from each.
+          </p>
           <fieldset>
             <legend>Cells already judged</legend>
             <p className="why" style={{ margin: "0 0 8px" }}>
@@ -154,11 +150,12 @@ export default async function Runs({ searchParams }) {
           </fieldset>
           <label>
             <span>Credit these verdicts to</span>
-            <input type="text" name="credit" placeholder="Ada Lovelace; Charles Babbage" />
+            <input type="text" name="credit" defaultValue="Polaris Collective"
+                   placeholder="Ada Lovelace; Charles Babbage" />
             <span className="hint">
               A publication computes its own citation from this, so write it as it
-              should read in an author field. Left empty, the run is credited to the
-              address you signed in with, which is not a citation.
+              should read in an author field. Left empty, the run is credited to
+              the Collective; it is never the address you signed in with.
             </span>
           </label>
           <button type="submit">Compose and price</button>

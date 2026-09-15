@@ -6,27 +6,28 @@
  * The registry already carries one row in that state, and one is the number that
  * can be explained. */
 import { requireOperator } from "../../../auth.mjs";
-import { BEHAVIOUR_SETS } from "../../../lib/admin-data.mjs";
 import { insert, select } from "../../../lib/supabase.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
 import { problems, slugProblem } from "../../../lib/locator-safe.mjs";
+import { creditProblem, resolveCredit } from "../../../lib/credit.mjs";
 
-export const POST = formRoute("/admin/behaviours", requireOperator, async (fields, email) => {
+export const POST = formRoute("/admin/behaviours", requireOperator, async (fields) => {
   const slug = fields.one("slug");
   const name = fields.one("name");
-  const set = fields.one("set");
   const group = fields.one("group");
   const definition = fields.one("definition");
   const query = fields.one("query");
   const boundary = fields.one("boundary");
   const source = fields.one("source");
+  const credit = fields.one("credit");
 
   const found = problems([[slugProblem, slug, "slug"]]);
-  if (!BEHAVIOUR_SETS.includes(set)) found.push(`set must be one of ${BEHAVIOUR_SETS.join(", ")}`);
   for (const [value, what] of [[name, "name"], [group, "group"], [query, "query"],
                                [boundary, "boundary"], [source, "source"]]) {
     if (!value) found.push(`${what} is required`);
   }
+  const creditIssue = creditProblem(credit);
+  if (creditIssue) found.push(creditIssue);
   if (found.length) refuse(found.join("\n"));
 
   const existing = await select("aci_behaviours", `select=slug,numeric_id,set_name`);
@@ -35,19 +36,22 @@ export const POST = formRoute("/admin/behaviours", requireOperator, async (field
            + "across every run and every publication, so it is never reused.");
   }
 
-  // numeric_id is namespaced per set and unique within it, enforced by the table.
-  const next = Math.max(0, ...existing.filter(row => row.set_name === set)
+  // numeric_id is unique within set_name, a column nothing reads any more and
+  // which a cleanup migration removes. Until then every behaviour is written
+  // into `user`, numbered after the last one there.
+  const next = Math.max(0, ...existing.filter(row => row.set_name === "user")
                                       .map(row => row.numeric_id)) + 1;
 
   await insert("aci_behaviours", [{
-    slug, name, set_name: set, numeric_id: next, group_name: group,
+    slug, name, set_name: "user", numeric_id: next, group_name: group,
     definition: definition || query,
     judging: { query, boundary, source },
     // Who wrote it. A behaviour's two sentences are the whole of what a verdict
     // is a verdict on, so whoever wrote them is owed the credit for it, and a
-    // publication computes that from this column rather than from a list.
-    added_by: email,
+    // publication computes that from this column rather than from a list. Never
+    // the operator's address: left empty this credits the Collective instead.
+    added_by: resolveCredit(credit),
   }]);
-  return `Registered ${slug} as ${set} #${next}. It reaches a panel when a run `
-       + "names it, and the reader when a publication carries it.";
+  return `Registered ${slug}. It reaches a panel when a run names it, and the `
+       + "reader when a publication carries it.";
 });

@@ -38,7 +38,10 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 
 import index_store               # noqa: E402
 import judge_call                # noqa: E402
-from store import Store          # noqa: E402
+import bands                     # noqa: E402
+import depth_call                # noqa: E402
+import whole_doc                 # noqa: E402
+from store import Store, StoreError  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "harness.py")
 h = importlib.util.module_from_spec(_spec)
@@ -87,11 +90,15 @@ def call_openrouter(provider, model_id, system, user, kwargs):
 
 def run(store, run_id, call_model=None, registry=None, passages_for=None,
         concurrency=None, config=None):
-    """Execute every call of `run_id` that is not already done.
+    """Execute every call of `run_id` that is not done, then every depth.
 
     The model call is injected for the same reason the store's transport is: the
     loop's behaviour -- what it takes, what it writes, what it does with a
     failure -- is provable without a network or a key.
+
+    A cell's depths wait for every passage call of the cell to be done, because a
+    depth grades the passages the reader shows, and those come from all of the
+    cell's judges.
     """
     call_model = call_model or call_openrouter
     config = config or h.load_config()
@@ -103,16 +110,14 @@ def run(store, run_id, call_model=None, registry=None, passages_for=None,
     if passages_for is None:
         passages_for = h.passages
 
-    spec_of_version = {v["id"]: v["spec_id"] for v in store.select("aci_spec_versions")}
+    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
     pending = [c for c in store.select("aci_judge_calls")
                if c["run_id"] == run_id and c["status"] != "done"]
 
-    report = {"attempted": 0, "done": 0, "failed": 0, "cancelled": False}
+    report = {"attempted": 0, "done": 0, "failed": 0, "cancelled": False,
+              "depths": {"done": 0, "failed": 0}}
     if cancelled(store, run_id):
         report["cancelled"] = True
-        return report
-    if not pending:
-        finish(store, run_id, report)
         return report
 
     store.update("aci_runs", {"id": run_id}, {"status": "running", "started_at": now()})
@@ -134,30 +139,89 @@ def run(store, run_id, call_model=None, registry=None, passages_for=None,
                 report["cancelled"] = True
                 return
             one_call(store, call, run_row, registry, passages_for,
-                     spec_of_version, call_model, config, report, lock)
+                     versions, call_model, config, report, lock)
+
+    def execute_depth(job):
+        call, retained = job
+        if cancelled(store, run_id):
+            report["cancelled"] = True
+            return
+        with gate_for(call["model"]):
+            if cancelled(store, run_id):
+                report["cancelled"] = True
+                return
+            one_depth(store, call, registry, retained, call_model, config, report, lock)
 
     workers = concurrency if concurrency is not None else PER_PROVIDER * 2
-    if workers <= 1:
-        for call in pending:
-            execute(call)
-    else:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-            list(pool.map(execute, pending))
 
+    def each(work, items):
+        if workers <= 1:
+            for item in items:
+                work(item)
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+                list(pool.map(work, items))
+
+    each(execute, pending)
+    if not report["cancelled"]:
+        each(execute_depth, pending_depths(store, run_id, passages_for, versions))
     if not report["cancelled"]:
         finish(store, run_id, report)
     return report
 
 
-def one_call(store, call, run_row, registry, passages_for, spec_of_version,
+def stored_count(store, call_id):
+    """How many judgements are already written for this call.
+
+    One small read, filtered on `call_id`, never the whole table: a relaunch
+    checks this before paying for the model again, and the insert path
+    re-checks it after a duplicate-key failure to tell a landed write from a
+    partial one.
+    """
+    return len(store.select("aci_judgements", {"call_id": f"eq.{call_id}"}))
+
+
+def partial_stored_error(stored, total):
+    return (f"this call holds {stored} of {total} judgements from an earlier "
+            f"attempt and cannot be completed in place (the job has insert-only "
+            f"access to aci_judgements): compose a new run for this cell.")
+
+
+def one_call(store, call, run_row, registry, passages_for, versions,
              call_model, config, report, lock):
     store.update("aci_judge_calls", {"id": call["id"]},
                  {"status": "running", "started_at": now()})
     with lock:
         report["attempted"] += 1
 
-    spec = spec_of_version[call["spec_version_id"]]
-    passages = passages_for(spec)
+    version = versions[call["spec_version_id"]]
+    passages = passages_for(version["spec_id"], version["version"])
+
+    stored = stored_count(store, call["id"])
+    if stored == len(passages):
+        # A relaunch of a call whose earlier attempt stored every judgement but
+        # died before the done PATCH (step 4 succeeded, step 5 never ran). The
+        # reply is fully on record: finish the call without paying for the
+        # model again. Whatever meter the row already carries is kept as is --
+        # the crashed attempt's usage was never written, and none is invented.
+        store.update("aci_judge_calls", {"id": call["id"]}, {
+            "status": "done", "error": None, "finished_at": now(),
+            "passages": len(passages)})
+        with lock:
+            report["done"] += 1
+        return
+    if stored:
+        # A partial set from an earlier attempt. The job cannot delete the
+        # stray rows (insert-only) and cannot tell which passages are missing
+        # without risking a second duplicate, so it does not call the model
+        # again and does not touch aci_judgements.
+        store.update("aci_judge_calls", {"id": call["id"]}, {
+            "status": "error", "finished_at": now(),
+            "error": partial_stored_error(stored, len(passages))})
+        with lock:
+            report["failed"] += 1
+        return
+
     rubric = run_row["rubric"]
     system, user = judge_call.compose(call["behaviour_slug"], rubric, registry, passages)
     provider, model_id = h.resolve(call["model"], config)
@@ -165,8 +229,7 @@ def one_call(store, call, run_row, registry, passages_for, spec_of_version,
     try:
         reply, usage, finish_reason, seconds = call_model(
             provider=provider, model_id=model_id, system=system, user=user,
-            kwargs=h.judge_kwargs(call["model"], model_id, config)
-            if hasattr(h, "judge_kwargs") else {})
+            kwargs=whole_doc.judge_kwargs(call["model"], model_id, config))
     except Exception as refused:                      # noqa: BLE001
         # The provider refused or the request died. The call carries why, and the
         # run carries on: one seat failing is not the run failing.
@@ -194,11 +257,113 @@ def one_call(store, call, run_row, registry, passages_for, spec_of_version,
             report["failed"] += 1
         return
 
-    store.insert("aci_judgements",
-                 judge_call.judgements(call["id"], passages, verdicts))
-    store.update("aci_judge_calls", {"id": call["id"]}, dict(meter, status="done"))
+    rows = judge_call.judgements(call["id"], passages, verdicts)
+    try:
+        # One POST whatever the passage count, so a death mid-insert can never
+        # again leave "some but not all" of a call's judgements stored.
+        store.insert("aci_judgements", rows, chunk=max(len(rows), 1))
+    except StoreError as failed_insert:
+        if "23505" not in str(failed_insert):
+            raise
+        # The insert may have landed before its response was lost -- that is
+        # exactly what a 409 duplicate on this table means. Re-count rather
+        # than assume either outcome.
+        landed = stored_count(store, call["id"])
+        if landed == len(passages):
+            store.update("aci_judge_calls", {"id": call["id"]},
+                         dict(meter, status="done", error=None))
+            with lock:
+                report["done"] += 1
+            return
+        store.update("aci_judge_calls", {"id": call["id"]}, dict(meter, **{
+            "status": "error", "error": partial_stored_error(landed, len(passages))}))
+        with lock:
+            report["failed"] += 1
+        return
+
+    store.update("aci_judge_calls", {"id": call["id"]},
+                 dict(meter, status="done", error=None))
     with lock:
         report["done"] += 1
+
+
+def pending_depths(store, run_id, passages_for, versions):
+    """[(call, retained passages)] for every depth still to give.
+
+    A cell's depths wait until all its passage calls are done. A call no depth row
+    was written for -- a run composed before depths existed -- has none to give.
+    The retained passages are the ones a reader shows by default, from the cell's
+    parsed judgements."""
+    calls = [c for c in store.select("aci_judge_calls") if c["run_id"] == run_id]
+    depths = {d["call_id"]: d for d in store.select("aci_depths")}
+    cells = {}
+    for call in calls:
+        cells.setdefault((call["behaviour_slug"], call["spec_version_id"]), []).append(call)
+
+    jobs, judgements = [], None
+    for (_slug, version_id), cell in sorted(cells.items()):
+        todo = [c for c in cell if c["id"] in depths and depths[c["id"]]["status"] != "done"]
+        if not todo or any(c["status"] != "done" for c in cell):
+            continue
+        if judgements is None:
+            judgements = store.select("aci_judgements")
+        model_of = {c["id"]: c["model"] for c in cell}
+        votes = {}
+        for row in judgements:
+            if row["call_id"] in model_of and row.get("parsed", True):
+                votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
+        shown = set(bands.shown_by_default(votes))
+        version = versions[version_id]
+        retained = [p for p in passages_for(version["spec_id"], version["version"])
+                    if p[0] in shown]
+        jobs.extend((call, retained) for call in todo)
+    return jobs
+
+
+def one_depth(store, call, registry, retained, call_model, config, report, lock):
+    """One judge's depth for its call's cell. A cell with nothing retained is
+    depth 0 without a call; a reply with no DEPTH line keeps its text and fails."""
+    match = {"call_id": call["id"]}
+    store.update("aci_depths", match, {"status": "running", "started_at": now()})
+    if not retained:
+        store.update("aci_depths", match, {
+            "status": "done", "depth": 0, "rationale": depth_call.NOTHING_RETAINED,
+            "passages": 0, "cost_usd": 0, "finished_at": now()})
+        with lock:
+            report["depths"]["done"] += 1
+        return
+
+    system, user = depth_call.compose(call["behaviour_slug"], registry, retained)
+    provider, model_id = h.resolve(call["model"], config)
+    try:
+        reply, usage, finish_reason, seconds = call_model(
+            provider=provider, model_id=model_id, system=system, user=user,
+            kwargs=whole_doc.judge_kwargs(call["model"], model_id, config))
+    except Exception as refused:                      # noqa: BLE001
+        store.update("aci_depths", match, {"status": "error", "error": str(refused)[:1000],
+                                           "finished_at": now()})
+        with lock:
+            report["depths"]["failed"] += 1
+        return
+
+    depth, rationale = depth_call.parse(reply)
+    meter = {"passages": len(retained), "seconds": seconds,
+             "prompt_tokens": usage.get("prompt_tokens"),
+             "completion_tokens": usage.get("completion_tokens"),
+             "cost_usd": cost_of(call["model"], usage, config),
+             "finished_at": now()}
+    if depth is None:
+        store.update("aci_depths", match, dict(meter, **{
+            "status": "error", "raw_output": (reply or "")[:20000],
+            "error": f"no DEPTH line in the reply (finish_reason={finish_reason})"}))
+        with lock:
+            report["depths"]["failed"] += 1
+        return
+    store.update("aci_depths", match, dict(meter, status="done", depth=depth,
+                                           rationale=rationale or "", error=None,
+                                           raw_output=None))
+    with lock:
+        report["depths"]["done"] += 1
 
 
 def cancelled(store, run_id):
@@ -208,7 +373,10 @@ def cancelled(store, run_id):
 
 def finish(store, run_id, report):
     calls = [c for c in store.select("aci_judge_calls") if c["run_id"] == run_id]
-    metered = [c["cost_usd"] for c in calls if c["cost_usd"] is not None]
+    ids = {c["id"] for c in calls}
+    depths = [d for d in store.select("aci_depths") if d["call_id"] in ids]
+    metered = [row["cost_usd"] for row in calls + depths
+               if row.get("cost_usd") is not None]
     patch = {"status": "done", "finished_at": now()}
     # Null means unknown and zero means free, and they are not the same claim.
     # The migrated bench carries no per-call cost -- its meter readings lived in
@@ -224,9 +392,10 @@ def main():
         sys.exit("ACI_RUN_ID must name the run to execute")
     report = run(Store.from_env(), run_id)
     print(f"run {run_id}: {report['attempted']} attempted, {report['done']} done, "
-          f"{report['failed']} failed"
+          f"{report['failed']} failed, depths {report['depths']['done']} done "
+          f"{report['depths']['failed']} failed"
           + (", cancelled" if report["cancelled"] else ""))
-    return 1 if report["failed"] else 0
+    return 1 if report["failed"] or report["depths"]["failed"] else 0
 
 
 if __name__ == "__main__":

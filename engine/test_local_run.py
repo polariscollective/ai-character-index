@@ -158,6 +158,19 @@ class LocalRunTest(unittest.TestCase):
                           str(self.scratch), call_model=scoring())
         self.assertIn("name@version:path", str(refused.exception))
 
+    def test_a_deepseek_call_gets_the_panels_quirks(self):
+        """Guards the defect where `h.judge_kwargs` was gated on `hasattr`:
+        harness.py has no such function, so the guard was always false and
+        every call, including deepseek's, went out with no settings at all."""
+        seen = []
+        def recording(provider, model_id, system, user, kwargs):
+            seen.append(kwargs)
+            return scoring()(provider, model_id, system, user, kwargs)
+        self.run_it(call=recording, panel="deepseek")
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0].get("temperature"), 0)
+        self.assertIn("max_tokens", seen[0])
+
     def test_the_prompt_is_recorded_by_digest_so_two_runs_can_be_compared(self):
         first = json.loads((self.run_it() / "run.json").read_text())
         second = json.loads((self.run_it() / "run.json").read_text())

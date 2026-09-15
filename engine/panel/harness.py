@@ -242,13 +242,24 @@ def client_for(provider, config=None):
     return OpenAI(api_key=key, base_url=base) if base else OpenAI(api_key=key)
 
 
-def passages(spec):
-    """(locator, section, text) for every content paragraph, TOC-filtered -- reuses cite.py."""
+def passages(spec, version=None):
+    """(locator, section, text) for every content paragraph of one version,
+    TOC-filtered -- reuses cite.py.
+
+    `version` names the version read; without it the registry's default is read,
+    which is what callers that judge a whole document by name still want. A call
+    on an older version must pass it, or it would judge the newer text.
+
+    A section is located by anchor or by heading path as its document's
+    `locatorStyle` says. A registry that records no style (the fixtures, the
+    command line) keeps the rule that predates the field."""
     out = []
-    version, sections, lines = cite.load_spec(spec, None)
+    version, sections, lines = cite.load_spec(spec, version)
+    style = cite.USER_SPEC_META.get((spec, version), {}).get("locatorStyle")
+    by_anchor = style == "anchor" if style else spec == "model-spec"
     titles = {cite.normalize(s.path_str.split(" > ")[-1]) for s in sections}
     for sec in sections:
-        ref = f"#{sec.anchor}" if (spec == "model-spec" and sec.anchor) else sec.path_str
+        ref = f"#{sec.anchor}" if (by_anchor and sec.anchor) else sec.path_str
         for i, raw in enumerate(cite.segment_blocks(lines, sec.start, sec.end), 1):
             t = cite.normalize(raw)
             if t.strip() and t not in titles:

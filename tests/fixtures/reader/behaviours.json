@@ -27,11 +27,24 @@
    "definition": "The document should say what it means.",
    "category": "Behaviours under test",
    "coverage": {
-    "corpus-labs": {
-     "verdict": "covered",
-     "depth": 3,
-     "note": "",
-     "verifiedDate": "2026-01-01",
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 2.7,
+      "judges": {
+       "a": {
+        "depth": 3,
+        "rationale": "Rules, no examples."
+       },
+       "b": {
+        "depth": 3,
+        "rationale": "Rules, no examples."
+       },
+       "c": {
+        "depth": 2,
+        "rationale": "Discussed in general terms."
+       }
+      }
+     },
      "passages": [
       {
        "id": "corpus-labs-defined-behaviour-1",
@@ -59,11 +72,24 @@
       }
      ]
     },
-    "second-labs": {
-     "verdict": "covered",
-     "depth": 3,
-     "note": "",
-     "verifiedDate": "2026-01-01",
+    "acme--second@2026-02-01": {
+     "depth": {
+      "mean": 1.0,
+      "judges": {
+       "a": {
+        "depth": 1,
+        "rationale": "Named only."
+       },
+       "b": {
+        "depth": 1,
+        "rationale": "Named only."
+       },
+       "d": {
+        "depth": 1,
+        "rationale": "Named only."
+       }
+      }
+     },
      "passages": [
       {
        "id": "second-labs-defined-behaviour-1",
@@ -78,6 +104,13 @@
        },
        "score": 4
       }
+     ],
+     "substitutions": [
+      {
+       "seat": "c",
+       "substitute": "d",
+       "reason": "c returned no output for this document on every attempt."
+      }
      ]
     }
    }
@@ -89,11 +122,24 @@
    "definition": "Tracked, and defined nowhere.",
    "category": "Behaviours under test",
    "coverage": {
-    "corpus-labs": {
-     "verdict": "covered",
-     "depth": 3,
-     "note": "",
-     "verifiedDate": "2026-01-01",
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 4.0,
+      "judges": {
+       "a": {
+        "depth": 4,
+        "rationale": "Rules and worked examples."
+       },
+       "b": {
+        "depth": 4,
+        "rationale": "Rules and worked examples."
+       },
+       "c": {
+        "depth": 4,
+        "rationale": "Rules and worked examples."
+       }
+      }
+     },
      "passages": [
       {
        "id": "corpus-labs-undefined-behaviour-1",
@@ -139,11 +185,8 @@
       }
      ]
     },
-    "second-labs": {
-     "verdict": "covered",
-     "depth": 3,
-     "note": "",
-     "verifiedDate": "2026-01-01",
+    "acme--second@2026-02-01": {
+     "depth": null,
      "passages": [
       {
        "id": "second-labs-undefined-behaviour-1",

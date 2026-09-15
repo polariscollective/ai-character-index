@@ -18,7 +18,7 @@ import { readFile as readFileAsync } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { serveReaderRoute, CURRENT_PUBLICATION } from "./reader-routes.mjs";
+import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -37,8 +37,13 @@ const DATA = join(fileURLToPath(new URL("..", import.meta.url)),
 const payloadDoc = JSON.parse(readFileSync(join(DATA, "behaviours.json"), "utf8"));
 const keepSet = payloadDoc.behaviours;
 const fixtureDocs = JSON.parse(readFileSync(join(DATA, "documents.json"), "utf8")).documents;
+// The draft publication's own documents, served only to a pin on DRAFT_PUBLICATION.
+const draftDocs = JSON.parse(readFileSync(join(DATA, "draft", "documents.json"), "utf8")).documents;
 const DOC_ID = fixtureDocs[0].id;
 const DOC_B = fixtureDocs[1].id;
+// Carries a translation band; DOC_ID does not, which is the pair the header
+// layout check below wants: one panel with the band, one without.
+const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
@@ -111,12 +116,87 @@ await at("?publication=00000000-0000-0000-0000-000000000000");
   check(unexpected.length === 0 && (await sidebar()).includes("Defined behaviour"),
     "a pin naming no publication degrades to the current one, with only its 404",
     unexpected.join("; "));
+  // The documents fall back with the payload: a pinned documents request would
+  // 404 the same way, and a reader that asked for it would have nothing to show.
+  const fellBack = await page.evaluate(() =>
+    document.querySelector(".document-panel")?.dataset.documentId ?? null);
+  check(fixtureDocs.some(doc => doc.id === fellBack),
+    "a pin that falls back reads the current publication's documents too", String(fellBack));
 }
 
 await at("?publication=behaviours-v5-reader");
 check(pageErrors.length === 0 && (await sidebar()).includes("Defined behaviour"),
   "a pin that is not a uuid is refused and degrades to the current one (no error)",
   pageErrors.join("; "));
+
+/* A pinned draft reads its documents from the publication it names. The reader
+ * used to fetch the documents unpinned and pair the draft's payload with the
+ * current publication's documents. Since documents became per publication their
+ * ids carry a version, so nothing matched: every tier read 0, and ?spec= was
+ * rewritten to a document the draft does not carry. */
+await at(`?publication=${DRAFT_PUBLICATION}`);
+{
+  const draftIds = draftDocs.map(doc => doc.id);
+  const currentIds = fixtureDocs.map(doc => doc.id);
+  const seen = await page.evaluate(() => ({
+    panels: [...document.querySelectorAll(".document-panel")].map(panel => panel.dataset.documentId),
+    labs: [...document.querySelectorAll(".provider-tab")].map(button => button.dataset.lab),
+    passages: document.querySelectorAll("[data-passage-id]").length,
+    tierCounts: [...document.querySelectorAll(".document-panel .tier-toggle")]
+      .reduce((total, button) => total + Number((button.textContent.match(/\((\d+)\)/) || [])[1] || 0), 0),
+    spec: new URL(location.href).searchParams.get("spec"),
+    sidebar: document.querySelector("#behaviour-list")?.textContent || "",
+  }));
+  const errors = [...pageErrors];
+  await page.click(".document-picker");
+  await page.waitForTimeout(150);
+  const offered = await page.evaluate(() =>
+    [...document.querySelectorAll(".spec-choice")].map(option => option.dataset.spec));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  check(seen.sidebar.includes("Draft behaviour"),
+    "a pin on a draft publication loads its payload", seen.sidebar.replace(/\s+/g, " ").slice(0, 80));
+  check(seen.panels.length === 1 && draftIds.includes(seen.panels[0]) && seen.spec === seen.panels[0],
+    "a pinned draft opens on one of its own documents, and ?spec= names it",
+    `panels ${seen.panels.join(", ")}; spec=${seen.spec}`);
+  check(seen.passages > 0 && seen.tierCounts > 0,
+    "a pinned draft's passages render on its documents, and its tiers count them",
+    `${seen.passages} passages, tier counts sum to ${seen.tierCounts}`);
+  const shown = [...seen.panels, ...offered, seen.spec];
+  check(offered.length > 0
+      && shown.every(id => draftIds.includes(id))
+      && !shown.some(id => currentIds.includes(id))
+      && seen.labs.length > 0 && seen.labs.every(lab => draftDocs.some(doc => doc.lab === lab)),
+    "a pinned draft never shows the current publication's documents",
+    `offered ${offered.join(", ")}; publishers ${seen.labs.join(", ")}`);
+  check(errors.length === 0, "a pinned draft: no console errors", errors.join("; "));
+}
+
+/* A quote that carries its example's code after a short bold intro, flattened into
+ * one string, the shape six passages of the Alibaba publication have. The reader
+ * renders the intro and the fence as two blocks, so the quote resolves on the intro
+ * and the fence is highlighted as its continuation. The draft carries one. */
+await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
+  + "&behavior=draft-behaviour&tiers=defining,core,related");
+{
+  const seen = await page.evaluate(() => {
+    const status = document.querySelector("#reader-status");
+    const anchor = [...document.querySelectorAll("[data-passage-id]")]
+      .find(block => /Keep the boundary/.test(block.textContent));
+    let code = anchor?.nextElementSibling;
+    while (code && !code.classList.contains("code-block")) code = code.nextElementSibling;
+    return {
+      unresolved: status.classList.contains("visible") ? status.textContent : "",
+      anchored: Boolean(anchor),
+      codeHighlighted: Boolean(code?.classList.contains("passage")),
+    };
+  });
+  check(seen.unresolved === "" && seen.anchored,
+    "a quote carrying its example's code after the intro resolves, with no unresolved anchors",
+    JSON.stringify(seen));
+  check(seen.codeHighlighted,
+    "the example's code block is highlighted as that passage's continuation", JSON.stringify(seen));
+}
 
 // =============================================================================
 console.log("== Reader: sidebar + behaviour selection ==");
@@ -131,27 +211,66 @@ await at("");
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {
-  const finding = await page.evaluate(() => ({
-    name: document.querySelector("#finding-behaviour")?.textContent.trim(),
-    def: document.querySelector("#finding-definition")?.textContent.trim() || "",
-  }));
-  check(finding.name === "Defined behaviour", "?behavior= selects the defined behaviour", finding.name);
-  check(finding.def.includes("say what it means"),
-    "the behaviour definition renders", finding.def.slice(0, 50));
+  const ticked = await page.evaluate(() => [...document.querySelectorAll("[data-behaviour]")]
+    .filter(input => input.checked).map(input => input.dataset.behaviour));
+  check(ticked.join(",") === DEFINED, "?behavior= ticks the defined behaviour in the menu",
+    ticked.join(","));
+  // The strip under the header that repeated the selection and the definition is
+  // gone. The definition is read in the behaviour's note, beside its name.
+  await page.click(`[data-behaviour-note="${DEFINED}"]`);
+  await page.waitForTimeout(150);
+  const note = await page.evaluate(() => document.querySelector("#key-note-body")?.textContent || "");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  check(note.includes("say what it means"),
+    "the behaviour's definition is read in its note in the menu",
+    note.replace(/\s+/g, " ").slice(0, 60));
 }
 await at("?behavior=no-such-behaviour");
 check(pageErrors.length === 0 && (await page.evaluate(() =>
-  document.querySelector("#finding-behaviour")?.textContent.trim().length > 0)),
-  "unknown ?behavior= degrades to a real behaviour without errors",
+  document.querySelectorAll(".document-panel").length === 1
+  && !document.querySelector(".passage-count").textContent.startsWith("Loading"))),
+  "unknown ?behavior= still opens a document, without errors",
   pageErrors.join("; "));
 
 // =============================================================================
 console.log("== Reader: tier bands (incl. the single-judge floor, B1) ==");
 const definedAll = q => at(`?behavior=${DEFINED}&spec=${DOC_ID}${q}`);
-await definedAll("");                       // default bands: defining + core
+await definedAll("");                       // default bands: all three
 {
   const n = await cards();
-  check(n === 1, "default bands: lone core vote renders, lone related vote waits in the related band", `${n} cards`);
+  check(n === 2, "default bands: all three show, so the lone related vote renders beside the core one",
+    `${n} cards`);
+  const tiers = new URL(page.url()).searchParams.get("tiers");
+  check(tiers === "defining,core,related", "the default bands are written to ?tiers=", tiers);
+}
+await definedAll("&tiers=defining,core");
+check((await cards()) === 1, "an explicit ?tiers= still wins: leaving related out hides the related vote");
+// The toggles still narrow the default view band by band, and give each band back.
+await definedAll("");
+{
+  const toggle = tier => `.document-panel .tier-toggle[data-tier="${tier}"]`;
+  const press = async tier => {
+    await page.click(toggle(tier));
+    await page.waitForTimeout(250);
+    return {
+      cards: await cards(),
+      tiers: new URL(page.url()).searchParams.get("tiers"),
+      pressed: await page.getAttribute(toggle(tier), "aria-pressed"),
+    };
+  };
+  let seen = await press("related");
+  check(seen.cards === 1 && seen.tiers === "defining,core" && seen.pressed === "false",
+    "the related toggle hides the related band", JSON.stringify(seen));
+  seen = await press("related");
+  check(seen.cards === 2 && seen.tiers === "defining,core,related" && seen.pressed === "true",
+    "pressed again, the related toggle shows it", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 1 && seen.tiers === "core,related" && seen.pressed === "false",
+    "the defining toggle hides the defining band and leaves related", JSON.stringify(seen));
+  seen = await press("defining");
+  check(seen.cards === 2 && seen.pressed === "true",
+    "pressed again, the defining toggle shows it", JSON.stringify(seen));
 }
 await definedAll("&tiers=defining,core,related");
 {
@@ -243,7 +362,7 @@ await at(`?compare=1`);
     "?compare=1 renders the chosen two documents",
     `${out.panels} panels, ${resizers} resizers`);
   check(out.toggle === "true", "compare toggle reflects ?compare=1");
-  check(out.link === "Original",
+  check(out.link === "Show original",
     "each pane links its own document rather than a shared 'Sources'", out.link);
 }
 await at("?embedded=1");
@@ -262,6 +381,21 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
     next: !document.querySelector(".next-passage").disabled,
   }));
   check(prevNext.prev && prevNext.next, "prev/next passage buttons enabled with anchors present");
+  // Reading one document, the full sentence is the counter everyone sees; the
+  // short N/M form is compare mode's, where the row has half the width.
+  const counters = await page.evaluate(() => {
+    const full = document.querySelector(".passage-count");
+    const short = document.querySelector(".passage-count-short");
+    const box = full.getBoundingClientRect();
+    return {
+      full: full.textContent,
+      fullShown: box.width > 1 && box.height > 1 && getComputedStyle(full).clip === "auto",
+      shortShown: short ? getComputedStyle(short).display !== "none" : null,
+    };
+  });
+  check(counters.fullShown && /^\d+ of \d+ passages$/.test(counters.full) && counters.shortShown === false,
+    "one document: the full passage counter shows, and the compact one does not",
+    JSON.stringify(counters));
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 await page.click("#clear-behaviours");
@@ -318,15 +452,18 @@ console.log("== Reader: compare is a two-document choice ==");
     "compare renders exactly two panes and one boundary", `${c.panes} panes, ${c.resizers} resizers`);
   check(c.overflow === 0, "compare does not overflow the page", `${c.overflow}px`);
   check(c.pickers === 2, "each pane carries its own document picker", `${c.pickers} pickers`);
-  check(c.a !== c.b, "the two sides are never the same document", `${c.a} / ${c.b}`);
+  check(c.a !== c.b, "the opening pair is two different documents", `${c.a} / ${c.b}`);
 
   {
     await pickerFor("a").click();
     await page.waitForTimeout(150);
     const options = await page.evaluate(() =>
       [...document.querySelectorAll(".spec-choice")].map(o => o.dataset.spec));
-    check(options.length === fixtureDocs.length,
-      "the picker offers every registered document", options.join(","));
+    // The documents of this side's own publisher. Another lab is chosen in the
+    // row of publishers above, so the picker does not repeat it.
+    const sameLab = fixtureDocs.filter(doc => doc.lab === fixtureDocs[0].lab);
+    check(options.length === sameLab.length,
+      "the picker offers every document of the side's publisher", options.join(","));
     await page.keyboard.press("Escape");
     await page.waitForTimeout(150);
   }
@@ -345,11 +482,14 @@ console.log("== Reader: compare is a two-document choice ==");
   check(c.a === DOC_B && c.b === DOC_ID,
     "?compare-with= restores the pair from a shared link", `${c.a} / ${c.b}`);
 
-  // Choosing the document already on the other side swaps rather than duplicating.
+  // Choosing the document already on the other side puts it on both sides. It
+  // used to swap the two instead, which quietly undid the choice the reader had
+  // just made; the operator asked that either side take any document, including
+  // the one already opposite.
   await pick("a", DOC_ID);
   c = await compareState();
-  check(c.a === DOC_ID && c.b !== DOC_ID,
-    "picking the other side's document swaps them instead of duplicating", `${c.a} / ${c.b}`);
+  check(c.a === DOC_ID && c.b === DOC_ID,
+    "picking the other side's document puts it on both sides", `${c.a} / ${c.b}`);
 
   // A stale or nonsense pair degrades to the first two documents rather than breaking.
   await load(base, "?compare=1&compare-with=nope,alsonope");
@@ -358,6 +498,206 @@ console.log("== Reader: compare is a two-document choice ==");
     "an unknown ?compare-with= falls back to two real documents", `${c.a} / ${c.b}`);
   check(pageErrors.length === 0, "compare picker: no console errors", pageErrors.join("; "));
 
+}
+
+// =============================================================================
+console.log("== Reader: publishers ==");
+/* The row of publishers above each document. Choosing one rebuilds the reader,
+ * which re-clones the header the control lives in, so focus has to be put back
+ * or a keyboard user is dropped at the top of the page. They are buttons in a
+ * labelled group rather than tabs: a tablist promises arrow keys and a roving
+ * tabindex, and a promise the page does not keep is worse than none. */
+{
+  const labs = [...new Set(fixtureDocs.map(doc => doc.lab))];
+  check(labs.length >= 2, "the fixture carries two publishers, so switching between them is tested",
+    labs.join(", "));
+  const [home, other] = labs;
+  const otherDocs = fixtureDocs.filter(doc => doc.lab === other)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)));
+
+  const publishers = () => page.evaluate(() => {
+    const panels = [...document.querySelectorAll(".document-panel")];
+    const focused = document.activeElement;
+    return {
+      groups: [...document.querySelectorAll(".provider-tabs")].map(group =>
+        `${group.getAttribute("role")}: ${group.getAttribute("aria-label")}`),
+      tabRoles: document.querySelectorAll('[role="tab"], [role="tablist"]').length,
+      panels: panels.map(panel => ({
+        id: panel.dataset.documentId,
+        pressed: [...panel.querySelectorAll('.provider-tab[aria-pressed="true"]')]
+          .map(button => button.dataset.lab).join(","),
+      })),
+      focus: {
+        publisher: Boolean(focused?.matches?.(".provider-tab")),
+        lab: focused?.dataset?.lab ?? null,
+        side: panels.indexOf(focused?.closest?.(".document-panel")),
+      },
+    };
+  });
+
+  await at(`?spec=${DOC_ID}`);
+  let seen = await publishers();
+  check(seen.groups.join(" | ") === "group: Publisher" && seen.tabRoles === 0,
+    "the publishers are a labelled group of buttons, not tabs", seen.groups.join(" | "));
+  check(seen.panels[0].pressed === home, "the publisher being read is the pressed one",
+    seen.panels[0].pressed);
+
+  // By keyboard: focus a publisher, press Enter.
+  await page.focus(`.provider-tab[data-lab="${other}"]`);
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  seen = await publishers();
+  check(seen.panels[0].id === otherDocs[0].id && seen.panels[0].pressed === other,
+    "Enter on a publisher opens its newest document", `${seen.panels[0].id}, pressed ${seen.panels[0].pressed}`);
+  check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 0,
+    "focus lands back on the publisher just chosen", JSON.stringify(seen.focus));
+
+  await page.click(".document-picker");
+  await page.waitForTimeout(150);
+  const options = await page.evaluate(() =>
+    [...document.querySelectorAll(".spec-choice")].map(option => option.dataset.spec));
+  check(options.join(",") === otherDocs.map(doc => doc.id).join(","),
+    "the document picker lists that publisher's documents, newest first, and no other's",
+    options.join(", "));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+
+  // Comparing, each side has its own group, named for its side, and the side that
+  // chose keeps the focus.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_B}`);
+  seen = await publishers();
+  check(seen.groups.join(" | ")
+      === "group: Publisher, left document | group: Publisher, right document",
+    "comparing, each side's publishers are named for their side", seen.groups.join(" | "));
+  await page.locator(".document-panel").nth(1).locator(`.provider-tab[data-lab="${other}"]`).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  seen = await publishers();
+  check(seen.panels[0].id === DOC_ID && seen.panels[1].id === otherDocs[0].id,
+    "comparing, a publisher chosen on the right changes the right side only",
+    seen.panels.map(panel => panel.id).join(" | "));
+  check(seen.focus.publisher && seen.focus.lab === other && seen.focus.side === 1,
+    "comparing, focus lands back on the right side's publisher", JSON.stringify(seen.focus));
+
+  // A tier toggle rebuilds both headers too. With one document on both sides its
+  // id cannot say which side pressed the toggle, so focus has to go back by
+  // position, to the side that pressed it.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=${DEFINED}`);
+  for (const side of [1, 0]) {
+    await page.locator(".document-panel").nth(side)
+      .locator('.tier-toggle[data-tier="related"]').focus();
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    const focus = await page.evaluate(() => {
+      const panels = [...document.querySelectorAll(".document-panel")];
+      const focused = document.activeElement;
+      return {
+        tier: focused?.dataset?.tier ?? null,
+        side: panels.indexOf(focused?.closest?.(".document-panel")),
+      };
+    });
+    check(focus.tier === "related" && focus.side === side,
+      `comparing one document twice, a tier toggle pressed on the ${side ? "right" : "left"}`
+        + " keeps focus on that side", JSON.stringify(focus));
+  }
+  check(pageErrors.length === 0, "publishers: no console errors", pageErrors.join("; "));
+}
+
+// =============================================================================
+console.log("== Reader: a document chosen in a panel opens at its top ==");
+/* A panel's scroll belongs to the document in it. Choosing another document
+ * opens that one at its top, and the other panel stays where its reader is; the
+ * same document drawn again keeps its place. Checked with a contents link
+ * followed first, because the heading it puts in the URL is what the rebuild
+ * used to scroll back to. The Zenith guidelines are long enough to scroll, so a
+ * panel reading 0 there is at its top and not merely unable to move; nothing is
+ * ticked for the switches, so no section is folded away. */
+{
+  const [labA, labB] = [...new Set(fixtureDocs.map(doc => doc.lab))];
+  const newestOf = lab => fixtureDocs.filter(doc => doc.lab === lab)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)))[0].id;
+  const scrolls = () => page.evaluate(() => [...document.querySelectorAll(".document-panel")]
+    .map(panel => {
+      const scroll = panel.querySelector(".document-scroll");
+      return { id: panel.dataset.documentId, top: Math.round(scroll.scrollTop),
+               range: scroll.scrollHeight - scroll.clientHeight };
+    }));
+  const scrollSide = (side, fraction) => page.evaluate(([side, fraction]) => {
+    const scroll = document.querySelectorAll(".document-scroll")[side];
+    scroll.scrollTo({ top: Math.round((scroll.scrollHeight - scroll.clientHeight) * fraction),
+                      behavior: "instant" });
+  }, [side, fraction]);
+  const settle = () => page.waitForTimeout(600);
+  const same = (a, b, range) => Math.abs(a - b) <= Math.max(4, range * 0.02);
+
+  // By keyboard, on the right, after a contents link was followed on the left.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=`);
+  await page.evaluate(() => document.querySelectorAll(".document-panel")[0]
+    .querySelector('.document-body a[href^="#"]').click());
+  await settle();
+  await scrollSide(0, 0.3);
+  await scrollSide(1, 0.7);
+  await settle();
+  let before = await scrolls();
+  await page.locator(".document-panel").nth(1).locator(`.provider-tab[data-lab="${labB}"]`).focus();
+  await page.keyboard.press("Enter");
+  await settle();
+  let after = await scrolls();
+  const hash = await page.evaluate(() => location.hash);
+  check(after[1].id === newestOf(labB) && after[1].range > 200 && after[1].top === 0,
+    "comparing, a publisher chosen by keyboard on the right opens its document at the top",
+    `hash ${hash}; right ${before[1].id} at ${before[1].top} -> ${after[1].id} at ${after[1].top} of ${after[1].range}`);
+  check(after[0].id === before[0].id && same(after[0].top, before[0].top, after[0].range),
+    "comparing, a switch on the right leaves the left panel where its reader is",
+    `left ${before[0].top} -> ${after[0].top} of ${after[0].range}`);
+
+  // By click, on the left.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=`);
+  await scrollSide(0, 0.7);
+  await scrollSide(1, 0.4);
+  await settle();
+  before = await scrolls();
+  await page.locator(".document-panel").nth(0).locator(`.provider-tab[data-lab="${labB}"]`).click();
+  await settle();
+  after = await scrolls();
+  check(after[0].id === newestOf(labB) && after[0].range > 200 && after[0].top === 0,
+    "comparing, a publisher clicked on the left opens its document at the top",
+    `left ${before[0].id} at ${before[0].top} -> ${after[0].id} at ${after[0].top} of ${after[0].range}`);
+  check(after[1].id === before[1].id && same(after[1].top, before[1].top, after[1].range),
+    "comparing, a switch on the left leaves the right panel where its reader is",
+    `right ${before[1].top} -> ${after[1].top} of ${after[1].range}`);
+
+  // One document on screen.
+  await at(`?spec=${DOC_ID}&behavior=`);
+  await scrollSide(0, 0.6);
+  await settle();
+  before = await scrolls();
+  await page.locator(`.provider-tab[data-lab="${labB}"]`).click();
+  await settle();
+  after = await scrolls();
+  check(after[0].id === newestOf(labB) && after[0].range > 200 && after[0].top === 0,
+    "reading one document, a publisher chosen opens its document at the top",
+    `${before[0].id} at ${before[0].top} -> ${after[0].id} at ${after[0].top} of ${after[0].range}`);
+
+  // The same document drawn again keeps its place: a tier toggle rebuilds both
+  // panels, and neither reader should lose the line they were on.
+  await at(`?compare=1&compare-with=${DOC_ID},${DOC_ID}&behavior=${DEFINED}`);
+  await scrollSide(0, 0.3);
+  await scrollSide(1, 0.6);
+  await settle();
+  before = await scrolls();
+  await page.locator(".document-panel").nth(1).locator('.tier-toggle[data-tier="related"]').click();
+  await settle();
+  after = await scrolls();
+  check(before.every(side => side.top > 0)
+      && after.every((side, i) => side.id === before[i].id
+        && Math.abs(side.top - before[i].top) <= Math.max(4, side.range * 0.1)),
+    "comparing, a tier toggle keeps both panels where their readers are",
+    before.map((side, i) => `${side.top} -> ${after[i].top} of ${after[i].range}`).join(", "));
+  await page.locator(".document-panel").nth(1).locator('.tier-toggle[data-tier="related"]').click();
+  await settle();
+  check(labA !== labB && pageErrors.length === 0, "switching documents: no console errors",
+    pageErrors.join("; "));
 }
 
 // =============================================================================
@@ -386,6 +726,67 @@ await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
   check(atHome === "200" && Number(atEnd) > Number(atHome),
     "sidebar resizer: keyboard Home/End resize", `${atHome} -> ${atEnd}`);
 }
+{
+  /* The sidebar's own header row and each document panel's first row, its
+   * publishers with Compare at the right of the last panel's, sit side by side,
+   * so their bottom rules fall on one line: expanded or collapsed (the arrow
+   * button, not a class swapped in by the walker), one document or two, at a
+   * wide and a narrow desktop width. The strip of behaviour tags that used to
+   * hold that line, and Compare with it, is gone. */
+  const topRows = () => page.evaluate(() => {
+    const panels = [...document.querySelectorAll(".document-panel")];
+    const toggle = document.querySelector("#compare-toggle");
+    const lastRow = panels.at(-1)?.querySelector(".provider-row");
+    const tabs = panels.at(-1)?.querySelector(".provider-tabs");
+    const t = toggle?.getBoundingClientRect();
+    const r = lastRow?.getBoundingClientRect();
+    const g = tabs?.getBoundingClientRect();
+    return {
+      sidebar: document.querySelector(".sidebar-intro").getBoundingClientRect().bottom,
+      rows: panels.map(panel => panel.querySelector(".provider-row")?.getBoundingClientRect().bottom ?? null),
+      strip: Boolean(document.querySelector(".finding-bar, .behaviour-chip, #finding-behaviour")),
+      toggle: toggle && r && g ? {
+        inRow: lastRow.contains(toggle),
+        visible: t.width > 0 && t.height > 0,
+        rightOfTabs: Math.round(t.left - g.right),
+        withinRow: t.top >= r.top && t.bottom <= r.bottom && t.right <= r.right,
+      } : null,
+    };
+  });
+  const setMenu = async open => {
+    if ((await page.getAttribute("#sidebar-toggle", "aria-expanded")) !== String(open)) {
+      await page.click("#sidebar-toggle");
+      await page.waitForTimeout(200);
+    }
+  };
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    await page.setViewportSize({ width, height });
+    for (const [mode, query] of [
+      ["one document", `?behavior=${DEFINED}&spec=${DOC_ID}`],
+      ["compare", `?behavior=${DEFINED}&compare=1&compare-with=${DOC_ID},${DOC_B}`],
+    ]) {
+      await at(query);
+      await setMenu(true);
+      const expanded = await topRows();
+      await setMenu(false);
+      const collapsed = await topRows();
+      await setMenu(true);
+      const off = seen => seen.rows.map(bottom => (bottom === null ? Infinity : Math.abs(bottom - seen.sidebar)));
+      check([...off(expanded), ...off(collapsed)].every(diff => diff <= 1),
+        `${mode} ${width}x${height}: the sidebar's rule and each panel's publisher row rule are one line,`
+          + " expanded and collapsed",
+        `expanded ${off(expanded).map(d => d.toFixed(2)).join("/")}px,`
+          + ` collapsed ${off(collapsed).map(d => d.toFixed(2)).join("/")}px`);
+      check(!expanded.strip && !collapsed.strip,
+        `${mode} ${width}x${height}: no strip of behaviour tags under the header`);
+      check([expanded.toggle, collapsed.toggle].every(seen =>
+          seen?.inRow && seen.visible && seen.rightOfTabs >= 0 && seen.withinRow),
+        `${mode} ${width}x${height}: Compare sits at the right of the publishers, on their row`,
+        JSON.stringify({ expanded: expanded.toggle, collapsed: collapsed.toggle }));
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+}
 await at("?compare=1");
 {
   const widths = () => page.evaluate(() =>
@@ -400,6 +801,118 @@ await at("?compare=1");
   check(before.length === 1 && afterRight[0] !== before[0] && afterHome[0] !== afterRight[0],
     "compare: the single boundary responds to the keyboard",
     JSON.stringify({ before, afterRight, afterHome }));
+}
+{
+  /* Comparing, each header ends in one row below the name/version/Show original
+   * line, whatever wrapped above it: a long title, a translation band on one side
+   * only (it sits below the header, not in it), a narrower half. At the left the
+   * walk, "N/M" and then the arrows; at the right what changes the view, Expand all
+   * and then the band toggles, flush with the header's right edge. Where the row
+   * has the width, both groups share one line (1440x900); where it does not (two
+   * panels at 1024x768) the view controls wrap below, still at the right, and
+   * nothing leaves the header. Checked for a pair where one side carries the
+   * translation band and the other does not, with a behaviour selected so the
+   * toggles carry counts, the widest they get. The resizer tests just above leave
+   * an off-centre compare split and a widened sidebar in localStorage; reset both
+   * so the panels start from the defaults this check means to cover. */
+  await page.evaluate(() => {
+    localStorage.setItem("aci-compare-first", "50");
+    localStorage.removeItem("aci-sidebar-width");
+  });
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    await page.setViewportSize({ width, height });
+    await at(`?compare=1&compare-with=${DOC_TRANSLATED},${DOC_ID}`
+      + `&behavior=${DEFINED}&tiers=defining,core,related`);
+    const measured = await page.evaluate(() => [...document.querySelectorAll(".document-panel")].map(panel => {
+      const rect = element => element.getBoundingClientRect();
+      const centre = box => (box.top + box.bottom) / 2;
+      const header = panel.querySelector(".document-header");
+      const style = getComputedStyle(header);
+      const h = rect(header);
+      // The header's content box: its border box less its own side padding, so
+      // this holds however the two panels are split.
+      const contentLeft = h.left + parseFloat(style.paddingLeft);
+      const contentRight = h.right - parseFloat(style.paddingRight);
+      const identity = rect(panel.querySelector(".document-row"));
+      const nav = rect(panel.querySelector(".passage-nav"));
+      const previous = rect(panel.querySelector(".previous-passage"));
+      const next = rect(panel.querySelector(".next-passage"));
+      const expand = rect(panel.querySelector(".document-focus-toggle"));
+      const legend = rect(panel.querySelector(".rail-legend"));
+      const inside = box => box.left >= h.left - 0.5 && box.right <= h.right + 0.5
+        && box.top >= h.top - 0.5 && box.bottom <= h.bottom + 0.5;
+      // The compact counter, "3/12", while "3 of 12 passages" stays the counter
+      // a screen reader reads.
+      const counter = panel.querySelector(".passage-count-short");
+      const full = panel.querySelector(".passage-count");
+      const c = counter ? rect(counter) : null;
+      const anchors = panel._anchors || [];
+      const expandOnBandsRow = Math.abs(centre(expand) - centre(legend)) <= 4;
+      return {
+        documentId: panel.dataset.documentId,
+        hasBand: !panel.querySelector(".document-translation").hidden,
+        walk: {
+          leads: Math.round((nav.left - contentLeft) * 10) / 10,
+          belowIdentity: Math.round(nav.top - identity.bottom),
+          arrowsInOrder: previous.right <= next.left,
+        },
+        counter: counter ? {
+          text: counter.textContent,
+          position: anchors.length ? `${panel._passageIndex + 1}/${anchors.length}` : "0/0",
+          // Visible: a box with area that the browser draws, not clipped away
+          // the way the full counter is in compare mode.
+          visible: c.width > 0 && c.height > 0 && counter.checkVisibility({ visibilityProperty: true })
+            && getComputedStyle(counter).clip === "auto",
+          beforeArrows: Math.round(previous.left - c.right),
+          centreDiff: Math.round(centre(c) - centre(previous)),
+          spokenMatches: anchors.length
+            ? full.textContent === `${panel._passageIndex + 1} of ${anchors.length} passages`
+            : !/\d/.test(full.textContent),
+          hiddenFromScreenReaders: counter.getAttribute("aria-hidden") === "true",
+        } : null,
+        view: {
+          expandBeforeBands: expandOnBandsRow ? expand.right <= legend.left : expand.bottom <= legend.top,
+          flushRight: Math.round((contentRight - legend.right) * 10) / 10,
+          belowIdentity: Math.round(Math.min(expand.top, legend.top) - identity.bottom),
+        },
+        oneRow: Math.abs(centre(nav) - centre(legend)) <= 4 && expandOnBandsRow,
+        viewWrappedBelow: Math.min(expand.top, legend.top) >= nav.bottom - 0.5,
+        nothingLeaves: [nav, expand, legend, ...(c ? [c] : [])].every(inside),
+      };
+    }));
+    const detail = key => measured.map(p => `${p.documentId} ${JSON.stringify(p[key])}`).join("; ");
+    check(measured.length === 2 && measured.some(p => p.hasBand) && measured.some(p => !p.hasBand),
+      `compare header layout ${width}x${height}: fixture pair has one banded panel and one plain one`,
+      measured.map(p => `${p.documentId} band=${p.hasBand}`).join(", "));
+    check(measured.every(p => Math.abs(p.walk.leads) <= 1 && p.walk.belowIdentity >= 0 && p.walk.arrowsInOrder),
+      `compare ${width}x${height}: the walk leads the row at the left, below the name/version line`,
+      detail("walk"));
+    check(measured.every(p => p.counter?.visible),
+      `compare ${width}x${height}: the passage counter is visible in both panels, not clipped`,
+      detail("counter"));
+    check(measured.every(p => p.counter && p.counter.beforeArrows >= 0 && p.counter.beforeArrows <= 12
+        && Math.abs(p.counter.centreDiff) <= 3),
+      `compare ${width}x${height}: the counter comes first, just left of the arrows, on their row`,
+      detail("counter"));
+    check(measured.every(p => p.counter && p.counter.text === p.counter.position
+        && p.counter.spokenMatches && p.counter.hiddenFromScreenReaders),
+      `compare ${width}x${height}: the counter reads N/M for the passage position,`
+        + " and the full sentence stays what a screen reader hears", detail("counter"));
+    check(measured.every(p => p.view.expandBeforeBands && p.view.flushRight >= -0.5
+        && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
+      `compare ${width}x${height}: at the right, Expand all and then the band toggles, flush right`,
+      detail("view"));
+    if (width >= 1440) {
+      check(measured.every(p => p.oneRow),
+        `compare ${width}x${height}: the walk and the view controls share one row`,
+        measured.map(p => `${p.documentId} oneRow=${p.oneRow}`).join("; "));
+    }
+    check(measured.every(p => (p.oneRow || p.viewWrappedBelow) && p.nothingLeaves),
+      `compare ${width}x${height}: the row fits or wraps below, and nothing leaves the header`,
+      measured.map(p => `${p.documentId} oneRow=${p.oneRow} wrapped=${p.viewWrappedBelow}`
+        + ` inside=${p.nothingLeaves}`).join("; "));
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
 }
 await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
 {

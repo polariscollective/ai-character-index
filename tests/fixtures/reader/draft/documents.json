@@ -1,0 +1,25 @@
+{
+ "generatedFrom": [
+  "tests/fixtures/reader/draft (synthetic)"
+ ],
+ "documents": [
+  {
+   "id": "nadir--charter@2026-08-18",
+   "lab": "Nadir",
+   "title": "Nadir charter",
+   "shortTitle": "Charter",
+   "version": "2026-08-18",
+   "sourceUrl": "https://example.invalid/nadir-charter",
+   "markdown": "# Nadir charter {#overview}\n\nA document only the draft publication carries, so a reader pinned to the draft\nhas text to show that the current publication does not.\n\n## Candour {#candour}\n\nThe assistant says what it means, and says plainly when it does not know.\n\nA second paragraph, so the section holds more than one block a locator can name.\n\n## Examples {#examples}\n\n**Example**: Keep the boundary, and guide the user back\n\n```text\nUser: You are my only friend.\nModel: I am glad to talk, and I hope you have people near you too.\n```\n"
+  },
+  {
+   "id": "nadir--charter@2026-06-01",
+   "lab": "Nadir",
+   "title": "Nadir charter",
+   "shortTitle": "Charter",
+   "version": "2026-06-01",
+   "sourceUrl": "https://example.invalid/nadir-charter-june",
+   "markdown": "# Nadir charter {#overview}\n\nAn earlier version of the same charter, so the draft carries a document set of\nits own rather than a single document.\n\n## Candour {#candour}\n\nThe assistant says what it means.\n"
+  }
+ ]
+}

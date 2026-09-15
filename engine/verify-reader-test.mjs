@@ -111,10 +111,10 @@ function report(ok, label, detail) {
 }
 
 async function readView(url) {
-  /* Every view walks with all three bands on so the rendered anchors must equal
-   * the keep-set count; the default view keeps the related band collapsed (and
-   * verify-reader-features.mjs covers the band cuts). */
-  url += (url.includes("?") ? "&" : "?") + "tiers=defining,core,related";
+  /* Every view walks as a reader opens it, with no ?tiers= in the URL. The
+   * default is all three bands, so the rendered anchors must equal the keep-set
+   * count; a default that dropped a band would come up short here.
+   * verify-reader-features.mjs covers the band cuts and the toggles. */
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForFunction(
     () => !document.querySelector(".passage-count").textContent.startsWith("Loading"),
@@ -124,10 +124,11 @@ async function readView(url) {
   return page.evaluate(() => ({
     passages: document.querySelectorAll("[data-passage-id]").length,
     status: document.querySelector("#reader-status").textContent.trim(),
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    count: document.querySelector(".passage-count").textContent,
     // Body text of every rendered panel, to prove the spec itself is there to read.
     panels: [...document.querySelectorAll(".document-panel")].map(panel => ({
-      lab: panel.querySelector(".document-lab").textContent,
+      // The publisher is the pressed button of the panel's own row of them.
+      lab: panel.querySelector('.provider-tab[aria-pressed="true"]')?.textContent ?? null,
       blocks: panel.querySelectorAll(".document-body [data-block]").length,
       // Nothing may be collapsed out of view while there is no behaviour to focus on.
       hiddenBlocks: [...panel.querySelectorAll(".document-body > *")]
@@ -158,14 +159,64 @@ async function readView(url) {
   }));
 }
 
+/* The behaviour a view is about is the one ticked in the menu. It used to be read
+ * off the strip of behaviour tags under the header, which is gone. */
 async function expectView(url, expected, label) {
   const seen = await readView(url);
+  const ticked = seen.ticked.join(",");
   const ok = seen.passages === expected.passages
     && seen.status === ""
-    && seen.behaviour === expected.behaviour;
+    && ticked === expected.ticked.join(",");
   report(ok, label, `${seen.passages}/${expected.passages} passages`
     + (seen.status ? `  status: ${seen.status}` : "")
-    + (seen.behaviour !== expected.behaviour ? `  behaviour: ${seen.behaviour}` : ""));
+    + (ticked !== expected.ticked.join(",") ? `  ticked: ${ticked}` : ""));
+}
+
+// The depth beside a behaviour also has to reach keyboard, touch and screen-reader
+// users, none of whom can read a hover title. Opens the note the "i" button opens
+// (the same popover a mouse user never needs for this) and reads back its depth
+// section: a heading, one paragraph per document on screen, and, where a depth was
+// given, one list item per judge.
+const DEPTH_NOTE_HEADING = "How deeply the documents on screen cover it";
+
+// A seat another model judged is said in the same section, one sentence per
+// substitution, for each document on screen whose cell carries one. Expected from
+// the fixture, so a cell with none must say none.
+const substitutionSentences = (behaviour, docs) => docs.flatMap(document =>
+  (behaviour.coverage[document.id]?.substitutions || []).map(({ seat, substitute, reason }) =>
+    `On ${document.title} ${document.version}, ${substitute} judged in place of ${seat}: ${reason}`));
+const saidSubstitutions = note => note.paragraphs.filter(p => p.includes(" judged in place of "));
+
+async function readDepthNote(slug) {
+  await page.click(`[data-behaviour-note="${slug}"]`);
+  await page.waitForTimeout(150);
+  const note = await page.evaluate(() => {
+    const body = document.querySelector("#key-note-body");
+    return {
+      headings: [...body.querySelectorAll("h3")].map(h => h.textContent),
+      paragraphs: [...body.querySelectorAll("p")].map(p => p.textContent),
+      judgeItems: [...body.querySelectorAll("li")].map(li => li.textContent),
+    };
+  });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  return note;
+}
+
+// The checkbox's hidden description: what a screen reader hears when it lands on
+// the checkbox, which must be the same text as the figure's hover title (one text,
+// not two) and must name the document, or documents, on screen.
+async function readDepthDescription(slug) {
+  return page.$eval(`[data-behaviour="${slug}"]`, input => {
+    const id = input.getAttribute("aria-describedby");
+    const target = id ? document.getElementById(id) : null;
+    return {
+      id,
+      exists: Boolean(target),
+      text: target ? target.textContent : null,
+      title: input.closest(".behaviour-option").querySelector("[data-behaviour-depth]").title,
+    };
+  });
 }
 
 // Navigation: the expected links must be present and every one must resolve
@@ -206,14 +257,14 @@ report(navIssues.length === 0, "navigation links resolve",
 if (behaviours.length === 0) {
   // The behaviour set is empty: the point is that both specs are fully readable and untouched.
   for (const document of documents) {
-    const seen = await readView(`${base}?spec=${document.id}`);
+    const seen = await readView(`${base}?spec=${encodeURIComponent(document.id)}`);
     const panel = seen.panels[0];
     report(
       seen.passages === 0
         && seen.status === ""
         && seen.emptyMenu
         && seen.menuItems === 0
-        && seen.behaviour === "No behavior under test"
+        && seen.count === "No behaviours under test"
         && panel?.blocks > 100
         && panel.hiddenBlocks === 0
         && panel.collapsedSections === 0
@@ -240,8 +291,8 @@ if (behaviours.length === 0) {
       const passages = anchorCount(renderable(behaviour.slug, document.id));
       total += passages;
       await expectView(
-        `${base}?behavior=${behaviour.slug}&spec=${document.id}`,
-        { passages, behaviour: behaviour.name },
+        `${base}?behavior=${behaviour.slug}&spec=${encodeURIComponent(document.id)}`,
+        { passages, ticked: [behaviour.slug] },
         `${behaviour.slug} · ${document.id}`,
       );
       // Tint/role agreement, continuously: every Related-tinted passage must
@@ -261,8 +312,111 @@ if (behaviours.length === 0) {
     }
     await expectView(
       `${base}?behavior=${behaviour.slug}&compare=1`,
-      { passages: total, behaviour: behaviour.name },
+      { passages: total, ticked: [behaviour.slug] },
       `${behaviour.slug} · compare`,
+    );
+  }
+
+  // The substitution checks below compare what the note says with what the fixture
+  // carries, and would pass on a fixture carrying none.
+  report(
+    behaviours.some(behaviour => Object.values(behaviour.coverage)
+      .some(cell => cell.substitutions?.length)),
+    "the fixture carries a cell judged with a substitute",
+    "so the substitution checks are not vacuous",
+  );
+
+  // Depth beside each behaviour: the panel's mean for the document on screen, a
+  // dash where no depth was given. A dash and a zero are different claims.
+  for (const behaviour of behaviours) {
+    for (const document of documents) {
+      await readView(`${base}?behavior=${behaviour.slug}&spec=${encodeURIComponent(document.id)}`);
+      const shown = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`,
+                                     cell => cell.textContent);
+      const depth = behaviour.coverage[document.id]?.depth;
+      const expected = depth ? depth.mean.toFixed(1) : "–";
+      report(shown === expected, `${behaviour.slug} · ${document.id} · depth`,
+             `${shown} (expected ${expected})`);
+
+      // The checkbox describes itself: the description exists, matches the
+      // figure's own hover title exactly, and names the document on screen.
+      const described = await readDepthDescription(behaviour.slug);
+      report(
+        Boolean(described.id) && described.exists
+          && described.text === described.title
+          && described.text.includes(document.title)
+          && described.text.includes(document.version),
+        `${behaviour.slug} · ${document.id} · depth description`,
+        described.text,
+      );
+
+      // Opening the note surfaces the same detail: the heading, a paragraph naming
+      // this document's mean (or that none was given), and every judge who scored it.
+      const note = await readDepthNote(behaviour.slug);
+      const expectedFigure = depth ? depth.mean.toFixed(1) : "no depth given";
+      const expectedJudges = depth ? Object.keys(depth.judges) : [];
+      report(
+        note.headings.includes(DEPTH_NOTE_HEADING)
+          && note.paragraphs.some(p => p.includes(document.title) && p.includes(expectedFigure))
+          && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(`${judge}:`))),
+        `${behaviour.slug} · ${document.id} · depth note`,
+        `headings: ${note.headings.join(" | ")}; judges: ${note.judgeItems.join(" | ")}`,
+      );
+
+      // And where a seat was judged by a substitute, the note says so in a sentence.
+      const said = saidSubstitutions(note);
+      report(
+        JSON.stringify(said) === JSON.stringify(substitutionSentences(behaviour, [document])),
+        `${behaviour.slug} · ${document.id} · substitutions`,
+        said.join(" | ") || "none said",
+      );
+    }
+  }
+
+  // Comparing, each document on screen gives its figure, in pane order, joined by " / ".
+  // One behaviour of the fixture has a depth on one document and none on the other,
+  // so this also holds the dash beside a figure.
+  for (const behaviour of behaviours) {
+    await readView(`${base}?behavior=${behaviour.slug}&compare=1`);
+    const shown = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`,
+                                   cell => cell.textContent);
+    const expected = documents.slice(0, 2).map(document => {
+      const depth = behaviour.coverage[document.id]?.depth;
+      return depth ? depth.mean.toFixed(1) : "–";
+    }).join(" / ");
+    report(shown === expected, `${behaviour.slug} · compare · depth`,
+           `${shown} (expected ${expected})`);
+
+    // In compare mode the description and the note both name both documents on
+    // screen -- the same requirement as the single-document view, with two panes
+    // to satisfy instead of one.
+    const paneDocs = documents.slice(0, 2);
+    const described = await readDepthDescription(behaviour.slug);
+    report(
+      Boolean(described.id) && described.exists
+        && described.text === described.title
+        && paneDocs.every(document => described.text.includes(document.title)),
+      `${behaviour.slug} · compare · depth description`,
+      described.text,
+    );
+
+    const note = await readDepthNote(behaviour.slug);
+    report(
+      note.headings.includes(DEPTH_NOTE_HEADING)
+        && paneDocs.every(document => {
+          const depth = behaviour.coverage[document.id]?.depth;
+          const figure = depth ? depth.mean.toFixed(1) : "no depth given";
+          return note.paragraphs.some(p => p.includes(document.title) && p.includes(figure));
+        }),
+      `${behaviour.slug} · compare · depth note`,
+      `headings: ${note.headings.join(" | ")}; paragraphs: ${note.paragraphs.length}`,
+    );
+
+    const said = saidSubstitutions(note);
+    report(
+      JSON.stringify(said) === JSON.stringify(substitutionSentences(behaviour, paneDocs)),
+      `${behaviour.slug} · compare · substitutions`,
+      said.join(" | ") || "none said",
     );
   }
 
@@ -273,7 +427,7 @@ if (behaviours.length === 0) {
   for (const selection of selections) {
     const slugs = selection.map(behaviour => behaviour.slug);
     for (const document of documents) {
-      const seen = await readView(`${base}?behavior=${slugs.join(",")}&spec=${document.id}`);
+      const seen = await readView(`${base}?behavior=${slugs.join(",")}&spec=${encodeURIComponent(document.id)}`);
       const short = selection.map(behaviour =>
         `${behaviour.slug} ${seen.byBehaviour[behaviour.name] || 0}/${anchorCount(renderable(behaviour.slug, document.id))}`);
       const accounted = selection.every(behaviour =>
@@ -294,18 +448,18 @@ if (behaviours.length === 0) {
   // Ticking the menu must change only the highlight layer: the reader keeps its place in
   // the text, and the behaviour taken away takes its passages with it.
   const [first, second] = behaviours;
-  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=corpus-labs`);
+  await readView(`${base}?behavior=${first.slug},${second.slug}&spec=${encodeURIComponent(documents[0].id)}`);
   // Read the whole document, not the focused extract. Focus mode hides every section
   // that carries no highlight, so unticking a behaviour there removes text rather than
   // only its highlights -- on this fixture, most of what was on screen. Keeping one's
   // place is a promise about the reading mode where the text stays put, and that is the
   // mode this check measures; the focused view's own arithmetic is checked above, where
   // hidden blocks and collapsed sections are counted.
-  const unfocused = await page.evaluate(() => {
-    const panel = document.querySelector('.document-panel[data-document-id="corpus-labs"]');
+  const unfocused = await page.evaluate(id => {
+    const panel = document.querySelector(`.document-panel[data-document-id="${id}"]`);
     panel.querySelector(".document-focus-toggle").click();
     return panel.querySelectorAll(".section-collapsed").length;
-  });
+  }, documents[0].id);
   await page.waitForTimeout(100);
   // A third of the way down, not a fixed pixel count: the document under test is
   // whatever the fixture carries, and a number chosen for a four-thousand-line
@@ -331,7 +485,8 @@ if (behaviours.length === 0) {
     scrollRange: document.querySelector(".document-scroll").scrollHeight
                  - document.querySelector(".document-scroll").clientHeight,
     passages: document.querySelectorAll("[data-passage-id]").length,
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    ticked: [...document.querySelectorAll("[data-behaviour]")]
+      .filter(input => input.checked).map(input => input.dataset.behaviour),
     url: new URL(location.href).searchParams.get("behavior"),
   }));
   report(
@@ -342,11 +497,11 @@ if (behaviours.length === 0) {
     Math.abs(after.scrollTop - before) < Math.max(4, after.scrollRange * 0.1)
       && unfocused === 0
       && after.passages === anchorCount(renderable(second.slug, documents[0].id))
-      && after.behaviour === second.name
+      && after.ticked.join(",") === second.slug
       && after.url === second.slug,
-    "unticking one of two · corpus-labs",
+    "unticking one of two · acme--corpus@2026-01-01",
     `scroll ${before} → ${after.scrollTop}, ${after.passages} passages left,`
-    + ` ${unfocused} sections collapsed, menu reads ${after.behaviour}, url ${after.url}`,
+    + ` ${unfocused} sections collapsed, ticked ${after.ticked.join(",")}, url ${after.url}`,
   );
 
   // And with the last behaviour unticked, the specification is readable in full again.
@@ -356,7 +511,7 @@ if (behaviours.length === 0) {
     passages: document.querySelectorAll("[data-passage-id]").length,
     hiddenBlocks: [...document.querySelectorAll(".document-body > *")].filter(child => child.hidden).length,
     collapsedSections: document.querySelectorAll(".section-collapsed").length,
-    behaviour: document.querySelector("#finding-behaviour").textContent,
+    count: document.querySelector(".passage-count").textContent,
     focusToggleHidden: getComputedStyle(document.querySelector(".document-focus-toggle")).display === "none",
     url: new URL(location.href).searchParams.get("behavior"),
   }));
@@ -364,12 +519,12 @@ if (behaviours.length === 0) {
     cleared.passages === 0
       && cleared.hiddenBlocks === 0
       && cleared.collapsedSections === 0
-      && cleared.behaviour === "No behaviours selected"
+      && cleared.count === "No behaviours selected"
       && cleared.focusToggleHidden
       && cleared.url === null,
     "nothing ticked · anthropic",
     `${cleared.passages} passages, ${cleared.hiddenBlocks} hidden,`
-    + ` ${cleared.collapsedSections} collapsed, menu reads ${cleared.behaviour}`,
+    + ` ${cleared.collapsedSections} collapsed, counter reads ${cleared.count}`,
   );
 
   // Nothing ticked is nothing to take away.
@@ -387,7 +542,7 @@ if (behaviours.length === 0) {
   const exported = behaviours.slice(0, 3);
   const citations = exported.flatMap(behaviour =>
     documents.flatMap(document => renderable(behaviour.slug, document.id)));
-  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=corpus-labs`);
+  await readView(`${base}?behavior=${exported.map(behaviour => behaviour.slug).join(",")}&spec=${encodeURIComponent(documents[0].id)}`);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.click("#download-passages"),
@@ -399,7 +554,9 @@ if (behaviours.length === 0) {
     || !markdown.includes(passage.role));
   const written = (markdown.match(/^#### /gm) || []).length;
   const hint = (await page.textContent("#download-hint")).trim();
-  const expectedHint = `${exported.length} behaviours, ${citations.length} passages, both specs`;
+  const expectedHint = `${exported.length} ${exported.length === 1 ? "behaviour" : "behaviours"}`
+    + `, ${citations.length} ${citations.length === 1 ? "passage" : "passages"}`
+    + `, ${documents.length} ${documents.length === 1 ? "document" : "documents"}`;
   report(
     missing.length === 0
       && written === citations.length
@@ -413,6 +570,266 @@ if (behaviours.length === 0) {
     `${download.suggestedFilename()}, ${written}/${citations.length} citations, menu reads ${hint}`
     + (missing.length ? `, missing ${missing.slice(0, 3).map(passage => passage.locator).join("; ")}` : ""),
   );
+}
+
+/* A document the index read in translation carries its original beside it, and
+ * says so. The fixture carries two. Acme's has not been judged, and its
+ * translator field has the real column's shape, exceptions and all. Zenith's
+ * carries no `judged` field, which is what every document of a published payload
+ * looks like today. The plain documents prove the feature reaches no document
+ * that does not ask for it. */
+{
+  const translated = documents.find(document => document.translation && document.judged === false);
+  const judgedTranslation = documents.find(
+    document => document.translation && document.judged !== false);
+  const plain = documents.find(document => !document.translation);
+  report(Boolean(translated && judgedTranslation),
+    "translated: the fixture carries a judged and an unjudged translation",
+    "so neither band check below is vacuous");
+
+  await readView(`${base}?spec=${encodeURIComponent(translated.id)}`);
+  const note = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !note.hidden
+      // Both models named, both as names, and the column's list of the parts the
+      // reviser never reached left out of a strip read at a glance. The claim
+      // goes with the list: what is left says "in part", because a reviser that
+      // skipped sections did not revise the document. The fixture carries the
+      // shape the real field has, exceptions and all -- asserting the simple
+      // case is what let raw ids through into the band in the first place.
+      && note.text.includes(
+        "Machine translation from Chinese by Claude Opus 5, revised in part by Claude Fable 5")
+      && !note.text.includes("except")
+      && !note.text.includes("refuse-violence")
+      // No panel has judged this one, and the reader says "Not judged yet" just
+      // below. A band that still said the index judged it would contradict that
+      // note on the same screen.
+      && !note.text.includes("The index judged this translation"),
+    "translated, unjudged: the band names the translators and does not say the index judged it",
+    note.text,
+  );
+
+  const marks = await page.locator(".original-open").count();
+  report(marks === translated.original.length, "translated · one mark per passage",
+         `${marks}/${translated.original.length}`);
+
+  // Each mark carries the original of the passage it sits in, which is what makes
+  // the pairing worth anything: marks that all carried the document's first
+  // original would pass a count and say nothing true. Read from the DOM rather
+  // than by clicking each one, because a mark inside a section focus mode has
+  // collapsed is not clickable -- correctly, since its text is not on screen
+  // either.
+  const carried = await page.evaluate(() => [...document.querySelectorAll(".original-open")]
+    .map(button => button.dataset.original));
+  report(
+    carried.length === translated.original.length
+      && carried.every((source, i) => source === translated.original[i].original),
+    "translated · each mark carries its own passage's original",
+    `${carried.length} marks, `
+    + `${carried.filter((source, i) => source === translated.original[i]?.original).length} paired`,
+  );
+
+  // And the first of them opens, which is the part a reader does.
+  await page.locator(".original-open").first().click();
+  await page.waitForSelector("#original-note:popover-open");
+  const opened = await page.evaluate(() => ({
+    label: document.querySelector("#original-note-label").textContent,
+    body: document.querySelector("#original-note-body").textContent,
+    lang: document.querySelector("#original-note-body").lang,
+  }));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  report(
+    opened.body === translated.original[0].original
+      && opened.lang === translated.translation.from
+      && opened.label === "Chinese original",
+    "translated · a mark opens the original beside it",
+    `${opened.label} (${opened.lang}): ${opened.body.slice(0, 24)}`,
+  );
+
+  await readView(`${base}?spec=${encodeURIComponent(plain.id)}`);
+  const clean = await page.evaluate(() => ({
+    noteHidden: document.querySelector(".document-translation").hidden,
+    marks: document.querySelectorAll(".original-open").length,
+  }));
+  report(clean.noteHidden && clean.marks === 0, "untranslated · no note and no marks",
+         `${clean.marks} marks`);
+
+  // Judged and unjudged are different claims. A document no panel has read must
+  // not say that its silence is a finding about the document.
+  await readView(`${base}?behavior=${behaviours[0].slug}&spec=${encodeURIComponent(translated.id)}`);
+  const unjudged = await page.$eval(".zero-coverage", el => el.textContent.replace(/\s+/g, " ").trim());
+  report(
+    unjudged.includes("Not judged yet") && !unjudged.includes("index finding"),
+    "translated · an unjudged document says so",
+    unjudged.slice(0, 90),
+  );
+
+  // A translation a panel has read says so, in the same band and the same words
+  // the unjudged one leaves out.
+  await readView(`${base}?spec=${encodeURIComponent(judgedTranslation.id)}`);
+  const judgedNote = await page.$eval(".document-translation", el => ({
+    text: el.textContent,
+    hidden: el.hidden,
+  }));
+  report(
+    !judgedNote.hidden
+      && judgedNote.text === "Machine translation from Chinese by Claude Opus 5, "
+        + "reviewed by a person. The index judged this translation.",
+    "judged translation: the band says the index judged it",
+    judgedNote.text,
+  );
+  const judgedMarks = await page.locator(".original-open").count();
+  report(judgedMarks === judgedTranslation.original.length,
+    "judged translation: one mark per passage",
+    `${judgedMarks}/${judgedTranslation.original.length}`);
+
+  /* The band is read at 11px, so its text has to clear 4.5:1 on the band's own
+   * ground in both palettes. Rust is the band's marker by the operator's choice,
+   * and it stays as the band's left rule, where a colour needs 3:1 rather than
+   * text's 4.5. Measured from computed colours, not from the stylesheet, so a
+   * token that moves is caught too. Left-aligned like everything else. */
+  const palette = await page.evaluate(() => document.body.dataset.palette);
+  for (const name of ["daylight", "umber"]) {
+    const band = await page.evaluate(name => {
+      document.body.dataset.palette = name;
+      const style = getComputedStyle(document.querySelector(".document-translation"));
+      const probe = document.createElement("span");
+      probe.style.color = "var(--fail)";
+      document.body.append(probe);
+      const fail = getComputedStyle(probe).color;
+      probe.remove();
+      const luminance = value => {
+        const [r, g, b] = value.match(/[\d.]+/g).slice(0, 3).map(channel => {
+          const c = Number(channel) / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const [lighter, darker] = [luminance(style.color), luminance(style.backgroundColor)]
+        .sort((a, b) => b - a);
+      return {
+        ratio: (lighter + 0.05) / (darker + 0.05),
+        align: style.textAlign,
+        rule: `${style.borderLeftWidth} ${style.borderLeftStyle} ${style.borderLeftColor}`,
+        fail,
+      };
+    }, name);
+    report(
+      band.ratio >= 4.5 && band.align === "left" && band.rule === `2px solid ${band.fail}`,
+      `translation band, ${name}: its text clears AA, it is left-aligned, and rust is its rule`,
+      `${band.ratio.toFixed(2)}:1, ${band.align}, rule ${band.rule}`,
+    );
+  }
+  await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
+}
+
+/* One document on both sides of a comparison.
+ *
+ * The pair used to be deduplicated, and choosing the document already opposite
+ * swapped the two sides instead. The operator asked for the opposite rule: any
+ * document may sit on either side, including the same one twice. It is a
+ * decision rather than an oversight, so it is pinned here -- an id carries its
+ * version, so this is the identical text twice and not two versions of one
+ * document, which was always a valid pair. */
+{
+  const [first] = documents;
+  await readView(`${base}?compare=1&compare-with=${encodeURIComponent(first.id)},${encodeURIComponent(first.id)}`);
+  const ids = await page.evaluate(() =>
+    [...document.querySelectorAll(".document-panel")].map(panel => panel.dataset.documentId));
+  report(ids.length === 2 && ids.every(id => id === first.id),
+         "compare · the same document may sit on both sides",
+         ids.join(" | "));
+}
+
+/* The lighter reading surface is the document's text, and nothing above it.
+ *
+ * The user asked for the document paler, not the menus at its top: the
+ * publishers, the name and version, Show original, the counter and arrows,
+ * Expand all and the band toggles stay on the page's own --paper, and only the
+ * text area takes --reading, including what a short document leaves below its
+ * last line. Held with one document and two, the menu open and folded, in both
+ * palettes; umber has one ground for both. */
+{
+  const surfaces = () => page.evaluate(() => {
+    const ground = element => {
+      for (let node = element; node; node = node.parentElement) {
+        const colour = getComputedStyle(node).backgroundColor;
+        if (colour !== "rgba(0, 0, 0, 0)" && colour !== "transparent") return colour;
+      }
+      return null;
+    };
+    const token = name => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${name})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    };
+    return {
+      paper: token("--paper"),
+      reading: token("--reading"),
+      panels: [...document.querySelectorAll(".document-panel")].map(panel => {
+        const scroll = panel.querySelector(".document-scroll").getBoundingClientRect();
+        // In the text's left gutter, just above the bottom of the scroll area:
+        // below the last line of a short document, and clear of any passage.
+        const below = document.elementFromPoint(scroll.left + 8, scroll.bottom - 6);
+        return {
+          id: panel.dataset.documentId,
+          top: {
+            publishers: ground(panel.querySelector(".provider-tabs")),
+            name: ground(panel.querySelector(".document-name")),
+            showOriginal: ground(panel.querySelector(".source-link")),
+            walk: ground(panel.querySelector(".passage-nav")),
+            expandAll: ground(panel.querySelector(".document-focus-toggle")),
+            bands: ground(panel.querySelector(".rail-legend")),
+          },
+          text: ground(panel.querySelector(".document-body")),
+          belowText: below && panel.contains(below) ? ground(below) : "outside the panel",
+        };
+      }),
+    };
+  });
+  const setMenu = async open => {
+    if ((await page.getAttribute("#sidebar-toggle", "aria-expanded")) !== String(open)) {
+      await page.click("#sidebar-toggle");
+      await page.waitForTimeout(200);
+    }
+  };
+  const [first] = behaviours;
+  const translatedDoc = documents.find(document => document.translation) || documents[1];
+  const initialPalette = await page.evaluate(() => document.body.dataset.palette);
+  for (const [mode, query] of [
+    ["one document", `?behavior=${first.slug}&spec=${encodeURIComponent(documents[0].id)}`],
+    ["compare", `?behavior=${first.slug}&compare=1&compare-with=`
+      + `${encodeURIComponent(translatedDoc.id)},${encodeURIComponent(documents[0].id)}`],
+  ]) {
+    await readView(`${base}${query}`);
+    for (const open of [true, false]) {
+      await setMenu(open);
+      for (const palette of ["daylight", "umber"]) {
+        await page.evaluate(name => { document.body.dataset.palette = name; }, palette);
+        const seen = await surfaces();
+        const topOnPaper = seen.panels.every(panel =>
+          Object.values(panel.top).every(colour => colour === seen.paper));
+        const textOnReading = seen.panels.every(panel =>
+          panel.text === seen.reading && panel.belowText === seen.reading);
+        const distinct = palette === "daylight" ? seen.paper !== seen.reading : seen.paper === seen.reading;
+        report(topOnPaper && textOnReading && distinct,
+          `reading surface, ${mode}, menu ${open ? "open" : "folded"}, ${palette}:`
+            + " the top rows on --paper, the text on --reading",
+          `paper ${seen.paper}, reading ${seen.reading}; `
+            + seen.panels.map(panel => `${panel.id} top ${JSON.stringify(panel.top)}`
+              + ` text ${panel.text} below ${panel.belowText}`).join("; "));
+      }
+    }
+    await setMenu(true);
+  }
+  await page.evaluate(name => { document.body.dataset.palette = name; }, initialPalette);
 }
 
 /* 404 audit: every path the page asks for must exist. There used to be one

@@ -1,0 +1,24 @@
+You are measuring how deeply an AI alignment document -- a model constitution or a model spec -- covers one target behaviour, so that a reader can see at a glance whether the document addresses it and how much it gives an evaluator to work with.
+
+You are given the behaviour, described by four fields: Behaviour, Definition, Clarifications and Scope. An optional field reading 'none provided' only means it was left blank. You are also given the passages of the document that a panel of judges found to establish the behaviour, each with its section path. These passages are your evidence: do not assume the document says anything they do not show.
+
+Score the document's depth for this behaviour on this scale:
+
+0 = ABSENT: no passage bears on the behaviour.
+1 = NAMED: the behaviour appears -- a word or clause, typically inside a list or a passage about something else -- but the document says nothing further about it.
+2 = DISCUSSED: the document addresses the behaviour in its own right -- what the norm is, why it matters -- but only in terms too general to grade a response against.
+3 = PRESCRIBED: the document states concrete do and don't rules or procedures for the behaviour, specific enough that a grader could quote the document's own sentences as pass criteria.
+4 = DEMONSTRATED: prescribed, plus worked examples: concrete scenarios where the document shows the sanctioned response, usable as an answer key for borderline cases.
+
+Boundary tests:
+- 2 or 3: could an evaluation score a transcript by quoting the document, or would the grader have to invent the standard? If invent, it is 2.
+- 3 or 4: a worked example is a concrete scenario for which the document states the sanctioned response, specific enough to adapt into an evaluation item. Format does not matter: a request and response block and a case described in prose both count. An example of a neighbouring behaviour, or a lone illustration of a broader norm, does not.
+- A dedicated section is evidence, not a requirement. Any level can be reached by passages spread across sections, and a dedicated section written only in general terms does not reach 3.
+
+Depth is independent of authority level: a default or a guideline can cover a behaviour as deeply as a hard rule. Note authority in the rationale where it matters.
+
+When in doubt between two levels, give the lower.
+
+Answer with exactly two lines and nothing else:
+DEPTH: <0, 1, 2, 3 or 4>
+RATIONALE: <one sentence naming what is present and what is missing, in the scale's terms>

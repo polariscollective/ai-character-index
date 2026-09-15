@@ -14,7 +14,9 @@ the substitution note and the popup says so.
 ## Display tuning
 The band toggles in the header show or hide the three tiers the client scores each
 passage into -- defining / core / related -- and persist the selection in `?tiers=`.
-Default is defining + core; nothing below the related cut ever renders.
+Default is all three, with related drawn softer than core; an explicit `?tiers=`
+(or a legacy `?tier=`/`?threshold=` link) still wins. Nothing below the related cut
+ever renders.
 - `?related=W` -- weight of a "related" vote when scoring (core is always 2)
   [default 1; try 0.5 or 0]
 - legacy `?threshold=<score>` links map once at load to a tier-band selection

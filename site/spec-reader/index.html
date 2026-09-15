@@ -58,7 +58,7 @@
           id="download-passages"
           class="download-passages"
           type="button"
-          title="Download a Markdown file with each ticked behaviour's definition and the passages shown for it under the current tier selection, in both specifications."
+          title="Download a Markdown file with each ticked behaviour's definition and the passages shown for it under the current tier selection, in every specification."
         >
           <span aria-hidden="true">↓</span> Download passages
         </button>
@@ -89,18 +89,14 @@
     ></div>
 
     <section class="workspace" aria-label="Specification reader">
-      <div class="finding-bar" aria-live="polite">
-        <div>
-          <span class="finding-behaviour" id="finding-behaviour">Loading…</span>
-          <span class="finding-definition" id="finding-definition"></span>
-        </div>
-        <div class="finding-actions">
-          <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false">
-            <span class="split-icon" aria-hidden="true"></span>
-            Compare
-          </button>
-        </div>
-      </div>
+      <!-- The switch into and out of compare. It belongs to no one document, so
+           there is one of it: app.js puts it at the right of the last panel's
+           publisher row whenever the panels are drawn, and until then it is hidden. -->
+      <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false"
+        title="Compare two documents side by side" hidden>
+        <span class="split-icon" aria-hidden="true"></span>
+        <span class="compare-label">Compare</span>
+      </button>
 
       <div id="reader-status" class="reader-status" role="status"></div>
       <div id="document-reader" class="document-grid" tabindex="-1"></div>
@@ -114,6 +110,11 @@
     <div id="key-note-body" class="key-note-body"></div>
   </div>
 
+  <div id="original-note" class="original-note" popover>
+    <p id="original-note-label" class="original-note-label"></p>
+    <p id="original-note-body" class="original-note-body"></p>
+  </div>
+
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
     <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
@@ -122,25 +123,35 @@
   <template id="document-template">
     <article class="document-panel">
       <header class="document-header">
-        <div>
-          <p class="document-lab"></p>
-          <h2 class="document-title">
-            <button class="document-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span class="document-name"></span>
-              <span class="picker-caret" aria-hidden="true"></span>
-            </button>
-          </h2>
+        <!-- One button per publisher, then the document and version that
+             publisher is being read at. Two rows rather than one control, because
+             which lab you are reading and which of its documents are different
+             choices, and comparing asks both of them twice. A group of buttons
+             rather than a tablist; app.js names each side's group when comparing. -->
+        <div class="provider-row">
+          <div class="provider-tabs" role="group" aria-label="Publisher"></div>
         </div>
-        <div class="document-meta">
-          <div class="meta-top">
-            <span class="document-version"></span>
+        <div class="document-row">
+          <div class="document-identity">
+            <h2 class="document-title">
+              <button class="document-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="document-name"></span>
+                <span class="document-version"></span>
+                <span class="picker-caret" aria-hidden="true"></span>
+              </button>
+            </h2>
+            <a class="source-link" href="#" target="_blank" rel="noopener">Show original</a>
+          </div>
+          <div class="document-meta">
             <span class="passage-nav">
               <span class="passage-count">Loading passages…</span>
+              <!-- Comparing, the sentence above is kept for screen readers and this
+                   short form is what a sighted reader sees, before the arrows. -->
+              <span class="passage-count-short" aria-hidden="true"></span>
               <button class="previous-passage" type="button" aria-label="Previous highlighted passage in this document">↑</button>
               <button class="next-passage" type="button" aria-label="Next highlighted passage in this document">↓</button>
             </span>
-          </div>
-          <button class="document-focus-toggle" type="button">Expand all</button>
+            <button class="document-focus-toggle" type="button">Expand all</button>
           <span class="rail-legend" role="group" aria-label="Passage tiers shown">
             <button class="tier-toggle" type="button" data-tier="defining" aria-pressed="false"
               title="Passages the panel scored as defining for the behaviour"
@@ -158,9 +169,12 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
-          <a class="source-link" href="#" target="_blank" rel="noopener">Original</a>
+          </div>
         </div>
       </header>
+      <!-- Under the header's rule rather than inside it: the caveat is about the
+           text below, not one more field of the document's identity. -->
+      <p class="document-translation" role="note" hidden></p>
       <div class="document-scroll">
         <div class="passage-rail" role="navigation" aria-label="Highlighted passages in this document"></div>
         <div class="document-body"></div>

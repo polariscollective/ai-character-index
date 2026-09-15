@@ -40,11 +40,15 @@ jobs:
       - name: Panel and citation suites
         run: |
           python3 engine/panel/test_panel.py
+          python3 engine/panel/test_build_site_data.py
           python3 -m unittest discover -s tests
 
       - name: Judging job suites
         run: |
           python3 engine/panel/test_judge_call.py
+          python3 engine/panel/test_passages.py
+          python3 engine/panel/test_bands.py
+          python3 engine/panel/test_depth_call.py
           python3 engine/panel/test_batch_job.py
           python3 engine/panel/test_compose_run.py
           python3 engine/test_job.py
@@ -55,6 +59,8 @@ jobs:
         run: |
           python3 engine/test_store.py
           python3 engine/test_index_store.py
+          python3 engine/test_build_spec_reader_data.py
+          python3 engine/test_verify_supabase_provenance.py
 
       # node directly, not pnpm: these suites import nothing outside the standard
       # library, so this job needs no install at all.
@@ -67,6 +73,7 @@ jobs:
           node engine/panel/test_appjs_tiers.js
           node engine/panel/test_appjs_quotes.js
           node engine/panel/test_appjs_wiring.js
+          node engine/panel/test_appjs_depth.js
 
   browser:
     runs-on: ubuntu-latest

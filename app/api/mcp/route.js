@@ -30,10 +30,21 @@ the behaviour, core establishes it there, related bears on it without
 establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
-Passage counts are not a like-for-like measure between laboratories. Some
-behaviours were swept by more judges against one document than another, so that
-document surfaced more candidate passages. Any answer spanning more than one
-specification says so in the response.
+retrieve_passages answers with every band unless its strength argument narrows
+it, which is what the spec reader shows before any toggle is touched. Every
+passage carries its strength, so a client can also filter what comes back.
+
+Where a behaviour and specification pair carries a depth, it is the mean the
+index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
+with no depth answers null.
+
+Where one judge of the panel could not answer a pair at all, another model judged
+it in that seat, and the pair carries substitutions: the seat, the substitute and
+the reason. A pair without that field was judged by the panel as configured.
+
+Every answer names the publication it was read from. A publication whose
+is_public is false is a build nobody has published, served by a development
+deployment, and what it answers is not the index's published data.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
@@ -57,9 +68,11 @@ async function answer(work) {
 const STRENGTH =
   "The weakest band to return, meaning that band and stronger. defining is the "
   + "document's fullest statement of the behaviour, core establishes it there, "
-  + "related bears on it without establishing it. Defaults to core, which is "
-  + "what the spec reader shows before any toggle is touched. A judge's own "
-  + "verdict of adjacent is the band named related here.";
+  + "related bears on it without establishing it. Defaults to related, so every "
+  + "band comes back, which is what the spec reader shows before any toggle is "
+  + "touched. Every passage carries its strength, so pass core or defining to "
+  + "narrow the answer. A judge's own verdict of adjacent is the band named "
+  + "related here.";
 
 const handler = createMcpHandler(
   server => {
@@ -79,8 +92,11 @@ const handler = createMcpHandler(
       description:
         "Every behaviour the current publication shows, with the brief the judge "
         + "panel was given, the boundary of the construct, where the definition "
-        + "came from, and per specification how many passages it has and the "
-        + "strongest band any of them reaches. Takes no arguments. Use the slugs "
+        + "came from, and per specification how many passages it has, the "
+        + "strongest band any of them reaches and the panel's depth. Where a judge "
+        + "could not answer a specification at all and another model took its "
+        + "seat, that specification carries substitutions naming the seat, the "
+        + "substitute and the reason. Takes no arguments. Use the slugs "
         + "it returns as the behaviours argument of retrieve_passages.",
       inputSchema: z.object({}),
     }, () => answer(snapshot => listBehaviours(snapshot)));
@@ -92,9 +108,11 @@ const handler = createMcpHandler(
         + "more behaviours, quoted verbatim with a locator, the band the panel "
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
-        + "across pages. Passage counts are NOT comparable between laboratories: "
-        + "some behaviours were swept by more judges against one document than "
-        + "another, and any answer spanning more than one specification says so.",
+        + "across pages. Where a pair carries a depth, it is the mean the index's "
+        + "panel gave it, 0 to 4; a pair with no depth answers null. Where a judge "
+        + "could not answer a pair at all, another model judged it in that seat, "
+        + "and the pair carries substitutions naming the seat, the substitute and "
+        + "the reason; that seat's verdicts and depth are then the substitute's.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "

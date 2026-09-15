@@ -18,14 +18,14 @@ const documents = await read("documents.json");
 
 const NOTES = {
   "defined-behaviour": {
-    name: "Defined behaviour", group: "Behaviours under test", set: "reader-test",
+    name: "Defined behaviour", group: "Behaviours under test",
     query: "The document should say what it means.",
     described: null,
     boundary: "The construct is whether the text states its own meaning.",
     source: "tests/fixtures (synthetic)", defined: true, judged: true,
   },
   "undefined-behaviour": {
-    name: "Undefined behaviour", group: "Behaviours under test", set: "reader-test",
+    name: "Undefined behaviour", group: "Behaviours under test",
     query: null, described: "Tracked, and defined nowhere.",
     boundary: null, source: null, defined: false, judged: true,
   },
@@ -40,10 +40,13 @@ const snapshot = () => ({
 test("list_model_specs names every document with its counts", () => {
   const answer = listModelSpecs(snapshot());
   assert.equal(answer.publication.id, "3114dd65-c6f2-5cb3-bf98-af5b314381c3");
-  assert.deepEqual(answer.model_specs.map(spec => spec.id), ["corpus-labs", "second-labs"]);
+  assert.deepEqual(answer.model_specs.map(spec => spec.id),
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
 
   const [corpus] = answer.model_specs;
-  assert.equal(corpus.lab, "Corpus Labs");
+  assert.equal(corpus.lab, "Acme");
   assert.equal(corpus.title, "Parser corpus");
   assert.equal(corpus.version, "2026-01-01");
   assert.equal(corpus.source_url, "https://example.invalid/corpus");
@@ -78,13 +81,19 @@ test("a behaviour judged without a brief says so instead of reading as undefined
   assert.match(undefinedBehaviour.note, /Judged without a recorded brief/);
 });
 
-test("list_behaviours summarises coverage per specification", () => {
+test("list_behaviours summarises coverage per specification, depth included", () => {
   const answer = listBehaviours(snapshot());
   const [defined] = answer.behaviours;
-  assert.deepEqual(defined.coverage, {
-    "corpus-labs": { passages: 2, strongest: "defining" },
-    "second-labs": { passages: 1, strongest: "defining" },
-  });
+  assert.deepEqual(defined.coverage["acme--corpus@2026-01-01"].passages, 2);
+  assert.deepEqual(defined.coverage["acme--corpus@2026-01-01"].strongest, "defining");
+  assert.equal(defined.coverage["acme--corpus@2026-01-01"].depth.mean, 2.7);
+  assert.equal(defined.coverage["acme--second@2026-02-01"].depth.mean, 1.0);
+});
+
+test("a cell no depth was given for says null rather than zero", () => {
+  const answer = listBehaviours(snapshot());
+  const undefinedBehaviour = answer.behaviours.find(b => b.slug === "undefined-behaviour");
+  assert.equal(undefinedBehaviour.coverage["acme--second@2026-02-01"].depth, null);
 });
 
 test("a behaviour the registry does not describe still lists", () => {
@@ -99,17 +108,35 @@ test("ToolError is an Error, so the route can tell a caller's mistake from a fau
   assert.ok(new ToolError("bad slug") instanceof Error);
 });
 
+/* A development deployment can serve a draft, and the instructions tell a client
+ * that is_public false means the answer is not the index's published data. That
+ * holds only if every answer carries the flag through, so all three are held to it. */
+test("every tool's answer carries the publication's is_public", () => {
+  const draft = snapshot();
+  draft.publication = { ...draft.publication, is_public: false };
+  const answers = {
+    list_model_specs: listModelSpecs(draft),
+    list_behaviours: listBehaviours(draft),
+    retrieve_passages: retrievePassages(draft, { behaviours: ["defined-behaviour"] }),
+  };
+  for (const [tool, answer] of Object.entries(answers)) {
+    assert.equal(answer.publication?.is_public, false,
+                 `${tool} must say the publication it read is not public`);
+  }
+});
+
 const BOTH = ["defined-behaviour", "undefined-behaviour"];
 
 test("a cell comes back with its passages quoted and located", () => {
   const answer = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
   });
   assert.equal(answer.results.length, 1);
   const [cell] = answer.results;
   assert.equal(cell.behaviour, "defined-behaviour");
-  assert.equal(cell.model_spec_id, "corpus-labs");
-  assert.equal(cell.passages.length, 1, "core is the default strength");
+  assert.equal(cell.model_spec_id, "acme--corpus@2026-01-01");
+  assert.equal(cell.passages.length, 2,
+               "related is the default strength, so the cell's related passage comes too");
 
   const [passage] = cell.passages;
   assert.deepEqual(Object.keys(passage).sort(),
@@ -131,22 +158,40 @@ test("strength means that band and stronger", () => {
   assert.equal(counted(call("related")), 7);
 });
 
-test("the default strength is core", () => {
+/* The spec reader opens on every band, related drawn softer, so the tools do too.
+ * Every passage still carries its strength, which is what a client filters on. */
+const strengthsOf = answer => answer.results.flatMap(
+  cell => cell.passages.map(passage => passage.strength));
+
+test("the default strength is related, the reader's own default", () => {
   const withDefault = retrievePassages(snapshot(), { behaviours: BOTH });
-  const explicit = retrievePassages(snapshot(), { behaviours: BOTH, strength: "core" });
+  const explicit = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
   assert.deepEqual(withDefault.results, explicit.results);
+});
+
+test("with no strength given, related passages are returned", () => {
+  const strengths = strengthsOf(retrievePassages(snapshot(), { behaviours: BOTH }));
+  assert.ok(strengths.includes("related"), `strengths returned: ${strengths.join(", ")}`);
+  assert.equal(strengths.length, 7, "every banded passage of the fixture");
+});
+
+test("with strength core, related passages are not returned", () => {
+  const strengths = strengthsOf(
+    retrievePassages(snapshot(), { behaviours: BOTH, strength: "core" }));
+  assert.ok(!strengths.includes("related"), `strengths returned: ${strengths.join(", ")}`);
+  assert.equal(strengths.length, 5);
 });
 
 test("cells follow the order of the arguments, passages strongest first", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour", "defined-behaviour"],
-    model_spec_ids: ["second-labs", "corpus-labs"],
+    model_spec_ids: ["acme--second@2026-02-01", "acme--corpus@2026-01-01"],
     strength: "related",
   });
   assert.deepEqual(
     answer.results.map(cell => `${cell.behaviour}/${cell.model_spec_id}`),
-    ["undefined-behaviour/second-labs", "undefined-behaviour/corpus-labs",
-     "defined-behaviour/second-labs", "defined-behaviour/corpus-labs"]);
+    ["undefined-behaviour/acme--second@2026-02-01", "undefined-behaviour/acme--corpus@2026-01-01",
+     "defined-behaviour/acme--second@2026-02-01", "defined-behaviour/acme--corpus@2026-01-01"]);
 
   const corpus = answer.results.at(-1);
   assert.deepEqual(corpus.passages.map(passage => passage.strength),
@@ -156,29 +201,132 @@ test("cells follow the order of the arguments, passages strongest first", () => 
 test("omitting model_spec_ids reads every specification", () => {
   const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
-                   ["corpus-labs", "second-labs"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
   assert.deepEqual(answer.model_specs_read.map(spec => spec.id),
-                   ["corpus-labs", "second-labs"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
 });
 
 test("an empty cell says so rather than disappearing", () => {
+  // This cell holds one related passage and nothing stronger, so it is empty at
+  // core, which is named because the default now returns every band.
   const answer = retrievePassages(snapshot(), {
-    behaviours: ["undefined-behaviour"], model_spec_ids: ["second-labs"],
+    behaviours: ["undefined-behaviour"], model_spec_ids: ["acme--second@2026-02-01"],
+    strength: "core",
   });
   const [cell] = answer.results;
   assert.deepEqual(cell.passages, []);
   assert.match(cell.note, /Absence of coverage is an index finding/);
 });
 
-test("a request spanning two specifications carries the comparability note", () => {
-  const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
-  assert.match(answer.comparability, /not comparable/);
+/* The same emptiness, two different claims. A document a panel has read and
+ * found nothing in is a finding of the index; a document nobody has judged is
+ * not, and the answer must not let a caller mistake the second for the first. */
+test("a document no panel has judged says that, not that its silence is a finding", () => {
+  const answer = retrievePassages(snapshot(), {
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--translated@2026-03-01"],
+  });
+  const [cell] = answer.results;
+  assert.deepEqual(cell.passages, []);
+  assert.match(cell.note, /No panel has judged this document/);
+  assert.doesNotMatch(cell.note, /index finding/);
 });
 
-test("a request naming one specification does not", () => {
+test("a retrieved cell carries its depth", () => {
   const answer = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
   });
+  assert.equal(answer.results[0].depth.mean, 2.7);
+  assert.equal(answer.results[0].depth.judges.c.depth, 2);
+});
+
+/* One cell of the fixture was judged with a substitute in a seat: `d` in place of
+ * `c`, on the second document, which the database accepts only when a
+ * substitution is recorded. Every other cell was judged by the panel as configured. */
+const SUBSTITUTED = "acme--second@2026-02-01";
+const SWAP = [{ seat: "c", substitute: "d",
+                reason: "c returned no output for this document on every attempt." }];
+
+test("a listed cell judged with a substitute says which seat, by whom, and why", () => {
+  const [defined] = listBehaviours(snapshot()).behaviours;
+  assert.deepEqual(defined.coverage[SUBSTITUTED].substitutions, SWAP);
+  assert.deepEqual(Object.keys(defined.coverage[SUBSTITUTED].depth.judges), ["a", "b", "d"]);
+  assert.ok(!("substitutions" in defined.coverage["acme--corpus@2026-01-01"]),
+            "a cell judged by the panel as configured carries no key at all");
+});
+
+test("a retrieved cell carries its substitutions beside its depth", () => {
+  const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
+  const [corpus, second] = answer.results;
+  assert.equal(second.model_spec_id, SUBSTITUTED);
+  assert.deepEqual(second.substitutions, SWAP);
+  assert.ok(!("substitutions" in corpus));
+});
+
+test("a substitution carries its seat, substitute and reason, and an empty list is none", () => {
+  const odd = snapshot();
+  odd.payload = structuredClone(payload);
+  const [defined] = odd.payload.behaviours;
+  defined.coverage[SUBSTITUTED].substitutions[0].added_by = "someone@example.invalid";
+  defined.coverage["acme--corpus@2026-01-01"].substitutions = [];
+  const listed = listBehaviours(odd).behaviours[0].coverage;
+  assert.deepEqual(listed[SUBSTITUTED].substitutions, SWAP);
+  assert.ok(!("substitutions" in listed["acme--corpus@2026-01-01"]));
+  const retrieved = retrievePassages(odd, { behaviours: ["defined-behaviour"] }).results;
+  assert.deepEqual(retrieved[1].substitutions, SWAP);
+  assert.ok(!("substitutions" in retrieved[0]));
+});
+
+/* The grandfathered publication, which the routes keep serving after the merge
+ * until a new one is made public, was written by the old builder. Its coverage
+ * carries a human curation's integer where a new publication carries the panel's
+ * { mean, judges }; the fields beside it are the recorded payload's, at 085fd2e. */
+const grandfathered = () => {
+  const old = structuredClone(payload);
+  for (const behaviour of old.behaviours) {
+    for (const id of Object.keys(behaviour.coverage)) {
+      behaviour.coverage[id] = { verdict: "covered", depth: 4, note: "",
+                                 verifiedDate: "2026-07-24",
+                                 passages: behaviour.coverage[id].passages };
+    }
+  }
+  return { ...snapshot(), payload: old };
+};
+
+test("a curation's integer is not reported as the depth the panel gave", () => {
+  const answer = listBehaviours(grandfathered());
+  const depths = answer.behaviours.flatMap(
+    behaviour => Object.values(behaviour.coverage).map(cell => cell.depth));
+  assert.equal(depths.length, 4);
+  assert.deepEqual(depths, [null, null, null, null]);
+});
+
+test("a retrieved cell of the grandfathered publication carries no depth", () => {
+  const answer = retrievePassages(grandfathered(), { behaviours: BOTH });
+  assert.equal(answer.results.length, 10, "two behaviours over five documents");
+  assert.deepEqual(answer.results.map(cell => cell.depth),
+                   [null, null, null, null, null, null, null, null, null, null]);
+});
+
+test("a depth counts only as an object with a finite mean, and a mean of zero counts", () => {
+  const odd = snapshot();
+  odd.payload = structuredClone(payload);
+  const [defined, undefinedBehaviour] = odd.payload.behaviours;
+  defined.coverage["acme--corpus@2026-01-01"].depth = { mean: "2.7", judges: {} };
+  defined.coverage["acme--second@2026-02-01"].depth = { mean: 0, judges: {} };
+  undefinedBehaviour.coverage["acme--corpus@2026-01-01"].depth = { judges: {} };
+  const answer = listBehaviours(odd);
+  assert.equal(answer.behaviours[0].coverage["acme--corpus@2026-01-01"].depth, null);
+  assert.deepEqual(answer.behaviours[0].coverage["acme--second@2026-02-01"].depth,
+                   { mean: 0, judges: {} });
+  assert.equal(answer.behaviours[1].coverage["acme--corpus@2026-01-01"].depth, null);
+});
+
+test("no answer carries a comparability caveat: every cell is judged by one panel", () => {
+  const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
   assert.equal(answer.comparability, undefined);
 });
 
@@ -220,7 +368,7 @@ test("an unknown strength is refused", () => {
 
 test("everything fits in one page when the budget is large", () => {
   const answer = retrievePassages(snapshot(), { behaviours: BOTH, strength: "related" });
-  assert.equal(answer.results.length, 4);
+  assert.equal(answer.results.length, 10, "two behaviours over five documents");
   assert.equal(answer.next_cursor, null);
   assert.deepEqual(answer.remaining, { cells: 0, passages: 0 });
 });
@@ -229,19 +377,20 @@ test("a page stops on a whole cell and names the next one", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: BOTH, strength: "related", limit: 2,
   });
-  // corpus-labs holds two passages and fills the budget exactly; second-labs
+  // acme--corpus@2026-01-01 holds two passages and fills the budget exactly; acme--second@2026-02-01
   // would take it to three, so it starts the next page.
-  assert.deepEqual(answer.results.map(cell => cell.model_spec_id), ["corpus-labs"]);
+  assert.deepEqual(answer.results.map(cell => cell.model_spec_id), ["acme--corpus@2026-01-01"]);
   assert.deepEqual(answer.next_cursor, {
     publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
-    behaviour: "defined-behaviour", model_spec_id: "second-labs",
+    behaviour: "defined-behaviour", model_spec_id: "acme--second@2026-02-01",
   });
-  assert.deepEqual(answer.remaining, { cells: 3, passages: 5 });
+  // Two behaviours over five documents is ten cells, one of them on this page.
+  assert.deepEqual(answer.remaining, { cells: 9, passages: 5 });
 });
 
 test("no cell is ever split", () => {
   const answer = retrievePassages(snapshot(), {
-    behaviours: ["undefined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["undefined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
     strength: "related", limit: 1,
   });
   assert.equal(answer.results.length, 1);
@@ -274,27 +423,23 @@ test("walking the cursor yields every passage exactly once", () => {
 
 test("a repeated behaviour slug answers as the unrepeated request does", () => {
   const repeated = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour", "defined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["defined-behaviour", "defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
   });
   const once = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
   });
   assert.deepEqual(repeated.results, once.results);
-  assert.equal(repeated.comparability, undefined,
-               "one specification repeated is still one specification, not a comparison");
 });
 
 test("a repeated specification id answers as the unrepeated request does", () => {
   const repeated = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs", "corpus-labs"],
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01", "acme--corpus@2026-01-01"],
   });
   const once = retrievePassages(snapshot(), {
-    behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+    behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
   });
   assert.deepEqual(repeated.results, once.results);
   assert.deepEqual(repeated.model_specs_read, once.model_specs_read);
-  assert.equal(repeated.comparability, undefined,
-               "one specification repeated is still one specification, not a comparison");
 });
 
 test("a walk over a repeated specification id terminates", () => {
@@ -302,7 +447,7 @@ test("a walk over a repeated specification id terminates", () => {
   let pages = 0;
   do {
     const answer = retrievePassages(snapshot(), {
-      behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs", "corpus-labs"],
+      behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01", "acme--corpus@2026-01-01"],
       strength: "related", limit: 1, cursor,
     });
     cursor = answer.next_cursor ?? undefined;
@@ -315,10 +460,12 @@ test("an empty cell rides along instead of starting a page of its own", () => {
   const answer = retrievePassages(snapshot(), {
     behaviours: ["undefined-behaviour"], strength: "core", limit: 3,
   });
-  // corpus-labs holds three, second-labs holds none: the empty one costs
-  // nothing and its note stays with the page that reached it.
+  // acme--corpus@2026-01-01 holds three; the others hold none. An empty cell
+  // costs nothing and its note stays with the page that reached it.
   assert.deepEqual(answer.results.map(cell => cell.model_spec_id),
-                   ["corpus-labs", "second-labs"]);
+                   ["acme--corpus@2026-01-01", "acme--second@2026-02-01",
+                    "acme--translated@2026-03-01", "zenith--guidelines@2026-05-01",
+                    "zenith--model-spec@2026-04-01"]);
   assert.equal(answer.next_cursor, null);
 });
 
@@ -327,7 +474,7 @@ test("a cursor from another publication is refused rather than followed", () => 
     () => retrievePassages(snapshot(), {
       behaviours: BOTH,
       cursor: { publication: "00000000-0000-0000-0000-000000000000",
-                behaviour: "defined-behaviour", model_spec_id: "second-labs" },
+                behaviour: "defined-behaviour", model_spec_id: "acme--second@2026-02-01" },
     }),
     error => error instanceof ToolError && /issued against publication/.test(error.message));
 });
@@ -335,18 +482,9 @@ test("a cursor from another publication is refused rather than followed", () => 
 test("a cursor naming a cell outside the request is refused", () => {
   assert.throws(
     () => retrievePassages(snapshot(), {
-      behaviours: ["defined-behaviour"], model_spec_ids: ["corpus-labs"],
+      behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
       cursor: { publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
-                behaviour: "undefined-behaviour", model_spec_id: "second-labs" },
+                behaviour: "undefined-behaviour", model_spec_id: "acme--second@2026-02-01" },
     }),
     error => error instanceof ToolError && /does not name a cell of this request/.test(error.message));
-});
-
-test("the comparability note is on every page of a two specification walk", () => {
-  const first = retrievePassages(snapshot(), {
-    behaviours: BOTH, strength: "related", limit: 1 });
-  const second = retrievePassages(snapshot(), {
-    behaviours: BOTH, strength: "related", limit: 1, cursor: first.next_cursor });
-  assert.match(first.comparability, /not comparable/);
-  assert.match(second.comparability, /not comparable/);
 });

@@ -14,6 +14,44 @@ export function isPublicationId(value) {
 }
 
 /**
+ * Which publications a deployment serves as the current one.
+ *
+ * Production serves what an operator has published and nothing else. A
+ * development deployment is for the opposite: looking at the build nobody has
+ * published yet, on a real surface rather than a local fixture.
+ *
+ * One variable, absent by default, so a deployment that forgets it hides
+ * development builds rather than showing them -- the same direction as
+ * `is_public` defaulting to false, and for the same reason. Only the exact
+ * string "true" opens it: a variable left as "0", "no" or an empty string is a
+ * variable somebody meant to turn off.
+ *
+ * Read per call rather than at module load, so a test can set it and a
+ * long-lived serverless instance cannot answer from the value it booted with.
+ *
+ * Every surface that resolves "the current publication" must ask this, or a
+ * development deployment would show one build in the reader and another in the
+ * behaviour notes and the MCP server, which is worse than either alone.
+ */
+export const SERVES_DEVELOPMENT = "ACI_SERVES_DEVELOPMENT";
+
+export function servesDevelopment(env = process.env) {
+  if (env[SERVES_DEVELOPMENT] !== "true") return false;
+  // And never on the production deployment, whatever it carries. One variable
+  // set by mistake there would put every unread build in front of the public,
+  // with nobody pressing anything: the switch that shows a draft must not be
+  // reachable by a typo in a settings page. The platform says where it is.
+  const where = env.VERCEL_ENV || env.NODE_ENV;
+  return where !== "production";
+}
+
+/** The query fragment that picks the current publication. */
+export function currentPublication(env = process.env) {
+  const newest = "order=published_at.desc&limit=1";
+  return servesDevelopment(env) ? newest : `is_public=is.true&${newest}`;
+}
+
+/**
  * One column of one publication: the pinned one, or the current one.
  *
  * `column` is never user input -- the two routes pass their own literal -- so
@@ -28,7 +66,7 @@ export function isPublicationId(value) {
 export async function publicationColumn(column, id, fetchImpl = fetch) {
   const query = id
     ? `id=eq.${id}&select=${column}`
-    : `select=${column}&is_public=is.true&order=published_at.desc&limit=1`;
+    : `select=${column}&${currentPublication()}`;
   const rows = await select("aci_publications", query, fetchImpl);
   return rows.length ? rows[0][column] : null;
 }
@@ -70,11 +108,15 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
  * and the digests that say the bytes have not moved since.
  */
 export async function publicationRow(id, fetchImpl = fetch) {
+  // is_public travels with the identity because a surface that cites a build has
+  // to know whether anyone published it: on a development deployment this row
+  // can be a draft, and a citation that called it the index's published data
+  // would be a false claim made by the page rather than by anyone.
   const columns = "id,published_at,published_by,notes,panel,rubric,grandfathered,"
-                + "payload_sha256,documents_sha256";
+                + "is_public,payload_sha256,documents_sha256";
   const query = id
     ? `id=eq.${id}&select=${columns}`
-    : `select=${columns}&is_public=is.true&order=published_at.desc&limit=1`;
+    : `select=${columns}&${currentPublication()}`;
   const rows = await select("aci_publications", query, fetchImpl);
   if (!rows.length) return null;
   return { ...rows[0], credit: await creditFor(rows[0].id, fetchImpl) };

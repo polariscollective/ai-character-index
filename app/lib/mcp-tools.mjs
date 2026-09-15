@@ -21,6 +21,35 @@ function passagesOf(behaviour, modelSpecId) {
   return bandCell(behaviour.coverage?.[modelSpecId]?.passages || []);
 }
 
+/**
+ * The depth the index's panel gave a cell, or null. Every depth an answer
+ * carries is read through here.
+ *
+ * A depth counts only as an object with a finite numeric mean. The grandfathered
+ * publication was written by the old builder and carries a human curation's
+ * integer in this field; answering with it would present the curation's figure
+ * as the panel's mean.
+ */
+function panelDepth(behaviour, modelSpecId) {
+  const depth = behaviour?.coverage?.[modelSpecId]?.depth;
+  return depth !== null && typeof depth === "object" && Number.isFinite(depth.mean)
+    ? depth : null;
+}
+
+/**
+ * The seats of a cell's panel that another model judged, and why, or null.
+ *
+ * A judge that cannot answer a cell at all is replaced there, and the database
+ * publishes the cell only when the substitution is recorded. The payload carries
+ * it on that cell and on no other, so an absent field means the panel as
+ * configured. Three fields travel and nothing else the payload might grow.
+ */
+function substitutionsOf(behaviour, modelSpecId) {
+  const recorded = behaviour?.coverage?.[modelSpecId]?.substitutions;
+  if (!Array.isArray(recorded) || !recorded.length) return null;
+  return recorded.map(({ seat, substitute, reason }) => ({ seat, substitute, reason }));
+}
+
 /** The fields that identify a specification, without its text. */
 function specSummary(document) {
   return {
@@ -73,10 +102,13 @@ export function listBehaviours({ publication, payload, notes }) {
       const coverage = {};
       for (const modelSpecId of Object.keys(behaviour.coverage || {})) {
         const passages = passagesOf(behaviour, modelSpecId);
+        const substitutions = substitutionsOf(behaviour, modelSpecId);
         coverage[modelSpecId] = {
           passages: passages.length,
           strongest: TIERS.find(
             tier => passages.some(passage => passage.band === tier)) || null,
+          depth: panelDepth(behaviour, modelSpecId),
+          ...(substitutions ? { substitutions } : {}),
         };
       }
 
@@ -102,25 +134,19 @@ const NO_COVERAGE =
   "No passages at this strength. Absence of coverage is an index finding, not "
   + "missing data.";
 
-/*
- * The defect the site hides, travelling with the data.
+/* The same sentence would be a false claim about a document no panel has read.
+ * "Nothing here governs that behaviour" is a finding; "nobody has looked" is
+ * not, and an answer that cannot tell them apart invites a caller to publish
+ * the second as the first.
  *
- * The reader's band maths scores every cell against its own maximum, so a cell
- * swept by six judges and one swept by three both render on a full scale. An
- * agent handed two lists and left to count does not have that protection. This
- * sentence names no document: it is attached to any request naming more than
- * one specification, whichever those are, and the index does not know here
- * which ones a future registration will add. When the missing calls on the
- * model spec are filled, the design document for that work owns removing it
- * from here, from the tool description in app/api/mcp/route.js and from
- * site/mcp.html.
- */
-const COMPARABILITY =
-  "Passage counts are not comparable between these documents. Some behaviours "
-  + "were swept by more judges against one document than against another, so "
-  + "that document surfaced more candidate passages for them. The bands each "
-  + "passage carries are sound; the totals are not a like-for-like measure of "
-  + "coverage.";
+ * Only a documents payload built with judged_version_ids carries the `judged`
+ * flag this note is selected by, and publish builds none today:
+ * engine/build-spec-reader-data.py passes no such set, and publish.py refuses a
+ * cell no run answered. So no published answer carries this note yet, and the
+ * reader fixture is the only place it is reached. */
+const NOT_JUDGED =
+  "No panel has judged this document, so the index holds no passages for it. "
+  + "That is not a finding about the document.";
 
 /** Four fields, and the judges in the rubric's own vocabulary. */
 function shapePassage(passage) {
@@ -188,7 +214,9 @@ export function retrievePassages({ publication, payload, documents }, args = {})
       + `${[...specById.keys()].join(", ")}`);
   }
 
-  const strength = args.strength || "core";
+  // Every band unless the caller narrows it, as the spec reader opens on every
+  // band. Each passage carries its strength, so a client can still filter.
+  const strength = args.strength || "related";
   if (!TIERS.includes(strength)) {
     throw new ToolError(`strength must be one of: ${TIERS.join(", ")}`);
   }
@@ -244,16 +272,26 @@ export function retrievePassages({ publication, payload, documents }, args = {})
   return {
     publication,
     model_specs_read: modelSpecIds.map(id => specSummary(specById.get(id))),
-    // The request decides, not the page: a two specification walk whose first
-    // page happens to hold one cell is still a comparison being assembled.
-    ...(modelSpecIds.length > 1 ? { comparability: COMPARABILITY } : {}),
     panel: panelOf(payload.provenance),
-    results: page.map(cell => ({
-      behaviour: cell.slug,
-      model_spec_id: cell.modelSpecId,
-      passages: cell.passages.map(shapePassage),
-      ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
-    })),
+    results: page.map(cell => {
+      const behaviour = behaviourBySlug.get(cell.slug);
+      const substitutions = substitutionsOf(behaviour, cell.modelSpecId);
+      return {
+        behaviour: cell.slug,
+        model_spec_id: cell.modelSpecId,
+        depth: panelDepth(behaviour, cell.modelSpecId),
+        ...(substitutions ? { substitutions } : {}),
+        passages: cell.passages.map(shapePassage),
+        // Two silences, and they are different claims: a panel read this
+        // document and found nothing, or no panel has read it at all. Only a
+        // payload built with judged_version_ids carries `judged`, and publish
+        // builds none today (see NOT_JUDGED), so a published answer always
+        // takes the second branch.
+        ...(cell.passages.length ? {} : {
+          note: specById.get(cell.modelSpecId)?.judged === false ? NOT_JUDGED : NO_COVERAGE,
+        }),
+      };
+    }),
     next_cursor: rest.length
       ? { publication: publication.id,
           behaviour: cells[next].slug,

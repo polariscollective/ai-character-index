@@ -47,25 +47,37 @@ export default async function Specifications({ searchParams }) {
       <section>
         <h2>Register a version</h2>
         <p className="why">
-          Give an id the index already carries to add a version to it, or a new one
-          to add a document. The id and the label go into every locator this text is
-          cited by, so neither may contain an @ or a path separator.
+          A document is named by its lab and its name, and each version is a document
+          of its own. Registering a name the index already carries adds a version to it.
         </p>
         <form className="panel" method="post" action="/api/admin/specifications">
           <label>
-            <span>Document id</span>
-            <input type="text" name="id" required placeholder="model-spec"
-                   list="known-specs" />
-            <datalist id="known-specs">
-              {specs.map(spec => <option key={spec.id} value={spec.id} />)}
-            </datalist>
+            <span>Lab</span>
+            <select name="lab" defaultValue="" required>
+              <option value="">Choose the lab that publishes it</option>
+              {labRows.map(lab => <option key={lab.id} value={lab.id}>{lab.name}</option>)}
+            </select>
+            <span className="hint">
+              A lab missing from this list is added by a migration in
+              polaris-supabase, not here.
+            </span>
           </label>
           <label>
-            <span>Version label</span>
-            <input type="text" name="version" required placeholder="2026-01-20" />
+            <span>Document name</span>
+            <input type="text" name="name" required placeholder="model-spec" list="known-names" />
+            <datalist id="known-names">
+              {[...new Set(specs.map(spec => spec.id.split("--")[1]).filter(Boolean))]
+                .map(name => <option key={name} value={name} />)}
+            </datalist>
             <span className="hint">
-              Whatever the lab calls this release. No date format is imposed.
+              Lowercase words joined by hyphens. With the lab it names the document,
+              openai--model-spec; the name of a document the index carries adds a version to it.
             </span>
+          </label>
+          <label>
+            <span>Version</span>
+            <input type="text" name="version" required placeholder="2026-08-18" />
+            <span className="hint">The release date, year first: a citation reads it as a date.</span>
           </label>
           <label>
             <span>Source url</span>
@@ -80,20 +92,18 @@ export default async function Specifications({ searchParams }) {
               bytes cannot be registered twice under two labels.
             </span>
           </label>
+          <label>
+            <span>Credit this version to</span>
+            <input type="text" name="credit" defaultValue="Polaris Collective" />
+            <span className="hint">
+              How the registrar reads in a publication&apos;s citation. Left empty,
+              it credits the Collective; it is never the address you signed in
+              with.
+            </span>
+          </label>
 
           <fieldset>
             <legend>Only for a document the index has not seen</legend>
-            <label>
-              <span>Lab</span>
-              <select name="lab" defaultValue="">
-                <option value="">Choose the lab that publishes it</option>
-                {labRows.map(lab => <option key={lab.id} value={lab.id}>{lab.name}</option>)}
-              </select>
-              <span className="hint">
-                A lab missing from this list is added by a migration in
-                polaris-supabase, not here.
-              </span>
-            </label>
             <label>
               <span>Title</span>
               <input type="text" name="title" placeholder="OpenAI Model Spec" />

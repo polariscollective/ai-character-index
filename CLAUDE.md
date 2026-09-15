@@ -105,6 +105,32 @@ This is also what `json` rather than `jsonb` was for. jsonb reorders keys on the
 way in, which breaks that equality permanently and silently. It did, once, and the
 tables were recreated.
 
+### Every hosted call went out with none of the panel's settings
+
+**Fixed.**
+
+`batch_job.one_call`, `batch_job.one_depth` and `local_run.one_call` built each
+call's settings with `h.judge_kwargs(...) if hasattr(h, "judge_kwargs") else {}`.
+`h` is harness.py, loaded by each of those modules the same way, and harness.py
+carries no `judge_kwargs`: that function lives in whole_doc.py. The `hasattr`
+check was therefore always false, and every call the job made went out with
+`kwargs={}` -- no `temperature`, no `max_tokens` cap, no `reasoning_effort`,
+whatever the model. This has been true since 52bb6a7, the job's first commit, so
+every run the hosted job has executed carries it, including the smoke run
+`29d490e8` and the full `frontier_fast` rerun of 2026-09-15, `aef5e906`: both ran
+every seat at the provider's default settings.
+
+It showed on deepseek, called at the provider's default temperature: its depth
+replies came back garbled on repeated attempts, for example `DEPTH:计量2`,
+`DEPTH: infant` and `DEPTH:{JUDGMENT}`. sol ran without its `reasoning_effort`,
+and no model had its output capped.
+
+The three call sites now import whole_doc.py and call `whole_doc.judge_kwargs`
+directly, with no guard. `judge_kwargs` reads a model's quirk off its resolved id
+after stripping any OpenRouter vendor prefix, so a native call and its mirror --
+`deepseek-ai/DeepSeek-V3.2` and `deepseek/deepseek-v3.2`, alike for fable and sol
+-- get the same settings.
+
 ## Changes of substance we made
 
 ### The reader's data attributes stay machine-readable, its prose does not
@@ -259,24 +285,86 @@ the Runs page now ask the calls rather than the run (`app/lib/runs.mjs`): a run
 with calls that are not done is launched again, in place.
 
 Not fixed, and worth knowing: a retried call's meter reading replaces the failed
-attempt's, so a run's summed cost undercounts what a parse failure spent.
+attempt's, and a retried depth's replaces its failed attempt's the same way, so a
+run's summed cost undercounts what a parse failure spent.
 
 The registration form had a smaller trap beside these. It offered only the sets
 rows already carried, so `user`, the set a publication build accepts a new
 behaviour in, was not offered, and the default was `reader-test`, which a build
 refuses without a hand-written curation row per lab.
 
+Sets were removed later. See `The index was reshaped before it was judged again`.
+
 ### A publication shows the display panel, whatever panel it names
 
-**Not fixed. Found while checking the readme's advice.**
+**Found while checking the readme's advice. Fixed.**
 
-`publish.py` never passes `--panel` to `build_site_data.py`, which therefore
-filters verdicts to `display.panel`, `frontier_fast`. A dry build of `helpfulness`
-from the inherited run, whose constitution cell carries five judges, held verdicts
-from `deepseek`, `fable` and `sol` alone, on both documents. Two things follow. A
-publication naming any other panel shows none of its verdicts. And the homogeneity
-rule, which requires a cell's run to hold exactly the named judges, refuses cells
-whose displayed verdicts would already be homogeneous.
+`publish.py` never passed `--panel` to `build_site_data.py`, which therefore
+filtered verdicts to `display.panel`. It passes the publication's panel now, and
+the portal composes and publishes with that one panel only.
+
+### The index was reshaped before it was judged again
+
+Sets, human verdicts and the strict variant decide nothing any more: the payload
+builder shows every behaviour a publication selects and reads no curation, and
+`general-welfare-impacts-strict`, whose reader row was fed by
+`animal-welfare-impacts`, leaves the reader. A document is a version, named
+`<lab>--<document>@<version>`, which is also the head of every locator into it,
+so two versions of one lab's document are two documents. And each judge of the
+panel gives a 0 to 4 depth per cell, in a small call after the passages, on the
+rubric in `methodology/spec-coverage-depth-rubric.md`; the publication carries
+the mean.
+
+Found on the way, and fixed with it: `harness.passages` read a spec's newest
+version whatever version a call named, so judging an older version after
+registering a newer one would have judged the newer text.
+
+The design is `docs/superpowers/specs/2026-09-14-one-panel-documents-as-versions-and-judged-depth-design.md`.
+The database only gained while `develop` was built; the cleanup migration it lists
+follows the merge.
+
+### A seat can be judged by a recorded substitute
+
+**Added because a judge cannot answer one behaviour on one document.** `fable`
+returns `finish_reason=content_filter` with empty output on
+`harm-avoidance-to-third-parties` against both versions of the OpenAI Model Spec,
+`@2025-12-18` and `@2026-08-18`: four attempts on each cell in run `aef5e906`,
+none answered. Upstream met the same refusal on the same cell and seated `opus`
+instead; `_opus_note` in `panel-config.json` records it for `runlog-v3.jsonl`.
+Without a way to say so, those cells could never be published, and dropping the
+seat would judge them with two models where every other cell has three.
+
+A substitution is a row of `aci_seat_substitutions`: the cell of the run it
+happened in, the seat, the model that judged in its place, and a plain sentence
+saying why. The row is the whole of the permission. The publication trigger holds
+a cell to the panel with its recorded substitutions applied, exact equality as
+before, so a substitute nobody recorded is refused like any stranger in a seat,
+and so is a cell judged by both the seat and its substitute. `publish.py` refuses
+by the same rule before writing, and counts depths over the seats as substituted.
+
+It is not hidden. The builder files the substitute's verdicts in the seat's place
+and writes `substitutions: [{seat, substitute, reason}]` on that cell's coverage
+entry and no other, so every other cell's bytes are unchanged. The reader's
+behaviour note says it in a sentence beside the document, and the MCP answers
+carry the same array.
+
+Which model may take a seat is declared now, not only recorded. `panel-config.json`
+carries a `substitutes` block, one ordered list per panel per seat:
+`frontier_fast`'s `fable` seat declares `opus`, then `kimi`. Opus is first because
+upstream met the same refusal and seated it there, recorded in `_opus_note`. Kimi
+follows because on 15 September 2026, judging the Alibaba Model Spec, every
+Anthropic model was refused on input: fable through Anthropic's own API, and
+fable, opus and sonnet through OpenRouter. Kimi, fable's panel mate in
+`frontier_primary`, took the seat instead. A substitute is used only when the
+seat's own model cannot answer a cell at all, and each use is still recorded in
+`aci_seat_substitutions` with a reason.
+
+Trying the declared order, opus before kimi, is policy for whoever records a
+substitution, not a rule the code enforces: nothing stops a reason naming kimi
+where opus was never tried. What the code enforces is that the substitute is on
+the declared list at all. `publish.py` refuses to build a publication when a
+selected cell carries a recorded substitution the panel does not declare for
+that seat, naming the cell and the declared order.
 
 ## Where the fork is heading
 
@@ -285,10 +373,8 @@ judging runs as a Cloud Run job, the site is a Next.js application on Vercel, an
 the index is operated from a portal rather than a terminal. Upstream keeps the
 property this fork gave up, which is running from a bare clone.
 
-What is left: the calls that would equalise the ragged bench, fifteen with
-`frontier_fast` (the four behaviours on the constitution, and
-`proportionate-risk-mitigation` on the model spec). They can be composed now, with
-judge again ticked, and until they run no new publication can carry those four.
+What is left: the cleanup migration after `develop` is merged, and retiring the
+provenance record of the grandfathered publication with it.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.

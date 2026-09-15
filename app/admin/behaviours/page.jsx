@@ -1,5 +1,5 @@
 /* The registry, and the form that adds to it. */
-import { BEHAVIOUR_SETS, behaviours } from "../../lib/admin-data.mjs";
+import { behaviours } from "../../lib/admin-data.mjs";
 import { Outcome } from "../parts.jsx";
 
 export default async function Behaviours({ searchParams }) {
@@ -21,7 +21,7 @@ export default async function Behaviours({ searchParams }) {
         <table>
           <thead>
             <tr>
-              <th>Slug</th><th>Name</th><th>Set</th><th className="num">#</th>
+              <th>Slug</th><th>Name</th>
               <th>Brief</th><th>Judged</th>
             </tr>
           </thead>
@@ -30,8 +30,6 @@ export default async function Behaviours({ searchParams }) {
               <tr key={row.slug}>
                 <td className="mono">{row.slug}</td>
                 <td>{row.name}</td>
-                <td className="mono">{row.set_name}</td>
-                <td className="num">{row.numeric_id}</td>
                 <td>{row.defined ? "written" : <span className="empty">none</span>}</td>
                 <td>{row.judged ? "yes" : <span className="empty">no</span>}</td>
               </tr>
@@ -55,19 +53,6 @@ export default async function Behaviours({ searchParams }) {
           <label>
             <span>Name</span>
             <input type="text" name="name" required placeholder="User autonomy" />
-          </label>
-          <label>
-            <span>Set</span>
-            <select name="set" defaultValue="user">
-              {BEHAVIOUR_SETS.map(set => <option key={set} value={set}>{set}</option>)}
-            </select>
-            <span className="hint">
-              Keep user for a behaviour you are adding. The other two are the sets the
-              index inherited: a reader-test behaviour needs a hand-written verdict per
-              lab that this portal cannot write, and a publication build refuses one
-              without it. The numeric id is assigned within the set, which is why it is
-              not asked for.
-            </span>
           </label>
           <label>
             <span>Group</span>
@@ -104,6 +89,16 @@ export default async function Behaviours({ searchParams }) {
             <span className="hint">
               Optional, and only worth filling in where the reader should be told
               something other than the brief.
+            </span>
+          </label>
+          <label>
+            <span>Credit this behaviour to</span>
+            <input type="text" name="credit" defaultValue="Polaris Collective" />
+            <span className="hint">
+              How the author reads in a publication&apos;s citation. A behaviour&apos;s
+              two sentences are what every verdict on it is a verdict on. Left
+              empty, it credits the Collective; it is never the address you
+              signed in with.
             </span>
           </label>
           <button type="submit">Register</button>

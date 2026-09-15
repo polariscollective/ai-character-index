@@ -8,9 +8,11 @@ in the Cloud Run image and on every contributor's machine.
 The transport is injectable so the tests never touch a network.
 """
 
+import http.client
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,11 +33,34 @@ def _urllib_transport(method, url, headers, body):
         return e.code, e.read()
 
 
+# Whether a failed request is safe to retry depends on whether it can have
+# reached the database, not just on the exception it raised:
+#
+# - A `URLError` that is not an `HTTPError` -- a TLS handshake timeout, a
+#   refused or reset connection, a DNS failure -- means `urlopen` never
+#   finished sending the request: it wraps failures of connecting and sending
+#   this way, so nothing was processed. Retried for every method, POST
+#   included.
+# - A raw `TimeoutError`/`socket.timeout`, `http.client.RemoteDisconnected` or
+#   `ConnectionResetError` raised while reading the response, or an
+#   `HTTPError` with status 502, 503 or 504, means the request may already
+#   have been processed. Retried only for a method that is idempotent here:
+#   GET, PATCH (which writes an absolute value) and DELETE. A POST is never
+#   retried past this point, since retrying an insert could duplicate a row.
+# - Everything else -- other 4xx/5xx, errors in this code -- fails
+#   immediately, as before.
+IDEMPOTENT_METHODS = {"GET", "PATCH", "DELETE"}
+RETRYABLE_STATUSES = {502, 503, 504}
+RETRY_BACKOFF_SECONDS = (2, 4, 8, 16)
+MAX_RETRIES = len(RETRY_BACKOFF_SECONDS)
+
+
 class Store:
-    def __init__(self, url, key, transport=None):
+    def __init__(self, url, key, transport=None, sleep=None):
         self.url = url.rstrip("/")
         self.key = key
         self.transport = transport or _urllib_transport
+        self.sleep = sleep or time.sleep
 
     @classmethod
     def from_env(cls):
@@ -53,12 +78,53 @@ class Store:
         headers.update(extra or {})
         return headers
 
+    @staticmethod
+    def _log_retry(method, table, attempt, reason):
+        # Never a header or a key: only the method, the table, the attempt
+        # number and a short reason.
+        print(f"store retry: {method} {table} attempt {attempt}/{MAX_RETRIES}: "
+              f"{reason}", file=sys.stderr)
+
+    def _call_transport(self, method, table, url, headers, body):
+        """The one place `self.transport` is called, retried on a transient
+        failure. See the module-level comment above IDEMPOTENT_METHODS for
+        which failures are retried, and for which methods."""
+        attempt = 0
+        while True:
+            try:
+                status, payload = self.transport(method, url, headers, body)
+            except urllib.error.HTTPError as e:
+                status, payload = e.code, e.read()
+            except urllib.error.URLError as e:
+                if attempt >= MAX_RETRIES:
+                    raise
+                attempt += 1
+                self._log_retry(method, table, attempt, f"{type(e).__name__}: {e}")
+                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                continue
+            except (TimeoutError, http.client.RemoteDisconnected,
+                    ConnectionResetError) as e:
+                if method not in IDEMPOTENT_METHODS or attempt >= MAX_RETRIES:
+                    raise
+                attempt += 1
+                self._log_retry(method, table, attempt, f"{type(e).__name__}: {e}")
+                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                continue
+
+            if (status in RETRYABLE_STATUSES and method in IDEMPOTENT_METHODS
+                    and attempt < MAX_RETRIES):
+                attempt += 1
+                self._log_retry(method, table, attempt, f"HTTP {status}")
+                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                continue
+            return status, payload
+
     def _request(self, method, table, query=None, body=None, extra_headers=None):
         url = f"{self.url}/rest/v1/{table}"
         if query:
             url += "?" + urllib.parse.urlencode(query)
-        status, payload = self.transport(
-            method, url, self._headers(extra_headers),
+        status, payload = self._call_transport(
+            method, table, url, self._headers(extra_headers),
             json.dumps(body) if body is not None else None)
         if status >= 300:
             raise StoreError(f"{method} {table} -> {status}: "

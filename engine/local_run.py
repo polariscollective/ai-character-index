@@ -46,6 +46,7 @@ sys.path.insert(0, str(HERE / "spec-cite"))
 
 import cite                      # noqa: E402
 import judge_call                # noqa: E402
+import whole_doc                 # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "panel" / "harness.py")
 h = importlib.util.module_from_spec(_spec)
@@ -100,7 +101,7 @@ def read_behaviour(path):
 def one_call(tag, system, user, config, passages, call_model):
     """One model reading the whole document. Returns what came back, unjudged."""
     provider, model_id = h.resolve(tag, config)
-    kwargs = h.judge_kwargs(tag, model_id, config) if hasattr(h, "judge_kwargs") else {}
+    kwargs = whole_doc.judge_kwargs(tag, model_id, config)
     reply, usage, finish_reason, seconds = call_model(
         provider=provider, model_id=model_id, system=system, user=user, kwargs=kwargs)
     verdicts, unparsed = judge_call.parse(reply, len(passages))

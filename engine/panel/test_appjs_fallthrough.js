@@ -38,22 +38,36 @@ function extractFn(header) {
 }
 
 const consts = lines.filter(l =>
+  l.startsWith("const DOCUMENTS_URL") ||
   l.startsWith("const PAYLOAD_URL") ||
   l.startsWith("const PUBLICATION_ID")).join("\n");
 
-let runner, readSource;
+/* The documents loader is new beside the payload's. Missing, it is replaced by one
+ * that throws, so its checks below fail by name rather than crashing the harness
+ * before the payload checks have run. */
+function extractOrThrowing(header) {
+  try { return extractFn(header); }
+  catch { return `${header} { throw new Error("not found in app.js: ${header}"); }`; }
+}
+
+let runner, readSource, documentsRunner, readAsked;
 eval(consts + "\n" +
   "let fetchMap = {};\n" +
+  "let asked = [];\n" +
   "const state = {};\n" +
   "let location;\n" +   // browser global, injected per-scenario below
   "async function loadJSON(url) {\n" +
+  "  asked.push(url);\n" +
   "  if (url in fetchMap) return fetchMap[url];\n" +
   "  throw new Error(\"HTTP 404 for \" + url);\n" +
   "}\n" +
   extractFn("function payloadName(id)") + "\n" +
   extractFn("function payloadUrl(id)") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
-  "runner = async (search, map) => { fetchMap = map; location = { search }; state.payloadSource = undefined; return loadBehaviours(); };\n" +
+  extractOrThrowing("async function loadDocuments()") + "\n" +
+  "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; state.payloadSource = undefined; return loadBehaviours(); };\n" +
+  "documentsRunner = async (search, map) => { await runner(search, map); return loadDocuments(); };\n" +
+  "readAsked = () => asked;\n" +
   "readSource = () => state.payloadSource;");
 
 const PINNED_ID = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
@@ -109,9 +123,51 @@ function check(ok, label, detail) {
           JSON.stringify(readSource().requested));
   }
 
+  /* ---- the documents come from the publication the payload resolved to ----
+   * Documents are per publication, so a draft's payload beside the current
+   * publication's documents matches nothing. The loader follows the payload's
+   * outcome rather than the URL: a pin that fell back reads the current documents
+   * even where a pinned documents request would have answered. */
+  const DOCS_CURRENT_URL = "/api/reader/documents";
+  const DOCS_PINNED_URL = `${DOCS_CURRENT_URL}?publication=${PINNED_ID}`;
+  const DOCS_PIN = { documents: ["PIN"] };
+  const DOCS_CURRENT = { documents: ["CURRENT"] };
+  const readDocuments = async (search, map) => {
+    try { return await documentsRunner(search, map); }
+    catch (error) { return { documents: [], error: error.message }; }
+  };
+  {
+    const docs = await readDocuments(`?publication=${PINNED_ID}`, {
+      [PINNED_URL]: PIN, [CURRENT_URL]: CURRENT,
+      [DOCS_PINNED_URL]: DOCS_PIN, [DOCS_CURRENT_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "PIN" && !readAsked().includes(DOCS_CURRENT_URL),
+          "a pinned payload reads the pinned publication's documents",
+          docs.error || JSON.stringify(readAsked()));
+  }
+  {
+    const docs = await readDocuments("", { [CURRENT_URL]: CURRENT, [DOCS_CURRENT_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "CURRENT", "no pin reads the current publication's documents",
+          docs.error || JSON.stringify(readAsked()));
+  }
+  {
+    const docs = await readDocuments(`?publication=${PINNED_ID}`, {
+      [CURRENT_URL]: CURRENT, [DOCS_PINNED_URL]: DOCS_PIN, [DOCS_CURRENT_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "CURRENT" && !readAsked().includes(DOCS_PINNED_URL),
+          "a dead pin's documents fall back with its payload",
+          docs.error || JSON.stringify(readAsked()));
+  }
+  {
+    const docs = await readDocuments("?publication=behaviours-v5-reader", {
+      [CURRENT_URL]: CURRENT, [DOCS_CURRENT_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "CURRENT"
+          && readAsked().every(url => !url.includes("behaviours-v5-reader")),
+          "a malformed pin reads the current documents and never asks for its own",
+          docs.error || JSON.stringify(readAsked()));
+  }
+
   console.log(failures === 0
     ? "app.js payload resolution: PASS (pin -> current publication; a dead pin "
-      + "falls through, a malformed one never asks)"
+      + "falls through, a malformed one never asks; the documents follow the payload)"
     : `app.js payload resolution: ${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
 })();

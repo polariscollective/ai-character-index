@@ -391,7 +391,7 @@ class TestAppJSQuotes(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("17 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("21 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestAppJSWiring(unittest.TestCase):
@@ -412,7 +412,48 @@ class TestAppJSWiring(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("27 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("31 checks, 0 failures", out.stdout, out.stdout)
+
+
+class TestAppJSDepth(unittest.TestCase):
+    """The depth app.js draws beside a behaviour and in its note: panelDepth,
+    depthSummaryLine, updateBehaviourDepths and openBehaviourNote. The
+    grandfathered publication carries a curation's integer where a new one
+    carries the panel's { mean, judges }, and reading the integer as the object
+    threw on every visit to the public reader. Skips (not fails) without
+    `node`."""
+
+    HARNESS = HERE / "test_appjs_depth.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_depth_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("22 checks, 0 failures", out.stdout, out.stdout)
+
+
+class TestAppJSTranslation(unittest.TestCase):
+    """The sentence app.js writes in a translated document's band:
+    translatorNames, shortenTranslator and translationNote. It said the index
+    judged a translation no panel had read, above a note saying nobody had, and
+    it cut a translator field at "except" without saying "in part" unless the
+    clause it cut said "revised by". Skips (not fails) without `node`."""
+
+    HARNESS = HERE / "test_appjs_translation.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_translation_band_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("13 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestRunlogPathResolution(unittest.TestCase):

@@ -12,53 +12,56 @@ import { createHash } from "node:crypto";
 import { insert, select } from "../../../lib/supabase.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
-import { locatorSafe, problems } from "../../../lib/locator-safe.mjs";
+import { labelTaken, nameProblem, newVersionRow, specificationId, versionProblem }
+  from "../../../lib/documents.mjs";
+import { creditProblem } from "../../../lib/credit.mjs";
 
 const STYLES = ["path", "anchor"];
 
-export const POST = formRoute("/admin/specifications", requireOperator, async (fields, email) => {
-  const id = fields.one("id");
+export const POST = formRoute("/admin/specifications", requireOperator, async (fields) => {
+  const lab = fields.one("lab");
+  const name = fields.one("name");
   const version = fields.one("version");
   const markdown = fields.raw("markdown");
   const sourceUrl = fields.one("source_url");
-  const lab = fields.one("lab");
   const title = fields.one("title");
   const shortTitle = fields.one("short_title");
   const style = fields.one("locator_style");
-
-  const found = problems([
-    [locatorSafe, id, "the document id"],
-    [locatorSafe, version, "the version label"],
-  ]);
-  if (!markdown.trim()) found.push("the document's markdown is required");
-  if (!sourceUrl) found.push("a source url is required: a stored version says where it came from");
-  if (found.length) refuse(found.join("\n"));
+  // Who a citation credits this version to. Never the operator's address: an
+  // empty field credits the Collective, and an address-shaped one is refused.
+  const credit = fields.one("credit");
 
   const [specs, labs] = await Promise.all([
     select("aci_specs", "select=*"),
     select("aci_labs", "select=id"),
   ]);
-  const spec = specs.find(row => row.id === id);
+  const found = [nameProblem(name), versionProblem(version), creditProblem(credit)]
+    .filter(Boolean);
+  if (!labs.some(row => row.id === lab)) {
+    found.push(`lab must be one of ${labs.map(row => row.id).join(", ")}`);
+  }
+  if (!markdown.trim()) found.push("the document's markdown is required");
+  if (!sourceUrl) found.push("a source url is required: a stored version says where it came from");
+  if (found.length) refuse(found.join("\n"));
 
+  const id = specificationId(lab, name);
+  const spec = specs.find(row => row.id === id);
+  const digest = createHash("sha256").update(markdown).digest("hex");
+  const versions = await select("aci_spec_versions",
+                                `select=spec_id,version,content_sha256&spec_id=eq.${id}`);
+
+  // Every refusal comes before the first write, so a refused registration leaves
+  // nothing behind, whatever the schema would or would not have caught.
   if (!spec) {
     // A new document needs everything a locator and a reader will ask of it.
     const missing = [];
-    if (!labs.some(row => row.id === lab)) {
-      missing.push(`lab must be one of ${labs.map(row => row.id).join(", ")}`);
-    }
     if (!title) missing.push("title is required for a document the index has not seen");
     if (!shortTitle) missing.push("short title is required");
     if (!STYLES.includes(style)) missing.push(`locator style must be ${STYLES.join(" or ")}`);
     if (missing.length) refuse(missing.join("\n"));
-    await insert("aci_specs", [{
-      id, lab_id: lab, title, short_title: shortTitle,
-      source_url: sourceUrl, locator_style: style,
-    }]);
   }
-
-  const digest = createHash("sha256").update(markdown).digest("hex");
-  const versions = await select("aci_spec_versions",
-                                `select=version,content_sha256&spec_id=eq.${id}`);
+  const taken = labelTaken(versions, id, version);
+  if (taken) refuse(taken);
   const same = versions.find(row => row.content_sha256 === digest);
   if (same) {
     refuse(`Those exact bytes are already registered as ${id}@${same.version}. `
@@ -66,10 +69,14 @@ export const POST = formRoute("/admin/specifications", requireOperator, async (f
            + "registered twice under two labels.");
   }
 
-  await insert("aci_spec_versions", [{
-    spec_id: id, version, markdown, content_sha256: digest,
-    source_url: sourceUrl, added_by: email,
-  }]);
+  if (!spec) {
+    await insert("aci_specs", [{
+      id, lab_id: lab, title, short_title: shortTitle,
+      source_url: sourceUrl, locator_style: style,
+    }]);
+  }
+  await insert("aci_spec_versions",
+              [newVersionRow({ specId: id, version, markdown, digest, sourceUrl, credit })]);
   return `Registered ${id}@${version}, ${markdown.length.toLocaleString("en-GB")} `
        + `characters, digest ${digest.slice(0, 12)}. Nothing judges it until a run `
        + "names it.";
