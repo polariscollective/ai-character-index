@@ -1511,6 +1511,49 @@ body.sidebar-collapsed .sidebar-resizer {
 .passage-why:focus-visible::after { opacity: 1; }
 .passage-why[aria-expanded="true"]::after { content: none; }
 
+/* Copy locator and Copy link, just before the question mark. Out of sight until
+   they are wanted: a light olive when the pointer is over the block or focus is
+   inside it, full on their own hover or focus. Colour and opacity only, over
+   150ms; nothing moves. Where there is no hover, the current passage and a tapped
+   one show them. */
+.passage-copy {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+}
+.passage-copy svg { display: block; width: 14px; height: 14px; }
+.passage-copy[data-copy="locator"] { margin-left: auto; }
+.passage-head .passage-copy ~ .passage-why { margin-left: 0; }
+.passage:hover .passage-copy,
+.passage:focus-within .passage-copy { opacity: .55; }
+/* As specific as the two rules above, and after them, so an icon's own hover or
+   focus wins over the block's. */
+.passage .passage-copy:hover,
+.passage .passage-copy:focus-visible { opacity: 1; color: var(--ink); }
+@media (hover: none) {
+  .passage.current .passage-copy,
+  .passage.touched .passage-copy { opacity: .55; }
+}
+/* What a refused clipboard selects instead of copying the link. */
+.passage-link {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.passage-link[hidden] { display: none; }
+
 .passage-rationale {
   display: block;
   margin: 0 0 7px;
@@ -1639,6 +1682,7 @@ summary:focus-visible, dialog:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .document-scroll { scroll-behavior: auto; }
   .section-heading-button .section-chevron { transition: none; }
+  .passage-copy { transition: none; }
 }
 
 /* ---------- reader test: no behaviour under test ---------- */
