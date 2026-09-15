@@ -127,26 +127,29 @@
   <template id="document-template">
     <article class="document-panel">
       <header class="document-header">
-        <div>
-          <p class="document-lab"></p>
-          <h2 class="document-title">
-            <button class="document-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span class="document-name"></span>
-              <span class="picker-caret" aria-hidden="true"></span>
-            </button>
-          </h2>
-        </div>
-        <div class="document-meta">
-          <div class="meta-top">
-            <span class="document-version"></span>
+        <!-- One tab per publisher, then the document and version that publisher
+             is being read at. Two rows rather than one control, because which
+             lab you are reading and which of its documents are different
+             choices, and comparing asks both of them twice. -->
+        <div class="provider-tabs" role="tablist" aria-label="Publisher"></div>
+        <div class="document-row">
+          <div class="document-identity">
+            <h2 class="document-title">
+              <button class="document-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="document-name"></span>
+                <span class="document-version"></span>
+                <span class="picker-caret" aria-hidden="true"></span>
+              </button>
+            </h2>
+            <a class="source-link" href="#" target="_blank" rel="noopener">Original</a>
+          </div>
+          <div class="document-meta">
             <span class="passage-nav">
               <span class="passage-count">Loading passages…</span>
               <button class="previous-passage" type="button" aria-label="Previous highlighted passage in this document">↑</button>
               <button class="next-passage" type="button" aria-label="Next highlighted passage in this document">↓</button>
             </span>
-          </div>
-          <p class="document-translation" role="note" hidden></p>
-          <button class="document-focus-toggle" type="button">Expand all</button>
+            <button class="document-focus-toggle" type="button">Expand all</button>
           <span class="rail-legend" role="group" aria-label="Passage tiers shown">
             <button class="tier-toggle" type="button" data-tier="defining" aria-pressed="false"
               title="Passages the panel scored as defining for the behaviour"
@@ -164,8 +167,9 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
-          <a class="source-link" href="#" target="_blank" rel="noopener">Original</a>
+          </div>
         </div>
+        <p class="document-translation" role="note" hidden></p>
       </header>
       <div class="document-scroll">
         <div class="passage-rail" role="navigation" aria-label="Highlighted passages in this document"></div>

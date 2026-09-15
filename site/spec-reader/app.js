@@ -227,6 +227,11 @@ const state = {
   sidebarCollapsed: false,
   compareFirst: 50,
   comparePair: null,   // [idA, idB]; null = the first two documents
+  /* The document that was on the right the last time the reader compared.
+   * Leaving compare keeps the left-hand document and drops the right one from
+   * the screen; coming back to a different second document than the one you
+   * chose would undo a choice the reader made rather than restore it. */
+  compareRight: null,
 };
 
 const elements = {
@@ -697,15 +702,19 @@ function setupSidebarResizer() {
  * panes overflowed the page. Which two is the reader's choice once there are more
  * than two to choose from. */
 
-/* Compare is a two-document view. With exactly two documents registered there is
- * nothing to choose and the picker stays hidden; with more, the reader picks the two.
- * An unknown or duplicated id in ?compare-with= falls back to the first two, so a
- * stale link still renders something coherent. */
+/* Compare is a two-document view, and each side is chosen on its own.
+ *
+ * A pair naming the same document twice is kept rather than corrected: two
+ * versions of one document are two documents, and the same version on both
+ * sides is a reader's business, not a mistake to fix behind them. An id the
+ * payload does not carry is another matter -- a stale ?compare-with= link, or a
+ * publication that no longer holds that version -- and falls back to what a
+ * comparison opens on, so the view renders something coherent either way. */
 function comparePair() {
   const ids = state.payload.documents.map(doc => doc.id);
   const [a, b] = state.comparePair || [];
   const first = ids.includes(a) ? a : ids[0];
-  const second = ids.includes(b) && b !== first ? b : ids.find(id => id !== first);
+  const second = ids.includes(b) ? b : defaultComparison(first);
   return [first, second];
 }
 
@@ -1859,6 +1868,66 @@ function setupOriginalNotes(panel) {
   });
 }
 
+/* Publishers, and what each publishes.
+ *
+ * The payload carries documents; a reader thinks in labs first and documents
+ * second, which is why the header asks the two questions in two rows. Order is
+ * the payload's for labs, and newest first within a lab: a version label sorts
+ * as a string because it is a date, and the index has said so since the first
+ * locator was written. */
+function labsOf(documents = state.payload?.documents || []) {
+  const labs = [];
+  for (const doc of documents) if (!labs.includes(doc.lab)) labs.push(doc.lab);
+  return labs;
+}
+
+function documentsOfLab(lab, documents = state.payload?.documents || []) {
+  return documents
+    .filter(doc => doc.lab === lab)
+    .sort((a, b) => String(b.version).localeCompare(String(a.version)));
+}
+
+/** The newest document a lab has in this publication. */
+function latestOfLab(lab) {
+  return documentsOfLab(lab)[0] || null;
+}
+
+/* What the second panel opens on.
+ *
+ * Anthropic's newest, or OpenAI's when Anthropic's is already the one being
+ * read: comparing a document with itself is the one pairing with nothing to
+ * say. Against a payload carrying neither lab, the first document that is not
+ * the one on the left, so a comparison opens on something rather than refusing.
+ */
+const COMPARISON_ORDER = ["Anthropic", "OpenAI"];
+
+function defaultComparison(leftId) {
+  const preferred = COMPARISON_ORDER
+    .map(lab => latestOfLab(lab))
+    .filter(Boolean)
+    .find(doc => doc.id !== leftId);
+  if (preferred) return preferred.id;
+  return (state.payload?.documents || []).find(doc => doc.id !== leftId)?.id || null;
+}
+
+/* One tab per publisher, the panel's own. Choosing a publisher shows its newest
+ * document, which is the version a reader means unless they say otherwise; the
+ * row below is where they say otherwise. */
+function renderProviderTabs(panel, doc) {
+  const tabs = panel.querySelector(".provider-tabs");
+  if (!tabs) return;
+  tabs.replaceChildren(...labsOf().map(lab => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "provider-tab";
+    tab.role = "tab";
+    tab.dataset.lab = lab;
+    tab.textContent = lab;
+    tab.setAttribute("aria-selected", String(lab === doc.lab));
+    return tab;
+  }));
+}
+
 function renderDocument(doc) {
   const panel = elements.template.content.firstElementChild.cloneNode(true);
   const markdownContext = {
@@ -1867,9 +1936,9 @@ function renderDocument(doc) {
     usedHeadingIds: new Map(),
   };
   panel.dataset.documentId = doc.id;
-  panel.querySelector(".document-lab").textContent = doc.lab;
+  renderProviderTabs(panel, doc);
   panel.querySelector(".document-name").textContent = doc.title;
-  panel.querySelector(".document-version").textContent = `Version ${doc.version}`;
+  panel.querySelector(".document-version").textContent = doc.version;
   // Each panel points at its own source. That is the whole reason this link left
   // the row above: up there it could only ever name one of two documents, and
   // when comparing it gave up and said "Sources".
@@ -2109,7 +2178,12 @@ function openSpecPicker(button) {
   const picker = elements.specPicker;
   if (!picker || typeof picker.showPopover !== "function") return;
 
-  picker.replaceChildren(...(state.payload?.documents || []).map(doc => {
+  // This publisher's documents, newest first. The publisher itself is chosen in
+  // the row above, so a list of every document in the index would be a second
+  // way to do what the tabs already do, and a longer one.
+  const lab = (state.payload?.documents || [])
+    .find(doc => doc.id === current)?.lab;
+  picker.replaceChildren(...documentsOfLab(lab).map(doc => {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "spec-choice";
@@ -2118,10 +2192,9 @@ function openSpecPicker(button) {
     option.setAttribute("aria-selected", String(doc.id === current));
     const name = document.createElement("span");
     name.className = "spec-choice-lab";
-    name.textContent = doc.lab;
+    name.textContent = doc.title;
     const detail = document.createElement("small");
-    const version = (doc.version || "").replaceAll("-", ".");
-    detail.textContent = version ? `${doc.title}, ${version}` : doc.title;
+    detail.textContent = doc.version;
     option.append(name, detail);
     option.addEventListener("click", () => {
       picker.hidePopover();
@@ -2169,13 +2242,19 @@ function placeUnder(popover, anchor) {
   popover.style.top = `${Math.round(top)}px`;
 }
 
-/* Picking a document that is already on the other side swaps them rather than
- * refusing: comparing a document with itself is the one selection with no meaning. */
+/* Each side is chosen on its own, and a document may be put on both.
+ *
+ * Choosing the document already on the other side used to swap the two, on the
+ * reasoning that comparing a document with itself says nothing. It says
+ * something once versions exist: the same document at two dates, side by side,
+ * is the comparison a reader of a reissued specification wants most. */
 function setComparePair(side, id) {
   const [a, b] = comparePair();
   const next = side === "a" ? [id, b] : [a, id];
-  if (next[0] === next[1]) next[side === "a" ? 1 : 0] = side === "a" ? a : b;
   state.comparePair = next;
+  // Remembered so that leaving compare and coming back restores the pair the
+  // reader chose rather than the one the reader was given.
+  state.compareRight = next[1];
   syncURL();
   rebuildReader();
 }
@@ -2314,6 +2393,16 @@ elements.documentReader.addEventListener("click", event => {
   focusPassage(panel, (panel._passageIndex || 0) + delta);
 });
 
+/* Choosing a publisher, in the panel that asked. Delegated like the tier
+ * toggles, because every rebuild re-clones the headers these buttons live in. */
+elements.documentReader.addEventListener("click", event => {
+  const tab = event.target.closest?.(".provider-tab");
+  if (!tab) return;
+  const panel = tab.closest(".document-panel");
+  const latest = latestOfLab(tab.dataset.lab);
+  if (latest && latest.id !== panel?.dataset.documentId) chooseSpec(panel, latest.id);
+});
+
 /* Comparison is one mode over both panels, so its switch is in the band both
  * panels share rather than repeated in each of their headers.
  *
@@ -2322,10 +2411,17 @@ elements.documentReader.addEventListener("click", event => {
  * before. Either way the reader stays with the text they were looking at. */
 elements.compareToggle.addEventListener("click", () => {
   const first = panels()[0]?.dataset.documentId;
+  if (state.comparing) state.compareRight = comparePair()[1] || state.compareRight;
   state.comparing = !state.comparing;
   if (state.comparing && first) {
-    const other = state.payload.documents.find(doc => doc.id !== first);
-    if (other) state.comparePair = [first, other.id];
+    // The side you chose last time, if the payload still carries it; otherwise
+    // the opening default. Not refused for being the document already on the
+    // left: putting one document on both sides is a choice the reader is
+    // allowed to make, so it is a choice worth restoring.
+    const remembered = state.payload.documents.some(doc => doc.id === state.compareRight)
+      ? state.compareRight
+      : defaultComparison(first);
+    if (remembered) state.comparePair = [first, remembered];
   } else if (!state.comparing && first) {
     state.selectedSpec = first;
   }

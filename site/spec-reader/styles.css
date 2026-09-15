@@ -949,29 +949,26 @@ body.sidebar-collapsed .sidebar-resizer {
 }
 .document-resizer { height: 100%; }
 .document-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
+/* A stack of rows, not a row of columns: publishers, then the document at a
+   version with what it takes to read it, then the caveat when there is one.
+   This header used to hold two things side by side, which is why it was a row;
+   its children are now the rows themselves. */
 .document-header {
-  min-height: 72px;
   padding: 12px 24px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   border-bottom: 1px solid var(--line-light);
 }
 
 /* Comparing, the same header has half the width to say the same five things in.
    The title steps down so it stops wrapping under its own caret. */
-.document-grid.compare .document-header { padding: 10px 16px; gap: 12px; }
+.document-grid.compare .document-header { padding: 10px 16px; gap: 6px; }
 .document-grid.compare .document-title { font-size: 17px; }
 .document-grid.compare .document-version { font-size: 10px; }
 
 
-.document-lab {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
 .document-title { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 600; }
 
 /* The title is the control that changes the document. It carries no button
@@ -1701,4 +1698,52 @@ body.no-behaviours .sidebar-export { display: none; }
   font-size: 15px;
   line-height: 1.75;
   white-space: pre-wrap;
+}
+
+/* The header's rows: publishers, then the document being read at a version,
+   then the caveat if there is one. Each panel carries its own set, so comparing
+   asks the same two questions twice, once per side, in the same places. */
+.provider-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line-light);
+}
+
+.provider-tab {
+  padding: 5px 10px 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+
+.provider-tab:hover { color: var(--ink); }
+.provider-tab[aria-selected="true"] {
+  border-bottom-color: var(--energy);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.document-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.document-identity { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.document-identity .document-version {
+  margin-left: 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
 }
