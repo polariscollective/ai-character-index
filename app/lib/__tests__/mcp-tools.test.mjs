@@ -184,6 +184,43 @@ test("a retrieved cell carries its depth", () => {
   assert.equal(answer.results[0].depth.judges.c.depth, 2);
 });
 
+/* One cell of the fixture was judged with a substitute in a seat: `d` in place of
+ * `c`, on the second document, which the database accepts only when a
+ * substitution is recorded. Every other cell was judged by the panel as configured. */
+const SUBSTITUTED = "acme--second@2026-02-01";
+const SWAP = [{ seat: "c", substitute: "d",
+                reason: "c returned no output for this document on every attempt." }];
+
+test("a listed cell judged with a substitute says which seat, by whom, and why", () => {
+  const [defined] = listBehaviours(snapshot()).behaviours;
+  assert.deepEqual(defined.coverage[SUBSTITUTED].substitutions, SWAP);
+  assert.deepEqual(Object.keys(defined.coverage[SUBSTITUTED].depth.judges), ["a", "b", "d"]);
+  assert.ok(!("substitutions" in defined.coverage["acme--corpus@2026-01-01"]),
+            "a cell judged by the panel as configured carries no key at all");
+});
+
+test("a retrieved cell carries its substitutions beside its depth", () => {
+  const answer = retrievePassages(snapshot(), { behaviours: ["defined-behaviour"] });
+  const [corpus, second] = answer.results;
+  assert.equal(second.model_spec_id, SUBSTITUTED);
+  assert.deepEqual(second.substitutions, SWAP);
+  assert.ok(!("substitutions" in corpus));
+});
+
+test("a substitution carries its seat, substitute and reason, and an empty list is none", () => {
+  const odd = snapshot();
+  odd.payload = structuredClone(payload);
+  const [defined] = odd.payload.behaviours;
+  defined.coverage[SUBSTITUTED].substitutions[0].added_by = "someone@example.invalid";
+  defined.coverage["acme--corpus@2026-01-01"].substitutions = [];
+  const listed = listBehaviours(odd).behaviours[0].coverage;
+  assert.deepEqual(listed[SUBSTITUTED].substitutions, SWAP);
+  assert.ok(!("substitutions" in listed["acme--corpus@2026-01-01"]));
+  const retrieved = retrievePassages(odd, { behaviours: ["defined-behaviour"] }).results;
+  assert.deepEqual(retrieved[1].substitutions, SWAP);
+  assert.ok(!("substitutions" in retrieved[0]));
+});
+
 /* The grandfathered publication, which the routes keep serving after the merge
  * until a new one is made public, was written by the old builder. Its coverage
  * carries a human curation's integer where a new publication carries the panel's

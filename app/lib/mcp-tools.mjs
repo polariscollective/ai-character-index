@@ -36,6 +36,20 @@ function panelDepth(behaviour, modelSpecId) {
     ? depth : null;
 }
 
+/**
+ * The seats of a cell's panel that another model judged, and why, or null.
+ *
+ * A judge that cannot answer a cell at all is replaced there, and the database
+ * publishes the cell only when the substitution is recorded. The payload carries
+ * it on that cell and on no other, so an absent field means the panel as
+ * configured. Three fields travel and nothing else the payload might grow.
+ */
+function substitutionsOf(behaviour, modelSpecId) {
+  const recorded = behaviour?.coverage?.[modelSpecId]?.substitutions;
+  if (!Array.isArray(recorded) || !recorded.length) return null;
+  return recorded.map(({ seat, substitute, reason }) => ({ seat, substitute, reason }));
+}
+
 /** The fields that identify a specification, without its text. */
 function specSummary(document) {
   return {
@@ -88,11 +102,13 @@ export function listBehaviours({ publication, payload, notes }) {
       const coverage = {};
       for (const modelSpecId of Object.keys(behaviour.coverage || {})) {
         const passages = passagesOf(behaviour, modelSpecId);
+        const substitutions = substitutionsOf(behaviour, modelSpecId);
         coverage[modelSpecId] = {
           passages: passages.length,
           strongest: TIERS.find(
             tier => passages.some(passage => passage.band === tier)) || null,
           depth: panelDepth(behaviour, modelSpecId),
+          ...(substitutions ? { substitutions } : {}),
         };
       }
 
@@ -241,13 +257,18 @@ export function retrievePassages({ publication, payload, documents }, args = {})
     publication,
     model_specs_read: modelSpecIds.map(id => specSummary(specById.get(id))),
     panel: panelOf(payload.provenance),
-    results: page.map(cell => ({
-      behaviour: cell.slug,
-      model_spec_id: cell.modelSpecId,
-      depth: panelDepth(behaviourBySlug.get(cell.slug), cell.modelSpecId),
-      passages: cell.passages.map(shapePassage),
-      ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
-    })),
+    results: page.map(cell => {
+      const behaviour = behaviourBySlug.get(cell.slug);
+      const substitutions = substitutionsOf(behaviour, cell.modelSpecId);
+      return {
+        behaviour: cell.slug,
+        model_spec_id: cell.modelSpecId,
+        depth: panelDepth(behaviour, cell.modelSpecId),
+        ...(substitutions ? { substitutions } : {}),
+        passages: cell.passages.map(shapePassage),
+        ...(cell.passages.length ? {} : { note: NO_COVERAGE }),
+      };
+    }),
     next_cursor: rest.length
       ? { publication: publication.id,
           behaviour: cells[next].slug,

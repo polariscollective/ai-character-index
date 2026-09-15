@@ -34,6 +34,10 @@ Where a behaviour and specification pair carries a depth, it is the mean the
 index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
 with no depth answers null.
 
+Where one judge of the panel could not answer a pair at all, another model judged
+it in that seat, and the pair carries substitutions: the seat, the substitute and
+the reason. A pair without that field was judged by the panel as configured.
+
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
 /** JSON in one text block, and a caller's mistake reported as one. */
@@ -78,8 +82,11 @@ const handler = createMcpHandler(
       description:
         "Every behaviour the current publication shows, with the brief the judge "
         + "panel was given, the boundary of the construct, where the definition "
-        + "came from, and per specification how many passages it has and the "
-        + "strongest band any of them reaches. Takes no arguments. Use the slugs "
+        + "came from, and per specification how many passages it has, the "
+        + "strongest band any of them reaches and the panel's depth. Where a judge "
+        + "could not answer a specification at all and another model took its "
+        + "seat, that specification carries substitutions naming the seat, the "
+        + "substitute and the reason. Takes no arguments. Use the slugs "
         + "it returns as the behaviours argument of retrieve_passages.",
       inputSchema: z.object({}),
     }, () => answer(snapshot => listBehaviours(snapshot)));
@@ -92,7 +99,10 @@ const handler = createMcpHandler(
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
         + "across pages. Where a pair carries a depth, it is the mean the index's "
-        + "panel gave it, 0 to 4; a pair with no depth answers null.",
+        + "panel gave it, 0 to 4; a pair with no depth answers null. Where a judge "
+        + "could not answer a pair at all, another model judged it in that seat, "
+        + "and the pair carries substitutions naming the seat, the substitute and "
+        + "the reason; the depth and verdicts are then the substitute's.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "
