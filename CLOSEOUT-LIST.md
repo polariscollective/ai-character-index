@@ -1,5 +1,7 @@
 # Closeout list
 
+> **A dated record, not a current to-do list (as of September 2026).** This list tracked the August 2026 closeout of the reader and its clone-and-fork pathway. Much of what it names has since gone: the index moved into Supabase and the site to Vercel; `data/`, the committed runlogs, the reader's manifest and the `specs/` mirrors left the repository; and the clone-and-fork pathway gave way to `engine/local_run.py` and the admin portal. Its open items were not re-triaged. The current state is in `SYSTEM.md` and `CLAUDE.md`.
+
 > **Aim (repo-owner decision):** ship the **model spec reader** — behaviour × model-spec coverage with cited passages — as a small, honest, **fixed demo**, plus a **clear pathway for people to clone/fork the repo and run it on their own behaviours**. The eval-discovery/quality workflow is out of scope and gets stripped. The target is the reader + pathway (Phase 2 below), **timeboxed to this week and likely to land as an incompletely-tested end state**; on top of it, be **explicit about the limitations** so people can judge whether and how to build on it. The full modular platform (Phase 3) stays deferred. Current state is documented in `SYSTEM.md` and the per-directory `OVERVIEW.md` files.
 >
 > Three **cumulative** phases, ordered safest-first; each leaves the repo coherent and honest, and later phases build on earlier ones. **Phase 2 is the current target.**

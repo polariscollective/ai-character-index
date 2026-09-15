@@ -6,11 +6,11 @@
 
 ## What the system is
 
-An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel whose two reader routes read the index out of Supabase, and operated from an admin portal in the same application.
+An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel (https://ai-character-index.vercel.app) whose reader routes and public MCP endpoint (`/api/mcp`) read the index out of Supabase, and operated from an admin portal in the same application. As of September 2026 the public publication, `07958c5e-eb91-4e31-81f2-32f79c01b84c`, carries 13 behaviours over 4 documents (Claude's Constitution 2026-01-20, the OpenAI Model Spec 2025-12-18 and 2026-08-18, and the Alibaba Model Spec 2026-04-00, read in an English machine translation), judged by the `frontier_fast` panel under rubric v5.
 
-**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables, and a publication row decides what the reader shows. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
+**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements, the frozen ledger and the two payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code, fixtures, and one file of digests (`engine/published-artefacts.sha256.json`) recording what the index published when the migration was verified against it.
 
-Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot run the panel or register a spec, and the upstream repository `AndresCotton/ai-character-index` keeps that property. And CI knows no secret: it verifies the code against fixtures, while `provenance.yml` verifies the published data on a schedule, where the credentials already are.
+Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot register a spec or publish, and the upstream repository `AndresCotton/ai-character-index` keeps that property. Judging survives it: `engine/local_run.py` judges a document with one key and no database. And CI knows no secret: it verifies the code against fixtures, while `provenance.yml` verifies the published data on a schedule, where the credentials already are.
 
 ## Global dependency map
 
@@ -19,14 +19,15 @@ graph TB
   admin["app/admin/ (the portal, behind a Google door)"] -->|"registers"| sb
   admin -->|"{ job, env }"| trig["polaris-batch-trigger"] --> job["engine/job.py<br/>compose · judge · publish"]
   job --> sb
-  labs["lab spec repos (OpenAI, Anthropic)"] -->|"registered through the portal"| sb
-  sb["Supabase aci_ tables<br/>specs · versions · behaviours · runs · calls · judgements · publications"]
+  labs["lab specifications (Anthropic, OpenAI, Alibaba)"] -->|"registered through the portal"| sb
+  sb["Supabase aci_ tables<br/>specs · versions · behaviours · runs · calls · judgements · depths · substitutions · publications"]
   panel["engine/panel/ (LLM judge APIs)"] -->|"judgements"| sb
   sb -->|"registry + spec text"| cite["engine/spec-cite/cite.py"]
   sb -->|"judgements + registry"| bsd["engine/panel/build_site_data.py"]
   sb -->|"spec text + frozen ledger"| bsr["engine/build-spec-reader-data.py"]
   bsd & bsr -->|"materialised at publication time"| pub["aci_publications"]
   pub -->|"/api/reader/payload, /api/reader/documents"| reader["site/spec-reader/ (served from public/)"]
+  pub -->|"read-only tools"| mcp["/api/mcp"]
   reader ==> vc["Next.js on Vercel"]
   rec["engine/published-artefacts.sha256.json"] -->|"the oracle"| ver["engine/verify_supabase_provenance.py"]
   sb --> ver
@@ -39,15 +40,15 @@ graph TB
 |---|---|---|
 | `.claude/skills/` | Retired procedure layer: no live skills; index files record the retirement (root `AGENTS.md` points here) | [.claude/skills/OVERVIEW.md](.claude/skills/OVERVIEW.md) |
 | `engine/` | Automation: citation resolution, LLM panel judging, payload builders, the job the container runs, E2E + feature-harness verifiers | [engine/OVERVIEW.md](engine/OVERVIEW.md) |
-| `app/` | The Next.js application: the reader's three routes, the admin portal, and the libraries both share | [ROOT.md](ROOT.md) |
+| `app/` | The Next.js application: the reader's routes, the MCP endpoint, the proposal route, the admin portal, and the libraries they share | [ROOT.md](ROOT.md) |
 | `specs/` | The locator grammar and the mirrors' provenance notes; the texts themselves are in the database | [specs/OVERVIEW.md](specs/OVERVIEW.md) |
 | `research/` | Canonical behaviour list | [research/OVERVIEW.md](research/OVERVIEW.md) |
 | `archive/` | Preserved analytical artifact: the cross-spec strict-reading judgment (self-describing README inside) | — |
-| `methodology/` | Depth rubric, public site copy, method-exploration findings | [methodology/OVERVIEW.md](methodology/OVERVIEW.md) |
-| `site/` | The reader's source, copied into `public/` at build time | [site/OVERVIEW.md](site/OVERVIEW.md) |
+| `methodology/` | Depth rubric (the scale of every judge's depth call), the upstream methodology page's copy, method-exploration findings | [methodology/OVERVIEW.md](methodology/OVERVIEW.md) |
+| `site/` | The public pages and the reader's source, copied into `public/` at build time | [site/OVERVIEW.md](site/OVERVIEW.md) |
 | `.github/` | CI on fixtures, a scheduled provenance job, and the Issues-page contact link | [.github/OVERVIEW.md](.github/OVERVIEW.md) |
 | `design/`, `vision/` | Settled-design log (Jul 2026) and the originating brief | [design/OVERVIEW.md](design/OVERVIEW.md), [vision/OVERVIEW.md](vision/OVERVIEW.md) |
-| root files | PLAN.md, README.md, the Next.js application and its two reader routes | [ROOT.md](ROOT.md) |
+| root files | PLAN.md, README.md, and the Next.js application's configuration | [ROOT.md](ROOT.md) |
 | branch/local territory | Experiment branches, parked CI work, local-only branches | [experiments-branches.md](experiments-branches.md) |
 
 ## System-level contracts (the tissue between components)
@@ -60,20 +61,29 @@ graph TB
    — a silent fall back to files that are no longer there is the failure this
    arrangement exists to remove.
 2. **Behaviour identity** — the slug is the primary key of `aci_behaviours`, the
-   only registry. Each row carries the display half (name, set, numeric id,
-   group, definition) and, where one exists, the judging half whole, in
+   only registry. Each row carries the display half (name, group, definition)
+   and, where one exists, the judging half whole, in
    `judging`: the definition the panel is given, the boundary of the construct,
    the provenance, and for one behaviour a definition the current rubric prefers.
-   `numeric_id` is namespaced per set and is not a global identifier. **Defined
+   The set a row names and its numbering within that set decide nothing any
+   more: a publication shows every behaviour it selects, and the cleanup
+   migration drops the set column. **Defined
    and judged are independent states**: a behaviour is defined once it carries a
    query, and judged once a call for it reaches `done`.
 3. **Judging** — a run is a batch of judge calls, one per behaviour × spec
    version × model; a call is the unit of work, cost, failure and resume; a
    judgement is one verdict on one passage. A run freezes what it judged
-   against, so it stays replayable after the registry moves on.
+   against, so it stays replayable after the registry moves on. A document is a
+   version, named `<lab>--<document>@<version>`. Judging uses one panel,
+   `frontier_fast` (`sol`, `fable`, `deepseek`), under rubric v5, and once a
+   cell's passages are in, each judge gives it a 0 to 4 depth in a call of its
+   own; a publication carries the mean.
 4. **Publication** — a publication selects, cell by cell, which run answers, and
    materialises both payloads the routes serve. Its cells must have been judged
-   by exactly the models it names, enforced by a trigger rather than by method;
+   by exactly the models it names, with the substitutions recorded in
+   `aci_seat_substitutions` applied, enforced by a trigger rather than by method
+   (`publish.py` also refuses a substitute the panel does not declare for that
+   seat in `panel-config.json`);
    the bench inherited from before that rule is the single `grandfathered`
    exemption, and a partial unique index means there can never be a second.
 5. **Provenance** — `engine/published-artefacts.sha256.json` records what the
@@ -120,6 +130,8 @@ graph TB
 5. **One publication is exempt** from the homogeneity check, because the bench
    it carries was judged by unequal panels across labs on four behaviours. See
    CLAUDE.md; filling the nine missing calls is dated work, not a side effect.
+   It is no longer the public one: as of September 2026 the public publication
+   was judged by `frontier_fast` throughout and is not grandfathered.
 
 ## Reading order for a cold-start agent
 

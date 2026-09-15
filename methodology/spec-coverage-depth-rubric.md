@@ -1,10 +1,14 @@
 # Spec-coverage depth rubric
 
-Anchors the 0-4 depth score assigned per spec in every coverage artifact and
-published in `data/coverage.json`. Depth qualifies a covered/partial verdict:
-it measures how much the spec gives an eval designer to work with for this
-behaviour, not how much the lab appears to care. Every score carries a one-line
-rationale naming what is present and what is missing, in the rubric's terms.
+Anchors the 0-4 depth score. As of September 2026 each judge of the panel gives
+one per behaviour per document, in a depth call of its own
+(`engine/panel/depth_call.py`, prompt `engine/panel/prompts/depth-v1.txt`), and a
+publication carries the mean. The depths of the frozen coverage ledger, which
+left `data/coverage.json` for the database, were assigned on it too; there depth
+qualified a covered/partial verdict. Depth measures how much the spec gives an
+eval designer to work with for this behaviour, not how much the lab appears to
+care. Every score carries a one-line rationale naming what is present and what is
+missing, in the rubric's terms.
 
 | Depth | Anchor | Bar |
 |---|---|---|
