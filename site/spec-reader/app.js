@@ -324,6 +324,7 @@ const elements = {
   template: document.querySelector("#document-template"),
   feedbackDialog: document.querySelector("#feedback-dialog"),
   feedbackForm: document.querySelector("#feedback-form"),
+  feedbackTitle: document.querySelector("#feedback-title"),
   feedbackClose: document.querySelector("#feedback-close"),
   feedbackCancel: document.querySelector("#feedback-cancel"),
   feedbackSend: document.querySelector("#feedback-send"),
@@ -332,7 +333,7 @@ const elements = {
   feedbackBehaviours: document.querySelector("#feedback-behaviours"),
   feedbackComment: document.querySelector("#feedback-comment"),
   feedbackEmail: document.querySelector("#feedback-email"),
-  feedbackNameField: document.querySelector("#feedback-name-field"),
+  feedbackPrivate: document.querySelector("#feedback-private"),
   feedbackName: document.querySelector("#feedback-name"),
   feedbackWebsite: document.querySelector("#feedback-website"),
   feedbackOutcome: document.querySelector("#feedback-outcome"),
@@ -2114,7 +2115,7 @@ const COPY_ICONS = `
  * a passage, and an icon that copies nothing must not be counted among them. */
 const FEEDBACK_ICON = `
       <button type="button" class="passage-feedback"
-        aria-label="Send feedback on this paragraph" title="Send feedback on this paragraph"><svg
+        aria-label="Note on this paragraph" title="Note on this paragraph"><svg
         viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
         d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
         fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>`;
@@ -2129,27 +2130,8 @@ const COPY_SAID = {
   link: ["Link copied", "The clipboard was refused. The link is selected: press copy."],
 };
 
-/* The visible half of a successful copy: markCopied swaps a button's icon for this
- * tick, on the same 16-unit grid as COPY_ICONS' two icons. It is kept out of that
- * constant on purpose -- a third icon is about to join COPY_ICONS for unrelated work,
- * and this one is never drawn alongside the others; it replaces whichever of the two
- * was pressed, in place, so the button's width never changes. */
-const COPY_TICK_ICON = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path d="M4 8.3l2.8 2.8L12.2 5.6" fill="none" stroke="currentColor" stroke-width="1.6"
-        stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
-/* The word beside the tick, because a tick on its own left readers unsure whether
- * anything had been copied.
- *
- * It is positioned against the button rather than laid out beside it (see
- * .copied-word), so the button's box never changes and the line it sits in never
- * reflows: the gutter these icons live in is 30px wide and the word needs sixty.
- * For its two seconds it sits on the paper ground, to the left of the tick, over
- * whatever was there. */
-const COPIED_WORD = `<span class="copied-word">Copied!</span>`;
-
-// How long the tick shows before the button reverts to its own icon, named so the
-// call site reads as a decision rather than a bare number.
+// How long "Copied" shows before the button reverts to its own icon, named so
+// the call site reads as a decision rather than a bare number.
 const COPY_TICK_MS = 2000;
 
 async function copyFromPassage(button) {
@@ -2215,14 +2197,17 @@ async function copyFromPassage(button) {
   }
 }
 
-/* Shows the tick on a successful copy, and puts the button's own icon back after
- * COPY_TICK_MS. The icon is cached in a data attribute the first time this runs and
- * never touched again, so a second press while the tick still shows restarts the
- * timer rather than caching the tick itself as though it were the button's real
- * content -- the bug that would otherwise leave a permanent tick. */
+/* Shows the word "Copied" on a successful copy, and puts the button's own icon
+ * back after COPY_TICK_MS. The icon is cached in a data attribute the first time
+ * this runs and never touched again, so a second press while the word still
+ * shows restarts the timer rather than caching the word itself as though it
+ * were the button's real content -- the bug that would otherwise leave it
+ * permanently. In the button rather than beside it (see .passage-copy.copied):
+ * more discreet, one thing instead of two, and the button simply grows to fit
+ * the word for the two seconds it shows. */
 function markCopied(button) {
   if (button.dataset.icon === undefined) button.dataset.icon = button.innerHTML;
-  button.innerHTML = COPY_TICK_ICON + COPIED_WORD;
+  button.innerHTML = `<span class="copied-label">Copied</span>`;
   button.classList.add("copied");
   clearTimeout(button._copiedTimer);
   button._copiedTimer = setTimeout(() => {
@@ -2254,8 +2239,18 @@ function resetCopied(scope) {
  * The behaviours are the intersection and not the menu, because that is what
  * annotatePassages writes: of the behaviours ticked in the sidebar, the ones
  * citing this paragraph. That is exactly the set colouring the text in front of
- * the reader, and the only set the dialog can honestly show them. */
+ * the reader, and the only set the dialog can honestly show them.
+ *
+ * A third shape, beside a paragraph's own icons and a cited passage's: the icon
+ * beside the document's title, whose subject is the document itself -- its id is
+ * also what documentOf() in app/lib/feedback.mjs reads as the document, and it
+ * carries no behaviours, because a document-wide note is about no passage and no
+ * behaviour. */
 function feedbackSubject(button) {
+  if (button.classList.contains("document-feedback")) {
+    const locator = button.closest(".document-panel")?.dataset.documentId;
+    return locator ? { locator, behaviours: [] } : null;
+  }
   const holder = button.closest(".block-copy")?.parentElement;
   const block = holder || button.closest("[data-passage-id]");
   if (!block) return null;
@@ -2289,17 +2284,19 @@ function feedbackBody(subject, form, pinned) {
   };
 }
 
-/* Opens the feedback dialog for the paragraph whose icon was pressed, filled
- * with what feedbackSubject reads off it. Every field a previous opening may
- * have left behind is reset, because nothing here is remembered between
- * paragraphs: a comment or a vote belongs to the paragraph it was written
- * against. Native <dialog> modality traps focus and closes the dialog on
- * Escape on its own; only its own buttons close it otherwise. */
+/* Opens the note dialog for the paragraph or document whose icon was pressed,
+ * filled with what feedbackSubject reads off it. Every field a previous opening
+ * may have left behind is reset, because nothing about a paragraph is
+ * remembered between paragraphs: a comment or a vote belongs to the paragraph
+ * it was written against. Native <dialog> modality traps focus and closes the
+ * dialog on Escape on its own; only its own buttons close it otherwise. */
 function openFeedbackDialog(button) {
   const subject = feedbackSubject(button);
   if (!subject) return;
   state.feedbackTarget = subject;
 
+  const documentWide = button.classList.contains("document-feedback");
+  elements.feedbackTitle.textContent = documentWide ? "Note on this document" : "Note on this paragraph";
   elements.feedbackLocator.textContent = subject.locator;
 
   const hasBehaviours = subject.behaviours.length > 0;
@@ -2310,15 +2307,14 @@ function openFeedbackDialog(button) {
     thumb.setAttribute("aria-pressed", "false"));
   elements.feedbackComment.value = "";
   elements.feedbackEmail.value = "";
-  elements.feedbackForm.querySelectorAll('input[name="visibility"]').forEach(radio => {
-    radio.checked = radio.value === "private";
-  });
-  elements.feedbackNameField.hidden = true;
+  elements.feedbackPrivate.checked = false;
   elements.feedbackName.value = "";
+  elements.feedbackName.disabled = false;
   elements.feedbackWebsite.value = "";
   elements.feedbackOutcome.textContent = "";
   elements.feedbackOutcome.className = "feedback-outcome";
-  elements.feedbackSend.disabled = false;
+  // Nothing is typed yet, and the route needs an address to write back to.
+  elements.feedbackSend.disabled = true;
 
   elements.feedbackDialog.showModal();
   elements.feedbackComment.focus();
@@ -2330,9 +2326,11 @@ function closeFeedbackDialog() {
 }
 
 /* The dialog's own controls: closing it, the two-way thumbs (a second press on
- * the pressed one clears the vote, since it is optional), showing the name
- * field only for "Show it, and say it came from me", and a submit that does
- * not yet send anything but must not reload the page while it waits to. */
+ * the pressed one clears the vote, since it is optional), the private toggle
+ * disabling the name field it would otherwise attach a name to nobody reads,
+ * the send button staying disabled until there is an address to write back to,
+ * and a submit that does not yet send anything but must not reload the page
+ * while it waits to. */
 function setupFeedbackDialog() {
   elements.feedbackClose.addEventListener("click", closeFeedbackDialog);
   elements.feedbackCancel.addEventListener("click", closeFeedbackDialog);
@@ -2346,10 +2344,12 @@ function setupFeedbackDialog() {
     });
   });
 
-  elements.feedbackForm.querySelectorAll('input[name="visibility"]').forEach(radio => {
-    radio.addEventListener("change", () => {
-      elements.feedbackNameField.hidden = radio.value !== "attributed";
-    });
+  elements.feedbackPrivate.addEventListener("change", () => {
+    elements.feedbackName.disabled = elements.feedbackPrivate.checked;
+  });
+
+  elements.feedbackEmail.addEventListener("input", () => {
+    elements.feedbackSend.disabled = elements.feedbackEmail.value.trim() === "";
   });
 
   elements.feedbackForm.addEventListener("submit", event => event.preventDefault());
@@ -3524,6 +3524,13 @@ elements.documentReader.addEventListener("click", event => {
     openSpecPicker(picker);
     return;
   }
+});
+
+/* Beside the document's title: opens the same dialog, about the document as a
+ * whole. Re-cloned with the header, so delegated like the picker above. */
+elements.documentReader.addEventListener("click", event => {
+  const icon = event.target.closest?.(".document-feedback");
+  if (icon) openFeedbackDialog(icon);
 });
 
 /* The arrows belong to a document and are re-cloned with it, so they delegate

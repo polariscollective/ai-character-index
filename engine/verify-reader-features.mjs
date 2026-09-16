@@ -294,8 +294,9 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     });
   }, refuse);
   const copyButton = kind => page.locator(`[data-passage-id] .passage-copy[data-copy="${kind}"]`).first();
-  // "M4 8.3" opens COPY_TICK_ICON's path in app.js: a cheap, exact way to tell the tick
-  // apart from the button's own icon without duplicating the markup here.
+  // "Copied" is the word markCopied (in app.js) puts in the button in place of
+  // its own icon: a cheap, exact way to tell the two apart without duplicating
+  // the markup here.
   const readIcons = () => page.evaluate(() => {
     const block = document.querySelector("[data-passage-id]");
     const scroll = block.closest(".document-scroll").getBoundingClientRect();
@@ -314,7 +315,7 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
           opacity: Math.round(Number(style.opacity) * 100) / 100,
           color: style.color,
           copied: button.classList.contains("copied"),
-          tick: button.innerHTML.includes("M4 8.3"),
+          tick: button.innerHTML.includes("Copied"),
           inHead: box.top >= head.top - 1 && box.bottom <= head.bottom + 1,
           clearOfRail: box.right <= scroll.right - 14,
           motion: style.transitionDuration,
@@ -584,7 +585,7 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
           opacity: Math.round(Number(style.opacity) * 100) / 100,
           color: style.color,
           copied: button.classList.contains("copied"),
-          tick: button.innerHTML.includes("M4 8.3"),
+          tick: button.innerHTML.includes("Copied"),
           inGutter: icon.left >= box.right,
           clearOfRail: icon.right <= scroll.right - 14,
         };
@@ -601,7 +602,7 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
       holderLocator: toolbar?.parentElement?.dataset.locator ?? null,
       buttons: toolbar ? [...toolbar.querySelectorAll(".passage-copy")].map(button => ({
         copied: button.classList.contains("copied"),
-        tick: button.innerHTML.includes("M4 8.3"),
+        tick: button.innerHTML.includes("Copied"),
       })) : [],
     };
   });

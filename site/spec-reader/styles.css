@@ -1898,7 +1898,7 @@ summary:focus-visible, dialog:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .document-scroll { scroll-behavior: auto; }
   .section-heading-button .section-chevron { transition: none; }
-  :is(.passage-copy, .passage-feedback) { transition: none; }
+  :is(.passage-copy, .passage-feedback, .document-feedback) { transition: none; }
 }
 
 /* ---------- reader test: no behaviour under test ---------- */
@@ -2216,29 +2216,43 @@ body.no-behaviours .sidebar-export { display: none; }
   font-weight: 400;
 }
 
-/* "Copied!", beside the tick, for the two seconds the tick shows.
-   Absolutely positioned against the button, so the button keeps its box and
-   nothing on the line moves: these icons sit in a 30px gutter and the word is
-   twice that wide. It sits to the left of the icon on the paper ground, over
-   whatever is beneath it, and takes no pointer events, so the paragraph under it
-   stays selectable while it shows. A 1px rule and a pill, like every other small
-   control here; no shadow, and it does not fade or slide in. */
-.passage-copy.copied { position: relative; }
-.copied-word {
-  position: absolute;
-  right: calc(100% + 4px);
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 1px 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--paper);
-  color: var(--accent);
+/* The note icon beside the document's title. Unlike a paragraph's own (see
+   .passage-copy, .passage-feedback below) it does not wait for a hover: the
+   header is not a fleeting passage, so it stays visible on its own. */
+.document-feedback {
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.document-feedback svg { display: block; width: 15px; height: 15px; }
+.document-feedback:hover { background: var(--energy); color: var(--ink); }
+.document-feedback:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* "Copied", in the button itself, for the two seconds it shows (markCopied, in
+   app.js). More discreet than a tick beside a floating pill: one thing instead
+   of two. The button's own width (18px, set above) only fits an icon, so it
+   grows to fit the word instead, in a small font -- the only way a word fits
+   into what is otherwise an 18px control. */
+.passage-copy.copied {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: 2px 5px;
+}
+.copied-label {
   font-family: var(--ui);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 10px;
+  line-height: 1.4;
   white-space: nowrap;
-  pointer-events: none;
 }
 
 /* ---------- feedback on a paragraph ---------- */
@@ -2332,6 +2346,13 @@ body.no-behaviours .sidebar-export { display: none; }
   background: transparent;
   border-style: dashed;
   color: var(--muted);
+}
+/* The name field while the private toggle is on: a private note is shown to
+   nobody, so a name on it would mean nothing. Disabled, not hidden, so the
+   toggle's effect on it is seen rather than the field vanishing. */
+.feedback-field input:disabled {
+  opacity: .55;
+  cursor: default;
 }
 .feedback-note {
   display: block;

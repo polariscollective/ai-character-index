@@ -127,15 +127,16 @@
     <p id="original-note-body" class="original-note-body"></p>
   </div>
 
-  <!-- What a reader says about one paragraph. Opened from the third icon on any
-       paragraph; app.js fills the locator and the behaviours from the paragraph
-       itself, and neither can be typed. Modal, so the document behind it stops
-       taking the keyboard, and `novalidate` so the sentences a reader is refused
-       with are ours rather than the browser's. -->
+  <!-- What a reader says about one paragraph, or a whole document. Opened from
+       the third icon on any paragraph, or from the icon beside a document's
+       title; app.js fills the title, the locator and the behaviours from
+       whichever it was, and none of the three can be typed. Modal, so the
+       document behind it stops taking the keyboard, and `novalidate` so the
+       sentences a reader is refused with are ours rather than the browser's. -->
   <dialog id="feedback-dialog" class="feedback-dialog" aria-labelledby="feedback-title">
     <form id="feedback-form" class="feedback-form" novalidate>
       <div class="feedback-head">
-        <h2 id="feedback-title">Feedback on this paragraph</h2>
+        <h2 id="feedback-title">Note on this paragraph</h2>
         <button type="button" class="feedback-close" id="feedback-close"
           aria-label="Close">×</button>
       </div>
@@ -168,33 +169,24 @@
       </p>
 
       <p class="feedback-field">
-        <label for="feedback-email">Your address</label>
+        <label for="feedback-email">Your email address</label>
         <input id="feedback-email" type="email" maxlength="200" autocomplete="email">
-        <span class="feedback-note">We use it to write back. It is never shown on the site.</span>
+        <span class="feedback-note">Always kept private. We use it to write back.</span>
       </p>
 
       <fieldset class="feedback-visibility">
         <legend>How may we use this?</legend>
         <label class="feedback-choice">
-          <input type="radio" name="visibility" value="private" checked>
+          <input type="checkbox" id="feedback-private">
           <span class="choice-title">Keep it private</span>
-          <span class="choice-note">Only we read it.</span>
-        </label>
-        <label class="feedback-choice">
-          <input type="radio" name="visibility" value="anonymous">
-          <span class="choice-title">Show it, without my name</span>
-          <span class="choice-note">The comment and the vote may appear on the site.</span>
-        </label>
-        <label class="feedback-choice">
-          <input type="radio" name="visibility" value="attributed">
-          <span class="choice-title">Show it, and say it came from me</span>
-          <span class="choice-note">Your address stays private.</span>
+          <span class="choice-note">It will not appear on the site, and it will not be counted in any statistics.</span>
         </label>
       </fieldset>
 
-      <p class="feedback-field" id="feedback-name-field" hidden>
+      <p class="feedback-field" id="feedback-name-field">
         <label for="feedback-name">Name to show</label>
         <input id="feedback-name" type="text" maxlength="100" autocomplete="nickname">
+        <span class="feedback-note">Leave blank to appear without a name.</span>
       </p>
 
       <!-- Hidden from people, filled in by machinery that posts to every form it
@@ -238,6 +230,15 @@
                 <span class="picker-caret" aria-hidden="true"></span>
               </button>
             </h2>
+            <!-- Same speech bubble as a paragraph's own note icon (FEEDBACK_ICON
+                 in app.js), baked into this template rather than drawn by JS: the
+                 reader clones the template once per panel, so this gives every
+                 panel its own without appending it per document. -->
+            <button type="button" class="document-feedback"
+              aria-label="Note on this document" title="Note on this document"><svg
+              viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+              d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
+              fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
             <a class="source-link" href="#" target="_blank" rel="noopener">Show original</a>
             <!-- What still says the document is a translation once its notice is
                  dismissed; its title carries the notice's words. -->

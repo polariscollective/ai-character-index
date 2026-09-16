@@ -35,17 +35,33 @@ function extractFn(header) {
 eval(extractFn("function feedbackSubject("));
 eval(extractFn("function feedbackBody("));
 
-/* The two shapes the reader's DOM presents: a paragraph no passage cites, whose
- * icons sit in a .block-copy toolbar inside it, and a cited passage, whose icons
- * sit in its .passage-head. Only what these functions read is modelled. */
+/* The three shapes the reader's DOM presents: a paragraph no passage cites,
+ * whose icons sit in a .block-copy toolbar inside it; a cited passage, whose
+ * icons sit in its .passage-head; and the icon beside a document's title, whose
+ * subject is the document itself. Only what these functions read is modelled;
+ * every button mock carries a classList, since feedbackSubject reads it first
+ * to tell the document-wide icon apart from the other two. */
 function uncited(locator) {
   const block = { dataset: { locator }, classList: { contains: () => false } };
   const toolbar = { parentElement: block };
-  return { closest: selector => (selector === ".block-copy" ? toolbar : null) };
+  return {
+    classList: { contains: () => false },
+    closest: selector => (selector === ".block-copy" ? toolbar : null),
+  };
 }
 function cited(locators, behaviours) {
   const block = { dataset: { locators, behaviours } };
-  return { closest: selector => (selector === ".block-copy" ? null : block) };
+  return {
+    classList: { contains: () => false },
+    closest: selector => (selector === ".block-copy" ? null : block),
+  };
+}
+function documentWide(id) {
+  const panel = { dataset: { documentId: id } };
+  return {
+    classList: { contains: cls => cls === "document-feedback" },
+    closest: selector => (selector === ".document-panel" ? panel : null),
+  };
 }
 
 let checks = 0, failures = 0;
@@ -76,6 +92,14 @@ check("the separator is a delimiter, and a behaviour is not split on its own pun
 
 check("a block with no locator is nothing to send feedback about",
   feedbackSubject(uncited("")), null);
+
+const DOC_ID = "openai--model-spec@2026-08-18";
+
+check("the icon beside a document's title is about the document, with no behaviours",
+  feedbackSubject(documentWide(DOC_ID)), { locator: DOC_ID, behaviours: [] });
+
+check("a document panel with no id is nothing to send feedback about either",
+  feedbackSubject(documentWide(undefined)), null);
 
 const FORM = { vote: "down", comment: "It reads wrong.", email: "reader@example.org",
                visibility: "attributed", name: "A reader", website: "" };
