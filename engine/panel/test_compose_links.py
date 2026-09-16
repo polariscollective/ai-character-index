@@ -32,7 +32,11 @@ def judged(slug, version_id, locators, models=("a", "b"), status="done",
     locator given, which is what makes those passages retained."""
     calls, judgements = [], []
     for model in models:
-        call_id = f"{slug}-{version_id}-{model}"
+        # The run is part of the id, as it is in production, where a call id is a
+        # uuid. Two runs of one cell must not collide here: a fixture that let
+        # them would make a judgement unattributable to the run that produced it,
+        # and would pass code that cannot work against the real table.
+        call_id = f"{run_id}-{slug}-{version_id}-{model}"
         calls.append({"id": call_id, "run_id": run_id, "behaviour_slug": slug,
                       "spec_version_id": version_id, "model": model, "status": status,
                       "finished_at": finished_at})
@@ -167,6 +171,21 @@ class ComposeLinksTest(unittest.TestCase):
                           judgements=old_judgements + new_judgements)
         retained = compose_links.retained_passages(store, "defined-behaviour", CORPUS)
         self.assertEqual([p[0] for p in retained], [p[0] for p in self.corpus[2:3]])
+
+    def test_two_runs_over_the_same_passages_read_only_the_newer(self):
+        """The realistic re-judging: both runs scored the same locators, and the
+        ids are unique as they are in production. The older run's judgements must
+        not reach the banding at all, whether or not they agree."""
+        old_calls, old_judgements = judged(
+            "defined-behaviour", "v-corpus", [p[0] for p in self.corpus[:3]],
+            run_id="old", finished_at="2026-08-01T00:00:00Z")
+        new_calls, new_judgements = judged(
+            "defined-behaviour", "v-corpus", [p[0] for p in self.corpus[:1]],
+            run_id="new", finished_at="2026-09-10T00:00:00Z")
+        store = FakeStore(calls=old_calls + new_calls,
+                          judgements=old_judgements + new_judgements)
+        retained = compose_links.retained_passages(store, "defined-behaviour", CORPUS)
+        self.assertEqual([p[0] for p in retained], [p[0] for p in self.corpus[:1]])
 
 
 if __name__ == "__main__":

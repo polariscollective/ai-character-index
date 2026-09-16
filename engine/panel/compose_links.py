@@ -69,56 +69,16 @@ def retained_passages(store, slug, version, passages_for=None):
     surfaced.
     """
     passages_for = passages_for or h.passages
-    all_calls = [c for c in store.select("aci_judge_calls")
-                 if c["behaviour_slug"] == slug and c["spec_version_id"] == version["id"]
-                 and c["status"] == "done"]
-    calls = _newest_run_of_cell(all_calls)
+    calls = _newest_run_of_cell(
+        [c for c in store.select("aci_judge_calls")
+         if c["behaviour_slug"] == slug and c["spec_version_id"] == version["id"]
+         and c["status"] == "done"])
     if not calls:
         return []
-    newest_run_id = calls[0]["run_id"]
     model_of = {c["id"]: c["model"] for c in calls}
-
-    # Collect judgements for this cell only
-    call_ids_for_version = {c["id"] for c in all_calls}
-    all_judgements = [j for j in store.select("aci_judgements")
-                      if j["call_id"] in call_ids_for_version]
-    judgements_by_call_id = {}
-    for j in all_judgements:
-        judgements_by_call_id.setdefault(j["call_id"], []).append(j)
-
-    # Find the oldest run by finished_at
-    older_run_ids = set()
-    if all_calls:
-        by_finished_at = {}
-        for call in all_calls:
-            by_finished_at.setdefault(call.get("finished_at") or "", set()).add(call["run_id"])
-        min_finished_at = min(by_finished_at.keys())
-        older_run_ids = by_finished_at[min_finished_at] if min_finished_at else set()
-
-    # For each call_id, determine which judgements are from older runs
-    # by assuming they're ordered (older first) and partitioning by count
-    older_locators = set()
-    if older_run_ids and all_calls and all_judgements and newest_run_id not in older_run_ids:
-        # Only exclude if there are runs older than the newest run
-        # Count calls in older runs
-        older_calls = [c for c in all_calls if c["run_id"] in older_run_ids]
-        older_calls_count = len(older_calls)
-        total_calls_count = len(all_calls)
-
-        # Estimate judgements from older runs (proportional to number of calls)
-        if total_calls_count > 0:
-            estimated_older_judgements = (older_calls_count / total_calls_count) * len(all_judgements)
-            judgements_per_call_id_from_older = estimated_older_judgements / len(judgements_by_call_id)
-
-            # For each call_id, take the first N judgements as from older runs
-            for call_id, judgements in judgements_by_call_id.items():
-                for j in judgements[:round(judgements_per_call_id_from_older)]:
-                    older_locators.add(j["locator"])
-
-    # Build votes, excluding locators from older runs
     votes = {}
-    for row in all_judgements:
-        if row["locator"] not in older_locators and row.get("parsed", True):
+    for row in store.select("aci_judgements"):
+        if row["call_id"] in model_of and row.get("parsed", True):
             votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
     shown = set(bands.shown_by_default(votes))
     return [p for p in passages_for(version["spec_id"], version["version"])
