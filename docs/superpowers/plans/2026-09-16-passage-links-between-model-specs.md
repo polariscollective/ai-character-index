@@ -55,6 +55,8 @@ This task is in a different repository. Nothing in this repository can run again
 
 Read its `README.md` and the most recent migration in the `evals` project directory. Follow the file naming, the grant style and the comment style you find there. Do not invent a new convention.
 
+The schema moved on 16 September 2026, so check the baseline rather than an older dump: a cleanup migration, reported as `886a93a` in that repository, dropped `aci_cell_curation`, `aci_coverage` and `aci_publications.grandfathered`, and added a unique key on `aci_spec_versions (spec_id, version)`. Verify that against the repository itself rather than taking this line for it. Nothing below reads or writes any of those, and `aci_judge_calls` and `aci_judgements`, which every later task reads, were untouched.
+
 - [ ] **Step 2: Write the migration**
 
 ```sql
@@ -129,7 +131,7 @@ Two notes to carry into the PR description. The partial unique index exists beca
 
 - [ ] **Step 3: Check `aci_behaviours.slug` really is a key**
 
-The foreign key above assumes `slug` carries a unique or primary key constraint in `aci_behaviours`. Read the table's definition in that repository. If `slug` is not a key, drop `references aci_behaviours(slug)` from the column and say so in the PR description rather than adding a constraint to an existing table in passing.
+The foreign key above assumes `slug` carries a unique or primary key constraint in `aci_behaviours`. It does: `20260910130803_create_aci_tables.sql` declares `slug text primary key`, and seven existing tables reference it in exactly this shape, `behaviour_slug text not null references aci_behaviours(slug)`. Confirm that line when you open the repository rather than taking this paragraph for it. If it ever turns out not to be a key, drop `references aci_behaviours(slug)` from the column and say so in the PR description rather than adding a constraint to an existing table in passing.
 
 - [ ] **Step 4: Open the pull request**
 
@@ -1231,9 +1233,6 @@ from store import Store           # noqa: E402
 
 h = link_call.h
 
-now = batch_job.now
-cancelled = batch_job.cancelled_link_run if False else None   # replaced below
-
 
 def _cancelled(store, run_id):
     row = next((r for r in store.select("aci_link_runs") if r["id"] == run_id), None)
@@ -1379,14 +1378,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-Delete the two lines
-
-```python
-now = batch_job.now
-cancelled = batch_job.cancelled_link_run if False else None   # replaced below
-```
-
-before running the tests. They are not part of the module: `batch_job.now` is called directly and `_cancelled` reads `aci_link_runs`, which `batch_job.cancelled` does not.
+`_cancelled` is local rather than `batch_job.cancelled` because the two read different tables: `batch_job.cancelled` looks in `aci_runs`, and a link run lives in `aci_link_runs`. `batch_job.now`, `batch_job.cost_of`, `batch_job.PER_PROVIDER` and `batch_job.call_openrouter` are reused as they are.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
