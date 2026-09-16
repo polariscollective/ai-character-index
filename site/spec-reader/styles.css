@@ -659,18 +659,6 @@ body.resizing-columns {
   color: var(--ink);
 }
 
-/* The first line of a behaviour note: defined or not, judged or not. Those are
-   independent states and the note says both, because the menu shows every
-   behaviour alike and gives a reader no way to tell them apart. */
-.behaviour-note-state {
-  margin: 0 0 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-light);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 /* Each judge's depth, under the paragraph naming a document's mean: quieter than
    the paragraph, marked the way a spec passage's own lists are marked, so the
    note does not invent a second bullet system. */

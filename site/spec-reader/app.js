@@ -233,22 +233,11 @@ function openBehaviourNote(button) {
   elements.keyNoteTitle.textContent = entry.name;
   const body = document.createElement("div");
 
-  /* Four states, not two. Written-for-a-panel and judged are independent, and
-   * the combination that reads like a contradiction is the one that exists: this
-   * index carries a behaviour a panel answered for without the brief it was
-   * given being recorded beside it. Saying "nobody has written what this means"
-   * there would be half a truth; saying nothing would be none. What is NOT
-   * claimed here is anything about the panel's composition -- whether the same
-   * models answered for every specification is a property of a publication, not
-   * of the registry this note reads. */
-  const line = document.createElement("p");
-  line.className = "behaviour-note-state";
-  line.textContent = entry.defined
-    ? (entry.judged ? "Written for a panel, and judged."
-                    : "Written for a panel, not yet judged.")
-    : (entry.judged ? "Judged, but the brief the panel was given was not recorded with the behaviour."
-                    : "Tracked, written for no panel, and not yet judged.");
-  body.append(line);
+  /* No line about whether the behaviour was written for a panel and judged. It
+   * said the same thing under every behaviour the reader shows, which is a
+   * sentence a reader learns to skip, and it was read from two fields the
+   * response does not always carry, so where it did vary it varied wrongly. The
+   * note describes the behaviour; what a panel did with it is the page. */
 
   const section = (heading, text) => {
     if (!text) return;
