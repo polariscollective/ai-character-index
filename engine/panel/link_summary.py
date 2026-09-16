@@ -42,7 +42,9 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 import batch_job                    # noqa: E402
 import link_arbitrate               # noqa: E402
 import link_call                    # noqa: E402
+import link_record                  # noqa: E402
 import whole_doc                    # noqa: E402
+from store import Store             # noqa: E402
 
 h = link_call.h
 
@@ -224,8 +226,7 @@ def main(argv=None):
         kwargs=whole_doc.judge_kwargs(args.model, model_id, config))
     cost = batch_job.cost_of(args.model, usage, config)
 
-    out = source.with_name("summary.json")
-    out.write_text(json.dumps({
+    record = {
         "run": data["run"]["id"],
         "behaviour": behaviour_of(data),
         "documents": document_ids(data),
@@ -235,8 +236,17 @@ def main(argv=None):
         "seconds": seconds,
         "cost_usd": cost,
         "text": reply or "",
-    }, indent=1, ensure_ascii=False), encoding="utf-8")
+    }
+    out = source.with_name("summary.json")
+    out.write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
+    # The file is what a person reads beside the run; the table is what a reader
+    # and the MCP server can reach. The prompt digest is part of that table's
+    # key, so improving the wording writes a new row and re-running the same
+    # wording is refused rather than duplicated.
+    _, said = link_record.write(Store.from_env(), "aci_link_summaries",
+                                link_record.summary_rows(record))
     print(f"written to {out}")
+    print(f"  aci_link_summaries      {said}")
     print(f"  {len(reply or '')} characters, finish_reason={finish_reason}, "
           f"about ${cost:.2f} spent")
     return 0

@@ -649,6 +649,52 @@ the reader can see. `sol` is OpenAI's model and it judged OpenAI's document
 against Anthropic's; that is worth knowing before anything on this page is read
 as a finding.
 
+**The arbitration and the summary are rows now, and the MCP server answers a
+comparison.** `aci_link_arbitrations` and `aci_link_summaries`, migrated in
+`polaris-supabase` as `20260916170000` (PR #33), hold what had only been files
+beside a run. A file is nowhere a hosted reader or an MCP client can reach, so
+what the reader showed and what a caller was told could never have been the same
+thing.
+
+Arbitration is a table rather than a column on `aci_links`, and the reason is
+cardinality rather than taste. A row of `aci_links` is one judge's reading in one
+direction, so a single pair of passages has up to four of them; a verdict about
+the pair would have to be written on all four or on an arbitrarily chosen one.
+Some disputes have no row to annotate at all, one kind being a pair one judge
+linked and another, shown the same passage, did not. A verdict of `none` is a
+fact about rows rather than in them. And `aci_links` carries no update grant on
+purpose, so a column there would have meant granting update on a table of
+evidence. For the first run: 176 link rows, 82 arbitrations, and the 82
+correspond to no subset of the 176.
+
+`compare_documents` is the fourth MCP tool. Given a behaviour and exactly two
+specifications it answers with each document's passages, every pair the judges
+linked with what each judge said and the force of each rule, the arbiter's
+verdict where there was one, the passages one document has nothing facing, and
+the paragraph written from all of it. It comes whole rather than in pages,
+because a comparison split across pages is one a client has to reassemble before
+it can say anything; `detail: "counts"` is the lever instead, answering with the
+shape and with `full_answer_characters`, which is the exact size of the full
+answer rather than a guess at it. Relations there are named by the document they
+are about and never by a direction, because `stricter_source` read from the other
+side is `stricter_target` and two judges who agree would look like two who do
+not.
+
+The fetching lives in `app/lib/links.mjs` and the shaping in `mcp-tools.mjs`,
+which keeps its own rule that a tool is a pure function of its arguments and a
+fixture can exercise it with no network. Link evidence is read per call rather
+than memoised like the publication snapshot: a snapshot is one row every tool
+needs, and link evidence is hundreds of rows per pair.
+
+Two things to know about it. The `silences` branch is exercised by the fixture
+and not yet by data: the first run recorded no `absent` row, because the
+completeness floor meant both judges that answered linked every source passage.
+And the `Migrations` workflow in `polaris-supabase` has failed on every run since
+#30 with `Authorization failed for the access token and project ref pair`, so
+this migration, like those, was applied by hand with `supabase db push` from
+`evals/`. `evals/supabase/schema.sql` has not been refreshed since 12 September
+2026 and is behind the migrations that followed.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

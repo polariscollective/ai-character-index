@@ -61,6 +61,7 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 import batch_job                  # noqa: E402
 import index_store                # noqa: E402
 import link_call                  # noqa: E402
+import link_record                # noqa: E402
 import whole_doc                  # noqa: E402
 from store import Store           # noqa: E402
 
@@ -321,16 +322,23 @@ def main(argv=None):
             print(".", end="", flush=True)
     print()
 
-    out = source.with_name("arbitration.json")
-    out.write_text(json.dumps({
+    record = {
         "run": data["run"]["id"], "arbiter": args.arbiter,
         # Whether the arbiter is settling a dispute it was a party to. Read it
         # before reading the verdicts.
         "arbiter_was_a_party": a_party,
         "prompt_sha256": prompt_sha256(), "disputes": settled,
-    }, indent=1, ensure_ascii=False), encoding="utf-8")
+    }
+    out = source.with_name("arbitration.json")
+    out.write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
+    # The file is what a person reads beside the run; the table is what a reader
+    # and the MCP server can reach. Both are written here, from one object, so
+    # they cannot come to say different things.
+    _, said = link_record.write(Store.from_env(), "aci_link_arbitrations",
+                                link_record.arbitration_rows(record))
     unparsed = sum(1 for d in settled if not d["settled"]["relation"])
     print(f"written to {out}")
+    print(f"  aci_link_arbitrations   {said}")
     print(f"  {len(settled)} settled, {unparsed} unanswered, about ${spent:.2f} spent")
     return 0
 
