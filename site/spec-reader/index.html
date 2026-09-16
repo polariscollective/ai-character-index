@@ -174,12 +174,22 @@
         <span class="feedback-note">Always kept private. We use it to write back.</span>
       </p>
 
+      <!-- What the default means, said before the control that changes it.
+           Most readers never touch the toggle, so for them this paragraph IS the
+           consent: it has to say who sees the note, where, and that there is no
+           way back. There is none: a note is a message that was sent, the table
+           grants no delete, and saying so plainly is the only honest way to make
+           the toggle the remedy rather than decoration. -->
+      <p class="feedback-consent">As it stands, this note may be quoted publicly on this
+        site, under the name below or under none. Your email address is never shown. A note
+        cannot be unsent, so choose to keep it private now if you would rather we kept it to
+        ourselves.</p>
       <fieldset class="feedback-visibility">
         <legend>How may we use this?</legend>
         <label class="feedback-choice">
           <input type="checkbox" id="feedback-private">
           <span class="choice-title">Keep it private</span>
-          <span class="choice-note">It will not appear on the site, and it will not be counted in any statistics.</span>
+          <span class="choice-note">Only we read it. It is never shown and never counted.</span>
         </label>
       </fieldset>
 

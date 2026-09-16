@@ -2461,3 +2461,14 @@ body.no-behaviours .sidebar-export { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .feedback-close, .thumb, .feedback-cancel, .feedback-send { transition: none; }
 }
+
+/* What the default means, above the toggle that changes it. Plain body size
+   rather than the small grey of a hint: most readers never touch the toggle, so
+   this paragraph is the whole of the consent for them, and a hint is what people
+   skip. */
+.feedback-consent {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
