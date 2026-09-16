@@ -2517,6 +2517,8 @@ body.no-behaviours .sidebar-export { display: none; }
   line-height: 1.45;
   color: var(--muted);
 }
+.link-note[hidden] { display: none; }
+.link-goto[aria-expanded="true"] { background: var(--energy); border-color: var(--energy); }
 
 .link-target { animation: link-target-flash 1.6s ease-out; }
 @keyframes link-target-flash {

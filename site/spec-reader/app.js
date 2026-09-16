@@ -4058,12 +4058,17 @@ function linkBubbles(block) {
   /* The sentence is shown, not disclosed. A relation is one word and one word is
    * not enough to trust it: the reason is what a reader weighs, so it reads
    * beside the pill rather than behind a button they must think to press. */
-  const pills = found.map(link => {
+  const id = block.dataset.passageId || "link";
+  const pills = found.map((link, index) => {
     const said = link.judge ? `${link.judge}: ${link.comment}` : (link.comment || "");
     const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
+    const noteId = `${id}-link-${index}`;
     return `<span class="link-row" data-relation="${escapeHTML(link.relation)}">`
-      + `<button type="button" class="link-goto" data-goto="${escapeHTML(link.to)}">${word}</button>`
-      + (said ? `<span class="link-note">${escapeHTML(said)}</span>` : "")
+      + `<button type="button" class="link-goto" data-goto="${escapeHTML(link.to)}"`
+      + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
+      + `>${word}</button>`
+      + (said ? `<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
+                + `${escapeHTML(said)}</span>` : "")
       + `</span>`;
   }).join("");
   return `<span class="link-bubbles">${pills}</span>`;
@@ -4077,6 +4082,19 @@ function linkBubbles(block) {
 elements.documentReader?.addEventListener("click", event => {
   const button = event.target.closest(".link-goto");
   if (!button) return;
+
+  /* The pill is the disclosure as well as the journey: one click travels to the
+   * counterpart and shows why the judge called it what it did. There is no
+   * separate icon, because a reader who wants the reason wants it about the link
+   * they are already pressing. */
+  const note = document.getElementById(button.getAttribute("aria-controls") || "");
+  if (note) {
+    const open = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!open));
+    note.hidden = open;
+    requestAnimationFrame(updateRails);
+  }
+
   const mine = button.closest(".document-panel");
   const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
   const other = panels.find(panel => panel !== mine) || mine;

@@ -308,12 +308,16 @@ def main(argv=None):
         print("nothing called (pass --go to spend)")
         return 0
 
-    settled = []
+    # Counted per call, because that is what was paid for: one call answers a
+    # whole batch, and its cost is carried on each of that batch's disputes.
+    # Summing the disputes bills the same call ten times over.
+    settled, spent = [], 0.0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         for result in pool.map(
                 lambda batch: settle(batch, documents, args.arbiter, config,
                                      batch_job.call_openrouter), batches):
             settled.extend(result)
+            spent += (result[0]["settled"]["batch_cost_usd"] or 0) if result else 0
             print(".", end="", flush=True)
     print()
 
@@ -325,8 +329,6 @@ def main(argv=None):
         "arbiter_was_a_party": a_party,
         "prompt_sha256": prompt_sha256(), "disputes": settled,
     }, indent=1, ensure_ascii=False), encoding="utf-8")
-    spent = sum({id(d["settled"]): d["settled"]["batch_cost_usd"] or 0
-                 for d in settled}.values())
     unparsed = sum(1 for d in settled if not d["settled"]["relation"])
     print(f"written to {out}")
     print(f"  {len(settled)} settled, {unparsed} unanswered, about ${spent:.2f} spent")
