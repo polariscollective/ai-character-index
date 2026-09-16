@@ -4055,23 +4055,18 @@ function linkBubbles(block) {
    * them. The sentence is a disclosed note rather than a title, for the reason
    * the passage rationale is one: a tooltip cannot be read twice, copied, or
    * kept open beside the paragraph it is about. */
-  const id = block.dataset.passageId || "link";
-  const notes = [];
-  const bubbles = found.map((link, index) => {
-    const noteId = `${id}-link-${index}`;
+  /* The sentence is shown, not disclosed. A relation is one word and one word is
+   * not enough to trust it: the reason is what a reader weighs, so it reads
+   * beside the pill rather than behind a button they must think to press. */
+  const pills = found.map(link => {
     const said = link.judge ? `${link.judge}: ${link.comment}` : (link.comment || "");
-    notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
-      + `${escapeHTML(said)}</span>`);
     const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
-    const tip = "Why does the judge say that?";
-    return `<span class="link-bubble" data-relation="${escapeHTML(link.relation)}">`
+    return `<span class="link-row" data-relation="${escapeHTML(link.relation)}">`
       + `<button type="button" class="link-goto" data-goto="${escapeHTML(link.to)}">${word}</button>`
-      + `<button type="button" class="link-why" aria-expanded="false" `
-      + `aria-controls="${escapeHTML(noteId)}" data-goto="${escapeHTML(link.to)}" `
-      + `aria-label="${tip}" data-tip="${tip}">?</button>`
+      + (said ? `<span class="link-note">${escapeHTML(said)}</span>` : "")
       + `</span>`;
   }).join("");
-  return `<span class="link-bubbles">${bubbles}</span>${notes.join("")}`;
+  return `<span class="link-bubbles">${pills}</span>`;
 }
 
 /* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
@@ -4080,21 +4075,8 @@ function linkBubbles(block) {
  * this is for; with one panel open it scrolls within it, which is the honest
  * fallback rather than doing nothing. */
 elements.documentReader?.addEventListener("click", event => {
-  const button = event.target.closest(".link-goto, .link-why");
+  const button = event.target.closest(".link-goto");
   if (!button) return;
-
-  // The "?" explains as well as travels: the sentence opens where the reader is
-  // standing, so it is still there once the other panel has moved.
-  if (button.classList.contains("link-why")) {
-    const note = document.getElementById(button.getAttribute("aria-controls"));
-    if (note) {
-      const open = button.getAttribute("aria-expanded") === "true";
-      button.setAttribute("aria-expanded", String(!open));
-      note.hidden = open;
-      requestAnimationFrame(updateRails);
-    }
-  }
-
   const mine = button.closest(".document-panel");
   const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
   const other = panels.find(panel => panel !== mine) || mine;
