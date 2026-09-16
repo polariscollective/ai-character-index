@@ -214,7 +214,7 @@ async function readDepthDescription(slug) {
       id,
       exists: Boolean(target),
       text: target ? target.textContent : null,
-      title: input.closest(".behaviour-option").querySelector("[data-behaviour-depth]").title,
+      title: input.closest(".behaviour-option-row").querySelector("[data-behaviour-depth]").title,
     };
   });
 }
@@ -338,15 +338,21 @@ if (behaviours.length === 0) {
       report(shown === expected, `${behaviour.slug} · ${document.id} · depth`,
              `${shown} (expected ${expected})`);
 
-      // The figure is bare and hidden from screen readers. What they hear beside the
-      // name carries the scale, which a sighted reader gets once, from the column's
-      // header, and a screen reader would not hear with each value.
+      // The figure is bare on screen. What a screen reader hears carries the scale,
+      // which a sighted reader gets once, from the column's header, and a screen
+      // reader would not hear with each value: once beside the name, in the hidden
+      // form the checkbox carries, and once as the name of the figure's own button,
+      // which opens the cell behind it and so cannot be hidden from anyone.
       const spoken = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`, cell => ({
-        hidden: cell.getAttribute("aria-hidden") === "true",
-        text: cell.closest(".behaviour-option")?.querySelector(".depth-spoken")?.textContent ?? null,
+        tag: cell.tagName,
+        label: cell.getAttribute("aria-label"),
+        expanded: cell.getAttribute("aria-expanded"),
+        text: cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken")?.textContent ?? null,
       }));
       const expectedSpoken = depth ? `depth ${depth.mean.toFixed(1)} out of 4` : "no depth given";
-      report(spoken.hidden && spoken.text === expectedSpoken,
+      report(spoken.text === expectedSpoken && spoken.tag === "BUTTON"
+               && spoken.label === `${behaviour.name}: ${expectedSpoken}`
+               && spoken.expanded === "false",
              `${behaviour.slug} · ${document.id} · depth, spoken with its scale`,
              `${JSON.stringify(spoken)} (expected ${expectedSpoken})`);
 
@@ -401,7 +407,7 @@ if (behaviours.length === 0) {
     report(shown === expected, `${behaviour.slug} · compare · depth`,
            `${shown} (expected ${expected})`);
     const spokenCompare = await page.$eval(`[data-behaviour-depth="${behaviour.slug}"]`, cell =>
-      cell.closest(".behaviour-option")?.querySelector(".depth-spoken")?.textContent ?? null);
+      cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken")?.textContent ?? null);
     const paneDepths = documents.slice(0, 2).map(document => behaviour.coverage[document.id]?.depth);
     const expectedSpokenCompare = paneDepths.some(Boolean)
       ? `depth ${paneDepths.map(depth => (depth ? `${depth.mean.toFixed(1)} out of 4` : "not given")).join(" and ")}`
@@ -454,7 +460,7 @@ if (behaviours.length === 0) {
     const heads = await page.evaluate(() => [...document.querySelectorAll(".behaviour-group")].map(group => {
       const heading = group.querySelector("h2");
       const head = group.querySelector(".depth-head");
-      const figures = [...group.querySelectorAll(".behaviour-option .depth")]
+      const figures = [...group.querySelectorAll(".behaviour-option-row .depth")]
         .map(cell => cell.getBoundingClientRect());
       const box = head?.getBoundingClientRect();
       const name = heading.getBoundingClientRect();

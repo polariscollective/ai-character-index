@@ -1519,6 +1519,160 @@ await at("");
 }
 
 // =============================================================================
+console.log("== Reader: the depth column explains itself ==");
+/* Two popovers hang off the depth column: the scale, from the heading that states
+ * it, and one cell, from a figure. A reader looking at a 1.0 has to be able to ask
+ * what a 1 is, and who gave it, without leaving the reader. Both are opened here,
+ * read, and closed with Escape; only one of them is ever on screen, and the
+ * control that opened it has the focus back afterwards. */
+{
+  const figure = `[data-behaviour-depth="${DEFINED}"]`;
+  const read = () => page.evaluate(() => {
+    const note = document.querySelector("#depth-note");
+    const box = note?.getBoundingClientRect();
+    return {
+      open: document.querySelectorAll(":popover-open").length,
+      title: document.querySelector("#depth-note-title")?.textContent ?? "",
+      body: document.querySelector("#depth-note-body")?.textContent ?? "",
+      headings: [...(note?.querySelectorAll("h3") ?? [])].map(h => h.textContent),
+      judges: [...(note?.querySelectorAll(".depth-note-judges li") ?? [])].map(li => li.textContent),
+      role: note?.getAttribute("role") ?? null,
+      labelled: note?.getAttribute("aria-labelledby") ?? null,
+      focusInside: note ? note.contains(document.activeElement) : false,
+      scrolls: note ? getComputedStyle(note).overflowY : null,
+      // The box stays in the window and the page keeps its width: a long
+      // rationale scrolls inside the box rather than stretching the page.
+      insideWindow: box ? box.top >= -0.5 && box.bottom <= window.innerHeight + 0.5
+        && box.left >= -0.5 && box.right <= window.innerWidth + 0.5 : false,
+      pageKeepsWidth: document.documentElement.scrollWidth <= window.innerWidth + 0.5,
+      // Which of the column's own controls says it is open. The sidebar's fold
+      // toggle carries aria-expanded too, and is not one of these.
+      marked: [...document.querySelectorAll('.depth-head[aria-expanded="true"],'
+          + ' .depth[aria-expanded="true"]')]
+        .map(el => el.dataset.behaviourDepth ?? "scale").join(","),
+    };
+  });
+  const brief = seen => `${seen.open} open, marked "${seen.marked}", `
+    + `title "${seen.title}", ${seen.judges.length} judges`;
+  const escape = selector => page.keyboard.press("Escape")
+    .then(() => page.waitForTimeout(200))
+    .then(() => page.evaluate(sel => ({
+      open: document.querySelectorAll(":popover-open").length,
+      // The control itself, not merely one of its kind.
+      focused: document.activeElement === document.querySelector(sel),
+      expanded: document.querySelector(sel)?.getAttribute("aria-expanded") ?? null,
+    }), selector));
+
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}`);
+  await page.locator(".depth-head").first().click();
+  await page.waitForTimeout(250);
+  const scale = await read();
+  check(scale.title === "Depth, out of 4" && scale.marked === "scale",
+    "the column's heading opens a popover of its own", brief(scale));
+  check(["absent", "named", "discussed", "prescribed", "demonstrated"]
+      .every(anchor => scale.body.includes(anchor))
+    && scale.body.includes("No passage bears on the behaviour.")
+    && scale.body.includes("usable as an answer key for borderline cases."),
+    "the scale popover gives the rubric's five levels in the rubric's own words",
+    scale.body.replace(/\s+/g, " ").slice(0, 110));
+  check(scale.body.includes("not whether it agrees with it")
+    && scale.body.includes("the mean of the panel's three judges"),
+    "the scale popover says what depth is not, and what the figure averages",
+    scale.body.replace(/\s+/g, " ").slice(0, 160));
+  check(scale.open === 1 && scale.role === "dialog" && scale.labelled === "depth-note-title"
+    && scale.focusInside && scale.scrolls === "auto" && scale.insideWindow,
+    "one popover, labelled, focused, scrolling inside the window rather than stretching it",
+    `${brief(scale)}, role ${scale.role}, labelled by ${scale.labelled},`
+      + ` focus inside ${scale.focusInside}, overflow ${scale.scrolls},`
+      + ` in window ${scale.insideWindow}`);
+
+  let closed = await escape(".depth-head");
+  check(closed.open === 0 && closed.focused && closed.expanded === "false",
+    "Escape closes the scale popover and gives the heading its focus back",
+    JSON.stringify(closed));
+
+  await page.click(figure);
+  await page.waitForTimeout(250);
+  const cell = await read();
+  check(cell.title === "Defined behaviour" && cell.headings.join(" | ") === "Parser corpus 2026-01-01"
+    && cell.marked === DEFINED,
+    "a figure opens the cell behind it, under the document it was judged on",
+    `${brief(cell)}, headings ${cell.headings.join(" | ")}`);
+  check(cell.body.includes("2.7 out of 4, prescribed."),
+    "the cell popover leads with the mean and the word it rounds to",
+    cell.body.replace(/\s+/g, " ").slice(0, 80));
+  check(cell.judges.length === 3
+    && cell.judges.some(line => line === "c 2 Discussed in general terms.")
+    && cell.judges.every(line => /^[abc] [0-4] \S/.test(line)),
+    "the cell popover names each judge with its own 0 to 4 and its rationale",
+    cell.judges.join(" | "));
+  check(cell.open === 1 && cell.focusInside && cell.insideWindow,
+    "the cell popover is the only one open, and holds the focus", brief(cell));
+
+  closed = await escape(figure);
+  check(closed.open === 0 && closed.focused && closed.expanded === "false",
+    "Escape closes the cell popover and gives the figure its focus back",
+    JSON.stringify(closed));
+
+  // A seat another model judged is named in the cell it happened in.
+  await at(`?behavior=${DEFINED}&spec=${DOC_B}`);
+  await page.click(figure);
+  await page.waitForTimeout(250);
+  const substituted = await read();
+  check(substituted.body.includes("d judged in place of c: c returned no output for"
+      + " this document on every attempt."),
+    "the cell popover names the substitute recorded in that seat",
+    substituted.body.replace(/\s+/g, " ").slice(0, 150));
+
+  // A document a behaviour was never judged on says so, rather than opening empty.
+  await at(`?behavior=${UNDEFINED}&spec=${DOC_B}`);
+  await page.click(`[data-behaviour-depth="${UNDEFINED}"]`);
+  await page.waitForTimeout(250);
+  const unjudged = await read();
+  check(unjudged.open === 1 && unjudged.judges.length === 0
+    && unjudged.body.includes("No depth given: this behaviour was not judged on this document."),
+    "a cell with no depth says so plainly instead of opening on nothing",
+    unjudged.body.replace(/\s+/g, " ").slice(0, 110));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+
+  // The scale and a cell can never be on screen together, and neither can one of
+  // them and a behaviour's note.
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}`);
+  await page.locator(".depth-head").first().click();
+  await page.waitForTimeout(200);
+  await page.click(figure);
+  await page.waitForTimeout(250);
+  const one = await read();
+  check(one.open === 1 && one.title === "Defined behaviour" && one.marked === DEFINED,
+    "opening a figure closes the scale: one popover, and one trigger marked open",
+    brief(one));
+  await page.click(`[data-behaviour-note="${DEFINED}"]`);
+  await page.waitForTimeout(250);
+  const swapped = await read();
+  check(swapped.open === 1 && swapped.marked === "",
+    "opening a behaviour's note closes the depth note and unmarks its trigger",
+    brief(swapped));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+
+  // Phone width: the box fits the window and the page keeps its width.
+  await page.setViewportSize({ width: 400, height: 780 });
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}`);
+  await page.click(figure);
+  await page.waitForTimeout(250);
+  const narrow = await read();
+  check(narrow.open === 1 && narrow.insideWindow && narrow.pageKeepsWidth,
+    "at 400px wide the popover stays in the window and the page is not pushed sideways",
+    `${brief(narrow)}, in window ${narrow.insideWindow}, page keeps width ${narrow.pageKeepsWidth}`);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(150);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  check(pageErrors.length === 0, "depth popovers: no console errors", pageErrors.join("; "));
+}
+
+// =============================================================================
 console.log("== Reader: compare toggle (click path) ==");
 // The URL path into compare is covered above; this is the button a reader
 // actually clicks, from an ordinary one-document view.

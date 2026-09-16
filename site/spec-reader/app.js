@@ -222,8 +222,7 @@ function openBehaviourNote(button) {
       (Array.isArray(substitutions) ? substitutions : []).forEach(({ seat, substitute, reason }) => {
         const said = document.createElement("p");
         // The reason is a database column, not composed copy: it may end mid-sentence.
-        const endedReason = /[.!?]$/.test(reason) ? reason : `${reason}.`;
-        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${endedReason}`;
+        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${endedSentence(reason)}`;
         body.append(said);
       });
       if (depth) {
@@ -316,6 +315,9 @@ const elements = {
   originalNote: document.querySelector("#original-note"),
   originalNoteLabel: document.querySelector("#original-note-label"),
   originalNoteBody: document.querySelector("#original-note-body"),
+  depthNote: document.querySelector("#depth-note"),
+  depthNoteTitle: document.querySelector("#depth-note-title"),
+  depthNoteBody: document.querySelector("#depth-note-body"),
   template: document.querySelector("#document-template"),
 };
 
@@ -820,9 +822,163 @@ function createDocumentResizer() {
   return resizer;
 }
 
+/* The depth column's two popovers, in one element.
+ *
+ * The heading opens the rubric, a figure opens the cell behind it, and both land
+ * in the same box: two elements would let the scale and a cell sit on screen
+ * together saying different things about the same column. The browser's light
+ * dismiss and Escape close it; what is added here is the focus, which goes into
+ * the box on the way in so a long rationale can be scrolled by keyboard, and
+ * back to the control that opened it on the way out. */
+let depthNoteTrigger = null;
+
+function releaseDepthTrigger() {
+  if (depthNoteTrigger) depthNoteTrigger.setAttribute("aria-expanded", "false");
+  depthNoteTrigger = null;
+}
+
+function closeDepthNote() {
+  const popover = elements.depthNote;
+  if (popover?.matches?.(":popover-open")) popover.hidePopover();
+  releaseDepthTrigger();
+}
+
+/* Beside the column it belongs to, level with the row that opened it.
+ *
+ * A popover renders in the top layer, where the browser would centre it in the
+ * window, so the corner is set here. Out of the menu rather than over it, and
+ * clamped: below the breakpoint the menu is the full width of the window and
+ * there is nothing to its right, so the box falls back to the trigger's own
+ * left edge and then to the window's. */
+function placeDepthNote(anchor) {
+  const popover = elements.depthNote;
+  const rect = anchor.getBoundingClientRect();
+  const box = popover.getBoundingClientRect();
+  const gap = 10;
+  const edge = 12;
+  const column = document.querySelector(".behaviour-sidebar");
+  const from = column ? column.getBoundingClientRect().right : rect.right;
+  let left = from + gap;
+  if (left + box.width > window.innerWidth - edge) {
+    left = Math.max(edge, Math.min(rect.left, window.innerWidth - box.width - edge));
+  }
+  // Level with the row, not below it: a figure halfway down a long menu has room
+  // under it and a figure at the foot has none, and the clamp is what tells them
+  // apart. Never taller than the window: the box scrolls, the page does not.
+  const top = Math.min(Math.max(edge, rect.top - 4), window.innerHeight - box.height - edge);
+  popover.style.left = `${Math.round(left)}px`;
+  popover.style.top = `${Math.round(Math.max(edge, top))}px`;
+}
+
+/* One note, drawn from the structure depthScaleNote and depthFigureNote return.
+ * Nothing here is ever innerHTML: a judge's rationale is model output and a
+ * document's title comes out of a publication. */
+function openDepthNote(trigger, note) {
+  const popover = elements.depthNote;
+  if (!popover || typeof popover.showPopover !== "function") return;
+  elements.depthNoteTitle.textContent = note.title;
+  const body = document.createElement("div");
+  const span = (className, text) => {
+    const element = document.createElement("span");
+    element.className = className;
+    element.textContent = text;
+    return element;
+  };
+
+  if (note.levels) {
+    body.append(span("depth-note-lede", note.lede));
+    const list = document.createElement("ul");
+    list.className = "depth-note-scale";
+    note.levels.forEach(level => {
+      const item = document.createElement("li");
+      // The spaces are for whoever reads the row as one string -- a screen
+      // reader, the walker -- and cost the grid nothing: whitespace between
+      // grid items is not an item.
+      item.append(span("depth-note-level", String(level.level)), " ",
+                  span("depth-note-anchor", level.anchor), " ",
+                  span("depth-note-bar", level.bar));
+      list.append(item);
+    });
+    body.append(list);
+  } else {
+    note.documents.forEach(cell => {
+      const heading = document.createElement("h3");
+      heading.textContent = cell.document;
+      const summary = document.createElement("p");
+      summary.className = "depth-note-mean";
+      // The figure is data and the rest of the sentence is prose, so only the
+      // figure is set in the mono face. One text either way: the words are the
+      // ones depthCellNote wrote, cut at the figure it already gave.
+      if (cell.figure) {
+        summary.append(span("depth-note-figure", cell.figure),
+                       document.createTextNode(cell.summary.slice(cell.figure.length)));
+      } else {
+        summary.textContent = cell.summary;
+      }
+      body.append(heading, summary);
+      cell.substitutions.forEach(sentence => {
+        const said = document.createElement("p");
+        said.className = "depth-note-substitution";
+        said.textContent = sentence;
+        body.append(said);
+      });
+      if (cell.judges.length) {
+        const list = document.createElement("ul");
+        list.className = "depth-note-judges";
+        cell.judges.forEach(given => {
+          const item = document.createElement("li");
+          item.append(span("depth-note-judge", given.judge), " ",
+                      span("depth-note-score", String(given.depth)), " ",
+                      span("depth-note-rationale", given.rationale));
+          list.append(item);
+        });
+        body.append(list);
+      }
+    });
+  }
+
+  elements.depthNoteBody.replaceChildren(...body.childNodes);
+  // Re-opening an open popover throws, and moving between two triggers can land
+  // the click before the light dismiss has run.
+  if (popover.matches(":popover-open")) popover.hidePopover();
+  releaseDepthTrigger();
+  depthNoteTrigger = trigger;
+  trigger.setAttribute("aria-expanded", "true");
+  popover.showPopover();
+  placeDepthNote(trigger);
+  popover.focus();
+}
+
+function setupDepthNotes() {
+  const popover = elements.depthNote;
+  if (!popover || typeof popover.showPopover !== "function") return;
+  popover.addEventListener("toggle", event => {
+    if (event.newState === "open") return;
+    // The toggle event is queued, so a second trigger clicked while the first
+    // note was open runs this after the new one is already up: that note's
+    // trigger owns the state now, and this one has nothing left to say.
+    if (popover.matches(":popover-open")) return;
+    const trigger = depthNoteTrigger;
+    releaseDepthTrigger();
+    /* Escape, or the trigger clicked again: the reader goes back where it was.
+     * A click on some other control is not stolen from it, which is why this
+     * asks where the focus is rather than moving it unconditionally. */
+    const inside = popover.contains(document.activeElement);
+    if (trigger && trigger.isConnected
+        && (inside || document.activeElement === document.body)) {
+      trigger.focus();
+    }
+  });
+  // The corner was measured against a window that no longer has those edges.
+  window.addEventListener("resize", () => {
+    if (popover.matches(":popover-open")) popover.hidePopover();
+  });
+}
+
 setupSidebarResizer();
 setupSidebarToggle();
 setupKeyNotes();
+setupDepthNotes();
 
 function behaviourGroups() {
   const groups = new Map();
@@ -859,18 +1015,32 @@ function renderBehaviourList() {
   elements.behaviourList.innerHTML = groups.map(group => `
     <section class="behaviour-group texture-${group.texture}">
       <!-- The depth column's scale, said once at its top rather than beside every
-           figure; each figure's spoken form carries it for a screen reader. -->
+           figure; each figure's spoken form carries it for a screen reader. It is
+           also the way into the rubric the figures are scored on: a reader who
+           wants to know what a 1 means asks the scale, in place, rather than
+           leaving for the methodology page. -->
       <div class="behaviour-group-head">
         <h2>${escapeHTML(group.name)}</h2>
-        <span class="depth-head">Depth, out of 4</span>
+        <button
+          type="button"
+          class="depth-head"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+        >Depth, out of 4</button>
       </div>
       <ul>
         ${group.behaviours.map(behaviour => {
           const checked = selected.has(behaviour.slug);
           const texture = behaviourTexture(behaviour);
           return `
-          <li class="behaviour-option-row">
-            <label class="behaviour-option${checked ? " checked" : ""} texture-${texture}" style="--bh: ${behaviourHue(behaviour)}">
+          <li class="behaviour-option-row" style="--bh: ${behaviourHue(behaviour)}">
+            <!-- The row as it is drawn: the tick target and the depth figure share one
+                 box, because they are one row, but the figure is a button and a button
+                 may not sit inside a label -- it is labelable itself, and the label
+                 would tick the behaviour on the way past. So the frame holds both and
+                 carries the hover and the ticked ground the label used to carry. -->
+            <span class="behaviour-option-frame">
+            <label class="behaviour-option${checked ? " checked" : ""} texture-${texture}">
               <input
                 class="behaviour-check"
                 type="checkbox"
@@ -881,9 +1051,19 @@ function renderBehaviourList() {
               <span class="behaviour-box" aria-hidden="true"></span>
               <span class="number">${String(behaviour.id).padStart(2, "0")}</span>
               <span class="name">${escapeHTML(behaviour.name)}</span>
-              <span class="depth" data-behaviour-depth="${escapeHTML(behaviour.slug)}" aria-hidden="true"></span>
               <span class="depth-spoken visually-hidden"></span>
             </label>
+            <!-- The figure, and the way into the cell behind it: the mean, each judge
+                 with its own score and its rationale, and any recorded substitute.
+                 updateBehaviourDepths writes its text and its name. -->
+            <button
+              type="button"
+              class="depth"
+              data-behaviour-depth="${escapeHTML(behaviour.slug)}"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+            ></button>
+            </span>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
             <span class="depth-description" id="depth-description-${escapeHTML(behaviour.slug)}" hidden></span>
@@ -909,6 +1089,16 @@ function renderBehaviourList() {
       openBehaviourNote(button);
     });
   });
+  elements.behaviourList.querySelectorAll(".depth-head").forEach(button => {
+    button.addEventListener("click", () =>
+      openDepthNote(button, depthScaleNote(payloadBehaviours())));
+  });
+  elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(button => {
+    button.addEventListener("click", () => {
+      const behaviour = payloadBehaviours().find(b => b.slug === button.dataset.behaviourDepth);
+      openDepthNote(button, depthFigureNote(behaviour, visibleDocuments().filter(Boolean)));
+    });
+  });
   updateBehaviourCount();
   updateBehaviourDepths();
 }
@@ -923,7 +1113,110 @@ function renderBehaviourList() {
  * group's heading ("Depth, out of 4"): "3.7 / 4" beside every name read poorly,
  * and comparing already puts " / " between two documents' figures. A sentence
  * that gives one depth on its own says the scale in that sentence. */
-const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
+/* The 0 to 4 scale itself, in the rubric's own terms.
+ *
+ * methodology/spec-coverage-depth-rubric.md is what the judges were given, and
+ * this is that table: the anchor and the bar of each level, so the popover the
+ * column's heading opens quotes the rubric rather than paraphrasing it into a
+ * second rubric nobody maintains. The rubric writes its asides with a double
+ * hyphen and this surface takes commas instead; nothing else is changed.
+ *
+ * DEPTH_WORDS, the word said beside a mean, is these anchors and not a second
+ * list of them. */
+const DEPTH_LEVELS = [
+  { level: 0, anchor: "absent",
+    bar: "No passage bears on the behaviour." },
+  { level: 1, anchor: "named",
+    bar: "The behaviour appears, a word or clause, typically inside a list or a "
+      + "passage about something else, but the spec says nothing further about it." },
+  { level: 2, anchor: "discussed",
+    bar: "The spec addresses the behaviour in its own right, what the norm is and "
+      + "why it matters, but only in terms too general to grade a response against." },
+  { level: 3, anchor: "prescribed",
+    bar: "The spec states concrete do/don't rules or procedures for the behaviour, "
+      + "specific enough that a grader can quote the spec's own sentences as pass criteria." },
+  { level: 4, anchor: "demonstrated",
+    bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
+      + "sanctioned response, usable as an answer key for borderline cases." },
+];
+
+const DEPTH_WORDS = DEPTH_LEVELS.map(level => level.anchor);
+
+/* Small counts read as words in a sentence, not as digits. Beyond this list a
+ * figure is a figure; no panel of the index has ever seated nine. */
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+
+/* A sentence out of a database column ends like one. The reason a substitution
+ * carries was typed by an operator and may stop mid-air; nothing else is added. */
+function endedSentence(reason) {
+  const text = String(reason ?? "").trim();
+  if (!text) return "";
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
+/* How many judges a cell of this publication carries, or null when its cells
+ * disagree. The scale's sentence says the figure is a mean, and a mean is only
+ * worth naming a size for when every cell was reached the same way: a payload
+ * whose cells were judged by different numbers says "the panel's judges" and
+ * counts nothing. */
+function depthJudgeCount(behaviours) {
+  const counts = new Set();
+  (behaviours || []).forEach(behaviour => {
+    Object.keys(behaviour?.coverage || {}).forEach(id => {
+      const depth = panelDepth(behaviour, id);
+      if (depth) counts.add(Object.keys(depth.judges || {}).length);
+    });
+  });
+  return counts.size === 1 ? [...counts][0] : null;
+}
+
+/* The one sentence under the scale: what depth measures, what it does not, and
+ * what the figure beside a behaviour is an average of. */
+function depthScaleLede(behaviours) {
+  const judges = depthJudgeCount(behaviours);
+  const panel = judges === null ? "the panel's judges"
+    : judges === 1 ? "the panel's single judge"
+    : `the panel's ${NUMBER_WORDS[judges] ?? judges} judges`;
+  return "Depth measures how far a document develops a behaviour, not whether it "
+    + `agrees with it, and each figure is the mean of ${panel}.`;
+}
+
+/* What the column's heading opens: the rubric, once, for the whole column. */
+function depthScaleNote(behaviours) {
+  return { title: "Depth, out of 4", lede: depthScaleLede(behaviours), levels: DEPTH_LEVELS };
+}
+
+/* What one figure is: the mean, the judges behind it with their own scores and
+ * their rationales, and the seat a recorded substitute sat in. A cell nobody
+ * judged says that in a sentence rather than opening on nothing, because an
+ * empty popover reads as a broken one. */
+function depthCellNote(behaviour, doc) {
+  const depth = panelDepth(behaviour, doc.id);
+  const recorded = behaviour?.coverage?.[doc.id]?.substitutions;
+  return {
+    document: `${doc.title} ${doc.version}`,
+    figure: depth ? depth.mean.toFixed(1) : null,
+    summary: depth
+      ? `${depth.mean.toFixed(1)} out of 4, ${DEPTH_WORDS[Math.round(depth.mean)]}.`
+      : "No depth given: this behaviour was not judged on this document.",
+    substitutions: (Array.isArray(recorded) ? recorded : [])
+      .map(({ seat, substitute, reason }) =>
+        `${substitute} judged in place of ${seat}: ${endedSentence(reason)}`),
+    judges: depth
+      ? Object.entries(depth.judges || {}).map(([judge, given]) => ({
+          judge, depth: given.depth, rationale: given.rationale || "" }))
+      : [],
+  };
+}
+
+/* What one figure opens. Comparing, the figure is a pair and so is the note:
+ * one section per document on screen, in the order the panes are in. */
+function depthFigureNote(behaviour, documents) {
+  return {
+    title: behaviour?.name || "",
+    documents: (documents || []).filter(Boolean).map(doc => depthCellNote(behaviour, doc)),
+  };
+}
 
 /* The depth the index's panel gave a behaviour on a document, or null. Every read of
  * a depth in this file goes through here.
@@ -961,10 +1254,19 @@ function depthSpoken(depths) {
 function updateBehaviourDepths() {
   if (!state.payload) return;
   const shown = visibleDocuments().filter(Boolean);
+  /* An open note was assembled for the documents that were on screen when it
+   * opened. Whatever brought us here changed them, so it is stale rather than
+   * wrong, and a stale note is worse: it reads as the answer to the question
+   * just asked. */
+  closeDepthNote();
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(cell => {
     const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
     const depths = shown.map(doc => panelDepth(behaviour, doc.id));
     cell.textContent = depths.map(depth => (depth ? depth.mean.toFixed(1) : "–")).join(" / ");
+    /* The figure is a control, so it cannot be hidden from screen readers the way
+     * a bare span was: it is named instead, with the behaviour it belongs to and
+     * the same spoken figures the checkbox carries. */
+    cell.setAttribute("aria-label", `${behaviour?.name || ""}: ${depthSpoken(depths)}`);
     const summary = shown.map((doc, i) => depthSummaryLine(doc, depths[i])).join("\n");
     // Kept for mouse users; a keyboard, touch or screen-reader user reaches the same
     // words through the checkbox's aria-describedby instead (see renderBehaviourList).
