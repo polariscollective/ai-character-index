@@ -113,6 +113,15 @@
     <div id="key-note-body" class="key-note-body"></div>
   </div>
 
+  <!-- The depth column's scale, and one cell of it, in one box: app.js fills it
+       from whichever control was pressed, so the two can never be on screen
+       together saying different things about the same column. -->
+  <div id="depth-note" class="depth-note" popover role="dialog" tabindex="-1"
+    aria-labelledby="depth-note-title">
+    <h2 id="depth-note-title" class="depth-note-title"></h2>
+    <div id="depth-note-body" class="depth-note-body"></div>
+  </div>
+
   <div id="original-note" class="original-note" popover>
     <p id="original-note-label" class="original-note-label"></p>
     <p id="original-note-body" class="original-note-body"></p>

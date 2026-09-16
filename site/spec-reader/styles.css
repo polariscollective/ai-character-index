@@ -454,13 +454,28 @@ body.resizing-columns {
   gap: 10px;
   padding: 15px 48px 7px 25px;
 }
+/* The scale is a control: it opens the rubric the figures are scored on. The
+   padding is a hit area and the negative margins give it straight back, so the
+   heading row is no taller for it and the label still ends where the figures
+   below it end. */
 .depth-head {
   flex: none;
+  margin: -2px -5px;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
   color: var(--faint);
+  font-family: inherit;
+  font-weight: inherit;
   font-size: 11px;
   line-height: 1.35;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
+.depth-head:hover,
+.depth-head[aria-expanded="true"] { background: var(--energy); color: var(--ink); }
 .behaviour-group h2 {
   flex: 1;
   min-width: 0;
@@ -472,21 +487,34 @@ body.resizing-columns {
   line-height: 1.35;
 }
 .behaviour-group ul { list-style: none; margin: 0; padding: 0 10px 10px; }
-.behaviour-option {
+/* The row as it is drawn. The tick target and the depth figure sit in it side by
+   side: the figure is a button, and a button inside a label would be ticked by
+   the label on its way past, so the ground they share is this frame rather than
+   the label it used to be. */
+.behaviour-option-frame {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 34px;
   padding: 7px 12px 7px 12px;
   display: flex;
   gap: 9px;
   align-items: baseline;
   border-radius: 5px;
+}
+.behaviour-option {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
   color: var(--ink);
   cursor: pointer;
   text-align: left;
 }
-.behaviour-option:hover { background: var(--chrome-deep); }
-.behaviour-option.checked {
+.behaviour-option-frame:hover { background: var(--chrome-deep); }
+.behaviour-option-frame:has(.behaviour-option.checked) {
   background: var(--paper);
   box-shadow: inset 3px 0 0 rgb(var(--bh) / var(--rule-core));
 }
@@ -507,7 +535,7 @@ body.resizing-columns {
   border-radius: 4px;
   background: var(--paper);
 }
-.behaviour-option:hover .behaviour-box { border-color: rgb(var(--bh) / var(--rule-core)); }
+.behaviour-option-frame:hover .behaviour-box { border-color: rgb(var(--bh) / var(--rule-core)); }
 .behaviour-option.checked .behaviour-box {
   position: relative;
   border-color: rgb(var(--bh) / var(--rule-core));
@@ -545,7 +573,7 @@ body.resizing-columns {
     to right, currentColor 0 3px, transparent 3px 6px);
   opacity: .45;
 }
-.behaviour-option.texture-stipple.checked {
+.behaviour-option-frame:has(.behaviour-option.texture-stipple.checked) {
   background-image: repeating-linear-gradient(
     to bottom, rgb(var(--bh) / var(--rule-core)) 0 3px, transparent 3px 6px);
   background-size: 3px 100%;
@@ -563,13 +591,29 @@ body.resizing-columns {
 }
 .behaviour-option .name { flex: 1; font-size: 12px; line-height: 1.35; }
 /* A behaviour's depth on the documents on screen: a figure, so mono, and quiet
-   beside the name it qualifies. */
-.behaviour-option .depth {
+   beside the name it qualifies. A control as well as a reading, which is where
+   "why is this a 1" is answered; its padding and negative margins are a hit area
+   that costs the row no height, the same trade the scale above it makes. */
+.behaviour-option-row .depth {
   flex: none;
+  margin: -2px -5px;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
   color: var(--faint);
   font-family: var(--mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.behaviour-option-row .depth:hover,
+.behaviour-option-row .depth[aria-expanded="true"] {
+  background: var(--energy);
+  color: var(--ink);
 }
 /* Read by a screen reader, drawn for no one. */
 .visually-hidden {
@@ -648,6 +692,121 @@ body.resizing-columns {
   height: 6px;
   border-radius: 50%;
   background: var(--energy);
+}
+
+/* What the depth column opens: the scale from its heading, one cell from a
+   figure. Built like the key's notes -- fixed, in the top layer, cornered from
+   the control that opened it -- and bounded the same way, so a judge who wrote
+   three hundred words scrolls inside the box instead of stretching the page. */
+.depth-note {
+  position: fixed;
+  inset: auto;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.depth-note::backdrop { background: transparent; }
+.depth-note:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+.depth-note-title {
+  margin: 0 0 10px;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+}
+.depth-note-body { font-size: 13px; line-height: 1.55; }
+.depth-note-body p { margin: 0 0 10px; }
+
+/* What depth is, and is not, before the levels it is read on. */
+.depth-note-lede {
+  display: block;
+  margin: 0 0 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line-light);
+  color: var(--muted);
+}
+
+/* The rubric's five levels, one row each: the figure and its anchor on the first
+   line, the bar under them. Two columns rather than three, so the bar keeps its
+   width at any window and the row never asks the page to scroll sideways. */
+.depth-note-scale,
+.depth-note-judges {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.depth-note-scale li,
+.depth-note-judges li {
+  display: grid;
+  gap: 2px 9px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-light);
+}
+.depth-note-scale li { grid-template-columns: 14px 1fr; }
+.depth-note-scale li:first-child,
+.depth-note-judges li:first-child { border-top: 0; padding-top: 2px; }
+.depth-note-level {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.depth-note-anchor { color: var(--ink); font-weight: 600; }
+.depth-note-bar,
+.depth-note-rationale { grid-column: 2 / -1; color: var(--muted); }
+
+/* Each document the figure covers, named over its own reading. The framework's
+   section heading: a 56px chartreuse rule, the name under it. The rule is drawn
+   rather than made of the heading's own box, so a long title wraps like prose
+   instead of being held to 56px. */
+.depth-note-body h3 {
+  margin: 20px 0 7px;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.depth-note-body h3::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 9px;
+  background: var(--energy);
+}
+.depth-note-body h3:first-child { margin-top: 0; }
+
+/* The mean, with the figure in the data face and the rest of the sentence in
+   the reading one. */
+.depth-note-mean { color: var(--ink); }
+.depth-note-figure {
+  margin-right: 2px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.depth-note-substitution { color: var(--muted); }
+
+/* One judge: who, what it gave, and why. The name is a model identifier and the
+   score is a figure, so both are mono; the rationale is prose and is not. */
+.depth-note-judges li { grid-template-columns: 1fr auto; }
+.depth-note-judge {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+}
+.depth-note-score {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--accent);
 }
 
 /* The export sits at the foot of the menu rather than in the toolbar at its head: it acts on
