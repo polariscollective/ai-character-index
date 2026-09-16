@@ -448,18 +448,35 @@ The evidence the judges were handed grew from 403 retained passages to 1079, and
 `not-undermining-human-oversight` on `openai--model-spec@2026-08-18`, went from
 1.0 to 3.3 on 1 passage becoming 10; no cell that moved fell by more than 0.4.
 
-Four of the 156 did not come back with a depth, and they are a finding of their
-own: `deepseek` answered `DEPTH: -1` on `avoiding-over-and-under-caution` and
+Four of the 156 did not come back with a depth, and two of them still have not.
+`deepseek` answered `DEPTH: -1` on `avoiding-over-and-under-caution` and
 `how-to-approach-tradeoffs` against the Alibaba Model Spec, `no-sycophancy`
 against the constitution, and `proportionate-risk-mitigation` against
 `openai--model-spec@2025-12-18`. Minus one is not on the 0 to 4 scale the prompt
 asks for, so `depth_call.parse` reads no answer and the call fails, as it should:
-the rationale beside it is coherent and names a level in the rubric's own words,
-but reading a score out of a rationale would be inventing a verdict. The seat is
-called at temperature 0 and reproduced it about ten times per cell, so it is the
-model's answer to those four prompts and not a flake. Until `deepseek` answers
-them, `publish.py` refuses the whole grid, because a cell must carry a depth from
-every judge of its run.
+reading a score out of a rationale would be inventing a verdict.
+
+The remedy on record was tried, exactly as the ledger describes it for the same
+seat on 15 September: the four calls were asked again with a one-line format
+reminder appended to the USER message, naming the single integer 0 to 4, saying
+that passages which do not bear on the behaviour are 0, and refusing any other
+value. The system prompt is untouched, so `depth_prompt_sha256` does not move.
+Two then answered on scale, both 2, and their cells are complete. The two Alibaba
+cells answered off scale five more times each.
+
+What those ten replies show is worth writing down, because it decides what to try
+next. `deepseek` is not saying the document is absent and inventing a token for
+it: every rationale describes content, one of them "a concrete prioritization
+method through permission levels and conflict-resolution rules, which can be
+quoted as pass criteria", which is the rubric's own definition of 3. Nor is it
+refusing: the replies come back in one to three seconds, `finish_reason=stop`,
+in the two-line format asked for. And the figure cannot be read as a negated
+depth, because `how-to-approach-tradeoffs` answered `-3` twice and `-1` three
+times with materially the same rationale. The sign is not a mistake with a
+recoverable magnitude behind it.
+
+Until those two cells carry a `deepseek` depth, `publish.py` refuses the whole
+grid, because a cell must carry a depth from every judge of its run.
 
 ## Where the fork is heading
 
