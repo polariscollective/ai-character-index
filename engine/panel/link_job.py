@@ -147,7 +147,28 @@ def one_call(store, call, registry, versions, passages_for, retained_for,
         return
 
     rows = link_call.link_rows(call["id"], sources, targets, links)
-    store.insert("aci_links", rows, chunk=max(len(rows), 1))
+    try:
+        store.insert("aci_links", rows, chunk=max(len(rows), 1))
+    except batch_job.StoreError as failed_insert:
+        # A death between this insert and the PATCH below leaves a call that is
+        # not done whose links are already stored, and the relaunch that follows
+        # meets the unique key on (call_id, source_locator, target_locator).
+        # That is what a 23505 here means: the rows are on record, so finish the
+        # call instead of letting a constraint stop the run. Re-count rather
+        # than assume, because a partial set is a different and worse state.
+        if "23505" not in str(failed_insert):
+            raise
+        landed = len(store.select("aci_links", {"call_id": f"eq.{call['id']}"}))
+        if landed != len(rows):
+            store.update("aci_link_calls", {"id": call["id"]}, dict(meter, **{
+                "status": "error",
+                "error": f"this call holds {landed} of {len(rows)} links from an "
+                         "earlier attempt and cannot be completed in place (the "
+                         "job has insert-only access to aci_links): compose a "
+                         "new run for this cell."}))
+            with lock:
+                report["failed"] += 1
+            return
     store.update("aci_link_calls", {"id": call["id"]},
                  dict(meter, status="done", error=None, raw_output=None))
     with lock:

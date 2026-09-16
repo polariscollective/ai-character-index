@@ -76,6 +76,20 @@ def half_reply(**kwargs):
             {"prompt_tokens": 100, "completion_tokens": 10}, "stop", 0.2)
 
 
+class DuplicateOnceStore(FakeStore):
+    """A store whose links insert lands on the server -- the rows are there
+    afterwards -- but whose caller sees a 23505 duplicate-key failure instead of
+    a response, the way a lost network reply would look."""
+
+    def insert(self, table, rows, chunk=1000):
+        super().insert(table, rows, chunk=chunk)
+        if table == "aci_links":
+            raise link_job.batch_job.StoreError(
+                "POST aci_links -> 409: duplicate key value violates unique "
+                'constraint "aci_links_call_id_source_locator_target_locator_key" '
+                "(23505)")
+
+
 class LinkJobTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -92,6 +106,19 @@ class LinkJobTest(unittest.TestCase):
                                 SOURCES if spec == "corpus" else TARGETS),
                             retained_for=lambda store, slug, version: SOURCES,
                             concurrency=1, **kwargs)
+
+    def test_a_duplicate_key_insert_leaves_the_call_done_and_does_not_crash_the_run(self):
+        """A death between the insert and the PATCH that marks the call done
+        leaves the links stored and the call not done. The relaunch meets the
+        unique key, and must finish the call rather than let a constraint stop
+        the run and strand it in `running` for good."""
+        store = DuplicateOnceStore([call_row(1, "sol")])
+        report = self.go(store)
+        self.assertEqual((report["done"], report["failed"]), (1, 0))
+        call = store.tables["aci_link_calls"][0]
+        self.assertEqual(call["status"], "done")
+        self.assertIsNone(call["error"])
+        self.assertEqual(len(store.tables["aci_links"]), 2)
 
     def test_a_call_walks_from_pending_to_done_and_writes_its_links(self):
         store = FakeStore([call_row(1, "sol")])
