@@ -436,11 +436,30 @@ quietly.
 
 The 156 depth calls of the three runs the public publication selects from
 (`aef5e906`, `c2f1b34a`, `a2bdadba`) were given again in place, under the new
-prompt, on 16 September 2026. Nothing was deleted, no run was composed, and no
-judgement or passage call was touched: the depth rows went back to `pending`,
-which is the only thing `batch_job.pending_depths` reads, and the job gave them
-again. The runs' recorded cost moved with them, because a run's cost is summed
-from its calls and its depths.
+prompt, on 16 September 2026, for $3.42 against the $2.21 the first depths cost.
+Nothing was deleted, no run was composed, and no judgement or passage call was
+touched: the depth rows went back to `pending`, which is the only thing
+`batch_job.pending_depths` reads, and the job gave them again. The runs' recorded
+cost moved with them, because a run's cost is summed from its calls and its
+depths.
+
+The evidence the judges were handed grew from 403 retained passages to 1079, and
+33 of the 52 cells moved. The cell the investigation started from,
+`not-undermining-human-oversight` on `openai--model-spec@2026-08-18`, went from
+1.0 to 3.3 on 1 passage becoming 10; no cell that moved fell by more than 0.4.
+
+Four of the 156 did not come back with a depth, and they are a finding of their
+own: `deepseek` answered `DEPTH: -1` on `avoiding-over-and-under-caution` and
+`how-to-approach-tradeoffs` against the Alibaba Model Spec, `no-sycophancy`
+against the constitution, and `proportionate-risk-mitigation` against
+`openai--model-spec@2025-12-18`. Minus one is not on the 0 to 4 scale the prompt
+asks for, so `depth_call.parse` reads no answer and the call fails, as it should:
+the rationale beside it is coherent and names a level in the rubric's own words,
+but reading a score out of a rationale would be inventing a verdict. The seat is
+called at temperature 0 and reproduced it about ten times per cell, so it is the
+model's answer to those four prompts and not a flake. Until `deepseek` answers
+them, `publish.py` refuses the whole grid, because a cell must carry a depth from
+every judge of its run.
 
 ## Where the fork is heading
 
