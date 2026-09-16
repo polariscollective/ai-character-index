@@ -236,12 +236,24 @@ def arbitrate(args):
 
 
 def summarise(args):
-    """Stage three, the same way: one question, then the paragraph."""
+    """Stage three, once per behaviour: questions out, then the paragraphs in.
+
+    A summary is about one behaviour over one pair of documents, which is what
+    aci_link_summaries is keyed by, so a run covering thirteen behaviours needs
+    thirteen of them. Each composes its own question and finds its own answer,
+    because the name of both is a digest of the question itself."""
     import link_summary                                  # noqa: PLC0415
     report = Path(args.report)
     folder = report / "summary"
-    argv = [str(report / "links.json"), "--go", f"--model={SEAT}"]
-    return link_summary.main(argv, call_model=through_files(folder, "summarise"))
+    data = json.loads((report / "links.json").read_text(encoding="utf-8"))
+    wanted = [args.behaviour] if args.behaviour else link_summary.behaviours_in(data)
+    for slug in wanted:
+        print(f"  {slug}")
+        link_summary.main(
+            [str(report / "links.json"), "--go", f"--model={SEAT}",
+             f"--behaviour={slug}"],
+            call_model=through_files(folder, "summarise"))
+    return 0
 
 
 def store_answers(args):
@@ -309,6 +321,8 @@ def main(argv=None):
 
     last = sub.add_parser("summarise", help="write how the two documents stand")
     last.add_argument("report", help="the report folder that `report` wrote")
+    last.add_argument("--behaviour", default=None,
+                      help="one behaviour; every behaviour of the report by default")
     last.set_defaults(handler=summarise)
 
     args = parser.parse_args(argv)

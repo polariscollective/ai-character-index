@@ -66,6 +66,25 @@ def behaviour_of(data):
     return data["directions"][0]["behaviour"]
 
 
+def behaviours_in(data):
+    """Every behaviour the report covers, in a stable order."""
+    return sorted({d["behaviour"] for d in data["directions"]})
+
+
+def for_behaviour(data, slug):
+    """The report with only one behaviour's directions.
+
+    A summary is about one behaviour over one pair of documents, which is what
+    aci_link_summaries is keyed by. A run covering thirteen behaviours would
+    otherwise pour all of them into one prompt and file the result under
+    whichever behaviour happened to come first -- a wrong answer that would read
+    like a right one."""
+    kept = [d for d in data["directions"] if d["behaviour"] == slug]
+    if not kept:
+        sys.exit(f"{slug} is not in this report: {', '.join(behaviours_in(data))}")
+    return dict(data, directions=kept)
+
+
 def document_ids(data):
     return sorted({d[side] for d in data["directions"] for side in ("source", "target")})
 
@@ -193,6 +212,9 @@ def main(argv=None, call_model=None):
     call, which is what the command line uses."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("links_json")
+    parser.add_argument("--behaviour", default=None,
+                        help="which behaviour to summarise; required when the "
+                             "report covers more than one")
     parser.add_argument("--model", default="sol")
     parser.add_argument("--arbitration", default=None,
                         help="a run's arbitration.json; its sibling by default")
@@ -203,6 +225,12 @@ def main(argv=None, call_model=None):
 
     source = Path(args.links_json)
     data = json.loads(source.read_text(encoding="utf-8"))
+    covered = behaviours_in(data)
+    if args.behaviour:
+        data = for_behaviour(data, args.behaviour)
+    elif len(covered) > 1:
+        sys.exit("this report covers more than one behaviour, and a summary is "
+                 f"about one: pass --behaviour=<{'|'.join(covered)}>")
     beside = Path(args.arbitration) if args.arbitration else \
         source.with_name("arbitration.json")
     arbitration = json.loads(beside.read_text(encoding="utf-8")) if beside.exists() else None
