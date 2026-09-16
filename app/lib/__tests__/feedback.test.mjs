@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   LIMITS, MAX_BEHAVIOURS, MAX_REQUEST_BYTES, PER_HOUR, VISIBILITIES,
-  documentOf, feedbackProblems, normalise,
+  announce, documentOf, feedbackProblems, normalise, record, resolvePublication,
 } from "../feedback.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -107,4 +107,122 @@ test("a request may not weigh more than the fields it can honestly carry", () =>
   assert.equal(MAX_REQUEST_BYTES, 64 * 1024);
   assert.ok(MAX_REQUEST_BYTES > LIMITS.comment * 2);
   assert.equal(PER_HOUR, 30);
+});
+
+/* A fetch that answers every PostgREST call with `rows`, remembering what was asked. */
+const spy = (rows = [{ id: "f1" }]) => {
+  const seen = [];
+  const fetchImpl = async (url, init = {}) => {
+    seen.push({ url, method: init.method || "GET", body: init.body });
+    return { ok: true, status: 200, text: async () => "",
+             json: async () => (typeof rows === "function" ? rows(url) : rows) };
+  };
+  return { seen, fetchImpl };
+};
+
+test("a pin that exists is the publication the feedback is about", async () => {
+  const { seen, fetchImpl } = spy([{ id: "8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37" }]);
+  const id = await resolvePublication("8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37", fetchImpl);
+  assert.equal(id, "8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37");
+  assert.match(seen[0].url, /aci_publications\?id=eq\.8d3f7a2e/);
+});
+
+test("no pin means the current publication, resolved as the reader resolves it", async () => {
+  const { seen, fetchImpl } = spy([{ id: "3114dd65-c6f2-5cb3-bf98-af5b314381c3" }]);
+  const id = await resolvePublication("", fetchImpl);
+  assert.equal(id, "3114dd65-c6f2-5cb3-bf98-af5b314381c3");
+  assert.match(seen[0].url, /is_public=is\.true/);
+  assert.match(seen[0].url, /order=published_at\.desc/);
+});
+
+test("a pin that is not a publication falls through rather than being stored", async () => {
+  const { seen, fetchImpl } = spy(url => (url.includes("id=eq.") ? [] : [{ id: "current" }]));
+  assert.equal(await resolvePublication("00000000-0000-0000-0000-000000000000", fetchImpl),
+               "current");
+  assert.equal(seen.length, 2, "it asked for the pin, then for the current one");
+  assert.equal(await resolvePublication("not-a-uuid", fetchImpl), "current");
+});
+
+test("nothing published yet is a null, not a refusal", async () => {
+  const { fetchImpl } = spy([]);
+  assert.equal(await resolvePublication("", fetchImpl), null);
+});
+
+test("the row carries the paragraph, the reading, and who may see it", async () => {
+  const { seen, fetchImpl } = spy();
+  const fields = normalise({
+    ...GOOD, vote: "down", behaviours: ["Helpfulness", "Proportionate risk mitigation"],
+    visibility: "attributed", display_name: "A reader",
+  });
+  await record({ fields, publication_id: "pub-1", hash: "abc" }, { fetchImpl });
+  assert.match(seen[0].url, /aci_feedback/);
+  const row = JSON.parse(seen[0].body)[0];
+  assert.deepEqual(row, {
+    publication_id: "pub-1",
+    locator: GOOD.locator,
+    document_id: "openai--model-spec@2026-08-18",
+    behaviours: ["Helpfulness", "Proportionate risk mitigation"],
+    vote: "down",
+    comment: GOOD.comment,
+    submitter: "reader@example.org",
+    display_name: "A reader",
+    visibility: "attributed",
+    source_hash: "abc",
+  });
+});
+
+test("the comment is stored as it was written, not as we would like it", async () => {
+  const { seen, fetchImpl } = spy();
+  const comment = "  it says  authority,  not escalation  ";
+  await record({ fields: normalise({ ...GOOD, comment }), publication_id: null, hash: "h" },
+               { fetchImpl });
+  // Trimmed at the edges by normalise, untouched within: somebody's words.
+  assert.equal(JSON.parse(seen[0].body)[0].comment, "it says  authority,  not escalation");
+});
+
+test("no webhook is a message nobody got, never feedback nobody has", async () => {
+  const hook = process.env.SLACK_WEBHOOK_URL;
+  delete process.env.SLACK_WEBHOOK_URL;
+  assert.match(await announce({ locator: "x", comment: "y" }, async () => {}, ""),
+               /SLACK_WEBHOOK_URL/);
+  if (hook) process.env.SLACK_WEBHOOK_URL = hook;
+});
+
+test("an unreachable webhook is reported, not thrown", async () => {
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.example/none";
+  const said = await announce({ locator: "x", comment: "y" },
+                              async () => { throw new Error("no route to host"); }, "");
+  assert.match(said, /slack unreachable: no route to host/);
+  delete process.env.SLACK_WEBHOOK_URL;
+});
+
+test("feedback cannot make the message ping the channel", async () => {
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.example/one";
+  let sent;
+  await announce({ locator: "spec@1 > #a > ¶1", comment: "<!channel> read this",
+                   vote: "up", visibility: "private", submitter: "r@e.org", behaviours: [] },
+                 async (url, init) => { sent = JSON.parse(init.body); return { ok: true }; },
+                 "https://example.org");
+  const whole = JSON.stringify(sent);
+  assert.ok(!whole.includes("<!channel>"), whole);
+  assert.match(whole, /&lt;!channel&gt;/);
+  delete process.env.SLACK_WEBHOOK_URL;
+});
+
+test("the message names the paragraph, the thumb, and where to read it", async () => {
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.example/two";
+  let sent;
+  await announce({ locator: "openai--model-spec@2026-08-18 > #a > ¶1",
+                   comment: "It reads wrong.", vote: "down", visibility: "anonymous",
+                   submitter: "r@e.org", behaviours: ["Helpfulness"] },
+                 async (url, init) => { sent = JSON.parse(init.body); return { ok: true }; },
+                 "https://example.org");
+  const whole = JSON.stringify(sent);
+  assert.match(whole, /Feedback on a paragraph/);
+  assert.match(whole, /thumb down/);
+  assert.match(whole, /Helpfulness/);
+  assert.match(whole, /anonymous/);
+  assert.match(whole, /https:\/\/example\.org\/admin\/feedback/);
+  assert.equal(typeof sent.text, "string", "a notification, or the push is silent");
+  delete process.env.SLACK_WEBHOOK_URL;
 });
