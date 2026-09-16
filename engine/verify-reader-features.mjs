@@ -1855,18 +1855,25 @@ console.log("== Reader: the note dialog ==");
     "the toggle on sends private and an empty display_name", JSON.stringify(sent));
   await page.waitForTimeout(900);
 
-  // The document's own icon: same dialog, no behaviours, the document as locator.
+  // The document's own icon: same dialog, no behaviours, and a line that says what
+  // the note is about in words. The document id is what travels, not what is shown:
+  // printing it at the reader was printing a machine's name for the thing in front
+  // of them, so the line is prose and the id is proved by what gets sent, below.
   await page.locator(".document-feedback").first().click();
   await page.waitForTimeout(150);
   const docSeen = await page.evaluate(() => ({
     open: document.querySelector("#feedback-dialog").open,
     title: document.querySelector("#feedback-title").textContent,
     locator: document.querySelector("#feedback-locator").textContent,
+    prose: document.querySelector("#feedback-locator").classList.contains("prose"),
     behavioursHidden: document.querySelector("#feedback-behaviours-field").hidden,
+    voteHidden: document.querySelector("#feedback-vote").hidden,
   }));
-  check(docSeen.open && docSeen.title === "Note on this document" && docSeen.locator === DOC_ID
-      && docSeen.behavioursHidden,
-    "the icon beside the document title opens the dialog with no behaviours field and the document id as locator",
+  check(docSeen.open && docSeen.title === "Note on this document"
+      && docSeen.locator.startsWith("General comment about ")
+      && !docSeen.locator.includes(DOC_ID) && docSeen.prose
+      && docSeen.behavioursHidden && !docSeen.voteHidden,
+    "the icon beside the document title opens the dialog on the document, named in words, with its thumbs",
     JSON.stringify(docSeen));
 
   // A click on the backdrop closes it, same as Cancel.

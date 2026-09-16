@@ -147,8 +147,11 @@
         <input id="feedback-behaviours" type="text" readonly aria-readonly="true">
       </p>
 
-      <fieldset class="feedback-vote">
-        <legend>Does the index get this paragraph right? (optional)</legend>
+      <!-- A thumb answers a claim the index makes. On a paragraph no selected
+           behaviour cites, the index has made none, so app.js hides the whole
+           fieldset and the comment becomes the required part instead. -->
+      <fieldset class="feedback-vote" id="feedback-vote">
+        <legend id="feedback-vote-legend">Does the index get this paragraph right? (optional)</legend>
         <div class="feedback-thumbs">
           <button type="button" class="thumb" data-vote="up" aria-pressed="false"><svg
             viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
@@ -164,8 +167,11 @@
       </fieldset>
 
       <p class="feedback-field">
-        <label for="feedback-comment">Your comment (optional)</label>
+        <label for="feedback-comment" id="feedback-comment-label">Your comment (optional)</label>
         <textarea id="feedback-comment" rows="4" maxlength="5000"></textarea>
+        <span class="feedback-note" id="feedback-comment-note" hidden>No behaviour you have
+          selected cites this paragraph, so there is nothing here to agree or disagree with.
+          Say what you mean in words.</span>
       </p>
 
       <p class="feedback-field">
@@ -174,16 +180,6 @@
         <span class="feedback-note">Always kept private. We use it to write back.</span>
       </p>
 
-      <!-- What the default means, said before the control that changes it.
-           Most readers never touch the toggle, so for them this paragraph IS the
-           consent: it has to say who sees the note, where, and that there is no
-           way back. There is none: a note is a message that was sent, the table
-           grants no delete, and saying so plainly is the only honest way to make
-           the toggle the remedy rather than decoration. -->
-      <p class="feedback-consent">As it stands, this note may be quoted publicly on this
-        site, under the name below or under none. Your email address is never shown. A note
-        cannot be unsent, so choose to keep it private now if you would rather we kept it to
-        ourselves.</p>
       <fieldset class="feedback-visibility">
         <legend>How may we use this?</legend>
         <label class="feedback-choice">
@@ -240,15 +236,6 @@
                 <span class="picker-caret" aria-hidden="true"></span>
               </button>
             </h2>
-            <!-- Same speech bubble as a paragraph's own note icon (FEEDBACK_ICON
-                 in app.js), baked into this template rather than drawn by JS: the
-                 reader clones the template once per panel, so this gives every
-                 panel its own without appending it per document. -->
-            <button type="button" class="document-feedback"
-              aria-label="Note on this document" title="Note on this document"><svg
-              viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
-              d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
-              fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
             <a class="source-link" href="#" target="_blank" rel="noopener">Show original</a>
             <!-- What still says the document is a translation once its notice is
                  dismissed; its title carries the notice's words. -->
@@ -281,6 +268,18 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
+            <!-- Same speech bubble as a paragraph's own note icon (FEEDBACK_ICON
+                 in app.js), baked into this template rather than drawn by JS: the
+                 reader clones the template once per panel, so this gives every
+                 panel its own without appending it per document. Last in the row,
+                 past the tier toggles, in one panel or two: a note on the whole
+                 document is the last thing offered, not something sitting next to
+                 the title competing with it. -->
+            <button type="button" class="document-feedback"
+              aria-label="Note on this document" title="Note on this document"><svg
+              viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+              d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
+              fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
           </div>
         </div>
       </header>

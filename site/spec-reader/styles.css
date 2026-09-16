@@ -2472,3 +2472,11 @@ body.no-behaviours .sidebar-export { display: none; }
   font-size: 13px;
   line-height: 1.55;
 }
+
+/* A document note names its document in words, not in the engine's id, so that
+   line is prose and drops the mono the framework reserves for data. */
+.feedback-locator.prose {
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--ink);
+}

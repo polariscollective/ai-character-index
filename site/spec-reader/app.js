@@ -294,6 +294,11 @@ const state = {
   /* What the open feedback dialog is about -- {locator, behaviours} from
    * feedbackSubject, or null while it is closed. Read by the send handler. */
   feedbackTarget: null,
+  /* Whether the dialog on screen may carry a thumb: a note on a document always
+   * may, a note on a paragraph only when a selected behaviour cites it. It also
+   * decides whether the comment is required, so it is read by syncFeedbackSend
+   * rather than derived twice. */
+  feedbackCanVote: false,
 };
 
 const elements = {
@@ -332,6 +337,10 @@ const elements = {
   feedbackBehavioursField: document.querySelector("#feedback-behaviours-field"),
   feedbackBehaviours: document.querySelector("#feedback-behaviours"),
   feedbackComment: document.querySelector("#feedback-comment"),
+  feedbackCommentLabel: document.querySelector("#feedback-comment-label"),
+  feedbackCommentNote: document.querySelector("#feedback-comment-note"),
+  feedbackVote: document.querySelector("#feedback-vote"),
+  feedbackVoteLegend: document.querySelector("#feedback-vote-legend"),
   feedbackEmail: document.querySelector("#feedback-email"),
   feedbackPrivate: document.querySelector("#feedback-private"),
   feedbackName: document.querySelector("#feedback-name"),
@@ -2313,6 +2322,16 @@ function feedbackBody(subject, form, pinned) {
  * The address, the name and the private toggle are the exception: they are the
  * reader's own standing answers, not the paragraph's, so they come back from
  * localStorage (see sendFeedback) rather than being blanked here. */
+/* Whether the note can be sent yet: an address always, and a comment as well
+ * when there is no thumb to send instead. The route refuses the same pair in the
+ * same words; this is so a reader is not refused by a round trip for something
+ * the page already knows. */
+function syncFeedbackSend() {
+  const hasEmail = elements.feedbackEmail.value.trim() !== "";
+  const hasComment = elements.feedbackComment.value.trim() !== "";
+  elements.feedbackSend.disabled = !hasEmail || (!state.feedbackCanVote && !hasComment);
+}
+
 function openFeedbackDialog(button) {
   const subject = feedbackSubject(button);
   if (!subject) return;
@@ -2320,11 +2339,41 @@ function openFeedbackDialog(button) {
 
   const documentWide = button.classList.contains("document-feedback");
   elements.feedbackTitle.textContent = documentWide ? "Note on this document" : "Note on this paragraph";
-  elements.feedbackLocator.textContent = subject.locator;
+  /* A paragraph's note is pinned by its locator, which is data and reads as data.
+   * A document's note is pinned by nothing finer than the document, so printing
+   * the document id there was printing a machine's name for something the reader
+   * is looking at. It says what it is about, in words, and drops the mono. */
+  if (documentWide) {
+    const header = button.closest(".document-panel");
+    const name = header?.querySelector(".document-name")?.textContent.trim() || "";
+    const version = header?.querySelector(".document-version")?.textContent.trim() || "";
+    elements.feedbackLocator.textContent =
+      `General comment about ${[name, version].filter(Boolean).join(" ") || subject.locator}`;
+  } else {
+    elements.feedbackLocator.textContent = subject.locator;
+  }
+  elements.feedbackLocator.classList.toggle("prose", documentWide);
 
   const hasBehaviours = subject.behaviours.length > 0;
   elements.feedbackBehavioursField.hidden = !hasBehaviours;
   elements.feedbackBehaviours.value = hasBehaviours ? subject.behaviours.join(", ") : "";
+
+  /* A thumb answers a claim, and on a paragraph no selected behaviour cites the
+   * index has made none: it is not saying this passage bears on anything, so
+   * there is nothing there to agree or disagree with. The thumbs go, and the
+   * comment takes their place as the part that must be filled in, because a note
+   * carrying neither would say nothing at all -- which is what the route refuses
+   * anyway, in the same words. A note on a whole document always keeps its
+   * thumbs: the document is the claim. */
+  state.feedbackCanVote = documentWide || hasBehaviours;
+  elements.feedbackVote.hidden = !state.feedbackCanVote;
+  elements.feedbackVoteLegend.textContent = documentWide
+    ? "Does the index get this document right? (optional)"
+    : "Does the index get this paragraph right? (optional)";
+  elements.feedbackCommentLabel.textContent = state.feedbackCanVote
+    ? "Your comment (optional)"
+    : "Your comment";
+  elements.feedbackCommentNote.hidden = state.feedbackCanVote;
 
   elements.feedbackForm.querySelectorAll(".thumb").forEach(thumb =>
     thumb.setAttribute("aria-pressed", "false"));
@@ -2336,7 +2385,7 @@ function openFeedbackDialog(button) {
   elements.feedbackWebsite.value = "";
   elements.feedbackOutcome.textContent = "";
   elements.feedbackOutcome.className = "feedback-outcome";
-  elements.feedbackSend.disabled = elements.feedbackEmail.value.trim() === "";
+  syncFeedbackSend();
 
   elements.feedbackDialog.showModal();
   elements.feedbackComment.focus();
@@ -2429,8 +2478,9 @@ function setupFeedback() {
     elements.feedbackName.disabled = elements.feedbackPrivate.checked;
   });
 
+  elements.feedbackComment.addEventListener("input", syncFeedbackSend);
   elements.feedbackEmail.addEventListener("input", () => {
-    elements.feedbackSend.disabled = elements.feedbackEmail.value.trim() === "";
+    syncFeedbackSend();
   });
 
   // <dialog> attributes a click on its own backdrop to the dialog element
