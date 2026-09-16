@@ -4046,8 +4046,16 @@ async function loadReaderLinks() {
 function linkBubbles(block) {
   const rows = linkRows?.byLocator;
   if (!rows) return "";
+  /* A bubble says what the OTHER document does about this paragraph, so it means
+   * nothing with one document on screen, and nothing at all when the document it
+   * names is not the one being compared against: its paragraph would not be
+   * there to scroll to. Comparing is therefore the condition, and the pair on
+   * screen decides which links belong to it. */
+  if (!state.comparing) return "";
+  const onScreen = new Set(comparePair());
   const found = (block.dataset.locators || "").split("\n")
-    .flatMap(locator => rows[locator] || []);
+    .flatMap(locator => rows[locator] || [])
+    .filter(link => onScreen.has(link.to.split(" > ", 1)[0]));
   if (!found.length) return "";
   /* Two buttons in one pill, and the pill is a span because a button cannot
    * contain a button. The word goes to the paragraph; the "?" goes to it AND
@@ -4066,7 +4074,10 @@ function linkBubbles(block) {
   const pills = [];
   const notes = [];
   found.forEach((link, index) => {
-    const said = link.judge ? `${link.judge}: ${link.comment}` : (link.comment || "");
+    // The sentence alone. Which model produced it answers a question the reader
+    // did not ask, and the trail of who said what before is kept in the file
+    // rather than put on the page.
+    const said = link.comment || "";
     const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
     const noteId = `${id}-link-${index}`;
     pills.push(`<button type="button" class="link-goto" `

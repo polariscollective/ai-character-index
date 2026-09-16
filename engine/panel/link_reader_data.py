@@ -37,14 +37,30 @@ h = link_call.h
 DEFAULT_OUT = ROOT / "site" / "spec-reader" / "links.json"
 
 
+LABS = {"openai": "OpenAI", "anthropic": "Anthropic", "alibaba": "Alibaba"}
+
+
 def document_name(locator):
-    """"the Anthropic constitution", from a locator's head.
+    """"the Anthropic constitution", from a locator or a document id.
 
     The id is <lab>--<document>@<version>, and a reader wants the lab and the
-    document, not the version they are already looking at."""
+    document, not the version they are already looking at. Labs are named the way
+    they write their own names: capitalize() would make OpenAI "Openai"."""
     head = locator.split(" > ", 1)[0].split("@", 1)[0]
     lab, _, name = head.partition("--")
-    return f"the {lab.capitalize()} {name.replace('-', ' ')}"
+    return f"the {LABS.get(lab, lab.capitalize())} {name.replace('-', ' ')}"
+
+
+def in_plain_words(sentence, document_ids):
+    """A sentence with our document ids replaced by their names.
+
+    A judge writes "openai--model-spec@2026-08-18 permits...", which is exact and
+    unreadable. The reader is a person looking at two specifications, not at our
+    identifier scheme."""
+    for document_id in sorted(document_ids, key=len, reverse=True):
+        sentence = sentence.replace(document_id, document_name(document_id))
+        sentence = sentence.replace(document_id.split("@", 1)[0], document_name(document_id))
+    return sentence
 
 
 def say_which(comment, source_locator, target_locator):
@@ -96,15 +112,17 @@ def verdicts_by_pair(arbitration):
     return out
 
 
-def explain(verdict, source_locator, target_locator):
-    """The verdict first, then who had said what.
+def explain(verdict, source_locator, target_locator, document_ids):
+    """(what the page shows, what the file keeps).
 
-    The bubble asserts one thing, so the sentence that decided it comes first.
-    What the judges said follows, because a settled relation whose history is
-    lost cannot be argued with, and this page exists to be argued with.
+    The page gets the sentence that decided the relation and nothing else: a
+    reader wants to know how these two paragraphs stand to each other, and a name
+    like "fable" answers a question they did not ask. The rest -- who had said
+    what, and whom the arbiter agreed with -- is kept beside it in the file, where
+    it is what a bug report needs and what a methodology note is written from.
     """
     settled = verdict["settled"]
-    lead = f"{settled['arbiter']} settles it: {settled.get('why') or 'no reason given'}"
+    shown = in_plain_words(settled.get("why") or "", document_ids)
     trace = []
     for judge in sorted(verdict["readings"]):
         for reading in verdict["readings"][judge]:
@@ -112,74 +130,93 @@ def explain(verdict, source_locator, target_locator):
             said = say_which(reading.get("comment") or "", source_locator, target_locator)
             trace.append(f"{judge} had said {was}" + (f": {said}" if said else ""))
     if settled.get("agrees"):
-        trace.append(f"agrees with {settled['agrees']}")
-    return lead + (" — " + "; ".join(trace) if trace else "")
+        trace.append(f"{settled['arbiter']} agrees with {settled['agrees']}")
+    return shown, "; ".join(trace)
+
+
+def named_relation(relation, source_locator, target_locator):
+    """A judge's direction-relative relation, with the document named instead.
+
+    "stricter_source" is a fact about the call, not about the pair: read from the
+    other side the same claim is "stricter_target". Named once, it survives being
+    read from either end."""
+    if relation == "stricter_source":
+        return f"stricter {source_locator.split(' > ', 1)[0]}"
+    if relation == "stricter_target":
+        return f"stricter {target_locator.split(' > ', 1)[0]}"
+    return relation
 
 
 def by_locator(data, judge=None, arbitration=None):
-    """{source locator: [{to, relation, comment, judge, settled}]}.
+    """{locator: [{to, relation, comment, judge, settled, trace}]}.
+
+    A relation is a fact about a PAIR of paragraphs, so both of them carry it.
+    Emitting it only under the passage a call happened to start from left one
+    paragraph pointing at another that pointed back at nothing, which reads as an
+    inconsistency and is only an artefact of which direction found it first.
 
     Where an arbiter settled a pair, its relation is the one shown and its
-    sentence leads the explanation: the page must not say one thing in a pill and
-    another underneath. A pair it called `none` carries no bubble at all, because
-    it decided the link should not have been drawn.
-
-    A settled pair is shown whichever judge found it, including one this run's
+    sentence is the explanation; a pair it called `none` carries no bubble at
+    all. A settled pair is shown whichever judge found it, including one the
     `judge` filter would otherwise hide: it is no longer that judge's opinion.
     """
     verdicts = verdicts_by_pair(arbitration)
-    out, seen = {}, set()
+    document_ids = {d[side] for d in data["directions"] for side in ("source", "target")}
+    pairs = {}
 
     for direction in data["directions"]:
         for source in direction["sources"]:
             for target in source["targets"]:
+                key = tuple(sorted((source["locator"], target["locator"])))
+                if pairs.get(key, {}).get("settled"):
+                    continue
+                verdict = verdicts.get(key)
+                if verdict:
+                    shown, trace = explain(verdict, source["locator"],
+                                           target["locator"], document_ids)
+                    pairs[key] = {"named": verdict["settled"]["relation"],
+                                  "comment": shown, "trace": trace,
+                                  "settled": True,
+                                  "judge": verdict["settled"]["arbiter"]}
+                    continue
                 relations = target.get("judge_relations") or {}
                 if not relations:
                     relations = {j: target["relation"] for j in target.get("judges", [])}
-                key = tuple(sorted((source["locator"], target["locator"])))
-                verdict = verdicts.get(key)
-
-                if verdict:
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    relation = as_seen_from(verdict["settled"]["relation"], source["locator"])
-                    if relation == "none":
-                        continue
-                    out.setdefault(source["locator"], []).append({
-                        "to": target["locator"], "relation": relation,
-                        "judge": verdict["settled"]["arbiter"], "settled": True,
-                        "comment": explain(verdict, source["locator"], target["locator"]),
-                    })
-                    continue
-
                 for seat, relation in relations.items():
                     if judge is not None and seat != judge:
                         continue
-                    if not relation:
+                    if not relation or key in pairs:
                         continue
-                    out.setdefault(source["locator"], []).append({
-                        "to": target["locator"], "relation": relation,
-                        "judge": seat, "settled": False,
-                        "comment": say_which((target["rationales"] or {}).get(seat, ""),
-                                             source["locator"], target["locator"]),
-                    })
+                    pairs[key] = {
+                        "named": named_relation(relation, source["locator"],
+                                                target["locator"]),
+                        "comment": in_plain_words(
+                            say_which((target["rationales"] or {}).get(seat, ""),
+                                      source["locator"], target["locator"]), document_ids),
+                        "trace": "", "settled": False, "judge": seat,
+                    }
 
-    # Pairs only the filtered-out judge found, which an arbiter has since settled.
+    # Settled pairs no direction of this run reached: the judge filter hid them.
     for key, verdict in verdicts.items():
-        if key in seen:
+        if key in pairs:
             continue
-        relation = verdict["settled"]["relation"]
-        for source_locator, target_locator in (key, key[::-1]):
-            shown = as_seen_from(relation, source_locator)
-            if shown == "none":
+        shown, trace = explain(verdict, key[0], key[1], document_ids)
+        pairs[key] = {"named": verdict["settled"]["relation"], "comment": shown,
+                      "trace": trace, "settled": True,
+                      "judge": verdict["settled"]["arbiter"]}
+
+    out = {}
+    for (left, right), entry in pairs.items():
+        for source_locator, target_locator in ((left, right), (right, left)):
+            relation = as_seen_from(entry["named"], source_locator)
+            if not relation or relation == "none":
                 continue
-            out.setdefault(source_locator, []).append({
-                "to": target_locator, "relation": shown,
-                "judge": verdict["settled"]["arbiter"], "settled": True,
-                "comment": explain(verdict, source_locator, target_locator),
-            })
-        seen.add(key)
+            row = {"to": target_locator, "relation": relation,
+                   "judge": entry["judge"], "settled": entry["settled"],
+                   "comment": entry["comment"]}
+            if entry["trace"]:
+                row["trace"] = entry["trace"]
+            out.setdefault(source_locator, []).append(row)
     return out
 
 
