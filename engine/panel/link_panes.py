@@ -2,6 +2,7 @@
 """Two documents side by side, with the links drawn between them.
 
     python3 engine/panel/link_panes.py artefacts/<run folder>/links.json
+    python3 engine/panel/link_panes.py <links.json> --judge=sol --left=anthropic
 
 Writes `panes.html` beside it. The report is the record and `link_viewer.py` is
 the list of links; this is the thing you read a document in, with what the other
@@ -14,6 +15,11 @@ Clicking a bubble scrolls the other pane to that paragraph and flashes it.
 
 Links from both directions of a run live in the same page, so the bubbles appear
 on both sides: what A says about B's passage, and what B says about A's.
+
+`--judge` shows one judge's readings and nothing else, which is what exploring a
+run wants: the panel's summary is a publishing rule, and with one seat it says
+nothing at all. `--left` names the document to put on the left, by any prefix of
+its id.
 
 It reads the documents through the panel's own passage cutter, so a locator here
 is the locator the index publishes, and the paragraph under it is the one the
@@ -110,23 +116,33 @@ def gravest(relations):
     return sorted(known, key=ORDER.index)[0] if known else None
 
 
-def bubbles_by_locator(data):
+def bubbles_by_locator(data, judge=None):
     """{source locator: [bubble]}, over both directions of the run.
 
     A bubble is what one passage's counterpart is, and where it lives. Judges
     that part are kept apart: the tooltip says who read what, and the bubble is
     coloured by the gravest of them.
+
+    With `judge`, only that seat's readings are shown, and the relation is its
+    own rather than the panel's. A run explored one seat at a time has no
+    consensus to report, and reporting one would be a claim nobody made.
     """
     out = {}
     for direction in data["directions"]:
         for source in direction["sources"]:
             for target in source["targets"]:
                 per_judge = target.get("judge_relations") or {}
+                if judge is not None:
+                    if judge not in per_judge:
+                        continue
+                    per_judge = {judge: per_judge[judge]}
                 said = list(per_judge.values()) or [target["relation"]]
                 worst = gravest(said) or "same"
                 told = ", ".join(f"{j}: {r}" for j, r in per_judge.items()) \
                     or ", ".join(target["judges"])
-                rationales = " | ".join(f"{j}: {r}" for j, r in target["rationales"].items())
+                rationales = " | ".join(
+                    f"{j}: {r}" for j, r in target["rationales"].items()
+                    if judge is None or j == judge)
                 out.setdefault(source["locator"], []).append({
                     "to": target["locator"],
                     "relation": worst,
@@ -138,11 +154,19 @@ def bubbles_by_locator(data):
     return out
 
 
-def documents_of(data):
-    """The two document ids of a run, left then right, in the order the first
-    direction names them."""
+def documents_of(data, left=None):
+    """The two document ids of a run, left then right.
+
+    The run's own order by default, which is its first direction's. `left` names
+    the one to put first, by any prefix of its id."""
     first = data["directions"][0]
-    return first["source"], first["target"]
+    pair = [first["source"], first["target"]]
+    if left and not pair[0].startswith(left):
+        if pair[1].startswith(left):
+            pair.reverse()
+        else:
+            sys.exit(f"--left={left!r} names neither {pair[0]} nor {pair[1]}")
+    return pair
 
 
 def passages_of(document_id):
@@ -150,20 +174,25 @@ def passages_of(document_id):
     return h.passages(spec_id, version)
 
 
-def render(data, panes):
+def render(data, panes, judge=None):
     run = data["run"]
     out = [f"<title>{e(' vs '.join(d for d, _ in panes))}</title>",
            f"<style>{STYLE}</style>"]
     out.append("<header>")
     out.append("<h1>What each document does to the other, passage by passage</h1>")
     behaviours = sorted({d["behaviour"] for d in data["directions"]})
+    seats = e(judge) if judge else e(", ".join(run.get("panel") or []))
     out.append(f"<p class='meta'>{e(', '.join(behaviours))} &middot; run {e(run['id'][:8])} "
-               f"&middot; panel {e(', '.join(run.get('panel') or []))}</p>")
-    absent = sorted({c["model"] for d in data["directions"] for c in d.get("calls", [])
-                     if c["status"] != "done"})
-    if absent:
-        out.append(f"<p class='meta warn'>{e(', '.join(absent))} did not answer. These are the "
-                   "other judges' readings, not the panel's finding.</p>")
+               f"&middot; {'read by ' if judge else 'panel '}{seats}</p>")
+    if judge:
+        out.append(f"<p class='meta'>One judge's readings. There is no panel finding here, "
+                   f"and no silence can be asserted from one seat.</p>")
+    else:
+        absent = sorted({c["model"] for d in data["directions"] for c in d.get("calls", [])
+                         if c["status"] != "done"})
+        if absent:
+            out.append(f"<p class='meta warn'>{e(', '.join(absent))} did not answer. These are "
+                       "the other judges' readings, not the panel's finding.</p>")
     out.append("</header>")
 
     ids = {}
@@ -171,7 +200,7 @@ def render(data, panes):
         for index, (locator, _section, _text) in enumerate(passages):
             ids[locator] = f"p{pane}-{index}"
 
-    bubbles = bubbles_by_locator(data)
+    bubbles = bubbles_by_locator(data, judge)
 
     out.append("<div class='panes'>")
     for document_id, passages in panes:
@@ -201,17 +230,21 @@ def render(data, panes):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("links_json", help="the links.json of a run's report folder")
+    parser.add_argument("--judge", default=None,
+                        help="show one seat's readings only, for example sol")
+    parser.add_argument("--left", default=None,
+                        help="the document to put on the left, by any prefix of its id")
     args = parser.parse_args(argv)
 
     source = Path(args.links_json)
     data = json.loads(source.read_text(encoding="utf-8"))
 
     index_store.install_registry(Store.from_env())
-    left, right = documents_of(data)
+    left, right = documents_of(data, args.left)
     panes = [(left, passages_of(left)), (right, passages_of(right))]
 
     page = source.with_name("panes.html")
-    page.write_text(render(data, panes), encoding="utf-8")
+    page.write_text(render(data, panes, args.judge), encoding="utf-8")
     print(f"written to {page}")
     for document_id, passages in panes:
         print(f"  {document_id}: {len(passages)} paragraphs")

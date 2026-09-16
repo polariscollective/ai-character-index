@@ -198,13 +198,74 @@ def render(data):
     return "\n".join(out)
 
 
+def only_judge(data, judge):
+    """The run as one seat read it, with everything else removed.
+
+    Filtering the data once rather than every place that renders it: the page
+    below is then the same page, showing a run that happens to have one judge.
+
+    The counts are recomputed, because the ones the report carries are the
+    panel's and would describe a bench this page is no longer showing. With one
+    seat there is no majority, so nothing here is asserted: a link is what that
+    judge said, and a silence is that judge finding nothing, not the index
+    finding nothing.
+    """
+    for direction in data["directions"]:
+        direction["calls"] = [c for c in direction.get("calls", [])
+                              if c["model"] == judge]
+        linked = contradictions = silent = 0
+        for source in direction["sources"]:
+            kept = []
+            for target in source["targets"]:
+                relations = target.get("judge_relations") or {}
+                if judge not in relations and judge not in target.get("judges", []):
+                    continue
+                relation = relations.get(judge, target["relation"])
+                target["relation"] = relation
+                target["judge_relations"] = {judge: relation}
+                target["judges"] = [judge]
+                target["rationales"] = {j: r for j, r in target["rationales"].items()
+                                        if j == judge}
+                kept.append(target)
+                if relation == "contradiction":
+                    contradictions += 1
+            source["targets"] = kept
+            source["silences"] = {j: r for j, r in (source.get("silences") or {}).items()
+                                  if j == judge}
+            source["judges"] = [judge]
+            source["judges_linking"] = 1 if kept else 0
+            source["relation"] = kept[0]["relation"] if len(kept) == 1 else (
+                _gravest_of(kept) if kept else None)
+            source["state"] = "linked" if kept else (
+                "silent" if source["silences"] else "contested")
+            linked += 1 if kept else 0
+            silent += 1 if (not kept and source["silences"]) else 0
+        direction["counts"] = {
+            "sources": len(direction["sources"]), "linked": linked, "silent": silent,
+            "contested": len(direction["sources"]) - linked - silent,
+            "contradictions": contradictions,
+        }
+        direction["agreement"] = {"sources": len(direction["sources"]), "unanimous": linked + silent}
+    data["run"]["panel"] = [f"{judge} alone, so nothing here is a panel finding"]
+    return data
+
+
+def _gravest_of(targets):
+    said = [t["relation"] for t in targets if t["relation"] in ORDER]
+    return sorted(said, key=ORDER.index)[0] if said else None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("links_json", help="the links.json of a run's report folder")
+    parser.add_argument("--judge", default=None,
+                        help="show one seat's readings only, for example sol")
     args = parser.parse_args(argv)
 
     source = Path(args.links_json)
     data = json.loads(source.read_text(encoding="utf-8"))
+    if args.judge:
+        data = only_judge(data, args.judge)
     page = source.with_name("links.html")
     page.write_text(render(data), encoding="utf-8")
     print(f"written to {page}")
