@@ -175,6 +175,75 @@ def replies_from(folder):
     return call_model
 
 
+def through_files(folder, label):
+    """A call_model that writes its question out, then reads its answer back.
+
+    Both phases in one function, because the modules it serves compose their
+    question inside the call they were about to make: there is no earlier moment
+    to intercept. On the first pass no answer exists, so the question is written
+    and an EMPTY reply is returned; on the second the answer is there and the
+    same composition finds it under the same name.
+
+    Empty rather than raised, which is where this differs from replies_from.
+    link_arbitrate runs its batches through a thread pool, so an exception would
+    end the run on the first batch and leave the rest of the questions never
+    composed. An empty reply parses to nothing, every dispute settles to a null
+    relation, link_record skips them, and the pass finishes having written every
+    question and stored not one judgement.
+    """
+    def call_model(provider, model_id, system, user, kwargs):
+        key = key_of(user)
+        answer = folder / f"{key}.answer"
+        if answer.exists():
+            return answer.read_text(encoding="utf-8"), {}, "in-session", None
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{key}.question").write_text(
+            f"{system}\n\n---- the call ----\n\n{user}", encoding="utf-8")
+        print(f"  {label}: question written as {key}.question")
+        return "", {}, "question-written", None
+    return call_model
+
+
+def build_report(args):
+    """The run as links.json, which is what stages two and three read.
+
+    The database holds the links; link_arbitrate and link_summary read a run's
+    report. This is the one command that turns the first into the second."""
+    import link_report                                   # noqa: PLC0415
+    store = Store.from_env()
+    index_store.install_registry(store)
+    compose_links.retained_passages = remembered_retained()
+    folder = link_report.write(store, args.run, str(ROOT / "artefacts"))
+    print(f"  report       {folder}")
+    print(f"\nthen:  python3 engine/panel/link_self.py arbitrate {folder}")
+    return 0
+
+
+def arbitrate(args):
+    """Stage two, twice: questions out, then verdicts in.
+
+    With one seat there are no disagreements between judges, so what this
+    settles is the seat disagreeing with itself: a pair it read one way from one
+    document's side and another way from the other's. link_arbitrate calls that
+    kind self-inconsistent and already detects it, which is why nothing here
+    reimplements the detection."""
+    import link_arbitrate                                # noqa: PLC0415
+    report = Path(args.report)
+    folder = report / "arbitration"
+    argv = [str(report / "links.json"), "--go", f"--arbiter={SEAT}",
+            f"--batch={args.batch}", "--concurrency=1"]
+    return link_arbitrate.main(argv, call_model=through_files(folder, "arbitrate"))
+
+
+def summarise(args):
+    """Stage three, the same way: one question, then the paragraph."""
+    import link_summary                                  # noqa: PLC0415
+    report = Path(args.report)
+    folder = report / "summary"
+    argv = [str(report / "links.json"), "--go", f"--model={SEAT}"]
+    return link_summary.main(argv, call_model=through_files(folder, "summarise"))
+
+
 def store_answers(args):
     folder = Path(args.folder)
     index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
@@ -225,6 +294,22 @@ def main(argv=None):
                            "call_model raises; a later store picks it up again, "
                            "since it retries every call that is not done")
     read.set_defaults(handler=store_answers)
+
+    made = sub.add_parser("report", help="write the run as links.json for stages two and three")
+    made.add_argument("--run", required=True, help="an aci_link_runs id")
+    made.set_defaults(handler=build_report)
+
+    # Both of these are run twice: once to write the questions, once to read the
+    # answers. Nothing is stored on the first pass.
+    third = sub.add_parser("arbitrate", help="settle the pairs the seat read two ways")
+    third.add_argument("report", help="the report folder that `report` wrote")
+    third.add_argument("--batch", type=int, default=10,
+                       help="disputes per question; both documents travel in each")
+    third.set_defaults(handler=arbitrate)
+
+    last = sub.add_parser("summarise", help="write how the two documents stand")
+    last.add_argument("report", help="the report folder that `report` wrote")
+    last.set_defaults(handler=summarise)
 
     args = parser.parse_args(argv)
     # Both commands ask for the same cell more than once, and each ask is a full

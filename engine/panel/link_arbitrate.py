@@ -269,7 +269,14 @@ def settle(batch, documents, arbiter, config, call_model):
     return out
 
 
-def main(argv=None):
+def main(argv=None, call_model=None):
+    """`call_model` is injected the way link_job.run and link_summary.main take
+    one, so an arbitration can be settled by a model reached through a provider
+    or by one that answers from a file. It defaults to the provider call, which
+    is what the command line uses.
+
+    settle() has always taken its caller; what was missing was a way to hand one
+    in from outside without duplicating the record this function assembles."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("links_json")
     parser.add_argument("--arbiter", default="deepseek",
@@ -314,9 +321,10 @@ def main(argv=None):
     # Summing the disputes bills the same call ten times over.
     settled, spent = [], 0.0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+        caller = call_model or batch_job.call_openrouter
         for result in pool.map(
                 lambda batch: settle(batch, documents, args.arbiter, config,
-                                     batch_job.call_openrouter), batches):
+                                     caller), batches):
             settled.extend(result)
             spent += (result[0]["settled"]["batch_cost_usd"] or 0) if result else 0
             print(".", end="", flush=True)
