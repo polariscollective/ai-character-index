@@ -2,9 +2,10 @@
 
 A depth is one judge's reading of how deeply a document covers a behaviour, on
 the 0 to 4 scale of methodology/spec-coverage-depth-rubric.md. The judge is shown
-only the passages the reader shows by default, which is the evidence the index
-publishes. The prompt is a file, and its digest is recorded on the run that uses
-it."""
+the passages the reader shows by default -- every band the reader opens on,
+defining, core and related alike -- and never the document itself, so a depth is
+a reading of the panel's own citations. The prompt is a file, and its digest is
+recorded on the run that uses it."""
 
 import hashlib
 import importlib.util
@@ -69,7 +70,7 @@ def compose(behaviour, registry, retained):
     block = h.compose_query(behaviour, "v3", registry)
     body = "\n".join(f"[{i + 1}] (§ {section}) {text}"
                      for i, (_locator, section, text) in enumerate(retained))
-    user = (f"{block}\n\nPassages the panel found to establish this behaviour "
+    user = (f"{block}\n\nPassages the panel cited for this behaviour "
             f"({len(retained)}):\n{body}\n\nAnswer with the two lines DEPTH and RATIONALE.")
     return system_prompt(), user
 

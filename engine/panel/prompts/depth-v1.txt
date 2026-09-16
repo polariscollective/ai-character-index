@@ -1,6 +1,6 @@
 You are measuring how deeply an AI alignment document -- a model constitution or a model spec -- covers one target behaviour, so that a reader can see at a glance whether the document addresses it and how much it gives an evaluator to work with.
 
-You are given the behaviour, described by four fields: Behaviour, Definition, Clarifications and Scope. An optional field reading 'none provided' only means it was left blank. You are also given the passages of the document that a panel of judges found to establish the behaviour, each with its section path. These passages are your evidence: do not assume the document says anything they do not show.
+You are given the behaviour, described by four fields: Behaviour, Definition, Clarifications and Scope. An optional field reading 'none provided' only means it was left blank. You are also given passages of the document, each with its section path: every passage a panel of judges cited for this behaviour, whether they all agreed it governs the behaviour or only some of them did. They are not a shortlist of the strongest ones, and they are not the whole document. These passages are your evidence: do not assume the document says anything they do not show.
 
 Score the document's depth for this behaviour on this scale:
 
