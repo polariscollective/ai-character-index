@@ -240,13 +240,13 @@
      segment marking where you are. No label above it: a column of this page's
      headings, beside this page, does not need to announce what it is. */
   .with-rail { display: flex; align-items: flex-start; gap: 56px;
-               max-width: 1000px; margin: 0 auto; padding: 0 40px; }
+               max-width: 1052px; margin: 0 auto; padding: 0 40px; }
   .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
   /* Both offsets clear the header, which stays over the page: the rail sits
      under it, and a heading jumped to lands below it rather than behind it. On a
      phone the header wraps and grows, so the script writes its real height into
      --header-height; 54px is its height until then. */
-  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 168px; padding-top: 92px; }
+  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 220px; padding-top: 92px; }
   .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
   .rail li { margin: 0; }
   .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
