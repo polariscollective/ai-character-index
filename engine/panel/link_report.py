@@ -79,8 +79,15 @@ def report(store, run_id, passages_for=None, retained_for=None):
             "contested": sum(1 for s in sources if s["state"] == link_consensus.CONTESTED),
             "contradictions": sum(1 for s in sources if s["relation"] == "contradiction"),
         }
+        # Unanimity is the three judges saying the same thing, and "nobody
+        # linked it" is not that. A source is silent when every judge answered
+        # absent, and contested when one of them never answered at all, which is
+        # what a failed call leaves behind. Counting the second as agreement
+        # would report the judges unanimous on exactly the cells a failure
+        # spoiled, which is the reading this number exists to prevent.
         unanimous = sum(1 for s in sources
-                        if s["judges_linking"] in (0, len(cell)))
+                        if s["state"] == link_consensus.SILENT
+                        or s["judges_linking"] == len(cell))
         directions.append({
             "behaviour": slug,
             "source": compose_links.document_id(source),

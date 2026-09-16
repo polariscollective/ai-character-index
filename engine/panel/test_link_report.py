@@ -67,6 +67,25 @@ class ReportTest(unittest.TestCase):
             passages_for=lambda spec, version: SOURCES if spec == "corpus" else TARGETS,
             retained_for=lambda store, slug, version: SOURCES)
 
+    def test_a_judge_that_never_answered_is_not_counted_as_agreement(self):
+        """A source nobody linked is silent when all three answered absent, and
+        contested when one of them never answered, which is what a failed call
+        leaves. The two must not be counted alike: the second is the case the
+        agreement figure exists to expose."""
+        store = FakeStore()
+        store.tables["aci_links"] = [row for row in store.tables["aci_links"]
+                                     if not (row["call_id"] == "link-call-3"
+                                             and row["source_locator"] == "src-2")]
+        out = link_report.report(
+            store, RUN,
+            passages_for=lambda spec, version: SOURCES if spec == "corpus" else TARGETS,
+            retained_for=lambda store, slug, version: SOURCES)
+        direction = out["directions"][0]
+        by_locator = {s["locator"]: s for s in direction["sources"]}
+        self.assertEqual(by_locator["src-2"]["state"], "contested")
+        self.assertEqual(by_locator["src-2"]["judges_linking"], 0)
+        self.assertEqual(direction["agreement"]["unanimous"], 0)
+
     def test_one_direction_with_its_counts(self):
         out = self.report()
         self.assertEqual(len(out["directions"]), 1)
