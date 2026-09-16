@@ -4058,20 +4058,27 @@ function linkBubbles(block) {
   /* The sentence is shown, not disclosed. A relation is one word and one word is
    * not enough to trust it: the reason is what a reader weighs, so it reads
    * beside the pill rather than behind a button they must think to press. */
+  /* The pills sit in a row, wrapping: a paragraph with three counterparts has
+   * three of them side by side, not a column that reads like a list of
+   * corrections. The reasons live after the row, one shown at a time, so opening
+   * one never shifts the pills about. */
   const id = block.dataset.passageId || "link";
-  const pills = found.map((link, index) => {
+  const pills = [];
+  const notes = [];
+  found.forEach((link, index) => {
     const said = link.judge ? `${link.judge}: ${link.comment}` : (link.comment || "");
     const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
     const noteId = `${id}-link-${index}`;
-    return `<span class="link-row" data-relation="${escapeHTML(link.relation)}">`
-      + `<button type="button" class="link-goto" data-goto="${escapeHTML(link.to)}"`
+    pills.push(`<button type="button" class="link-goto" `
+      + `data-relation="${escapeHTML(link.relation)}" data-goto="${escapeHTML(link.to)}"`
       + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
-      + `>${word}</button>`
-      + (said ? `<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
-                + `${escapeHTML(said)}</span>` : "")
-      + `</span>`;
-  }).join("");
-  return `<span class="link-bubbles">${pills}</span>`;
+      + `>${word}</button>`);
+    if (said) {
+      notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
+        + `${escapeHTML(said)}</span>`);
+    }
+  });
+  return `<span class="link-bubbles">${pills.join("")}</span>${notes.join("")}`;
 }
 
 /* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
@@ -4086,19 +4093,33 @@ elements.documentReader?.addEventListener("click", event => {
   /* The pill is the disclosure as well as the journey: one click travels to the
    * counterpart and shows why the judge called it what it did. There is no
    * separate icon, because a reader who wants the reason wants it about the link
-   * they are already pressing. */
+   * they are already pressing.
+   *
+   * One reason at a time. Several open at once push the text about and leave a
+   * reader unsure which pill they are reading, so opening one closes the rest. */
   const note = document.getElementById(button.getAttribute("aria-controls") || "");
-  if (note) {
-    const open = button.getAttribute("aria-expanded") === "true";
-    button.setAttribute("aria-expanded", String(!open));
-    note.hidden = open;
-    requestAnimationFrame(updateRails);
+  const open = button.getAttribute("aria-expanded") === "true";
+  elements.documentReader.querySelectorAll('.link-goto[aria-expanded="true"]')
+    .forEach(other => {
+      other.setAttribute("aria-expanded", "false");
+      const its = document.getElementById(other.getAttribute("aria-controls") || "");
+      if (its) its.hidden = true;
+    });
+  if (note && !open) {
+    button.setAttribute("aria-expanded", "true");
+    note.hidden = false;
   }
+  requestAnimationFrame(updateRails);
 
   const mine = button.closest(".document-panel");
   const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
   const other = panels.find(panel => panel !== mine) || mine;
-  const target = other?.querySelector(`[data-locator="${CSS.escape(button.dataset.goto)}"]`);
+  /* Matched in JavaScript rather than by an attribute selector: a locator carries
+   * spaces, chevrons and a pilcrow, and CSS.escape on a value inside a quoted
+   * selector is a way to match nothing at all without saying so. */
+  const wanted = button.dataset.goto;
+  const target = [...(other?.querySelectorAll("[data-locator]") || [])]
+    .find(block => block.dataset.locator === wanted);
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "center" });
   target.classList.remove("link-target");

@@ -2480,17 +2480,11 @@ body.no-behaviours .sidebar-export { display: none; }
    relation is an opinion and the sentence is what makes it weighable. */
 .link-bubbles {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 6px;
 }
-.link-row {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-}
 .link-goto {
-  flex: none;
   padding: 1px 9px;
   border: 1px solid var(--faint);
   border-radius: 999px;
@@ -2501,24 +2495,31 @@ body.no-behaviours .sidebar-export { display: none; }
   line-height: 1.4;
   cursor: pointer;
 }
-.link-row[data-relation="contradiction"] .link-goto { border-color: var(--fail); color: var(--fail); }
-.link-row[data-relation="nuance"] .link-goto { border-color: var(--adjacent-mark); }
-.link-row[data-relation="stricter_source"] .link-goto,
-.link-row[data-relation="stricter_target"] .link-goto { border-color: var(--accent); }
-.link-row[data-relation="same"] .link-goto { border-color: var(--muted); color: var(--muted); }
+.link-goto[data-relation="contradiction"] { border-color: var(--fail); color: var(--fail); }
+.link-goto[data-relation="nuance"] { border-color: var(--adjacent-mark); }
+.link-goto[data-relation="stricter_source"],
+.link-goto[data-relation="stricter_target"] { border-color: var(--accent); }
+.link-goto[data-relation="same"] { border-color: var(--muted); color: var(--muted); }
 .link-goto:hover,
-.link-goto:focus-visible { background: var(--energy); border-color: var(--energy); color: var(--ink); }
+.link-goto:focus-visible,
+.link-goto[aria-expanded="true"] { background: var(--energy); border-color: var(--energy);
+                                  color: var(--ink); }
 
-/* The judge's sentence, shown rather than disclosed: the word is the claim and
-   this is the reason for it, which is what a reader actually weighs. */
+/* The reason for one link, under the row rather than inside it: the pills keep
+   their places when it opens, and only one is ever open. */
 .link-note {
+  display: block;
+  margin: 5px 0 7px;
+  padding: 6px 9px;
+  border-left: 2px solid var(--faint);
+  border-radius: 0 3px 3px 0;
+  background: rgb(0 0 0 / .03);
   font-family: var(--ui);
   font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
 }
 .link-note[hidden] { display: none; }
-.link-goto[aria-expanded="true"] { background: var(--energy); border-color: var(--energy); }
 
 .link-target { animation: link-target-flash 1.6s ease-out; }
 @keyframes link-target-flash {
