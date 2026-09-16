@@ -6,7 +6,7 @@
 
 The public presentation layer. Plain HTML and vanilla JS, with no framework and no build step of its own: `predev` and `prebuild` in `package.json` copy `site/` into the gitignored `public/`, and the Next.js application serves it from there. The application is deployed on Vercel at https://ai-character-index.vercel.app, which builds on a push. `next.config.mjs` gives the prose pages names (`/how-it-works`, `/mcp`) and hands `/` and `/spec-reader/` their index files.
 
-No data lives here. The reader and the pages fetch it from the application's routes, which read the current public publication out of Supabase: `/api/reader/documents`, `/api/reader/payload`, `/api/reader/behaviours` and `/api/reader/publication`. A `?publication=` pin reaches any publication, public or draft.
+No data lives here. The reader and the pages fetch it from the application's routes, which read the current public publication out of Supabase: `/api/reader/documents`, `/api/reader/payload`, `/api/reader/behaviours` and `/api/reader/publication`. A `?publication=` pin reaches any publication, public or draft. `/api/feedback` is the one route among these the reader posts to, from the note dialog on a paragraph or a document.
 
 ## Contents
 
@@ -17,7 +17,7 @@ No data lives here. The reader and the pages fetch it from the application's rou
 | `mcp.html` | Served at `/mcp`. How to connect to the public MCP endpoint, `/api/mcp`: streamable HTTP, no account, three read-only tools. |
 | `methodology.html` | A redirect to `/how-it-works`, kept because links to it are already shared. It no longer carries prose. |
 | `propose.html` | A redirect to `/how-it-works`, kept for the same reason. The proposal forms moved to `how-it-works.html`. |
-| `spec-reader/` | The spec reader: the documents of the current publication, a behaviour menu that highlights the passages judged to bear on each behaviour, each judge's verdict scored client-side into defining, core and related bands, and the depth the panel gave each document. It has its own `README.md`. |
+| `spec-reader/` | The spec reader: the documents of the current publication, a behaviour menu that highlights the passages judged to bear on each behaviour, each judge's verdict scored client-side into defining, core and related bands, and the depth the panel gave each document. It also carries the note dialog, opened from a paragraph's own icon or a document's, and posts what it collects to `/api/feedback`. It has its own `README.md`. |
 | `README.md` | Short layer status. |
 
 ## Relationships
