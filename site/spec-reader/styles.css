@@ -2469,3 +2469,45 @@ body.no-behaviours .sidebar-export { display: none; }
   font-size: 13px;
   color: var(--ink);
 }
+
+/* Links to the other document. A judged paragraph carries one bubble per
+   counterpart: what the other specification does about what this paragraph
+   says. Clicking one scrolls the compared panel to that paragraph.
+
+   Colour carries the relation, and only the relation: rust where no response
+   could respect both documents, gold where they differ without colliding, olive
+   where they agree. The judge's own sentence is the bubble's title, because a
+   relation is an opinion and the sentence is what makes it weighable. */
+.link-bubbles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.link-bubble {
+  font-family: var(--ui);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 1px 9px;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.link-bubble[data-relation="contradiction"] { border-color: var(--fail); color: var(--fail); }
+.link-bubble[data-relation="nuance"] { border-color: var(--adjacent-mark); }
+.link-bubble[data-relation="stricter_source"],
+.link-bubble[data-relation="stricter_target"] { border-color: var(--accent); }
+.link-bubble[data-relation="same"] { border-color: var(--muted); color: var(--muted); }
+.link-bubble:hover,
+.link-bubble:focus-visible { background: var(--energy); border-color: var(--energy);
+                             color: var(--ink); }
+
+/* Where a bubble just sent the reader. Fades out, so the eye is led once and
+   the paragraph then reads as any other. */
+.link-target { animation: link-target-flash 1.6s ease-out; }
+@keyframes link-target-flash {
+  from { background: var(--energy); }
+  to { background: transparent; }
+}

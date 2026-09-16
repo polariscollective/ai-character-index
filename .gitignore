@@ -57,3 +57,9 @@ public/
 
 # Results of a local run. They are somebody's working output, not the index.
 artefacts/
+
+# One run of passage links, written by engine/panel/link_reader_data.py for a
+# reader to look at locally. It is the output of one run, often filtered to one
+# judge, and the record of the first run says nothing from it is publishable:
+# committing it would ship those bubbles to whoever the reader is deployed to.
+site/spec-reader/links.json

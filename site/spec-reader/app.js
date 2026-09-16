@@ -2599,7 +2599,9 @@ function clearHighlights(panel) {
   // A paragraph that is about to become a passage gets its icons in its head.
   panel._blockCopy?.parentElement?.classList.remove("holds-copy", "touched");
   panel._blockCopy?.remove();
-  body.querySelectorAll(".passage-head, .passage-rationale").forEach(part => part.remove());
+  body.querySelectorAll(".passage-head, .passage-rationale, .link-bubbles")
+    .forEach(part => part.remove());
+  body.querySelectorAll(".link-target").forEach(block => block.classList.remove("link-target"));
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
     block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current", "touched");
@@ -2697,6 +2699,10 @@ function annotatePassages(panel, doc) {
       .join("\n");
     block._railTint = railTint(marks);
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
+    // After the text rather than before it: the labels say what this paragraph
+    // is, the bubbles say what the other document does about it, and that reads
+    // after the paragraph rather than over it.
+    block.insertAdjacentHTML("beforeend", linkBubbles(block));
   });
 
   return { missing };
@@ -4010,6 +4016,65 @@ function revealPassageLink(linked) {
   anchor.focus({ preventScroll: true });
 }
 
+/* Links between two documents: which paragraph of the other one this paragraph
+ * says the same as, demands more than, or cannot be obeyed with. A flat file
+ * beside the reader, written per run by engine/panel/link_reader_data.py, and
+ * absent by default: no file, no bubbles, and the page is exactly what it was.
+ *
+ * Not a route and not part of a publication, deliberately. A link is attached to
+ * a locator and to nothing else, so nothing here needs the run or the
+ * publication it came from. */
+let linkRows = null;
+
+const LINK_WORDS = {
+  same: "same rule", nuance: "nuance", stricter_source: "stricter here",
+  stricter_target: "stricter there", contradiction: "contradiction",
+};
+
+async function loadReaderLinks() {
+  try {
+    linkRows = await loadJSON("links.json");
+  } catch {
+    linkRows = null;   // no run published to this deployment: simply no bubbles
+  }
+}
+
+/* The bubbles under one judged block, one per counterpart. `data-locators` is
+ * the block's own, newline separated, set a few lines above by annotatePassages.
+ * The judge's sentence rides in the title: a relation is an opinion, and the
+ * sentence is what lets a reader weigh it. */
+function linkBubbles(block) {
+  const rows = linkRows?.byLocator;
+  if (!rows) return "";
+  const found = (block.dataset.locators || "").split("\n")
+    .flatMap(locator => rows[locator] || []);
+  if (!found.length) return "";
+  const bubbles = found.map(link => `<button type="button" class="link-bubble" `
+    + `data-relation="${escapeHTML(link.relation)}" data-goto="${escapeHTML(link.to)}" `
+    + `title="${escapeHTML(link.judge ? `${link.judge}: ${link.comment}` : link.comment)}">`
+    + `${escapeHTML(LINK_WORDS[link.relation] || link.relation)}</button>`).join("");
+  return `<span class="link-bubbles">${bubbles}</span>`;
+}
+
+/* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
+ * Every block carries data-locator from attachLocators, judged or not, so the
+ * target is on screen whenever its document is. Comparing two documents is what
+ * this is for; with one panel open it scrolls within it, which is the honest
+ * fallback rather than doing nothing. */
+elements.documentReader?.addEventListener("click", event => {
+  const bubble = event.target.closest(".link-bubble");
+  if (!bubble) return;
+  const mine = bubble.closest(".document-panel");
+  const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
+  const other = panels.find(panel => panel !== mine) || mine;
+  const target = other?.querySelector(`[data-locator="${CSS.escape(bubble.dataset.goto)}"]`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.remove("link-target");
+  void target.offsetWidth;
+  target.classList.add("link-target");
+});
+
 async function initialize() {
   setupFeedback();
   renderBehaviourList();
@@ -4020,7 +4085,8 @@ async function initialize() {
     const behaviours = await loadBehaviours();
     // The notes beside the documents, not before them: a note that fails to load
     // must not stop the reader rendering, so its failure is swallowed.
-    const [documents] = await Promise.all([loadDocuments(), loadBehaviourNotes()]);
+    const [documents] = await Promise.all([
+      loadDocuments(), loadBehaviourNotes(), loadReaderLinks()]);
     state.rawBehaviours = behaviours.behaviours || [];
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();
