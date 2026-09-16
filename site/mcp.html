@@ -199,6 +199,43 @@
     .site-header nav { gap: 14px; }
   }
 
+  /* Sub-heading inside a section: the two routes, and the clients under each. */
+  section.m h3 { font-family: var(--display); font-size: 17px; font-weight: 600;
+                 margin: 28px 0 8px; }
+  /* Steps to follow in order are numbered, as they are on the how-it-works page:
+     the bullet's indent, with the number where the chartreuse circle would be. */
+  section.m ol { max-width: 66ch; margin: 8px 0 16px; padding-left: 24px; }
+  section.m ol > li { padding-left: 4px; }
+  section.m ol > li::before { content: none; }
+  section.m ol > li::marker { color: var(--ink2); font-weight: 600; }
+
+  /* ---------- the contents rail ---------- */
+  /* The same rail the how-it-works page carries: one hairline down the side of
+     the page's own headings, with a chartreuse segment marking where you are.
+     This page has sections enough to need it now. */
+  .with-rail { display: flex; align-items: flex-start; gap: 56px;
+               max-width: 1000px; margin: 0 auto; padding: 0 40px; }
+  .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
+  /* Both offsets clear the header, which stays over the page: the rail sits
+     under it, and a heading jumped to lands below it rather than behind it. On a
+     phone the header wraps and grows, so the script writes its real height into
+     --header-height; 54px is its height until then. */
+  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 168px; padding-top: 92px; }
+  .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
+  .rail li { margin: 0; }
+  .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
+            border-left: 2px solid transparent; color: var(--ink3);
+            font-size: 13px; line-height: 1.35; text-decoration: none; box-shadow: none;
+            transition: color .15s ease, border-color .15s ease; }
+  .rail a:hover { background: none; color: var(--ink); }
+  .rail a[aria-current="true"] { color: var(--ink); border-left-color: var(--energy); }
+  .sheet [id] { scroll-margin-top: calc(var(--header-height, 54px) + 24px); }
+  @media (max-width: 940px) {
+    .with-rail { display: block; padding: 0 22px; }
+    .with-rail .sheet { max-width: 66ch; margin: 0 auto; }
+    .rail { display: none; }
+  }
+
 </style>
 </head>
 <body data-palette="daylight">
@@ -218,22 +255,87 @@
   </nav>
 </header>
 
-<div class="sheet">
+<div class="with-rail">
+
+  <nav class="rail" aria-label="On this page">
+    <ol></ol>
+  </nav>
+
+  <div class="sheet">
 
   <div class="m-head">
     <div class="m-title">MCP</div>
-    <p class="m-sub">The index answers over the Model Context Protocol, so an agent can ask it
-    where a model specification addresses a behaviour instead of reading the whole document.
-    Three read-only tools, no account and no key.</p>
+    <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
+    these documents by quoting them, rather than from memory. This page has the whole setup, from
+    a settings menu or from a command line. Three tools, read only, no account and no key.</p>
   </div>
 
-  <section class="m">
-    <h2>How to connect</h2>
-    <p>One endpoint, streamable HTTP, and nothing to authenticate:</p>
+  <section class="m" id="what-this-does">
+    <h2>What this does</h2>
+    <p>MCP, the Model Context Protocol, is a standard way to let an assistant look something up in
+    another service while it answers you. Connect the index and your assistant stops answering
+    about these documents from memory: it quotes the passages a document actually gives on a
+    subject, and says where in the document each one sits, so you can check the answer rather than
+    trust it.</p>
+    <p>The index speaks it at one address:</p>
     <pre><code data-origin>/api/mcp</code></pre>
-    <p>In Claude Code:</p>
+    <p>There is nothing to sign in to and no key to obtain. The index only reads: it can be asked
+    what the documents say, and it cannot be asked to change anything. Everything it serves is the
+    published index, the same data the spec reader is built from, so a call reads what the site
+    shows and nothing else.</p>
+  </section>
+
+  <section class="m" id="settings-menu">
+    <h2>Connect from a settings menu</h2>
+    <p>No terminal. Both routes below were checked against the publisher&rsquo;s own documentation
+    as of September 2026, and these menus do change.</p>
+
+    <h3>Claude</h3>
+    <p>Custom connectors are available on the Free, Pro, Max, Team and Enterprise plans, and a free
+    account is limited to one of them.</p>
+    <ol>
+      <li>Open Claude&rsquo;s settings, on claude.ai or in the desktop app, and choose
+      <b>Connectors</b>.</li>
+      <li>Choose <b>Add custom connector</b>.</li>
+      <li>Paste the address above and choose <b>Add</b>. The index needs no sign-in, so leave any
+      authentication fields empty.</li>
+      <li>In a conversation, open the <b>+</b> button beside the message box, choose
+      <b>Connectors</b>, and switch the index on.</li>
+    </ol>
+    <p>On a Team or Enterprise plan an owner adds it once under <b>Organization settings</b>, then
+    <b>Connectors</b>, and everyone else then chooses <b>Connect</b> beside it.</p>
+
+    <h3>ChatGPT</h3>
+    <p>Custom MCP servers sit behind developer mode, which OpenAI lists for Plus, Pro, Business,
+    Enterprise and Education accounts on the web. It is not on the free plan.</p>
+    <ol>
+      <li>Open <b>Settings</b>, then <b>Security and login</b>, and turn on <b>Developer
+      mode</b>.</li>
+      <li>Go to <b>Plugins</b>, choose the plus button, and create a developer-mode app for the
+      address above.</li>
+    </ol>
+    <p>Developer mode gives an assistant full use of a server&rsquo;s tools, including tools that
+    write. The index has none of those: it only reads.</p>
+  </section>
+
+  <section class="m" id="command-line">
+    <h2>Connect from the command line</h2>
+    <p>One command, in the client you already use. Each was checked against its publisher&rsquo;s
+    own documentation as of September 2026.</p>
+
+    <h3>Claude Code</h3>
     <pre><code data-origin>claude mcp add --transport http ai-character-index /api/mcp</code></pre>
-    <p>In a client that takes a configuration file:</p>
+    <p>Add <code>--scope user</code> to have it in every project rather than only this one. Type
+    <code>/mcp</code> inside Claude Code to see that it connected.</p>
+
+    <h3>Codex CLI</h3>
+    <pre><code data-origin>codex mcp add ai-character-index --url /api/mcp</code></pre>
+    <p><code>codex mcp list</code> shows what is configured.</p>
+
+    <h3>Gemini CLI</h3>
+    <pre><code data-origin>gemini mcp add --transport http ai-character-index /api/mcp</code></pre>
+
+    <h3>A client that takes a configuration file</h3>
     <pre><code data-origin>{
   "mcpServers": {
     "ai-character-index": {
@@ -242,12 +344,34 @@
     }
   }
 }</code></pre>
-    <p>Everything it serves is the published index, the same data the spec reader is built from,
-    so a call reads what the site shows and nothing else.</p>
+    <p>Clients spell this differently, so prefer the client&rsquo;s own command where there is one:
+    it writes the shape that client expects.</p>
   </section>
 
-  <section class="m">
+  <section class="m" id="what-to-ask">
+    <h2>What to ask it</h2>
+    <p>Once it is connected, ask in ordinary words. For instance:</p>
+    <ul>
+      <li>What does OpenAI&rsquo;s Model Spec say about sycophancy? Quote the passages.</li>
+      <li>Where do Claude&rsquo;s Constitution and the Alibaba Model Spec differ on user
+      autonomy?</li>
+      <li>What changed between the two versions of the OpenAI Model Spec on human oversight?</li>
+    </ul>
+    <p>The index carries thirteen behaviours as of September 2026, and the assistant will name the
+    ones it used and quote from the documents it read.</p>
+  </section>
+
+  <section class="m" id="tools">
     <h2>Tools</h2>
+    <p>Three, and all of them read. Four words recur below. A <b>behaviour</b> is one thing a
+    document might commit a model to, such as deferring to a user&rsquo;s own decisions. A
+    <b>locator</b> is the address of a quote inside a document, naming the document, its version,
+    the section and the sentences, as in
+    <code>openai--model-spec@2026-08-18 &gt; #scope_of_autonomy &gt; &para;14</code>. The
+    <b>panel</b> is the three frontier models that read every document for every behaviour and
+    marked the passages. A <b>depth</b> is the score those judges give a document for a behaviour,
+    from 0, absent, to 4, rules with worked examples: it says how much the document gives an
+    evaluation to work with, not how much the lab cares.</p>
     <p><b>list_model_specs.</b> Every specification the current publication carries: id,
     laboratory, title, version, source URL, how many behaviours were judged against it and how
     many passages it holds. No arguments. It does not return the specification text, which runs to
@@ -290,6 +414,8 @@
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
   </section>
+
+  </div>
 
 </div>
 
@@ -378,6 +504,68 @@ for (const pre of document.querySelectorAll("pre")) {
       copyStatus.textContent = "Selected, press copy on your keyboard";
     }
     reset = setTimeout(() => { delete button.dataset.said; copyStatus.textContent = ""; }, 2000);
+  });
+}
+
+/* The header stays over the page and wraps onto more rows on a phone, so what
+   has to clear it (the rail, a heading jumped to) reads its real height from
+   here rather than from a constant. */
+const siteHeader = document.querySelector(".site-header");
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--header-height", `${siteHeader.offsetHeight}px`);
+}).observe(siteHeader);
+
+/* The rail is built from the page's own headings, so it cannot fall out of step
+   with them. Each h2 gets an id from its text where it has none. */
+const rail = document.querySelector(".rail ol");
+if (rail) {
+  const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sections = [...document.querySelectorAll(".sheet section.m")]
+    .map(section => ({ section, heading: section.querySelector("h2") }))
+    .filter(entry => entry.heading);
+  const links = new Map();
+  for (const { section, heading } of sections) {
+    if (!section.id) section.id = slug(heading.textContent);
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = `#${section.id}`;
+    link.textContent = heading.textContent;
+    item.append(link);
+    rail.append(item);
+    links.set(section.id, link);
+  }
+
+  /* Which section you are in. The sections are observed, not the headings:
+     headings are points, so a band narrow enough to mean "at the top of the
+     screen" contains none of them most of the time. Sections tile the page, so
+     one of them always covers the band, and `current` is never reset to a
+     default, so at the very bottom the last answer stands. */
+  let current = sections[0].section.id;
+  const visible = new Set();
+  const mark = () => {
+    for (const { section } of sections) {
+      if (visible.has(section.id)) { current = section.id; break; }
+    }
+    for (const [id, link] of links) {
+      if (id === current) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  };
+  const watch = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target.id);
+      else visible.delete(entry.target.id);
+    }
+    mark();
+  }, { rootMargin: "-12% 0px -76% 0px" });
+  sections.forEach(({ section }) => watch.observe(section));
+  mark();
+
+  /* A click marks its target at once rather than waiting for the scroll to
+     settle, which is what made the rail feel unresponsive. */
+  rail.addEventListener("click", event => {
+    const link = event.target.closest("a");
+    if (link) { current = link.hash.slice(1); visible.clear(); mark(); }
   });
 }
 </script>
