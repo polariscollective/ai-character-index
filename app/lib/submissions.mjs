@@ -12,6 +12,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { insert, select, upload } from "./supabase.mjs";
 import { locatorSafe, problems } from "./locator-safe.mjs";
+import { forSlack, postToSlack } from "./slack.mjs";
 
 export const BUCKET = "aci-submissions";
 
@@ -124,12 +125,18 @@ export function asMarkdown(text) {
   return null;
 }
 
-/** How many proposals this source has made in the last hour. */
-export async function recentFrom(hash, fetchImpl = fetch) {
+/**
+ * How many submissions this source has made in the last hour, in one table.
+ *
+ * The table is an argument because two public routes are rate-limited the same
+ * way against two tables, and the reasoning behind this query -- an hour, this
+ * source, counted against the table itself so it needs no second store and
+ * survives a cold start -- is worth writing down once.
+ */
+export async function recentFrom(hash, fetchImpl = fetch, table = "aci_submissions") {
   const since = new Date(Date.now() - 3600 * 1000).toISOString();
   const rows = await select(
-    "aci_submissions",
-    `select=id&source_hash=eq.${hash}&created_at=gte.${since}`, fetchImpl);
+    table, `select=id&source_hash=eq.${hash}&created_at=gte.${since}`, fetchImpl);
   return rows.length;
 }
 
@@ -155,15 +162,6 @@ export async function record({ kind, proposal, document, submitter, hash },
   return row;
 }
 
-/* Slack reads a few sequences out of message text, and one of them is a way to
- * ping everyone in the channel. This form is open to the internet, so a proposal
- * could carry <!channel> and would otherwise send it. Escaping the three
- * characters Slack asks for is also what stops that being parsed at all. */
-function forSlack(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 /* Long enough to judge a proposal from the message, short enough to read. */
 const IN_SLACK = 700;
 
@@ -187,9 +185,6 @@ const FIELDS = {
  * says who was not told.
  */
 export async function announce(row, fetchImpl = fetch, site = "") {
-  const hook = process.env.SLACK_WEBHOOK_URL?.trim();
-  if (!hook) return "SLACK_WEBHOOK_URL is not set";
-
   const proposal = row.proposal || {};
   const title = row.kind === "behaviour"
     ? `New behaviour proposed: ${proposal.name || "untitled"}`
@@ -213,16 +208,5 @@ export async function announce(row, fetchImpl = fetch, site = "") {
           + ` | <${site}/admin/submissions|read it in the portal>` }] },
   ];
 
-  try {
-    const response = await fetchImpl(hook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // `text` is the notification and the fallback for clients that do not
-      // render blocks. Sending blocks without it makes a silent push.
-      body: JSON.stringify({ text: forSlack(title), blocks }),
-    });
-    return response.ok ? null : `slack returned ${response.status}`;
-  } catch (error) {
-    return `slack unreachable: ${error.message}`;
-  }
+  return postToSlack(title, blocks, fetchImpl);
 }

@@ -104,6 +104,16 @@ test("the rate-limit query asks for this source within the hour", async () => {
   assert.match(asked, /created_at=gte\./);
 });
 
+test("the same rate limit counts in whichever table it is asked about", async () => {
+  let asked;
+  await recentFrom("abc", async (url) => {
+    asked = url;
+    return { ok: true, status: 200, json: async () => [], text: async () => "" };
+  }, "aci_feedback");
+  assert.match(asked, /aci_feedback\?/);
+  assert.match(asked, /source_hash=eq\.abc/);
+});
+
 test("a document goes to the bucket before the row that describes it", async () => {
   const seen = [];
   const fetchImpl = async (url, init) => {

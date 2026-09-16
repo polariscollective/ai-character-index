@@ -53,3 +53,23 @@ fresh clone (no manifest yet) still renders. Each `build_site_data.py` run write
 `data/behaviours-<YYYY-MM-DDTHH-MM-SS>.json` and updates the manifest; both are
 gitignored and stay local. `engine/panel/select_run.py` resolves/verifies pins from
 the CLI the same way the page does (`--pin <name>`, `--latest`).
+
+## Saying something about a paragraph, or a document
+Every paragraph carries three icons, revealed on hover, on focus or on a tap:
+copy its locator, copy a link to it, and open a note. The same third icon sits
+beside a document's title, for a note about the whole document rather than one
+paragraph; it opens the same dialog with no behaviours field, sending the
+document's id as the locator.
+
+The dialog -- "Note on this paragraph" or "Note on this document" -- takes a
+comment, a thumb, or both, with the locator and the behaviours highlighting the
+paragraph shown but not editable, and an address, required and used to write
+back, never shown on the site. A private toggle says what private protects,
+and nothing says what leaving it alone costs: a note left alone may be shown on
+the site, unnamed, and cannot be unsent. Off with no name typed sends the
+note anonymous (the default); off with a name typed sends it attributed under
+that name; the toggle on keeps it private.
+
+It posts to `/api/feedback`, the one route this page writes to. The address,
+the name and the private toggle are remembered in `localStorage` after the
+first accepted send. Nothing is displayed anywhere yet.

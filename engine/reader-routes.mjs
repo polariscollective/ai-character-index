@@ -98,3 +98,41 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
   }
   return true;
 }
+
+/** The body of the most recent POST /api/feedback, or null before one arrives.
+ * Module-level rather than returned from serveFeedbackRoute, because the
+ * walker that drives the fixture server reads it back well after the request
+ * that set it -- through a browser click, not a return value it could hold on
+ * to. */
+let lastFeedback = null;
+
+/**
+ * Answers POST /api/feedback the way app/api/feedback does when it accepts:
+ * `{done}`, never `{problem}`. This is a fixture for the browser walkers, not
+ * a rebuild of the route's own rules -- those are tested under node, against
+ * app/lib/feedback.mjs, with no browser and no database. What this exists for
+ * is letting a walker prove what the dialog actually sent, by reading
+ * lastFeedback back after driving a click.
+ *
+ * Returns false so the caller falls through to its static handler, matching
+ * serveReaderRoute's contract.
+ */
+export async function serveFeedbackRoute(request, response) {
+  const url = new URL(request.url, "http://x");
+  if (url.pathname !== "/api/feedback" || request.method !== "POST") return false;
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  try {
+    lastFeedback = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    lastFeedback = null;
+  }
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(JSON.stringify({ done: "Thank you. We read every one." }));
+  return true;
+}
+
+/** What the last POST /api/feedback sent, for a walker to assert against. */
+export function lastFeedbackReceived() {
+  return lastFeedback;
+}

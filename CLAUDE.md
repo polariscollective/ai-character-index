@@ -285,6 +285,81 @@ the table would have given that away to buy one boolean. A pin, `?publication=`,
 still reaches any publication, which is how a draft is previewed and how an old
 one is checked.
 
+### A reader can leave a note on a paragraph, or on a document
+
+The index says things about paragraphs, and every one of them is a panel's
+reading. `aci_feedback` is where a reader disagrees, or just agrees: a third
+icon beside the two copy icons on every paragraph, cited or not, opens a
+dialog that takes a comment, a thumb, or both. The dialog calls this a note —
+"Note on this paragraph", "Note on this document" — and so does the portal,
+whose page is titled "Notes"; the table, the route and the URL stayed
+`aci_feedback` and `/api/feedback`, because renaming those for a word would
+have been churn with nothing behind it. `/api/feedback` is the second route
+open to the internet that writes, and carries the proposal form's guards for
+the same reasons: a honeypot, thirty per source per hour counted against the
+table itself, a cap on every field, and a size cap read from Content-Length
+before the body is buffered.
+
+The consent default is not what was planned, and it is worth saying plainly
+why. A note sent without touching a single control is `anonymous`, not
+private: the toggle defaults off. Most readers never touch it, so for them
+the default is not a fallback, it is the whole of their consent — and an
+untouched control that quietly meant "keep this private" was a courtesy
+nobody had asked for and nobody could see. The toggle says what private
+protects. Nothing says what leaving it alone costs, and that is worth knowing
+rather than papering over: a paragraph above the toggle said it, and was removed
+as unnecessary. A reader who touches no control is not told that their words may
+be shown. `private` is the deliberate opt-out now, not the default. What was three
+radio choices is one toggle and a name field, and visibility is derived
+rather than asked for twice: the toggle on gives `private`; off with a name
+typed gives `attributed`; off with nothing typed gives `anonymous`. The
+database's two check constraints — a note says something, a name is present
+exactly when `attributed` is chosen — are unchanged and still hold; only the
+form above them changed shape.
+
+A note can also be about a whole document, not only a paragraph: an icon
+beside the document's title opens the same dialog with no behaviours field,
+and sends the document's id as the `locator`. Neither a migration nor a route
+change was needed, because a document id is already a locator that names the
+whole document.
+
+There is no withdrawal, and the dialog does not say so. The table grants
+select, insert and update to the operators who read it, and no delete, so a note
+is a message that was sent. Nothing tells the reader that before they send it,
+which is the second half of the same gap: a note cannot be taken back, and the
+moment to choose private is the only moment there is.
+
+Three things it does deliberately, unchanged from the plan. The behaviours it
+shows are the intersection, not the menu: of the behaviours ticked in the
+sidebar, the ones citing that paragraph, which is the set colouring the text
+in front of the reader. The publication is resolved by the route rather than
+taken from the page, because a locator names the text and carries its version
+but the reading laid over it is a publication's; `publication_id` carries no
+foreign key, so a publication archived by a cleanup migration does not take a
+reader's words with it. And the address is never public at any of the three
+states: what `attributed` shows is a name the reader types for the purpose,
+because an address published as given is harvested within days, a cost we
+would be imposing on somebody who did us a favour. The name is required when
+`attributed` is chosen, in the form and again as a check constraint, so
+choosing to be named and leaving it blank is refused rather than quietly
+published as anonymous.
+
+Nothing is displayed yet, and that is the point of recording consent now: the
+surface, when it exists, will be built from what readers actually permitted.
+The design is `docs/superpowers/specs/2026-09-16-feedback-on-a-paragraph-design.md`;
+the table is `20260916140000_aci_feedback.sql` in `polaris-supabase`.
+
+### A copy now says `Copied`, not only a colour change
+
+Unrelated to notes, landed in the same branch: pressing "Copy locator" or
+"Copy link" already wrote to the clipboard and turned the button
+accent-coloured, but the confirmation of that lived in an `aria-live` region
+only a screen reader hears, so a sighted reader had nothing to go on. The
+button now shows the word "Copied" in place of its icon, accent-coloured, for
+two seconds, then reverts: a successful clipboard write is otherwise
+invisible, and an announcement only a screen reader hears is not feedback for
+the reader looking at the page.
+
 ### Every launch of the container is a row
 
 `aci_jobs` records each run of the judging image: its mode, its arguments, where
