@@ -186,7 +186,11 @@ def price(system, user, model, config):
     return round(tokens_in * prices[0] / 1e6 + OUTPUT_TOKENS * prices[1] / 1e6, 2)
 
 
-def main(argv=None):
+def main(argv=None, call_model=None):
+    """`call_model` is injected the way link_job.run and link_arbitrate.settle
+    take one, so the same summary can be written by a model reached through a
+    provider or by one that answers from a file. It defaults to the provider
+    call, which is what the command line uses."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("links_json")
     parser.add_argument("--model", default="sol")
@@ -221,7 +225,7 @@ def main(argv=None):
         return 0
 
     provider, model_id = h.resolve(args.model, config)
-    reply, usage, finish_reason, seconds = batch_job.call_openrouter(
+    reply, usage, finish_reason, seconds = (call_model or batch_job.call_openrouter)(
         provider=provider, model_id=model_id, system=system, user=user,
         kwargs=whole_doc.judge_kwargs(args.model, model_id, config))
     cost = batch_job.cost_of(args.model, usage, config)
