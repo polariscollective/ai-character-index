@@ -1,0 +1,13 @@
+{
+  "rater": "matt",
+  "sheet": "audit-sheet-shared20.md",
+  "date": "2026-07-28",
+  "scale": {"1": "core", "0.4": "adjacent", "0": "unrelated"},
+  "note": "Both humans labeled without full document context; a full-context pass might carry semantic content raters lacked.",
+  "labels": {
+    "1": 0, "2": 0.4, "3": 0, "4": 1, "5": 0.4,
+    "6": 0, "7": 0.4, "8": 0.4, "9": 0.4, "10": 0,
+    "11": 1, "12": 1, "13": 0, "14": 0.4, "15": 0,
+    "16": 1, "17": 0.4, "18": 0, "19": 0, "20": 0.4
+  }
+}

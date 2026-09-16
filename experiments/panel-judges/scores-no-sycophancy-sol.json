@@ -1,0 +1,1063 @@
+{
+  "behaviour": "no-sycophancy",
+  "model": "sol",
+  "chunk": "paragraph",
+  "n_blocks": 211,
+  "results": [
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b612",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b613",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b614",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Hard constraints > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b612",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Instructable behaviors > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Preserving important societal structures > Preserving epistemic autonomy > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Preserving important societal structures > Preserving epistemic autonomy > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Preserving important societal structures > Preserving epistemic autonomy > \u00b65",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > Preserving important societal structures > Preserving epistemic autonomy > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > The costs and benefits of actions > \u00b623",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > The costs and benefits of actions > \u00b633",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > The role of intentions and context > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > The role of intentions and context > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Avoiding harm > The role of intentions and context > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b612",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b613",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b616",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b617",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b619",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b621",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b622",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b623",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b63",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Being honest > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Having broadly good values and judgment > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Having broadly good values and judgment > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Having broadly good values and judgment > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Having broadly good values and judgment > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly ethical > Having broadly good values and judgment > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly safe > Safe behaviors > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly safe > Safe behaviors > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly safe > Safe behaviors > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being broadly safe > Safe behaviors > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Balancing helpfulness with other values > \u00b625",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Balancing helpfulness with other values > \u00b633",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > Claude\u2019s three types of principals > \u00b614",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > Handling conflicts between operators and users > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > Handling conflicts between operators and users > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > How to treat operators and users > \u00b613",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > How to treat operators and users > \u00b614",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > How to treat operators and users > \u00b615",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > How to treat operators and users > \u00b616",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > How to treat operators and users > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Navigating helpfulness across principals > Understanding existing deployment contexts > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > What constitutes genuine helpfulness > \u00b69",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > Why helpfulness is one of Claude\u2019s most important traits > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Being helpful > \u00b62",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "constitution@2026-01-20 > Claude\u2019s nature > Claude as a novel entity > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Claude\u2019s nature > Claude\u2019s wellbeing and psychological stability > Resilience and consistency across contexts > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Claude\u2019s nature > Claude\u2019s wellbeing and psychological stability > Resilience and consistency across contexts > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Claude\u2019s nature > Claude\u2019s wellbeing and psychological stability > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Claude\u2019s nature > Claude\u2019s wellbeing and psychological stability > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Concluding thoughts > Acknowledging open problems > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Concluding thoughts > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Following Anthropic\u2019s guidelines > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Following Anthropic\u2019s guidelines > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude and the mission of Anthropic > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude\u2019s core values > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude\u2019s core values > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude\u2019s core values > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude\u2019s core values > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Claude\u2019s core values > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Our approach to Claude\u2019s constitution > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "constitution@2026-01-20 > Overview > Our approach to Claude\u2019s constitution > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #adapt_length_in_voice_mode > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #ask_clarifying_questions > \u00b617",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b61",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b612",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b615",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b616",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b617",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #assume_objective_pov > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b61",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b63",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b67",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_errors > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_regulated_advice > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_regulated_advice > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #avoid_sycophancy > \u00b63",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #be_clear > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #be_clear > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #be_honest_and_transparent > \u00b61",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #be_professional > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #comply_with_laws > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_encourage_self_harm > \u00b65",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_encourage_self_harm > \u00b66",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_encourage_self_harm > \u00b67",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b61",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b610",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b611",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b63",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b65",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_lie > \u00b69",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_make_unprompted_personal_comments > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_make_unprompted_personal_comments > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_make_unprompted_personal_comments > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #do_not_make_unprompted_personal_comments > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b614",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b616",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b621",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b622",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b623",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b624",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b626",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b627",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b628",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b629",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b630",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b631",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b632",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b633",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #express_uncertainty > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b613",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b614",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b615",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #follow_all_applicable_instructions > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #general_principles > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #general_principles > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #highlight_misalignments > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #highlight_misalignments > \u00b62",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #highlight_misalignments > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #ignore_untrusted_data > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #ignore_untrusted_data > \u00b616",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #imitate_accents_in_voice_mode > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b613",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b614",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b615",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b68",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #letter_and_spirit > \u00b69",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #levels_of_authority > \u00b615",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #levels_of_authority > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #levels_of_authority > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #levels_of_authority > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #levels_of_authority > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_agenda > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_agenda > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_agenda > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_topic_off_limits > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_topic_off_limits > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #no_topic_off_limits > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b65",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #present_perspectives > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #protect_privileged_information > \u00b610",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #protect_privileged_information > \u00b611",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #protect_privileged_information > \u00b612",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #protect_privileged_information > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #red_line_principles > \u00b66",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #red_line_principles > \u00b67",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #refusal_style > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #refusal_style > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #restricted_content > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #risk_taxonomy > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #risk_taxonomy > \u00b63",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #risk_taxonomy > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #support_mental_health > \u00b61",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #support_mental_health > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #support_mental_health > \u00b63",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #support_mental_health > \u00b64",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #support_programmatic_use > \u00b612",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #uphold_fairness > \u00b61",
+      "score": 1,
+      "relevant": true
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #uphold_fairness > \u00b62",
+      "score": 0,
+      "relevant": false
+    },
+    {
+      "locator": "model-spec@2025-12-18 > #uphold_fairness > \u00b65",
+      "score": 0,
+      "relevant": false
+    }
+  ]
+}
