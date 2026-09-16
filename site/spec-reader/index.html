@@ -127,6 +127,87 @@
     <p id="original-note-body" class="original-note-body"></p>
   </div>
 
+  <!-- What a reader says about one paragraph, or a whole document. Opened from
+       the third icon on any paragraph, or from the icon beside a document's
+       title; app.js fills the title, the locator and the behaviours from
+       whichever it was, and none of the three can be typed. Modal, so the
+       document behind it stops taking the keyboard, and `novalidate` so the
+       sentences a reader is refused with are ours rather than the browser's. -->
+  <dialog id="feedback-dialog" class="feedback-dialog" aria-labelledby="feedback-title">
+    <form id="feedback-form" class="feedback-form" novalidate>
+      <div class="feedback-head">
+        <h2 id="feedback-title">Note on this paragraph</h2>
+        <button type="button" class="feedback-close" id="feedback-close"
+          aria-label="Close">×</button>
+      </div>
+      <p class="feedback-locator" id="feedback-locator"></p>
+
+      <p class="feedback-field" id="feedback-behaviours-field" hidden>
+        <label for="feedback-behaviours">Behaviours highlighting it</label>
+        <input id="feedback-behaviours" type="text" readonly aria-readonly="true">
+      </p>
+
+      <!-- A thumb answers a claim the index makes. On a paragraph no selected
+           behaviour cites, the index has made none, so app.js hides the whole
+           fieldset and the comment becomes the required part instead. -->
+      <fieldset class="feedback-vote" id="feedback-vote">
+        <legend id="feedback-vote-legend">Does the index get this paragraph right? (optional)</legend>
+        <div class="feedback-thumbs">
+          <button type="button" class="thumb" data-vote="up" aria-pressed="false"><svg
+            viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+            d="M4.6 14V6.8h1.9L9 2.4c.9 0 1.5.7 1.5 1.6v2.1h2.6c.8 0 1.4.8 1.2 1.6l-1 4.8c-.1.6-.7 1-1.3 1H4.6ZM4.6 6.8H1.8V14h2.8"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/></svg> Yes</button>
+          <button type="button" class="thumb" data-vote="down" aria-pressed="false"><svg
+            viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+            d="M4.6 2v7.2h1.9L9 13.6c.9 0 1.5-.7 1.5-1.6V9.9h2.6c.8 0 1.4-.8 1.2-1.6l-1-4.8c-.1-.6-.7-1-1.3-1H4.6ZM4.6 9.2H1.8V2h2.8"
+            fill="none" stroke="currentColor" stroke-width="1.3"
+            stroke-linejoin="round"/></svg> No</button>
+        </div>
+      </fieldset>
+
+      <p class="feedback-field">
+        <label for="feedback-comment" id="feedback-comment-label">Your comment (optional)</label>
+        <textarea id="feedback-comment" rows="4" maxlength="5000"></textarea>
+      </p>
+
+      <p class="feedback-field">
+        <label for="feedback-email">Your email address</label>
+        <input id="feedback-email" type="email" maxlength="200" autocomplete="email">
+        <span class="feedback-note">Always kept private. We use it to write back.</span>
+      </p>
+
+      <fieldset class="feedback-visibility">
+        <legend>How may we use this?</legend>
+        <label class="feedback-choice">
+          <input type="checkbox" id="feedback-private">
+          <span class="choice-title">Keep it private</span>
+          <span class="choice-note">Only we read it. It is never shown and never counted.</span>
+        </label>
+      </fieldset>
+
+      <p class="feedback-field" id="feedback-name-field">
+        <label for="feedback-name">Name to show</label>
+        <input id="feedback-name" type="text" maxlength="100" autocomplete="nickname">
+        <span class="feedback-note">Leave blank to appear without a name.</span>
+      </p>
+
+      <!-- Hidden from people, filled in by machinery that posts to every form it
+           finds. A submission carrying it is thanked and recorded nowhere. -->
+      <p class="feedback-trap" aria-hidden="true">
+        <label for="feedback-website">Leave this empty</label>
+        <input id="feedback-website" type="text" tabindex="-1" autocomplete="off">
+      </p>
+
+      <p class="feedback-outcome" id="feedback-outcome" role="status"></p>
+
+      <div class="feedback-actions">
+        <button type="button" class="feedback-cancel" id="feedback-cancel">Cancel</button>
+        <button type="submit" class="feedback-send" id="feedback-send">Send feedback</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
     <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
@@ -184,6 +265,18 @@
               <i class="legend-mark adjacent" aria-hidden="true"></i> Related<span class="tier-count"></span>
             </button>
           </span>
+            <!-- Same speech bubble as a paragraph's own note icon (FEEDBACK_ICON
+                 in app.js), baked into this template rather than drawn by JS: the
+                 reader clones the template once per panel, so this gives every
+                 panel its own without appending it per document. Last in the row,
+                 past the tier toggles, in one panel or two: a note on the whole
+                 document is the last thing offered, not something sitting next to
+                 the title competing with it. -->
+            <button type="button" class="document-feedback"
+              aria-label="Note on this document" title="Note on this document"><svg
+              viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+              d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
+              fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
           </div>
         </div>
       </header>

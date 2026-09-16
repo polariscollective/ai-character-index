@@ -1675,7 +1675,7 @@ body.sidebar-collapsed .sidebar-resizer {
    inside it, full on their own hover or focus. Colour and opacity only, over
    150ms; nothing moves. Where there is no hover, the current passage and a tapped
    one show them. */
-.passage-copy {
+:is(.passage-copy, .passage-feedback) {
   flex: none;
   width: 18px;
   height: 18px;
@@ -1689,19 +1689,29 @@ body.sidebar-collapsed .sidebar-resizer {
   opacity: 0;
   transition: opacity .15s ease, color .15s ease, background-color .15s ease;
 }
-.passage-copy svg { display: block; width: 14px; height: 14px; }
+:is(.passage-copy, .passage-feedback) svg { display: block; width: 14px; height: 14px; }
 .passage-copy[data-copy="locator"] { margin-left: auto; }
-.passage-head .passage-copy ~ .passage-why { margin-left: 0; }
-.passage:hover .passage-copy,
-.passage:focus-within .passage-copy { opacity: .55; }
+.passage-head :is(.passage-copy, .passage-feedback) ~ .passage-why { margin-left: 0; }
+.passage:hover :is(.passage-copy, .passage-feedback),
+.passage:focus-within :is(.passage-copy, .passage-feedback) { opacity: .55; }
 /* As specific as the two rules above, and after them, so an icon's own hover or
    focus wins over the block's. */
-.passage .passage-copy:hover,
-.passage .passage-copy:focus-visible { opacity: 1; color: var(--ink); }
+.passage :is(.passage-copy, .passage-feedback):hover,
+.passage :is(.passage-copy, .passage-feedback):focus-visible { opacity: 1; color: var(--ink); }
 @media (hover: none) {
-  .passage.current .passage-copy,
-  .passage.touched .passage-copy { opacity: .55; }
+  .passage.current :is(.passage-copy, .passage-feedback),
+  .passage.touched :is(.passage-copy, .passage-feedback) { opacity: .55; }
 }
+/* The tick a successful copy shows for two seconds (markCopied, in app.js). Full
+   opacity and --accent, whether or not the pointer is still over the button: a
+   plain .passage-copy.copied would be as specific as .passage-copy itself and lose
+   to .passage .passage-copy:hover above it, dimming the tick back to .55 under a
+   pointer that has not moved since the click. Matching the same .passage ancestor
+   here keeps this rule at least as specific, and it is written after what it must
+   beat. */
+.passage .passage-copy.copied,
+.passage .passage-copy.copied:hover,
+.passage .passage-copy.copied:focus-visible { opacity: 1; color: var(--accent); }
 /* What a refused clipboard selects instead of copying the link. */
 .passage-link {
   display: block;
@@ -1726,15 +1736,23 @@ body.sidebar-collapsed .sidebar-resizer {
   flex-direction: column;
   gap: 2px;
 }
-.block-copy .passage-copy { margin: 0; }
-.holds-copy:hover > .block-copy .passage-copy,
-.holds-copy:focus-within > .block-copy .passage-copy { opacity: .55; }
-.holds-copy .block-copy .passage-copy:hover,
-.holds-copy .block-copy .passage-copy:focus-visible { opacity: 1; color: var(--ink); }
+.block-copy :is(.passage-copy, .passage-feedback) { margin: 0; }
+.holds-copy:hover > .block-copy :is(.passage-copy, .passage-feedback),
+.holds-copy:focus-within > .block-copy :is(.passage-copy, .passage-feedback) { opacity: .55; }
+.holds-copy .block-copy :is(.passage-copy, .passage-feedback):hover,
+.holds-copy .block-copy :is(.passage-copy, .passage-feedback):focus-visible { opacity: 1; color: var(--ink); }
 @media (hover: none) {
-  .holds-copy.touched > .block-copy .passage-copy,
-  .linked-block > .block-copy .passage-copy { opacity: .55; }
+  .holds-copy.touched > .block-copy :is(.passage-copy, .passage-feedback),
+  .linked-block > .block-copy :is(.passage-copy, .passage-feedback) { opacity: .55; }
 }
+/* The same tick as the passage-head rule above, reached through the toolbar's own
+   ancestor chain. This is the specificity trap the gutter sets: .holds-copy .block-copy
+   .passage-copy:hover is more specific than the passage-head rule, so a .copied selector
+   built for that rule alone would win in a passage's head and still lose here, at .55
+   opacity, while the pointer sits over the gutter icon it was just pressed with. */
+.holds-copy .block-copy .passage-copy.copied,
+.holds-copy .block-copy .passage-copy.copied:hover,
+.holds-copy .block-copy .passage-copy.copied:focus-visible { opacity: 1; color: var(--accent); }
 /* What a refused clipboard selects under a paragraph with no note to open. */
 .block-copy-fallback {
   display: block;
@@ -1880,7 +1898,7 @@ summary:focus-visible, dialog:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .document-scroll { scroll-behavior: auto; }
   .section-heading-button .section-chevron { transition: none; }
-  .passage-copy { transition: none; }
+  :is(.passage-copy, .passage-feedback, .document-feedback) { transition: none; }
 }
 
 /* ---------- reader test: no behaviour under test ---------- */
@@ -2196,4 +2214,269 @@ body.no-behaviours .sidebar-export { display: none; }
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 400;
+}
+
+/* The note icon beside the document's title. Unlike a paragraph's own (see
+   .passage-copy, .passage-feedback below) it does not wait for a hover: the
+   header is not a fleeting passage, so it stays visible on its own. */
+.document-feedback {
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.document-feedback svg { display: block; width: 15px; height: 15px; }
+.document-feedback:hover { background: var(--energy); color: var(--ink); }
+.document-feedback:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* "Copied", in the button itself, for the two seconds it shows (markCopied, in
+   app.js). More discreet than a tick beside a floating pill: one thing instead
+   of two. The button's own width (18px, set above) only fits an icon, so it
+   grows to fit the word instead, in a small font -- the only way a word fits
+   into what is otherwise an 18px control. */
+.passage-copy.copied {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: 2px 5px;
+}
+.copied-label {
+  font-family: var(--ui);
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* ---------- feedback on a paragraph ---------- */
+
+/* Modal, centred, and no wider than prose wants to be. The framework's one
+   permitted box: a 1px rule around a single highlighted element per view. */
+.feedback-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(86vh, 720px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.feedback-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+.feedback-form { display: block; padding: 18px 20px 20px; overflow-y: auto; max-height: inherit; }
+
+.feedback-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.feedback-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.feedback-close {
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  color: var(--faint);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.feedback-close:hover { background: var(--energy); color: var(--ink); }
+.feedback-close:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* The paragraph this is about, in the family the index writes data in. */
+.feedback-locator {
+  margin: 6px 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-light);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.feedback-field { margin: 0 0 16px; }
+.feedback-field[hidden] { display: none; }
+.feedback-field label,
+.feedback-vote legend,
+.feedback-visibility legend {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.feedback-field input,
+.feedback-field textarea {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--reading);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.feedback-field textarea { resize: vertical; min-height: 72px; }
+.feedback-field input:focus-visible,
+.feedback-field textarea:focus-visible {
+  outline: 2px solid var(--energy);
+  outline-offset: 1px;
+}
+/* Shown, not editable: the behaviours are read off the paragraph. Readonly
+   rather than disabled, so it keeps its place in the tab order and a screen
+   reader still reads the context every other reader can see. */
+.feedback-field input[readonly] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+}
+/* The name field while the private toggle is on: a private note is shown to
+   nobody, so a name on it would mean nothing. Disabled, not hidden, so the
+   toggle's effect on it is seen rather than the field vanishing. */
+.feedback-field input:disabled {
+  opacity: .55;
+  cursor: default;
+}
+.feedback-note {
+  display: block;
+  margin-top: 5px;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.feedback-vote, .feedback-visibility {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.feedback-thumbs { display: flex; gap: 8px; }
+/* A pill, as every button on a Polaris surface is. Pressed, it takes the energy
+   colour at the weight a selected table row takes it. */
+.thumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.thumb svg { width: 14px; height: 14px; display: block; }
+.thumb:hover { border-color: var(--muted); }
+.thumb:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* Pressed, it takes the energy colour at full strength with ink text, which is
+   what every other active control in this reader does (.depth-head, the tier
+   toggles). color-mix appears nowhere in this file and does not start here. */
+.thumb[aria-pressed="true"] {
+  background: var(--energy);
+  border-color: var(--muted);
+  color: var(--ink);
+}
+
+.feedback-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin-bottom: 10px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.feedback-choice input { grid-row: 1 / span 2; margin-top: 3px; accent-color: var(--accent); }
+.feedback-choice input:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.feedback-choice .choice-title { font-size: 14px; }
+.feedback-choice .choice-note { color: var(--faint); font-size: 12px; line-height: 1.45; }
+
+/* Never seen, never reached by the keyboard, and not announced. */
+.feedback-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.feedback-outcome {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.feedback-outcome:empty { display: none; }
+.feedback-outcome.problem { color: var(--fail); }
+.feedback-outcome.done { color: var(--muted); }
+
+.feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-light);
+  margin-top: 4px;
+  padding-top: 16px;
+}
+.feedback-cancel, .feedback-send {
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-family: var(--ui);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.feedback-cancel { border: 1px solid var(--muted); background: transparent; color: var(--ink); }
+.feedback-cancel:hover { border-color: var(--ink); }
+.feedback-send { border: 1px solid var(--accent); background: var(--accent); color: var(--paper); }
+.feedback-send:hover { background: var(--energy); border-color: var(--energy); color: var(--ink); }
+.feedback-send[disabled] { opacity: .55; cursor: default; }
+.feedback-cancel:focus-visible, .feedback-send:focus-visible {
+  outline: 2px solid var(--energy);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-close, .thumb, .feedback-cancel, .feedback-send { transition: none; }
+}
+
+/* What the default means, above the toggle that changes it. Plain body size
+   rather than the small grey of a hint: most readers never touch the toggle, so
+   this paragraph is the whole of the consent for them, and a hint is what people
+   skip. */
+.feedback-consent {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* A document note names its document in words, not in the engine's id, so that
+   line is prose and drops the mono the framework reserves for data. */
+.feedback-locator.prose {
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--ink);
 }

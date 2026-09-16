@@ -291,6 +291,14 @@ const state = {
    * the screen; coming back to a different second document than the one you
    * chose would undo a choice the reader made rather than restore it. */
   compareRight: null,
+  /* What the open feedback dialog is about -- {locator, behaviours} from
+   * feedbackSubject, or null while it is closed. Read by the send handler. */
+  feedbackTarget: null,
+  /* Whether the dialog on screen may carry a thumb: a note on a document always
+   * may, a note on a paragraph only when a selected behaviour cites it. It also
+   * decides whether the comment is required, so it is read by syncFeedbackSend
+   * rather than derived twice. */
+  feedbackCanVote: false,
 };
 
 const elements = {
@@ -319,6 +327,24 @@ const elements = {
   depthNoteTitle: document.querySelector("#depth-note-title"),
   depthNoteBody: document.querySelector("#depth-note-body"),
   template: document.querySelector("#document-template"),
+  feedbackDialog: document.querySelector("#feedback-dialog"),
+  feedbackForm: document.querySelector("#feedback-form"),
+  feedbackTitle: document.querySelector("#feedback-title"),
+  feedbackClose: document.querySelector("#feedback-close"),
+  feedbackCancel: document.querySelector("#feedback-cancel"),
+  feedbackSend: document.querySelector("#feedback-send"),
+  feedbackLocator: document.querySelector("#feedback-locator"),
+  feedbackBehavioursField: document.querySelector("#feedback-behaviours-field"),
+  feedbackBehaviours: document.querySelector("#feedback-behaviours"),
+  feedbackComment: document.querySelector("#feedback-comment"),
+  feedbackCommentLabel: document.querySelector("#feedback-comment-label"),
+  feedbackVote: document.querySelector("#feedback-vote"),
+  feedbackVoteLegend: document.querySelector("#feedback-vote-legend"),
+  feedbackEmail: document.querySelector("#feedback-email"),
+  feedbackPrivate: document.querySelector("#feedback-private"),
+  feedbackName: document.querySelector("#feedback-name"),
+  feedbackWebsite: document.querySelector("#feedback-website"),
+  feedbackOutcome: document.querySelector("#feedback-outcome"),
 };
 
 /* Display tiers for panel-scored passages, strongest first. Per cell with j judges:
@@ -511,6 +537,17 @@ function savedFlag(key) {
 
 function saveFlag(key, value) {
   try { localStorage.setItem(key, value ? "1" : "0"); } catch (error) {}
+}
+
+/* A plain string remembered across sessions, empty rather than absent when
+ * nothing was ever saved or the browser refuses storage -- the feedback
+ * dialog's address and name fields read these back as "", never "null". */
+function savedString(key) {
+  try { return localStorage.getItem(key) || ""; } catch (error) { return ""; }
+}
+
+function saveString(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) {}
 }
 
 function setSidebarWidth(width, persist = false) {
@@ -2058,7 +2095,7 @@ function passageLabels(marks, passageId) {
   return `
     <span class="passage-head">
       ${chips}
-      ${COPY_ICONS}
+      ${PASSAGE_ICONS}
       <button type="button" class="passage-why" aria-expanded="false" aria-controls="${panelId}"
         aria-label="Why was this passage selected?" data-tip="Why was this passage selected?">?</button>
     </span>
@@ -2084,11 +2121,36 @@ const COPY_ICONS = `
         focusable="false"><path d="M6.8 9.2a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-.9.9M9.2 6.8a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l.9-.9"
         fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>`;
 
+/* Say something about this paragraph.
+ *
+ * A third icon in the same group as the two copy icons, so it reaches a cited
+ * passage's head and an ordinary paragraph's gutter from one addition, and
+ * inherits their reveal: out of sight until the pointer is over the block, focus
+ * is inside it, or it is tapped. A speech bubble drawn inline, because the
+ * framework carries no icon library and no emoji.
+ *
+ * Its own class, not .passage-copy: the browser walker counts the copy icons of
+ * a passage, and an icon that copies nothing must not be counted among them. */
+const FEEDBACK_ICON = `
+      <button type="button" class="passage-feedback"
+        aria-label="Note on this paragraph" title="Note on this paragraph"><svg
+        viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
+        d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
+        fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>`;
+
+/* The icons a paragraph carries, cited or not: copy its locator, copy a link to
+ * it, say something about it. */
+const PASSAGE_ICONS = `${COPY_ICONS}${FEEDBACK_ICON}`;
+
 /* What a copy says, done and refused. */
 const COPY_SAID = {
   locator: ["Locator copied", "The clipboard was refused. The locator is selected: press copy."],
   link: ["Link copied", "The clipboard was refused. The link is selected: press copy."],
 };
+
+// How long "Copied" shows before the button reverts to its own icon, named so
+// the call site reads as a decision rather than a bare number.
+const COPY_TICK_MS = 2000;
 
 async function copyFromPassage(button) {
   // A paragraph's own icons (setupBlockCopy) copy the paragraph's locator; a cited
@@ -2109,6 +2171,7 @@ async function copyFromPassage(button) {
   try {
     await navigator.clipboard.writeText(text);
     say(COPY_SAID[kind][0]);
+    markCopied(button);
   } catch {
     /* A refused clipboard is not a dead end: open the passage's note and select
        what would have been copied, so the usual keyboard copy works. A paragraph
@@ -2152,6 +2215,291 @@ async function copyFromPassage(button) {
   }
 }
 
+/* Shows the word "Copied" on a successful copy, and puts the button's own icon
+ * back after COPY_TICK_MS. The icon is cached in a data attribute the first time
+ * this runs and never touched again, so a second press while the word still
+ * shows restarts the timer rather than caching the word itself as though it
+ * were the button's real content -- the bug that would otherwise leave it
+ * permanently. In the button rather than beside it (see .passage-copy.copied):
+ * more discreet, one thing instead of two, and the button simply grows to fit
+ * the word for the two seconds it shows. */
+function markCopied(button) {
+  if (button.dataset.icon === undefined) button.dataset.icon = button.innerHTML;
+  button.innerHTML = `<span class="copied-label">Copied</span>`;
+  button.classList.add("copied");
+  clearTimeout(button._copiedTimer);
+  button._copiedTimer = setTimeout(() => {
+    button.innerHTML = button.dataset.icon;
+    button.classList.remove("copied");
+  }, COPY_TICK_MS);
+}
+
+/* Puts a copy button's own icon back at once, whatever its timer was doing. Called
+ * from setupBlockCopy's holdAt whenever the floating toolbar changes paragraph: the
+ * toolbar is one shared element, so without this a tick from the paragraph just left
+ * would keep showing on the paragraph the pointer lands on next, claiming a copy the
+ * reader never made there. */
+function resetCopied(scope) {
+  scope.querySelectorAll(".passage-copy.copied").forEach(button => {
+    clearTimeout(button._copiedTimer);
+    button.innerHTML = button.dataset.icon;
+    button.classList.remove("copied");
+  });
+}
+
+/* What a feedback dialog is about: the paragraph whose icon was pressed.
+ *
+ * The same two shapes copyFromPassage reads. A paragraph's own icons sit in a
+ * .block-copy toolbar inside it and it carries one locator; a cited passage
+ * keeps its icons in its head and carries the locators it is cited by, newest
+ * first, and the behaviours citing it.
+ *
+ * The behaviours are the intersection and not the menu, because that is what
+ * annotatePassages writes: of the behaviours ticked in the sidebar, the ones
+ * citing this paragraph. That is exactly the set colouring the text in front of
+ * the reader, and the only set the dialog can honestly show them.
+ *
+ * A third shape, beside a paragraph's own icons and a cited passage's: the icon
+ * beside the document's title, whose subject is the document itself -- its id is
+ * also what documentOf() in app/lib/feedback.mjs reads as the document, and it
+ * carries no behaviours, because a document-wide note is about no passage and no
+ * behaviour. */
+function feedbackSubject(button) {
+  if (button.classList.contains("document-feedback")) {
+    const locator = button.closest(".document-panel")?.dataset.documentId;
+    return locator ? { locator, behaviours: [] } : null;
+  }
+  const holder = button.closest(".block-copy")?.parentElement;
+  const block = holder || button.closest("[data-passage-id]");
+  if (!block) return null;
+  const locator = holder ? holder.dataset.locator : (block.dataset.locators || "").split("\n")[0];
+  if (!locator) return null;
+  // " · " is the delimiter app.js writes and verify-reader-test.mjs splits on.
+  // It is not punctuation: a behaviour's own hyphens and commas survive it.
+  const behaviours = holder ? []
+    : (block.dataset.behaviours || "").split(" · ").map(name => name.trim()).filter(Boolean);
+  return { locator, behaviours };
+}
+
+/* What is sent. Pure, and given everything it needs, so the harness can hold it
+ * to its output without a browser.
+ *
+ * Visibility is derived, never asked for twice:
+ *
+ *   private | name    | visibility  | display_name
+ *   --------|---------|-------------|-------------
+ *   on      | either  | private     | ""
+ *   off     | empty   | anonymous   | ""
+ *   off     | filled  | attributed  | the name
+ *
+ * `display_name` is emptied for anything but "attributed": a name typed before
+ * the reader chose to be private is not a name they asked us to show. The
+ * route does the same on arrival and the database says it as a check
+ * constraint, so all three agree. */
+function feedbackBody(subject, form, pinned) {
+  const visibility = form.private ? "private" : (form.name ? "attributed" : "anonymous");
+  return {
+    locator: subject.locator,
+    behaviours: subject.behaviours,
+    publication: pinned,
+    vote: form.vote,
+    comment: form.comment,
+    email: form.email,
+    visibility,
+    display_name: visibility === "attributed" ? form.name : "",
+    website: form.website,
+  };
+}
+
+/* Opens the note dialog for the paragraph or document whose icon was pressed,
+ * filled with what feedbackSubject reads off it. Every field a previous opening
+ * may have left behind is reset, because nothing about a paragraph is
+ * remembered between paragraphs: a comment or a vote belongs to the paragraph
+ * it was written against. Native <dialog> modality traps focus and closes the
+ * dialog on Escape on its own; only its own buttons close it otherwise.
+ *
+ * The address, the name and the private toggle are the exception: they are the
+ * reader's own standing answers, not the paragraph's, so they come back from
+ * localStorage (see sendFeedback) rather than being blanked here. */
+/* Whether the note can be sent yet: an address always, and a comment as well
+ * when there is no thumb to send instead. The route refuses the same pair in the
+ * same words; this is so a reader is not refused by a round trip for something
+ * the page already knows. */
+function syncFeedbackSend() {
+  const hasEmail = elements.feedbackEmail.value.trim() !== "";
+  const hasComment = elements.feedbackComment.value.trim() !== "";
+  elements.feedbackSend.disabled = !hasEmail || (!state.feedbackCanVote && !hasComment);
+}
+
+function openFeedbackDialog(button) {
+  const subject = feedbackSubject(button);
+  if (!subject) return;
+  state.feedbackTarget = subject;
+
+  const documentWide = button.classList.contains("document-feedback");
+  elements.feedbackTitle.textContent = documentWide ? "Note on this document" : "Note on this paragraph";
+  /* A paragraph's note is pinned by its locator, which is data and reads as data.
+   * A document's note is pinned by nothing finer than the document, so printing
+   * the document id there was printing a machine's name for something the reader
+   * is looking at. It says what it is about, in words, and drops the mono. */
+  if (documentWide) {
+    /* The publisher first, because without it the line names a document without
+     * saying whose: "Model spec, April 2026" describes three of the four
+     * documents this index carries. The id that travels has carried the lab all
+     * along -- it is the head of every locator -- and this is the reader's half
+     * of the same fact. */
+    const header = button.closest(".document-panel");
+    const lab = header?.querySelector('.provider-tab[aria-pressed="true"]')?.textContent.trim() || "";
+    const name = header?.querySelector(".document-name")?.textContent.trim() || "";
+    const version = header?.querySelector(".document-version")?.textContent.trim() || "";
+    const named = [lab, [name, version].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    elements.feedbackLocator.textContent = `General comment about ${named || subject.locator}`;
+  } else {
+    elements.feedbackLocator.textContent = subject.locator;
+  }
+  elements.feedbackLocator.classList.toggle("prose", documentWide);
+
+  const hasBehaviours = subject.behaviours.length > 0;
+  elements.feedbackBehavioursField.hidden = !hasBehaviours;
+  elements.feedbackBehaviours.value = hasBehaviours ? subject.behaviours.join(", ") : "";
+
+  /* A thumb answers a claim, and on a paragraph no selected behaviour cites the
+   * index has made none: it is not saying this passage bears on anything, so
+   * there is nothing there to agree or disagree with. The thumbs go, and the
+   * comment takes their place as the part that must be filled in, because a note
+   * carrying neither would say nothing at all -- which is what the route refuses
+   * anyway, in the same words. A note on a whole document always keeps its
+   * thumbs: the document is the claim. */
+  state.feedbackCanVote = documentWide || hasBehaviours;
+  elements.feedbackVote.hidden = !state.feedbackCanVote;
+  elements.feedbackVoteLegend.textContent = documentWide
+    ? "Does the index get this document right? (optional)"
+    : "Does the index get this paragraph right? (optional)";
+  elements.feedbackCommentLabel.textContent = state.feedbackCanVote
+    ? "Your comment (optional)"
+    : "Your comment";
+
+  elements.feedbackForm.querySelectorAll(".thumb").forEach(thumb =>
+    thumb.setAttribute("aria-pressed", "false"));
+  elements.feedbackComment.value = "";
+  elements.feedbackEmail.value = savedString("aci-feedback-email");
+  elements.feedbackPrivate.checked = savedFlag("aci-feedback-private");
+  elements.feedbackName.value = savedString("aci-feedback-name");
+  elements.feedbackName.disabled = elements.feedbackPrivate.checked;
+  elements.feedbackWebsite.value = "";
+  elements.feedbackOutcome.textContent = "";
+  elements.feedbackOutcome.className = "feedback-outcome";
+  syncFeedbackSend();
+
+  elements.feedbackDialog.showModal();
+  elements.feedbackComment.focus();
+}
+
+function closeFeedbackDialog() {
+  state.feedbackTarget = null;
+  elements.feedbackDialog.close();
+}
+
+/* What "Send" does: posts feedbackBody(...) to /api/feedback and shows
+ * whatever the route said. Disabled for the whole round trip, as a lock
+ * against a second click sending the same note twice; a refusal or a network
+ * failure re-enables it so the reader can fix what was wrong and try again,
+ * and only a success leaves it disabled, because the dialog is about to close
+ * on its own.
+ *
+ * What is remembered is remembered only once something was accepted: an
+ * address the route refused is not offered back next time. */
+async function sendFeedback() {
+  const subject = state.feedbackTarget;
+  if (!subject) return;
+  const pressed = elements.feedbackForm.querySelector('.thumb[aria-pressed="true"]');
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const form = {
+    vote: pressed?.dataset.vote || null,
+    comment: elements.feedbackComment.value,
+    email: elements.feedbackEmail.value.trim(),
+    private: elements.feedbackPrivate.checked,
+    name: elements.feedbackName.value.trim(),
+    website: elements.feedbackWebsite.value,
+  };
+
+  elements.feedbackSend.disabled = true;
+  elements.feedbackOutcome.textContent = "";
+  elements.feedbackOutcome.className = "feedback-outcome";
+
+  let outcome;
+  try {
+    const response = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(feedbackBody(subject, form, pinned)),
+    });
+    outcome = await response.json();
+  } catch (error) {
+    elements.feedbackOutcome.textContent = "That did not reach us. Check your connection and try again.";
+    elements.feedbackOutcome.classList.add("problem");
+    elements.feedbackSend.disabled = false;
+    return;
+  }
+
+  if (outcome.problem) {
+    elements.feedbackOutcome.textContent = outcome.problem;
+    elements.feedbackOutcome.classList.add("problem");
+    elements.feedbackSend.disabled = false;
+    return;
+  }
+
+  elements.feedbackOutcome.textContent = outcome.done || "Thank you.";
+  elements.feedbackOutcome.classList.add("done");
+  saveString("aci-feedback-email", form.email);
+  saveString("aci-feedback-name", form.name);
+  saveFlag("aci-feedback-private", form.private);
+  setTimeout(closeFeedbackDialog, 1000);
+}
+
+/* The dialog's own controls: closing it, the two-way thumbs (a second press on
+ * the pressed one clears the vote, since it is optional), the private toggle
+ * disabling the name field it would otherwise attach a name to nobody reads,
+ * the send button staying disabled until there is an address to write back to,
+ * a click on the backdrop, and the submit that actually sends. Called once
+ * from initialize(), not eagerly at module load: its wiring only needs the
+ * dialog's own elements, which exist as soon as the page does, but it belongs
+ * beside the rest of what initialize() sets up rather than ahead of it. */
+function setupFeedback() {
+  elements.feedbackClose.addEventListener("click", closeFeedbackDialog);
+  elements.feedbackCancel.addEventListener("click", closeFeedbackDialog);
+
+  elements.feedbackForm.querySelectorAll(".thumb").forEach(thumb => {
+    thumb.addEventListener("click", () => {
+      const pressed = thumb.getAttribute("aria-pressed") === "true";
+      elements.feedbackForm.querySelectorAll(".thumb").forEach(other =>
+        other.setAttribute("aria-pressed", "false"));
+      thumb.setAttribute("aria-pressed", String(!pressed));
+    });
+  });
+
+  elements.feedbackPrivate.addEventListener("change", () => {
+    elements.feedbackName.disabled = elements.feedbackPrivate.checked;
+  });
+
+  elements.feedbackComment.addEventListener("input", syncFeedbackSend);
+  elements.feedbackEmail.addEventListener("input", () => {
+    syncFeedbackSend();
+  });
+
+  // <dialog> attributes a click on its own backdrop to the dialog element
+  // itself, since the backdrop is outside every element in it: the form fills
+  // the whole of the dialog's box, so this only fires outside that box.
+  elements.feedbackDialog.addEventListener("click", event => {
+    if (event.target === elements.feedbackDialog) closeFeedbackDialog();
+  });
+
+  elements.feedbackForm.addEventListener("submit", event => {
+    event.preventDefault();
+    sendFeedback();
+  });
+}
+
 /* The same two icons for every paragraph no passage cites.
  *
  * One toolbar per panel, moved into the paragraph the pointer is over, the one
@@ -2162,7 +2510,7 @@ async function copyFromPassage(button) {
  * icons in its head, and none go on a heading, which carries no locator, or on a
  * code block or a table, which scroll sideways and would clip them or put them
  * over their text. Those blocks still open from a link. */
-const BLOCK_COPY = `<span class="block-copy">${COPY_ICONS}</span>`;
+const BLOCK_COPY = `<span class="block-copy">${PASSAGE_ICONS}</span>`;
 
 function setupBlockCopy(panel) {
   const body = panel.querySelector(".document-body");
@@ -2176,6 +2524,7 @@ function setupBlockCopy(panel) {
         || /^(H[1-6]|PRE)$/.test(block.tagName)) return null;
     if (toolbar.parentElement !== block) {
       toolbar.parentElement?.classList.remove("holds-copy", "touched");
+      resetCopied(toolbar);   // a tick belongs to the paragraph it copied, not the one the toolbar lands on next
       block.classList.add("holds-copy");
       block.append(toolbar);
     }
@@ -2217,6 +2566,11 @@ function setupPassageDisclosure(panel) {
     const copy = event.target.closest(".passage-copy");
     if (copy) {
       copyFromPassage(copy);
+      return;
+    }
+    const feedback = event.target.closest(".passage-feedback");
+    if (feedback) {
+      openFeedbackDialog(feedback);
       return;
     }
     // Where there is no pointer to hover with, a tapped passage shows its icons.
@@ -2817,7 +3171,13 @@ function renderDocument(doc, side = 0) {
     panel.querySelector(".document-header").append(meta);
     const actions = document.createElement("span");
     actions.className = "meta-actions";
-    actions.append(panel.querySelector(".document-focus-toggle"), panel.querySelector(".rail-legend"));
+    // The note icon joins them, last. It is already last in the row at full
+    // width; without this it would stay a direct child of the row here and so
+    // land BEFORE the group, between the walk and the view controls, which is
+    // the one place in the header it means nothing.
+    actions.append(panel.querySelector(".document-focus-toggle"),
+                   panel.querySelector(".rail-legend"),
+                   panel.querySelector(".document-feedback"));
     meta.append(actions);
   }
   renderProviderTabs(panel, doc, side);
@@ -3317,6 +3677,13 @@ elements.documentReader.addEventListener("click", event => {
   }
 });
 
+/* Beside the document's title: opens the same dialog, about the document as a
+ * whole. Re-cloned with the header, so delegated like the picker above. */
+elements.documentReader.addEventListener("click", event => {
+  const icon = event.target.closest?.(".document-feedback");
+  if (icon) openFeedbackDialog(icon);
+});
+
 /* The arrows belong to a document and are re-cloned with it, so they delegate
  * and each one steps the panel it sits in. */
 elements.documentReader.addEventListener("click", event => {
@@ -3640,6 +4007,7 @@ function revealPassageLink(linked) {
 }
 
 async function initialize() {
+  setupFeedback();
   renderBehaviourList();
   try {
     // The payload first: which publication it resolved to decides where the

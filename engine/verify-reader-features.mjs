@@ -18,7 +18,8 @@ import { readFile as readFileAsync } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
+         CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
@@ -52,6 +53,9 @@ const UNDEFINED = "undefined-behaviour";
 const server = createServer(async (req, res) => {
   // Answered from the staged tree's own payloads, so the fixture index is
   if (await serveReaderRoute(req, res, DATA, "behaviours")) return;
+  // The dialog's own send: a fixture that always accepts, recording what it
+  // was sent for the feedback dialog section below to read back.
+  if (await serveFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
@@ -96,6 +100,17 @@ const at = q => load(base, q);
 // Two citations in one paragraph light one rendered block, so counts are per
 // distinct block: strip the sentence suffix and count.
 const blockOf = locator => locator.replace(/ s\d+(?:-s?\d+)?$/, "");
+// The copy icons' tick turns --accent, which differs between the daylight and umber
+// palettes, so proving the CSS rule actually won means resolving the token through the
+// page itself and comparing computed colour strings, not just checking opacity.
+const resolveVar = name => page.evaluate(name => {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const value = getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+}, name);
 
 // =============================================================================
 console.log("== Reader: payload resolution (bundled vs user-extended) ==");
@@ -283,6 +298,9 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     });
   }, refuse);
   const copyButton = kind => page.locator(`[data-passage-id] .passage-copy[data-copy="${kind}"]`).first();
+  // "Copied" is the word markCopied (in app.js) puts in the button in place of
+  // its own icon: a cheap, exact way to tell the two apart without duplicating
+  // the markup here.
   const readIcons = () => page.evaluate(() => {
     const block = document.querySelector("[data-passage-id]");
     const scroll = block.closest(".document-scroll").getBoundingClientRect();
@@ -299,6 +317,9 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
           svg: Boolean(button.querySelector("svg")),
           text: button.textContent.trim(),
           opacity: Math.round(Number(style.opacity) * 100) / 100,
+          color: style.color,
+          copied: button.classList.contains("copied"),
+          tick: button.innerHTML.includes("Copied"),
           inHead: box.top >= head.top - 1 && box.bottom <= head.bottom + 1,
           clearOfRail: box.right <= scroll.right - 14,
           motion: style.transitionDuration,
@@ -312,6 +333,7 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     };
   });
   const awayFromPassages = async () => { await page.mouse.move(2, 700); await page.waitForTimeout(350); };
+  const accentColor = await resolveVar("--accent");
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
@@ -350,6 +372,10 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   seen = await readIcons();
   check(seen.copied[0] === seen.locator && seen.status === "Locator copied" && seen.polite,
     "Copy locator copies the passage's locator, and says so politely", JSON.stringify(seen));
+  check(seen.buttons[0].copied && seen.buttons[0].tick && seen.buttons[0].opacity === 1
+      && seen.buttons[0].color === accentColor,
+    "a successful copy turns the pressed icon into a tick, fully opaque, in --accent, in a passage head",
+    JSON.stringify(seen.buttons[0]));
   await copyButton("link").click();
   await page.waitForTimeout(200);
   seen = await readIcons();
@@ -357,6 +383,17 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(Boolean(link) && new URL(link).searchParams.get("passage") === seen.locator
       && seen.status === "Link copied",
     "Copy link copies a link naming that passage, and says so", JSON.stringify(seen));
+  check(seen.buttons[1].copied && seen.buttons[1].tick && seen.buttons[1].opacity === 1
+      && seen.buttons[1].color === accentColor,
+    "copying the link shows the same tick on its own icon", JSON.stringify(seen.buttons[1]));
+
+  // COPY_TICK_MS in app.js is 2000; the locator click above is already ~400ms in, so
+  // this margin covers both buttons' independent timers.
+  await page.waitForTimeout(1900);
+  seen = await readIcons();
+  check(seen.buttons.every(button => !button.copied && !button.tick && button.color !== accentColor),
+    "after two seconds both icons are back to themselves, and neither is marked copied",
+    JSON.stringify(seen.buttons));
 
   await page.goto(link, { waitUntil: "networkidle" });
   await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
@@ -375,6 +412,8 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(seen.selected === seen.locator && seen.noteOpen && /press/i.test(seen.status || ""),
     "a refused clipboard selects the locator in the opened note instead, and says how to copy it",
     JSON.stringify(seen));
+  check(seen.buttons.every(button => !button.copied && !button.tick),
+    "a refused clipboard shows no tick: nothing was copied", JSON.stringify(seen.buttons));
   await copyButton("link").click();
   await page.waitForTimeout(200);
   seen = await readIcons();
@@ -382,6 +421,8 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   try { selectedLink = new URL(seen.selected).searchParams.get("passage"); } catch {}
   check(selectedLink === seen.locator && /press/i.test(seen.status || ""),
     "a refused clipboard selects the link in the note instead", JSON.stringify(seen));
+  check(seen.buttons.every(button => !button.copied && !button.tick),
+    "a refused clipboard shows no tick for the link icon either", JSON.stringify(seen.buttons));
 
   await at(`?publication=${DRAFT_PUBLICATION}&behavior=draft-behaviour&tiers=defining,core,related`);
   await stubClipboard(false);
@@ -541,10 +582,14 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     return {
       buttons: [...block.querySelectorAll(":scope > .block-copy .passage-copy")].map(button => {
         const icon = button.getBoundingClientRect();
+        const style = getComputedStyle(button);
         return {
           label: button.getAttribute("aria-label"),
           svg: Boolean(button.querySelector("svg")),
-          opacity: Math.round(Number(getComputedStyle(button).opacity) * 100) / 100,
+          opacity: Math.round(Number(style.opacity) * 100) / 100,
+          color: style.color,
+          copied: button.classList.contains("copied"),
+          tick: button.innerHTML.includes("Copied"),
           inGutter: icon.left >= box.right,
           clearOfRail: icon.right <= scroll.right - 14,
         };
@@ -553,6 +598,18 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
       copied: window.__copied || [],
     };
   }, blockSelector);
+  // The toolbar itself, wherever it currently sits -- used to prove a tick does not
+  // survive the toolbar moving to a paragraph nobody copied.
+  const readToolbar = () => page.evaluate(() => {
+    const toolbar = document.querySelector(".block-copy");
+    return {
+      holderLocator: toolbar?.parentElement?.dataset.locator ?? null,
+      buttons: toolbar ? [...toolbar.querySelectorAll(".passage-copy")].map(button => ({
+        copied: button.classList.contains("copied"),
+        tick: button.innerHTML.includes("Copied"),
+      })) : [],
+    };
+  });
 
   await page.setViewportSize({ width: 1280, height: 720 });
   const started = Date.now();
@@ -579,6 +636,22 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(seen.copied[0] === uncited && Boolean(link) && new URL(link).searchParams.get("passage") === uncited
       && seen.status === "Link copied",
     "an uncited paragraph's icons copy its locator and a link to it", JSON.stringify(seen.copied));
+  check(seen.buttons.every(button => button.copied && button.tick && button.opacity === 1),
+    "both gutter icons show a tick, fully opaque, after copying", JSON.stringify(seen.buttons));
+
+  // Requirement 3: the toolbar is one shared element, so moving it to a paragraph
+  // nobody copied must clear the tick at once -- not wait out the timer.
+  let toolbar = await readToolbar();
+  check(toolbar.holderLocator === uncited && toolbar.buttons.every(button => button.copied && button.tick),
+    "before the toolbar moves, its buttons still show the tick on the paragraph that was copied",
+    JSON.stringify(toolbar));
+  await page.locator(".document-body li", { hasText: "A second item with a nested list under it" }).hover();
+  await page.waitForTimeout(100);
+  toolbar = await readToolbar();
+  check(toolbar.holderLocator !== null && toolbar.holderLocator !== uncited
+      && toolbar.buttons.every(button => !button.copied && !button.tick),
+    "moving the toolbar to another paragraph puts the real icons back immediately",
+    JSON.stringify(toolbar));
 
   await page.locator(".document-body h2", { hasText: "Blocks" }).first().hover();
   await page.waitForTimeout(250);
@@ -1391,6 +1464,9 @@ await at("?compare=1");
       const next = rect(panel.querySelector(".next-passage"));
       const expand = rect(panel.querySelector(".document-focus-toggle"));
       const legend = rect(panel.querySelector(".rail-legend"));
+      // Last in the view controls since the note icon joined them, so it, not the
+      // band toggles, is what has to sit against the header's right edge.
+      const note = rect(panel.querySelector(".document-feedback"));
       const inside = box => box.left >= h.left - 0.5 && box.right <= h.right + 0.5
         && box.top >= h.top - 0.5 && box.bottom <= h.bottom + 0.5;
       // The compact counter, "3/12", while "3 of 12 passages" stays the counter
@@ -1424,7 +1500,12 @@ await at("?compare=1");
         } : null,
         view: {
           expandBeforeBands: expandOnBandsRow ? expand.right <= legend.left : expand.bottom <= legend.top,
-          flushRight: Math.round((contentRight - legend.right) * 10) / 10,
+          /* After the band toggles, which at two panels on a narrow screen can
+             mean on the line below them rather than beside them: .meta-actions
+             wraps, as the legend itself does. Either is "after"; what would be
+             wrong is the icon before them. */
+          bandsBeforeNote: legend.right <= note.left + 0.5 || legend.bottom <= note.top + 0.5,
+          flushRight: Math.round((contentRight - note.right) * 10) / 10,
           belowIdentity: Math.round(Math.min(expand.top, legend.top) - identity.bottom),
         },
         oneRow: Math.abs(centre(nav) - centre(legend)) <= 4 && expandOnBandsRow,
@@ -1450,9 +1531,9 @@ await at("?compare=1");
         && p.counter.spokenMatches && p.counter.hiddenFromScreenReaders),
       `compare ${width}x${height}: the counter reads N/M for the passage position,`
         + " and the full sentence stays what a screen reader hears", detail("counter"));
-    check(measured.every(p => p.view.expandBeforeBands && p.view.flushRight >= -0.5
-        && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
-      `compare ${width}x${height}: at the right, Expand all and then the band toggles, flush right`,
+    check(measured.every(p => p.view.expandBeforeBands && p.view.bandsBeforeNote
+        && p.view.flushRight >= -0.5 && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
+      `compare ${width}x${height}: at the right, Expand all, the band toggles, then the note icon flush right`,
       detail("view"));
     if (width >= 1440) {
       check(measured.every(p => p.oneRow),
@@ -1686,6 +1767,145 @@ await page.waitForTimeout(250);
   }));
   check(out.pressed === "true" && out.comparing,
     "clicking the compare toggle switches to the compare view");
+
+  /* Comparing moves the view controls into a .meta-actions group, and the note
+     icon has to travel with them: left as a direct child of the row it lands
+     between the walk and the controls, which is the one place in the header it
+     means nothing. Last in the group, past Related, on both panels. */
+  const noteLast = await page.evaluate(() => [...document.querySelectorAll(".document-panel")]
+    .map(panel => {
+      const actions = panel.querySelector(".meta-actions");
+      const icon = panel.querySelector(".document-feedback");
+      return Boolean(actions && icon && actions.lastElementChild === icon
+        && icon.previousElementSibling?.classList.contains("rail-legend"));
+    }));
+  check(noteLast.length === 2 && noteLast.every(Boolean),
+    "comparing, each panel's note icon is last in the view controls, after Related",
+    JSON.stringify(noteLast));
+}
+
+// =============================================================================
+console.log("== Reader: the note dialog ==");
+// A note on a paragraph, and the same dialog on a whole document: it opens
+// naming its subject, the send button gates on an address and nothing else,
+// the private toggle disables the name field, and a send posts the body the
+// derivation table promises and is remembered for next time.
+{
+  const openFromPassage = async () => {
+    await page.locator("[data-passage-id]").first().hover();
+    await page.waitForTimeout(200);
+    await page.locator("[data-passage-id] .passage-feedback").first().click();
+    await page.waitForTimeout(150);
+  };
+  const dialogState = () => page.evaluate(() => {
+    const block = document.querySelector("[data-passage-id]");
+    return {
+      open: document.querySelector("#feedback-dialog").open,
+      title: document.querySelector("#feedback-title").textContent,
+      locator: document.querySelector("#feedback-locator").textContent,
+      behavioursHidden: document.querySelector("#feedback-behaviours-field").hidden,
+      behaviours: document.querySelector("#feedback-behaviours").value,
+      sendDisabled: document.querySelector("#feedback-send").disabled,
+      nameDisabled: document.querySelector("#feedback-name").disabled,
+      blockLocator: block ? (block.dataset.locators || "").split("\n")[0] : null,
+    };
+  });
+
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+  await page.evaluate(() => {
+    try {
+      localStorage.removeItem("aci-feedback-email");
+      localStorage.removeItem("aci-feedback-name");
+      localStorage.removeItem("aci-feedback-private");
+    } catch {}
+  });
+
+  await openFromPassage();
+  let seen = await dialogState();
+  check(seen.open && seen.title === "Note on this paragraph" && seen.locator === seen.blockLocator
+      && !seen.behavioursHidden && seen.behaviours.length > 0 && seen.sendDisabled,
+    "the dialog opens from a paragraph, names its locator, shows the behaviours field filled, and disables send with no address",
+    JSON.stringify(seen));
+
+  await page.locator("#feedback-email").fill("reader@example.org");
+  await page.waitForTimeout(100);
+  seen = await dialogState();
+  check(!seen.sendDisabled, "typing an address enables the send button", JSON.stringify(seen));
+
+  await page.locator("#feedback-private").check();
+  await page.waitForTimeout(100);
+  seen = await dialogState();
+  check(seen.nameDisabled, "the private toggle disables the name field", JSON.stringify(seen));
+  await page.locator("#feedback-private").uncheck();
+  await page.waitForTimeout(100);
+
+  await page.locator("#feedback-comment").fill("It reads wrong.");
+  await page.locator('.thumb[data-vote="up"]').click();
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  let sent = lastFeedbackReceived();
+  check(Boolean(sent) && sent.locator === seen.blockLocator && sent.vote === "up"
+      && sent.comment === "It reads wrong." && sent.email === "reader@example.org"
+      && sent.visibility === "anonymous" && sent.display_name === "",
+    "a send with a comment, a thumb and an address posts locator, vote, comment and email as typed, anonymous with no name",
+    JSON.stringify(sent));
+
+  const remembered = await page.evaluate(() => {
+    try { return { email: localStorage.getItem("aci-feedback-email") }; } catch { return {}; }
+  });
+  check(remembered.email === "reader@example.org", "the address is in localStorage afterwards",
+    JSON.stringify(remembered));
+
+  await page.waitForTimeout(900);   // sendFeedback closes the dialog ~1s after a done outcome
+  const closedAfterSend = await page.evaluate(() => !document.querySelector("#feedback-dialog").open);
+  check(closedAfterSend, "the dialog closes on its own after a successful send");
+
+  await openFromPassage();
+  await page.locator("#feedback-name").fill("A reader");
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  sent = lastFeedbackReceived();
+  check(sent?.visibility === "attributed" && sent?.display_name === "A reader",
+    "a name typed with the toggle off sends attributed and that name", JSON.stringify(sent));
+  await page.waitForTimeout(900);
+
+  await openFromPassage();
+  await page.locator("#feedback-private").check();
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  sent = lastFeedbackReceived();
+  check(sent?.visibility === "private" && sent?.display_name === "",
+    "the toggle on sends private and an empty display_name", JSON.stringify(sent));
+  await page.waitForTimeout(900);
+
+  // The document's own icon: same dialog, no behaviours, and a line that says what
+  // the note is about in words. The document id is what travels, not what is shown:
+  // printing it at the reader was printing a machine's name for the thing in front
+  // of them, so the line is prose and the id is proved by what gets sent, below.
+  await page.locator(".document-feedback").first().click();
+  await page.waitForTimeout(150);
+  const docSeen = await page.evaluate(() => ({
+    open: document.querySelector("#feedback-dialog").open,
+    title: document.querySelector("#feedback-title").textContent,
+    locator: document.querySelector("#feedback-locator").textContent,
+    prose: document.querySelector("#feedback-locator").classList.contains("prose"),
+    behavioursHidden: document.querySelector("#feedback-behaviours-field").hidden,
+    voteHidden: document.querySelector("#feedback-vote").hidden,
+  }));
+  check(docSeen.open && docSeen.title === "Note on this document"
+      && docSeen.locator.startsWith("General comment about ")
+      && !docSeen.locator.includes(DOC_ID) && docSeen.prose
+      && docSeen.behavioursHidden && !docSeen.voteHidden,
+    "the icon beside the document title opens the dialog on the document, named in words, with its thumbs",
+    JSON.stringify(docSeen));
+
+  // A click on the backdrop closes it, same as Cancel.
+  await page.mouse.click(4, 4);
+  await page.waitForTimeout(150);
+  const closedByBackdrop = await page.evaluate(() => !document.querySelector("#feedback-dialog").open);
+  check(closedByBackdrop, "a click on the backdrop closes the dialog");
+
+  check(pageErrors.length === 0, "the note dialog: no console errors", pageErrors.join("; "));
 }
 
 // =============================================================================

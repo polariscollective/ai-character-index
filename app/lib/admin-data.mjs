@@ -103,6 +103,11 @@ export async function submissions(limit = 50, fetchImpl = fetch) {
   })));
 }
 
+/** What readers said about paragraphs, newest first. */
+export async function feedback(limit = 50, fetchImpl = fetch) {
+  return select("aci_feedback", `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
+}
+
 /** The most recent job launches, newest first. */
 export async function jobs(limit = 12, fetchImpl = fetch) {
   return select("aci_jobs", `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);

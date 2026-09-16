@@ -33,7 +33,8 @@
 | `polaris-supabase/evals/supabase/migrations/20260916140000_aci_feedback.sql` | the table, its constraints, its indexes, its grant |
 | `app/lib/feedback.mjs` | what a submission must be, what it is recorded as, what Slack is told, and the whole of the route's behaviour as one testable function |
 | `app/api/feedback/route.js` | the shell that gives that function the platform's `Request` |
-| `app/lib/submissions.mjs` | `recentFrom` counts in a named table; `forSlack` becomes importable |
+| `app/lib/slack.mjs` | the webhook, and the escaping that stops a public form pinging the channel |
+| `app/lib/submissions.mjs` | `recentFrom` counts in a named table; its Slack message goes through `slack.mjs` |
 | `app/lib/admin-data.mjs` | `feedback()`, the portal's read |
 | `app/admin/feedback/page.jsx` | the portal's page |
 | `app/api/admin/feedback/route.js` | moving a row's status |
@@ -221,18 +222,20 @@ Expected: `Applying migration 20260916140000_aci_feedback.sql...` then `Finished
 
 **Files:**
 - Create: `app/lib/feedback.mjs`
-- Modify: `app/lib/submissions.mjs` (`recentFrom` takes a table; `forSlack` is exported)
+- Create: `app/lib/slack.mjs`
+- Modify: `app/lib/submissions.mjs` (`recentFrom` takes a table; `forSlack` and the send move to `slack.mjs`)
 - Create: `app/lib/__tests__/feedback.test.mjs`
 - Modify: `app/lib/__tests__/submissions.test.mjs` (one test for the new argument)
 
 **Interfaces:**
-- Consumes: `sourceHash`, `callerAddress`, `recentFrom`, `forSlack` from `./submissions.mjs`.
+- Consumes: `sourceHash`, `callerAddress`, `recentFrom` from `./submissions.mjs`; `forSlack`, `postToSlack` from `./slack.mjs`.
 - Produces:
   - `PER_HOUR = 30`, `MAX_REQUEST_BYTES = 65536`, `TABLE = "aci_feedback"`, `VISIBILITIES = ["private", "anonymous", "attributed"]`, `LIMITS`, `MAX_BEHAVIOURS = 20`
   - `normalise(sent) -> {locator, behaviours, vote, comment, email, visibility, display_name, publication, website}` (every string trimmed, `behaviours` an array of non-empty trimmed strings, `visibility` defaulted to `"private"`, `display_name` emptied unless the visibility is `attributed`, `vote` `"up"`/`"down"`/`null`)
   - `feedbackProblems(fields) -> string[]`
   - `documentOf(locator) -> string`
   - `recentFrom(hash, fetchImpl, table)` in `submissions.mjs`, the third argument defaulting to `"aci_submissions"`
+  - `forSlack(value) -> string` and `postToSlack(title, blocks, fetchImpl) -> string|null` in `app/lib/slack.mjs`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -377,9 +380,22 @@ export async function recentFrom(hash, fetchImpl = fetch, table = "aci_submissio
 }
 ```
 
-In the same file, export the Slack escaper, which is now used by two modules:
+- [ ] **Step 3b: Move the Slack send into its own module**
+
+Two public routes now tell Slack about two different things through one webhook, and the part that is the same for both is the part that must not be got wrong twice: the escaping that stops a stranger's words pinging the channel, and a send that reports rather than throws. Create `app/lib/slack.mjs`:
 
 ```javascript
+/**
+ * Telling Slack, for the routes open to the internet.
+ *
+ * Two of them now, saying different things through one webhook. What is shared
+ * is not the message: it is the escaping that stops a stranger's words pinging
+ * the channel, and a send that reports what went wrong rather than throwing it
+ * at a caller who has already recorded the thing it is about.
+ *
+ * Each caller builds its own blocks. This sends them.
+ */
+
 /* Slack reads a few sequences out of message text, and one of them is a way to
  * ping everyone in the channel. These forms are open to the internet, so a
  * submission could carry <!channel> and would otherwise send it. Escaping the
@@ -388,7 +404,38 @@ export function forSlack(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+/**
+ * Post a message. Returns what went wrong, or null; never throws.
+ *
+ * The row it describes is already written by the time this runs, so a failure
+ * here is a message nobody got rather than words nobody has. `title` is the
+ * notification and the fallback for clients that do not render blocks: sending
+ * blocks without it makes a silent push.
+ */
+export async function postToSlack(title, blocks, fetchImpl = fetch) {
+  const hook = process.env.SLACK_WEBHOOK_URL?.trim();
+  if (!hook) return "SLACK_WEBHOOK_URL is not set";
+  try {
+    const response = await fetchImpl(hook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: forSlack(title), blocks }),
+    });
+    return response.ok ? null : `slack returned ${response.status}`;
+  } catch (error) {
+    return `slack unreachable: ${error.message}`;
+  }
+}
 ```
+
+In `app/lib/submissions.mjs`, delete the module-private `forSlack`, import both from the new module (`import { forSlack, postToSlack } from "./slack.mjs";`), and replace the tail of `announce` — from `const hook = process.env.SLACK_WEBHOOK_URL?.trim();` down to its final `}` — so that it builds `title` and `blocks` exactly as it does today and ends with:
+
+```javascript
+  return postToSlack(title, blocks, fetchImpl);
+```
+
+The `blocks` array, the `title`, the field list and the truncation stay exactly as they are: this moves the send, not the message. `submissions.test.mjs` exercises all of it through `announce` and must pass unchanged.
 
 - [ ] **Step 4: Hold the new argument with a test**
 
@@ -424,7 +471,8 @@ test("the same rate limit counts in whichever table it is asked about", async ()
  * headers before a byte of the body is buffered.
  */
 import { insert, select } from "./supabase.mjs";
-import { callerAddress, forSlack, recentFrom, sourceHash } from "./submissions.mjs";
+import { callerAddress, recentFrom, sourceHash } from "./submissions.mjs";
+import { forSlack, postToSlack } from "./slack.mjs";
 import { currentPublication, isPublicationId } from "./publications.mjs";
 
 export const TABLE = "aci_feedback";
@@ -537,7 +585,7 @@ Expected: PASS, no failures. The submissions suite must still pass unchanged apa
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/lib/feedback.mjs app/lib/submissions.mjs \
+git add app/lib/feedback.mjs app/lib/slack.mjs app/lib/submissions.mjs \
         app/lib/__tests__/feedback.test.mjs app/lib/__tests__/submissions.test.mjs
 git commit -m "$(cat <<'EOF'
 feat: what the feedback route refuses
@@ -548,9 +596,10 @@ named and leaving the field empty is refused rather than quietly published as
 anonymous, and a name typed before the reader chose otherwise is dropped.
 
 recentFrom counts in a named table now, because two public routes are
-rate-limited the same way against two tables, and forSlack is exported rather
-than copied: the reason a public form must not be able to ping the channel is
-worth writing down once.
+rate-limited the same way against two tables, and the Slack send moves to its
+own module: what two public forms share is not the message but the escaping
+that stops a stranger's words pinging the channel, and that is worth writing
+down once.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01XLRKTYAnoVBUKA7J89iD54
@@ -567,7 +616,7 @@ EOF
 - Modify: `app/lib/__tests__/feedback.test.mjs`
 
 **Interfaces:**
-- Consumes: everything Task 2 produced; `insert`, `select` from `./supabase.mjs`; `currentPublication`, `isPublicationId` from `./publications.mjs`.
+- Consumes: everything Task 2 produced; `insert`, `select` from `./supabase.mjs`; `forSlack`, `postToSlack` from `./slack.mjs`; `currentPublication`, `isPublicationId` from `./publications.mjs`.
 - Produces:
   - `resolvePublication(pin, fetchImpl) -> string|null`
   - `record({fields, publication_id, hash}, {fetchImpl}) -> row`
@@ -758,9 +807,6 @@ const THUMB = { up: "thumb up", down: "thumb down" };
  * place it appears outside the database, and it appears nowhere public.
  */
 export async function announce(row, fetchImpl = fetch, site = "") {
-  const hook = process.env.SLACK_WEBHOOK_URL?.trim();
-  if (!hook) return "SLACK_WEBHOOK_URL is not set";
-
   const comment = String(row.comment || "");
   const shown = comment.length > IN_SLACK ? `${comment.slice(0, IN_SLACK)}...` : comment;
   const lines = [
@@ -784,20 +830,11 @@ export async function announce(row, fetchImpl = fetch, site = "") {
           + ` | <${site}/admin/feedback|read it in the portal>` }] },
   ];
 
-  try {
-    const response = await fetchImpl(hook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // `text` is the notification and the fallback for clients that do not
-      // render blocks. Sending blocks without it makes a silent push.
-      body: JSON.stringify({ text: forSlack(title), blocks }),
-    });
-    return response.ok ? null : `slack returned ${response.status}`;
-  } catch (error) {
-    return `slack unreachable: ${error.message}`;
-  }
+  return postToSlack(title, blocks, fetchImpl);
 }
 ```
+
+and remove the `if (!hook) return "SLACK_WEBHOOK_URL is not set";` lines from the top of this `announce`: `postToSlack` makes that check, and making it twice is how the two would drift apart. The function's first line becomes `const comment = String(row.comment || "");`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
