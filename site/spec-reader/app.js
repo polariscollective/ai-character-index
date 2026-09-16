@@ -299,6 +299,9 @@ const state = {
    * decides whether the comment is required, so it is read by syncFeedbackSend
    * rather than derived twice. */
   feedbackCanVote: false,
+  /* The close that follows a thank you. Held so reopening the dialog inside that
+   * second cancels it: otherwise the old timer closes the new dialog. */
+  feedbackCloseTimer: null,
 };
 
 const elements = {
@@ -2391,6 +2394,7 @@ function openFeedbackDialog(button) {
   elements.feedbackOutcome.className = "feedback-outcome";
   syncFeedbackSend();
 
+  clearTimeout(state.feedbackCloseTimer);
   elements.feedbackDialog.showModal();
   elements.feedbackComment.focus();
 }
@@ -2452,9 +2456,9 @@ async function sendFeedback() {
   elements.feedbackOutcome.textContent = outcome.done || "Thank you.";
   elements.feedbackOutcome.classList.add("done");
   saveString("aci-feedback-email", form.email);
-  saveString("aci-feedback-name", form.name);
+  saveString("aci-feedback-name", form.private ? "" : form.name);
   saveFlag("aci-feedback-private", form.private);
-  setTimeout(closeFeedbackDialog, 1000);
+  state.feedbackCloseTimer = setTimeout(closeFeedbackDialog, 1000);
 }
 
 /* The dialog's own controls: closing it, the two-way thumbs (a second press on

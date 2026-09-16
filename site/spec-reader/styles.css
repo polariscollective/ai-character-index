@@ -2435,7 +2435,6 @@ body.no-behaviours .sidebar-export { display: none; }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 4px;
   border-top: 1px solid var(--line-light);
   margin-top: 4px;
   padding-top: 16px;
@@ -2462,16 +2461,6 @@ body.no-behaviours .sidebar-export { display: none; }
   .feedback-close, .thumb, .feedback-cancel, .feedback-send { transition: none; }
 }
 
-/* What the default means, above the toggle that changes it. Plain body size
-   rather than the small grey of a hint: most readers never touch the toggle, so
-   this paragraph is the whole of the consent for them, and a hint is what people
-   skip. */
-.feedback-consent {
-  margin: 0 0 12px;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.55;
-}
 
 /* A document note names its document in words, not in the engine's id, so that
    line is prose and drops the mono the framework reserves for data. */

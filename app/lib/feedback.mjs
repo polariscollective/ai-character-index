@@ -175,8 +175,8 @@ const THUMB = { up: "thumb up", down: "thumb down" };
  * The address is in the message because the message goes to us. It is the one
  * place it appears outside the database, and it appears nowhere public.
  */
-export async function announce(row, fetchImpl = fetch, site = "") {
-  const comment = String(row.comment || "");
+export async function announce(row = {}, fetchImpl = fetch, site = "") {
+  const comment = String(row?.comment || "");
   const shown = comment.length > IN_SLACK ? `${comment.slice(0, IN_SLACK)}...` : comment;
   const lines = [
     `*Paragraph:* \`${forSlack(row.locator)}\``,
@@ -189,9 +189,17 @@ export async function announce(row, fetchImpl = fetch, site = "") {
     ? `Feedback on a paragraph (${THUMB[row.vote] || row.vote})`
     : "Feedback on a paragraph";
 
+  /* Slack refuses a section block over 3000 characters, and refuses the whole
+   * message with it. The comment is already cut; behaviours are capped at 20
+   * names of 200 characters by the route, and escaping expands each character
+   * it touches, so the joined block can still pass the ceiling while every
+   * field is within its own limit. Cut what is sent, not what is stored. */
+  const said = lines.join("\n");
+  const body = said.length > IN_SLACK * 3 ? `${said.slice(0, IN_SLACK * 3)}...` : said;
+
   const blocks = [
     { type: "header", text: { type: "plain_text", text: forSlack(title).slice(0, 150) } },
-    { type: "section", text: { type: "mrkdwn", text: lines.join("\n") } },
+    { type: "section", text: { type: "mrkdwn", text: body } },
     { type: "context", elements: [{ type: "mrkdwn",
       text: `From ${forSlack(row.submitter || "no address given")}`
           + ` | may be shown: ${forSlack(row.visibility || "private")}`

@@ -305,10 +305,11 @@ why. A note sent without touching a single control is `anonymous`, not
 private: the toggle defaults off. Most readers never touch it, so for them
 the default is not a fallback, it is the whole of their consent — and an
 untouched control that quietly meant "keep this private" was a courtesy
-nobody had asked for and nobody could see. The dialog now carries a paragraph
-above the toggle, said before the control it explains, stating what "as it
-stands" means: the note may be shown, unnamed, unless you say otherwise.
-`private` is the deliberate opt-out now, not the default. What was three
+nobody had asked for and nobody could see. The toggle says what private
+protects. Nothing says what leaving it alone costs, and that is worth knowing
+rather than papering over: a paragraph above the toggle said it, and was removed
+as unnecessary. A reader who touches no control is not told that their words may
+be shown. `private` is the deliberate opt-out now, not the default. What was three
 radio choices is one toggle and a name field, and visibility is derived
 rather than asked for twice: the toggle on gives `private`; off with a name
 typed gives `attributed`; off with nothing typed gives `anonymous`. The
@@ -322,10 +323,11 @@ and sends the document's id as the `locator`. Neither a migration nor a route
 change was needed, because a document id is already a locator that names the
 whole document.
 
-There is no withdrawal, and the dialog says so. The table grants select,
-insert and update to the operators who read it, and no delete, so a note is a
-message that was sent: the consent paragraph says it cannot be unsent, which
-is the reason to choose private now rather than regret it later.
+There is no withdrawal, and the dialog does not say so. The table grants
+select, insert and update to the operators who read it, and no delete, so a note
+is a message that was sent. Nothing tells the reader that before they send it,
+which is the second half of the same gap: a note cannot be taken back, and the
+moment to choose private is the only moment there is.
 
 Three things it does deliberately, unchanged from the plan. The behaviours it
 shows are the intersection, not the menu: of the behaviours ticked in the

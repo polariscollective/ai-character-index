@@ -64,10 +64,9 @@ document's id as the locator.
 The dialog -- "Note on this paragraph" or "Note on this document" -- takes a
 comment, a thumb, or both, with the locator and the behaviours highlighting the
 paragraph shown but not editable, and an address, required and used to write
-back, never shown on the site. Above a private toggle it says what happens if
-the toggle is left alone: the note may be shown on the site, unnamed, and it
-cannot be unsent -- because silence is the answer most readers give, and that
-answer has to be said rather than assumed. Off with no name typed sends the
+back, never shown on the site. A private toggle says what private protects,
+and nothing says what leaving it alone costs: a note left alone may be shown on
+the site, unnamed, and cannot be unsent. Off with no name typed sends the
 note anonymous (the default); off with a name typed sends it attributed under
 that name; the toggle on keeps it private.
 
