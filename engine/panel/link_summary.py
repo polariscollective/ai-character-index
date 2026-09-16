@@ -279,8 +279,12 @@ def main(argv=None, call_model=None):
                                 link_record.summary_rows(record))
     print(f"written to {out}")
     print(f"  aci_link_summaries      {said}")
+    # Null, not zero. batch_job.cost_of returns None for a seat with no price,
+    # which is what an in-session judge is, and this project has already settled
+    # that null means unknown while zero means free. Printing $0.00 here would be
+    # a claim nobody can support about a call nobody billed.
     print(f"  {len(reply or '')} characters, finish_reason={finish_reason}, "
-          f"about ${cost:.2f} spent")
+          + (f"about ${cost:.2f} spent" if cost is not None else "no cost recorded"))
     return 0
 
 
