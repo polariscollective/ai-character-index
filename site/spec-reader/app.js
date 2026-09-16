@@ -3694,6 +3694,50 @@ elements.documentReader.addEventListener("click", event => {
   if (icon) openFeedbackDialog(icon);
 });
 
+/* Scrolling is navigation too, so the count follows the view.
+ *
+ * The arrows kept one place and the reader's eye kept another: scroll past four
+ * passages, press the right arrow, and you travel backwards, to the one after
+ * wherever the arrows were left. Nothing had told the panel the view had moved,
+ * because nothing was listening for it. This listens, and gives the count to
+ * whichever passage holds the middle of the page.
+ *
+ * It only reads. No section is opened and nothing is scrolled, so reading past a
+ * collapsed section does not unfold it. Scroll events do not bubble, so this is
+ * captured on the way down rather than delegated on the way up. */
+let countingFrame = 0;
+elements.documentReader.addEventListener("scroll", event => {
+  const body = event.target.closest?.(".document-body");
+  const panel = body?.closest(".document-panel");
+  if (!panel?._anchors?.length || countingFrame) return;
+  countingFrame = requestAnimationFrame(() => {
+    countingFrame = 0;
+    const middle = body.getBoundingClientRect().top + body.clientHeight / 2;
+    let nearest = -1;
+    let best = Infinity;
+    panel._anchors.forEach((anchor, index) => {
+      const box = anchor.getBoundingClientRect();
+      // A passage inside a collapsed section is `hidden` and has no rectangle at
+      // all, which would read as sitting at the very top of the page. It is not
+      // where anybody is looking.
+      if (!box.height) return;
+      const distance = Math.abs(box.top + box.height / 2 - middle);
+      if (distance < best) { best = distance; nearest = index; }
+    });
+    if (nearest < 0 || nearest === panel._passageIndex) return;
+    panel._passageIndex = nearest;
+    state.activePanel = panel;
+    panel.querySelectorAll(".passage.current, .rail-mark.current")
+      .forEach(item => item.classList.remove("current"));
+    const anchor = panel._anchors[nearest];
+    anchor.classList.add("current");
+    panel
+      .querySelector(`.rail-mark[data-for-passage="${CSS.escape(anchor.dataset.passageId)}"]`)
+      ?.classList.add("current");
+    updatePassageCount(panel);
+  });
+}, true);
+
 /* The arrows belong to a document and are re-cloned with it, so they delegate
  * and each one steps the panel it sits in. */
 elements.documentReader.addEventListener("click", event => {
@@ -4132,6 +4176,23 @@ elements.documentReader?.addEventListener("click", event => {
   const target = [...(other?.querySelectorAll("[data-locator]") || [])]
     .find(block => block.dataset.locator === wanted);
   if (!target) return;
+
+  /* Open what is closed over the destination before travelling to it. A section
+   * carrying no highlight of its own is collapsed, and updateSectionVisibility
+   * marks its blocks `hidden`: an element with no layout is one scrollIntoView
+   * moves to silently, so the pill appears to do nothing at all. Which section is
+   * shut depends on what the reader has selected, which is why only some links
+   * looked broken. The arrows already do this, for the same reason. */
+  const destination = target.closest(".document-body");
+  if (destination) {
+    let sectionChild = target;
+    while (sectionChild.parentElement && sectionChild.parentElement !== destination) {
+      sectionChild = sectionChild.parentElement;
+    }
+    (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
+    updateSectionVisibility(other);
+  }
+
   target.scrollIntoView({ behavior: "smooth", block: "center" });
   target.classList.remove("link-target");
   void target.offsetWidth;
@@ -4140,16 +4201,31 @@ elements.documentReader?.addEventListener("click", event => {
   /* Which of the destination's bubbles brought you here. A paragraph can carry
    * three, and landing among them without knowing which one is the counterpart
    * leaves the reader to guess. Links are carried on both paragraphs, so the
-   * reciprocal is always there: it is the one pointing back at where the click
-   * came from. Marked, not opened, because only one reason is read at a time and
-   * the one just opened is the one that was asked for. */
+   * reciprocal is normally there: it is the one pointing back at where the click
+   * came from.
+   *
+   * It opens with the one that was pressed. Two notes are open at once, and they
+   * are always the two halves of one link, which is the whole of the exception to
+   * "one reason at a time": a reader standing on the far paragraph is reading the
+   * same relation from its other end. Where the counterpart carries no pill at
+   * all -- it belongs to no shown behaviour, or is related and related is not on
+   * screen -- nothing opens, and the journey is the whole of what happened. */
   elements.documentReader.querySelectorAll(".link-goto.link-back")
     .forEach(previous => previous.classList.remove("link-back"));
   const from = new Set((button.closest("[data-passage-id]")?.dataset.locators || "")
     .split("\n").filter(Boolean));
   const back = [...target.querySelectorAll(".link-goto")]
     .find(pill => from.has(pill.dataset.goto));
-  if (back) back.classList.add("link-back");
+  if (back) {
+    back.classList.add("link-back");
+    const its = document.getElementById(back.getAttribute("aria-controls") || "");
+    // Only when this click opened a note rather than closing one: a second press
+    // on the same pill collapses the pair, both ends together.
+    if (its && button.getAttribute("aria-expanded") === "true") {
+      back.setAttribute("aria-expanded", "true");
+      its.hidden = false;
+    }
+  }
 });
 
 async function initialize() {
