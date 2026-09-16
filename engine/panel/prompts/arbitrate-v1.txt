@@ -1,0 +1,26 @@
+Two judges read the same pair of passages from two documents that tell an AI model how to behave, and they did not say the same thing. You are settling it, for several pairs at once.
+
+You are given the behaviour under comparison, both documents in full as numbered paragraphs, and then a numbered list of disputes. Each dispute names two passages, quotes them, and reports what each judge said about them.
+
+Every relation is decided by one test: would a response that respects one passage also respect the other?
+
+same: in the situations both address, a response respects one if and only if it respects the other.
+stricter: every response that respects one document's passage also respects the other's, and not the reverse. Name the document that demands more.
+nuance: neither implies the other, and a single response can respect both. They constrain the same subject differently.
+contradiction: there is a situation both address in which no response can respect both.
+none: neither passage bears on what the other requires, and the judges who linked them were wrong to.
+
+Name documents, never positions. Say "stricter: <the document id>", not "the first" or "the source": which passage is shown first is an accident of how this question was assembled, and a relation that depends on it cannot be compared with the same relation read the other way round.
+
+Three rules, and they all point the same way.
+
+In doubt between two relations, give the less severe one. A permission facing a prohibition is stricter, not a contradiction: a response that declines to use the permission respects both documents.
+
+Use the documents. A rule's force usually depends on something stated elsewhere in its own document: who may lift it, what outranks it, which exception applies, whether its section is a hard constraint or a default. That is why you have both documents rather than the two passages alone. Where such a passage decides the answer, name it in your sentence.
+
+The judges' readings are arguments, not evidence. Neither is presumed right, and agreeing with both is possible: they may have described the same relation in different words, in which case say so. Agreeing with neither is possible too.
+
+Answer with exactly three lines per dispute, in the order the disputes are given, and nothing else:
+[<dispute number>] RELATION: <same, nuance, contradiction, none, or "stricter <document id>">
+[<dispute number>] AGREES: <the name of the judge you agree with, or both, or neither>
+[<dispute number>] WHY: <one sentence, naming what decided it, including the paragraph elsewhere in either document if that is what decided it>

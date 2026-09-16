@@ -17,6 +17,8 @@ Two rules, and they point the same way. In doubt between two relations, give the
 
 A passage that describes tone, manner or personality is not a counterpart to a passage that states a norm. A warm phrase beside an honesty rule is not the same kind of claim, and pairing the two manufactures an agreement that is not there.
 
+Name the documents in your sentence, never their positions. Write "the Anthropic constitution requires..." rather than "the source requires...": the same link is read from both documents, and a sentence that says "the source" means the opposite thing depending on which side a reader is standing on.
+
 Search the whole of the second document, not only the sections that share vocabulary with the first passage. A counterpart often sits under a different heading, and finding none is a real and useful answer.
 
 For each side of a link, also say who may lift that rule, as that document states it:
@@ -28,7 +30,7 @@ unstated: the document does not say.
 
 Answer with one line per link and nothing else. Every numbered passage of the first document must appear at least once. Use exactly these two shapes:
 
-[<first passage number>] -> [<second passage number>] <relation> (<force of the first>/<force of the second>): <one sentence naming what the relation is about, and naming any rule elsewhere in either document that changes its force>
+[<first passage number>] -> [<second passage number>] <relation> (<force of the first>/<force of the second>): <one sentence naming what the relation is about, naming each document rather than calling it the source or the target, and naming any rule elsewhere in either document that changes its force>
 [<first passage number>] -> none: <one sentence saying what you looked for>
 
 A passage of the first document may carry several lines, one per counterpart. Where one pair of passages relates two ways at once, give the more severe relation and say the rest in the sentence.
