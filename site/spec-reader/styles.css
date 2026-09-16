@@ -894,6 +894,10 @@ body.resizing-columns {
   color: var(--ink);
 }
 
+/* Comparing, the behaviour note is about two documents at once. Set by
+ * openBehaviourNote at the moment it opens, and only there. */
+.key-note.key-note-wide { width: min(720px, calc(100vw - 32px)); }
+
 .key-note::backdrop { background: transparent; }
 
 .key-note-title {

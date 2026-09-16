@@ -75,7 +75,20 @@ var depthNoteTrigger = null;
 var releasedTo = null;
 var figureLabel = null;
 var elements = {
-  keyNote: { showPopover() { noteShown = true; }, hidePopover() {}, matches() { return false; } },
+  // The classes the note opened with. A real popover has a classList and
+  // openBehaviourNote sets its width through one, so a stub without it makes
+  // every check in this file throw on a line that has nothing to do with depth.
+  keyNote: {
+    classes: new Set(),
+    classList: {
+      toggle(name, on) {
+        if (on) elements.keyNote.classes.add(name);
+        else elements.keyNote.classes.delete(name);
+      },
+      remove(name) { elements.keyNote.classes.delete(name); },
+    },
+    showPopover() { noteShown = true; }, hidePopover() {}, matches() { return false; },
+  },
   keyNoteTitle: {},
   keyNoteBody: { children: [], replaceChildren(...nodes) { this.children = nodes; } },
   depthNote: { matches() { return false; }, hidePopover() {} },
@@ -454,6 +467,20 @@ check("comparing, the figure's popover covers both documents on screen, in pane 
        "Model Spec 2025-12-18: 2.0 out of 4, discussed."]);
 check("a pane with no document on it is not a section of the popover",
       () => depthFigureNote(THREE_JUDGES, [JUDGED_DOCUMENTS[0], null]).documents.length, 1);
+
+/* ---- the width it opens at ---- */
+check("comparing, the behaviour note opens wide",
+      () => {
+        show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
+        note("helpfulness");
+        return elements.keyNote.classes.has("key-note-wide");
+      }, true);
+check("on one document it opens at the width of the column it hangs off",
+      () => {
+        show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS);
+        note("helpfulness");
+        return elements.keyNote.classes.has("key-note-wide");
+      }, false);
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

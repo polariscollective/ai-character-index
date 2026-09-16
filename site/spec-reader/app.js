@@ -157,6 +157,13 @@ async function loadDocuments() {
 function openBehaviourNote(button) {
   const note = elements.keyNote;
   if (!note || typeof note.showPopover !== "function") return;
+
+  /* Twice as wide when two documents are on screen. 360px is the width of a note
+   * hanging off a sidebar; comparing, this one is read as prose about both
+   * documents and there is window to spare. Set before the popover opens,
+   * because placeKeyNote measures the box to find its corner. */
+  note.classList.toggle("key-note-wide", state.comparing);
+
   const slug = button.dataset.behaviourNote;
   const entry = (behaviourNotes || {})[slug];
   if (!entry) return;
@@ -730,6 +737,9 @@ function setupKeyNotes() {
     button.addEventListener("click", () => {
       const entry = KEY_NOTES[button.dataset.key];
       if (!entry) return;
+      // The key's own notes are two short paragraphs and keep their width,
+      // whatever the behaviour note last did with the popover they share.
+      note.classList.remove("key-note-wide");
       elements.keyNoteTitle.textContent = entry.title;
       // Our own literals, never anything read from a payload.
       elements.keyNoteBody.innerHTML =
