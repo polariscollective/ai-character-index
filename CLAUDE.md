@@ -399,6 +399,108 @@ the declared list at all. `publish.py` refuses to build a publication when a
 selected cell carries a recorded substitution the panel does not declare for
 that seat, naming the cell and the declared order.
 
+### The depth judge was shown less of the document than the reader
+
+**Found by asking why one cell scored 1.0. Fixed, and the depths it spoiled were
+given again.**
+
+A depth call never reads the document. It reads the passages the panel cited, and
+`bands.shown_by_default` chose them: it returned the defining and core bands. The
+reader's `DEFAULT_BANDS` has been defining, core and related since related was
+made visible by default -- drawn thinner rather than hidden behind a toggle -- so
+the two lines fell out of step, and the figure printed under a behaviour was read
+from less evidence than the page under it shows. Both sides said in a docstring
+that they drew the line the reader draws, which is what the line had stopped
+being.
+
+What it published: `not-undermining-human-oversight` on
+`openai--model-spec@2026-08-18` was 1.0, unanimously. `#scope_of_autonomy ¶14`
+scored 6 on the 2025-12 version of that document and 5 on the 2026-08 one, because
+one judge moved it from 3 to 2 after "shutdown timer" became "ending condition".
+Six is the core cut on a three-judge panel, so the passage left the evidence and
+the judge was handed a single bullet, and three judges correctly read one bullet
+as depth 1. The rule itself is byte-identical across the two versions.
+`objectivity-on-contested-questions` (five cited passages down to one) and
+`helpfulness` (three down to two) had the same shape, milder.
+
+`shown_by_default` returns every banded passage now. `bands.py` carries
+`DEFAULT_BANDS` beside `TIERS`, and `test_bands.py` reads the reader's own
+`DEFAULT_BANDS` line out of `site/spec-reader/app.js` and holds the Python to it,
+so a copy cannot drift silently again. The prompt says the passages are every one
+the panel cited and not a shortlist of the strongest, and
+`methodology/spec-coverage-depth-rubric.md` says plainly what the judge is shown
+and that a depth is a reading of the panel's citations rather than of the whole
+document. `prompts/depth-v1.txt` changed with it, from sha `20df8c4d` to
+`bd096eba`; a run records the depth prompt's digest, so the wording cannot change
+quietly.
+
+The 156 depth calls of the three runs the public publication selects from
+(`aef5e906`, `c2f1b34a`, `a2bdadba`) were given again in place, under the new
+prompt, on 16 September 2026, for $3.42 against the $2.21 the first depths cost.
+Nothing was deleted, no run was composed, and no judgement or passage call was
+touched: the depth rows went back to `pending`, which is the only thing
+`batch_job.pending_depths` reads, and the job gave them again. The runs' recorded
+cost moved with them, because a run's cost is summed from its calls and its
+depths.
+
+The evidence the judges were handed grew from 403 retained passages to 1079, and
+33 of the 52 cells moved. The cell the investigation started from,
+`not-undermining-human-oversight` on `openai--model-spec@2026-08-18`, went from
+1.0 to 3.3 on 1 passage becoming 10; no cell that moved fell by more than 0.4.
+
+Four of the 156 did not come back with a depth on the first asking.
+`deepseek` answered `DEPTH: -1` on `avoiding-over-and-under-caution` and
+`how-to-approach-tradeoffs` against the Alibaba Model Spec, `no-sycophancy`
+against the constitution, and `proportionate-risk-mitigation` against
+`openai--model-spec@2025-12-18`. Minus one is not on the 0 to 4 scale the prompt
+asks for, so `depth_call.parse` reads no answer and the call fails, as it should:
+reading a score out of a rationale would be inventing a verdict.
+
+The remedy on record was tried, exactly as the ledger describes it for the same
+seat on 15 September: the four calls were asked again with a one-line format
+reminder appended to the USER message, naming the single integer 0 to 4, saying
+that passages which do not bear on the behaviour are 0, and refusing any other
+value. The system prompt is untouched, so `depth_prompt_sha256` does not move.
+Two then answered on scale, both 2, and their cells are complete. The two Alibaba
+cells answered off scale five more times each.
+
+What those ten replies show is worth writing down, because it decides what to try
+next. `deepseek` is not saying the document is absent and inventing a token for
+it: every rationale describes content, one of them "a concrete prioritization
+method through permission levels and conflict-resolution rules, which can be
+quoted as pass criteria", which is the rubric's own definition of 3. Nor is it
+refusing: the replies come back in one to three seconds, `finish_reason=stop`,
+in the two-line format asked for. And the figure cannot be read as a negated
+depth, because `how-to-approach-tradeoffs` answered `-3` twice and `-1` three
+times with materially the same rationale. The sign is not a mistake with a
+recoverable magnitude behind it.
+
+A ladder of user-message variants finished it, cheapest first, a cell leaving the
+ladder the moment it answered on scale, and the system prompt untouched
+throughout. A one-shot example -- the two lines of a correct answer carrying a
+number that is not the one expected back, so it shows the shape and suggests
+nothing -- took `how-to-approach-tradeoffs` on its second attempt, at the panel's
+temperature 0, to depth 3. `avoiding-over-and-under-caution` refused that,
+refused the scale restated inline one line per level, refused both together with
+a sentence saying a negative number is not on the scale, and refused all three
+again at temperature 0.2. It answered at temperature 0.5, on the second attempt,
+`DEPTH: III`, which the parser reads because 0f32b79 taught it Roman numerals;
+the attempt before had answered `DEPTH: (4) DEMONSTRATED`, which it does not.
+
+That one figure was obtained at a temperature the panel does not use, and the
+publication's notes say so beside it: a reader must be able to see that it was
+got differently from every other figure in the grid. Nothing else was bent to
+reach it -- no substitute seated, no rule relaxed, no parser taught to read a
+number that is not on the scale.
+
+Publication `1919ee6b` carries the result: the same thirteen behaviours over the
+same four documents as `07958c5e`, from the same runs, built as a draft and
+verified. Re-judging depths in place has a cost worth knowing: `07958c5e` no
+longer rebuilds to its stored digest, because its payload carries the depths it
+was published with and the rows now hold different ones. Its stored bytes still
+match their own digests and its passages still resolve; only the rebuild check
+fails, and it fails for a reason the record explains.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

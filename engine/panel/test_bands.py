@@ -37,11 +37,41 @@ class ParityTest(unittest.TestCase):
         self.assertEqual([bands.tier_band(*case) for case in cases], reader_bands(cases))
 
 
+class DefaultBandsTest(unittest.TestCase):
+    """The reader's own default, read out of the reader.
+
+    site/spec-reader/app.js decides which bands a reader sees before touching a
+    toggle, and the depth judge is shown exactly those. The list is small enough
+    to copy and important enough that a silent copy is how the depth score came
+    to be taken from a narrower evidence base than the reader shows."""
+
+    def test_the_default_bands_are_the_ones_the_reader_opens_with(self):
+        source = (ROOT / "site" / "spec-reader" / "app.js").read_text()
+        line = next(l for l in source.splitlines() if l.startswith("const DEFAULT_BANDS ="))
+        reader = json.loads(line.split("=", 1)[1].strip().rstrip(";"))
+        self.assertEqual(list(bands.DEFAULT_BANDS), reader)
+
+
 class ShownTest(unittest.TestCase):
     def test_a_unanimous_core_passage_of_three_judges_is_shown(self):
         self.assertEqual(bands.shown_by_default({"p": {"a": 2, "b": 2, "c": 2}}), ["p"])
 
-    def test_a_passage_two_judges_call_related_is_not(self):
+    def test_a_related_passage_is_shown_because_the_reader_draws_it(self):
+        # Two judges of three cite it, the third does not: related, which the
+        # reader draws thinned rather than hides. The depth judge sees it too.
+        self.assertEqual(bands.shown_by_default({"p": {"a": 2, "b": 2, "c": 0}}), ["p"])
+
+    def test_the_passage_that_fell_one_point_below_the_core_cut_is_still_shown(self):
+        # #scope_of_autonomy ¶14 of the 2026-08 Model Spec: fable 2, sol 3,
+        # deepseek 0, score 5 where the core cut is 6. Hiding it left one bullet
+        # as the whole evidence for not-undermining-human-oversight, and three
+        # judges correctly read one bullet as depth 1.
+        self.assertEqual(
+            bands.shown_by_default({"para14": {"fable": 2, "sol": 3, "deepseek": 0},
+                                    "para5": {"fable": 3, "sol": 3, "deepseek": 2}}),
+            ["para14", "para5"])
+
+    def test_a_passage_below_every_band_is_not_shown(self):
         self.assertEqual(bands.shown_by_default({"p": {"a": 1, "b": 1, "c": 0}}), [])
 
     def test_one_defining_verdict_raises_the_scale_of_the_whole_cell(self):

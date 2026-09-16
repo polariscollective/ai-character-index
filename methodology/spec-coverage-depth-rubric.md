@@ -10,6 +10,20 @@ eval designer to work with for this behaviour, not how much the lab appears to
 care. Every score carries a one-line rationale naming what is present and what is
 missing, in the rubric's terms.
 
+## What the judge is shown
+
+The passages the panel cited for the behaviour in that document, each with its
+section path, and nothing else: not the document, not a shortlist of the
+strongest citations. The passages are the ones the reader shows by default, which
+is every banded passage -- defining, core and related, the three bands the reader
+opens on -- so the judge and the reader are looking at the same evidence.
+
+A depth is therefore a reading of the panel's own citations, not of the whole
+document. A behaviour the panel cited thinly is scored on what was cited, and a
+figure can move because a passage changed band without the document changing a
+word. The judge is told this and told not to assume the document says anything
+the passages do not show.
+
 | Depth | Anchor | Bar |
 |---|---|---|
 | 0 | absent | No passage bears on the behaviour. |
@@ -38,8 +52,10 @@ missing, in the rubric's terms.
 - **A dedicated section is evidence, not a requirement.** Any level can be
   reached by passages scattered across sections; likewise a dedicated section
   with only general language does not clear 3.
-- **Depth is scored on core excerpts.** Adjacent-flagged passages define the
-  construct's edges for eval designers and do not raise depth.
+- **Depth is scored on every passage the panel cited**, at whatever band, since
+  that is what a reader of the index sees. Until 16 September 2026 the judge was
+  shown the defining and core bands only, and a passage one point under the core
+  cut was invisible to it while the reader had it on the page.
 - **Depth is independent of authority level.** Note authority in the rationale
   where it matters (behaviour 2 precedent: the model spec's dedicated
   calibration section carries only guideline authority).

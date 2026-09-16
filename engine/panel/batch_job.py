@@ -293,7 +293,8 @@ def pending_depths(store, run_id, passages_for, versions):
     A cell's depths wait until all its passage calls are done. A call no depth row
     was written for -- a run composed before depths existed -- has none to give.
     The retained passages are the ones a reader shows by default, from the cell's
-    parsed judgements."""
+    parsed judgements: every banded passage, related included, because that is
+    what the reader opens on."""
     calls = [c for c in store.select("aci_judge_calls") if c["run_id"] == run_id]
     depths = {d["call_id"]: d for d in store.select("aci_depths")}
     cells = {}
