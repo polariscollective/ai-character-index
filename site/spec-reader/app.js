@@ -2099,6 +2099,16 @@ const COPY_TICK_ICON = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="f
         <path d="M4 8.3l2.8 2.8L12.2 5.6" fill="none" stroke="currentColor" stroke-width="1.6"
         stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+/* The word beside the tick, because a tick on its own left readers unsure whether
+ * anything had been copied.
+ *
+ * It is positioned against the button rather than laid out beside it (see
+ * .copied-word), so the button's box never changes and the line it sits in never
+ * reflows: the gutter these icons live in is 30px wide and the word needs sixty.
+ * For its two seconds it sits on the paper ground, to the left of the tick, over
+ * whatever was there. */
+const COPIED_WORD = `<span class="copied-word">Copied!</span>`;
+
 // How long the tick shows before the button reverts to its own icon, named so the
 // call site reads as a decision rather than a bare number.
 const COPY_TICK_MS = 2000;
@@ -2173,7 +2183,7 @@ async function copyFromPassage(button) {
  * content -- the bug that would otherwise leave a permanent tick. */
 function markCopied(button) {
   if (button.dataset.icon === undefined) button.dataset.icon = button.innerHTML;
-  button.innerHTML = COPY_TICK_ICON;
+  button.innerHTML = COPY_TICK_ICON + COPIED_WORD;
   button.classList.add("copied");
   clearTimeout(button._copiedTimer);
   button._copiedTimer = setTimeout(() => {
