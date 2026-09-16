@@ -117,3 +117,80 @@ export function feedbackProblems(fields) {
   }
   return found;
 }
+
+/**
+ * Which publication this is about.
+ *
+ * Resolved here rather than taken from the page. A locator names the text and
+ * carries its version, so the text needs no help; what it does not name is the
+ * reading laid over it, which is a publication's. A pin is honoured when it
+ * names a publication that exists, and anything else falls through to the
+ * current one, resolved exactly as the reader's payload route resolves it.
+ */
+export async function resolvePublication(pin, fetchImpl = fetch) {
+  if (isPublicationId(pin)) {
+    const rows = await select("aci_publications", `id=eq.${pin}&select=id`, fetchImpl);
+    if (rows.length) return rows[0].id;
+  }
+  const rows = await select("aci_publications", `select=id&${currentPublication()}`, fetchImpl);
+  return rows.length ? rows[0].id : null;
+}
+
+/** Write the row. The durable act; Slack is a courtesy the caller pays after. */
+export async function record({ fields, publication_id, hash }, { fetchImpl = fetch } = {}) {
+  const [row] = await insert(TABLE, [{
+    publication_id,
+    locator: fields.locator,
+    document_id: documentOf(fields.locator),
+    behaviours: fields.behaviours,
+    vote: fields.vote,
+    comment: fields.comment,
+    submitter: fields.email,
+    display_name: fields.display_name,
+    visibility: fields.visibility,
+    source_hash: hash,
+  }], fetchImpl);
+  return row;
+}
+
+/* Long enough to judge a comment from the message, short enough to read. */
+const IN_SLACK = 700;
+
+const THUMB = { up: "thumb up", down: "thumb down" };
+
+/**
+ * Tell Slack. Returns what went wrong, or null; never throws.
+ *
+ * The row is already written by the time this runs, so a failure here is a
+ * message nobody got rather than words nobody has. That is why the caller
+ * records first and announces second, and why this swallows everything.
+ *
+ * The address is in the message because the message goes to us. It is the one
+ * place it appears outside the database, and it appears nowhere public.
+ */
+export async function announce(row, fetchImpl = fetch, site = "") {
+  const comment = String(row.comment || "");
+  const shown = comment.length > IN_SLACK ? `${comment.slice(0, IN_SLACK)}...` : comment;
+  const lines = [
+    `*Paragraph:* \`${forSlack(row.locator)}\``,
+    ...(row.behaviours?.length ? [`*Highlighted for:* ${forSlack(row.behaviours.join(", "))}`] : []),
+    ...(row.vote ? [`*Verdict:* ${THUMB[row.vote] || forSlack(row.vote)}`] : []),
+    ...(shown ? [`*Said:* ${forSlack(shown)}`] : []),
+  ];
+
+  const title = row.vote
+    ? `Feedback on a paragraph (${THUMB[row.vote] || row.vote})`
+    : "Feedback on a paragraph";
+
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: forSlack(title).slice(0, 150) } },
+    { type: "section", text: { type: "mrkdwn", text: lines.join("\n") } },
+    { type: "context", elements: [{ type: "mrkdwn",
+      text: `From ${forSlack(row.submitter || "no address given")}`
+          + ` | may be shown: ${forSlack(row.visibility || "private")}`
+          + (row.display_name ? ` as ${forSlack(row.display_name)}` : "")
+          + ` | <${site}/admin/feedback|read it in the portal>` }] },
+  ];
+
+  return postToSlack(title, blocks, fetchImpl);
+}
