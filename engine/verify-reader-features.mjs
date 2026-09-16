@@ -1464,6 +1464,9 @@ await at("?compare=1");
       const next = rect(panel.querySelector(".next-passage"));
       const expand = rect(panel.querySelector(".document-focus-toggle"));
       const legend = rect(panel.querySelector(".rail-legend"));
+      // Last in the view controls since the note icon joined them, so it, not the
+      // band toggles, is what has to sit against the header's right edge.
+      const note = rect(panel.querySelector(".document-feedback"));
       const inside = box => box.left >= h.left - 0.5 && box.right <= h.right + 0.5
         && box.top >= h.top - 0.5 && box.bottom <= h.bottom + 0.5;
       // The compact counter, "3/12", while "3 of 12 passages" stays the counter
@@ -1497,7 +1500,12 @@ await at("?compare=1");
         } : null,
         view: {
           expandBeforeBands: expandOnBandsRow ? expand.right <= legend.left : expand.bottom <= legend.top,
-          flushRight: Math.round((contentRight - legend.right) * 10) / 10,
+          /* After the band toggles, which at two panels on a narrow screen can
+             mean on the line below them rather than beside them: .meta-actions
+             wraps, as the legend itself does. Either is "after"; what would be
+             wrong is the icon before them. */
+          bandsBeforeNote: legend.right <= note.left + 0.5 || legend.bottom <= note.top + 0.5,
+          flushRight: Math.round((contentRight - note.right) * 10) / 10,
           belowIdentity: Math.round(Math.min(expand.top, legend.top) - identity.bottom),
         },
         oneRow: Math.abs(centre(nav) - centre(legend)) <= 4 && expandOnBandsRow,
@@ -1523,9 +1531,9 @@ await at("?compare=1");
         && p.counter.spokenMatches && p.counter.hiddenFromScreenReaders),
       `compare ${width}x${height}: the counter reads N/M for the passage position,`
         + " and the full sentence stays what a screen reader hears", detail("counter"));
-    check(measured.every(p => p.view.expandBeforeBands && p.view.flushRight >= -0.5
-        && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
-      `compare ${width}x${height}: at the right, Expand all and then the band toggles, flush right`,
+    check(measured.every(p => p.view.expandBeforeBands && p.view.bandsBeforeNote
+        && p.view.flushRight >= -0.5 && p.view.flushRight <= 1.5 && p.view.belowIdentity >= 0),
+      `compare ${width}x${height}: at the right, Expand all, the band toggles, then the note icon flush right`,
       detail("view"));
     if (width >= 1440) {
       check(measured.every(p => p.oneRow),
@@ -1759,6 +1767,21 @@ await page.waitForTimeout(250);
   }));
   check(out.pressed === "true" && out.comparing,
     "clicking the compare toggle switches to the compare view");
+
+  /* Comparing moves the view controls into a .meta-actions group, and the note
+     icon has to travel with them: left as a direct child of the row it lands
+     between the walk and the controls, which is the one place in the header it
+     means nothing. Last in the group, past Related, on both panels. */
+  const noteLast = await page.evaluate(() => [...document.querySelectorAll(".document-panel")]
+    .map(panel => {
+      const actions = panel.querySelector(".meta-actions");
+      const icon = panel.querySelector(".document-feedback");
+      return Boolean(actions && icon && actions.lastElementChild === icon
+        && icon.previousElementSibling?.classList.contains("rail-legend"));
+    }));
+  check(noteLast.length === 2 && noteLast.every(Boolean),
+    "comparing, each panel's note icon is last in the view controls, after Related",
+    JSON.stringify(noteLast));
 }
 
 // =============================================================================

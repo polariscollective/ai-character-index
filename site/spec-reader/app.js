@@ -3171,7 +3171,13 @@ function renderDocument(doc, side = 0) {
     panel.querySelector(".document-header").append(meta);
     const actions = document.createElement("span");
     actions.className = "meta-actions";
-    actions.append(panel.querySelector(".document-focus-toggle"), panel.querySelector(".rail-legend"));
+    // The note icon joins them, last. It is already last in the row at full
+    // width; without this it would stay a direct child of the row here and so
+    // land BEFORE the group, between the walk and the view controls, which is
+    // the one place in the header it means nothing.
+    actions.append(panel.querySelector(".document-focus-toggle"),
+                   panel.querySelector(".rail-legend"),
+                   panel.querySelector(".document-feedback"));
     meta.append(actions);
   }
   renderProviderTabs(panel, doc, side);
