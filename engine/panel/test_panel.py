@@ -496,6 +496,23 @@ class TestAppJSOpening(unittest.TestCase):
         self.assertIn("7 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSFeedback(unittest.TestCase):
+    """The feedback dialog's pure parts: what it is about (feedbackSubject) and
+    what it sends (feedbackBody). Skips (not fails) without `node`."""
+
+    HARNESS = HERE / "test_appjs_feedback.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_harness_passes(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("11 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSTranslation(unittest.TestCase):
     """The sentence app.js writes in a translated document's band:
     translatorNames, shortenTranslator and translationNote. It said the index
