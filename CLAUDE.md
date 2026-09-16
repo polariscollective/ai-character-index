@@ -44,7 +44,7 @@ dated work. Until then the constraint that forbids this is written into the
 database, with the historic publication as its single exemption. See
 `docs/superpowers/specs/2026-09-10-index-artifacts-to-supabase-design.md`.
 
-Since then: the public publication as of September 2026, `07958c5e`, is not
+Since then: the public publication as of September 2026, `1919ee6b`, is not
 grandfathered. Every one of its cells was judged by `frontier_fast`, with recorded
 substitutions, so the site no longer shows this bench. The cleanup migration,
 `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql` in
@@ -494,12 +494,15 @@ reach it -- no substitute seated, no rule relaxed, no parser taught to read a
 number that is not on the scale.
 
 Publication `1919ee6b` carries the result: the same thirteen behaviours over the
-same four documents as `07958c5e`, from the same runs, built as a draft and
-verified. Re-judging depths in place has a cost worth knowing: `07958c5e` no
-longer rebuilds to its stored digest, because its payload carries the depths it
-was published with and the rows now hold different ones. Its stored bytes still
-match their own digests and its passages still resolve; only the rebuild check
-fails, and it fails for a reason the record explains.
+same four documents as `07958c5e`, from the same runs, with the same passages,
+and only the depth figures re-judged. It was verified on every line and made
+public on 16 September 2026; `07958c5e` was withdrawn the same day, because the
+figures it carries are wrong rather than merely superseded. Re-judging depths in
+place has a cost worth knowing: `07958c5e` no longer rebuilds to its stored
+digest, because its payload carries the depths it was published with and the rows
+now hold different ones. Its stored bytes still match their own digests and its
+passages still resolve; only the rebuild check fails, and it fails for a reason
+the record explains.
 
 ## Where the fork is heading
 
@@ -509,26 +512,33 @@ Vercel, and the index is operated from a portal rather than a terminal. Upstream
 keeps the property this fork gave up, which is running from a bare clone.
 
 `develop` was merged into `main` on 15 September 2026 (PR #1, `119fa63`), Vercel
-deployed it to production, and publication `07958c5e`, thirteen behaviours over
-four documents, is public on https://ai-character-index.vercel.app.
+deployed it to production, and further releases followed on 16 September. The
+public publication is `1919ee6b`, thirteen behaviours over four documents, on
+https://ai-character-index.vercel.app.
+
+The cleanup migration `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`
+(`polaris-supabase` PR #30) was applied on 16 September 2026, once the code that
+stops reading what it drops was in production. It copied into an unexposed
+`aci_archive` schema, then removed, the grandfathered publication, five
+superseded drafts, six runs, the legacy `constitution` and `model-spec`
+documents, three unbriefed behaviours, and the `aci_cell_curation` and
+`aci_coverage` tables, and dropped the exemption. `tests/test_schema_after_cleanup.py`
+fails if code names a dropped table or column again.
 
 What is left, as of 16 September 2026:
 
-- Applying the cleanup migration,
-  `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`
-  (`polaris-supabase` PR #30), and only once the code that stops reading what it
-  drops is deployed: until then the reader's `/api/reader/publication` route
-  selects `aci_publications.grandfathered`. It copies into an unexposed
-  `aci_archive` schema, then removes, the grandfathered publication, five
-  superseded drafts, six runs, the legacy `constitution` and `model-spec`
-  documents, three unbriefed behaviours, and the `aci_cell_curation` and
-  `aci_coverage` tables, and drops the exemption. `tests/test_schema_after_cleanup.py`
-  fails if code names a dropped table or column again.
 - Dropping `aci_behaviours.set_name`, which the design also lists, once the
   registration route stops writing it.
-- The judging image's deploy. `deploy-runner.yml` has failed on every run, at
-  Google Cloud authentication, so jobs are launched from a local portal with
-  `ACI_PYTHON` set rather than on Cloud Run.
+- Exercising the judging image on Cloud Run. `deploy-runner.yml` failed on every
+  run until 16 September 2026, first at Google Cloud authentication, because the
+  workload identity condition naming this repository had been committed to
+  `polaris-tf`'s seed environment and never applied, then on the push, because
+  the workflow addressed the registry in the dev project while the shared
+  registry is in polaris-seed, and last on `gcloud run jobs update`, because the
+  deploy account could not act as `aci-runner`. All three are fixed and the
+  workflow is green, so the Cloud Run job carries the real image. No run has been
+  started through it yet: jobs are still launched from a local portal with
+  `ACI_PYTHON` set.
 
 The reasoning, the data model and the costs are in
 `docs/superpowers/specs/`, and the work is planned in `docs/superpowers/plans/`.
