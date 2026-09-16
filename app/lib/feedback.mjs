@@ -12,10 +12,10 @@
  * per source per hour, a cap on every field, and a size cap read from the
  * headers before a byte of the body is buffered.
  */
-import { insert, select } from "./supabase.mjs";
+import { insert } from "./supabase.mjs";
 import { callerAddress, recentFrom, sourceHash } from "./submissions.mjs";
 import { forSlack, postToSlack } from "./slack.mjs";
-import { currentPublication, isPublicationId } from "./publications.mjs";
+import { isPublicationId, publicationColumn } from "./publications.mjs";
 
 export const TABLE = "aci_feedback";
 
@@ -55,28 +55,36 @@ export function documentOf(locator) {
  * What arrived, in the shape the rules are written against.
  *
  * Two normalisations are decisions rather than tidying. An unstated visibility
- * is private, because the default must be the one that shows nothing. And a
- * name typed before the reader chose "without my name" is dropped, because the
- * choice they ended on is the choice: the database says the same thing with a
- * check constraint, and this is what keeps the two from disagreeing.
+ * is private, because the default must be the one that shows nothing -- and
+ * that is the whole of the rule: a non-empty string is kept as given, for
+ * `feedbackProblems` to judge, and anything else, sent by mistake or by
+ * malice, becomes "private" rather than being silently accepted as whatever it
+ * was. And a name typed before the reader chose "without my name" is dropped,
+ * because the choice they ended on is the choice: the database says the same
+ * thing with a check constraint, and this is what keeps the two from
+ * disagreeing.
+ *
+ * A body that is not an object -- a bare `null`, a number, a string -- is
+ * read as an empty submission rather than read at all: a default parameter
+ * only stands in for `undefined`, and a literal JSON `null` would otherwise
+ * reach `sent.visibility` and throw on a public route.
  */
-export function normalise(sent = {}) {
-  const visibility = VISIBILITIES.includes(sent.visibility) || sent.visibility
-    ? text(sent.visibility) || "private"
-    : "private";
-  const vote = text(sent.vote);
+export function normalise(sent) {
+  const fields = sent && typeof sent === "object" ? sent : {};
+  const visibility = text(fields.visibility) || "private";
+  const vote = text(fields.vote);
   return {
-    locator: text(sent.locator),
-    behaviours: (Array.isArray(sent.behaviours) ? sent.behaviours : [])
+    locator: text(fields.locator),
+    behaviours: (Array.isArray(fields.behaviours) ? fields.behaviours : [])
       .map(name => (name === null || name === undefined ? "" : String(name).trim()))
       .filter(Boolean),
     vote: vote || null,
-    comment: text(sent.comment),
-    email: text(sent.email),
+    comment: text(fields.comment),
+    email: text(fields.email),
     visibility,
-    display_name: visibility === "attributed" ? text(sent.display_name) : "",
-    publication: text(sent.publication),
-    website: text(sent.website),
+    display_name: visibility === "attributed" ? text(fields.display_name) : "",
+    publication: text(fields.publication),
+    website: text(fields.website),
   };
 }
 
@@ -129,11 +137,10 @@ export function feedbackProblems(fields) {
  */
 export async function resolvePublication(pin, fetchImpl = fetch) {
   if (isPublicationId(pin)) {
-    const rows = await select("aci_publications", `id=eq.${pin}&select=id`, fetchImpl);
-    if (rows.length) return rows[0].id;
+    const id = await publicationColumn("id", pin, fetchImpl);
+    if (id) return id;
   }
-  const rows = await select("aci_publications", `select=id&${currentPublication()}`, fetchImpl);
-  return rows.length ? rows[0].id : null;
+  return publicationColumn("id", null, fetchImpl);
 }
 
 /** Write the row. The durable act; Slack is a courtesy the caller pays after. */
@@ -193,4 +200,85 @@ export async function announce(row, fetchImpl = fetch, site = "") {
   ];
 
   return postToSlack(title, blocks, fetchImpl);
+}
+
+const said = (status, outcome) => Response.json(outcome, { status });
+
+/* What a reader is told when it worked. One sentence, and it does not promise a
+ * reply: reading every one is a promise we keep, answering every one is not. */
+const THANKS = "Thank you. We read every one.";
+
+/**
+ * The whole of the route, in one function so it can be tested without a server.
+ *
+ * JSON in, JSON out, where /api/submit takes a form and answers with a 303. The
+ * difference is the surface: the proposal page is a page, and a redirect there
+ * means the outcome survives a reload with no JavaScript at all. The reader is
+ * an application that has already fetched three payloads, and a navigation
+ * would throw away the document position, the behaviour selection and the
+ * compare view the reader had arranged.
+ */
+export async function handle(request, { fetchImpl = fetch } = {}) {
+  // Everything that can be judged from the headers is judged before a byte of
+  // the body is read. Parsing buffers the whole of it, so a check that runs
+  // afterwards has already paid for the request it means to refuse.
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (declared > MAX_REQUEST_BYTES) {
+    return said(413, { problem: "That is larger than this form takes." });
+  }
+
+  const hash = sourceHash(callerAddress(request.headers));
+  try {
+    if (await recentFrom(hash, fetchImpl, TABLE) >= PER_HOUR) {
+      return said(429, {
+        problem: `That is ${PER_HOUR} within the hour from here, which is as many as this `
+               + "form takes. The ones already sent are safe; try again later.",
+      });
+    }
+  } catch (error) {
+    // The rate-limit read failing must not refuse honest feedback.
+    console.error(`feedback: counting recent submissions failed: ${error.message}`);
+  }
+
+  let sent;
+  try {
+    sent = await request.json();
+  } catch {
+    return said(400, { problem: "That was not feedback." });
+  }
+
+  const fields = normalise(sent);
+
+  // Hidden from people, filled in by machinery that posts to every form it
+  // finds. Answered exactly as a real submission is, and recorded nowhere:
+  // saying "refused" would teach the next attempt what to leave blank.
+  if (fields.website) return said(200, { done: THANKS });
+
+  const found = feedbackProblems(fields);
+  if (found.length) return said(400, { problem: found.join("\n") });
+
+  let publication_id = null;
+  try {
+    publication_id = await resolvePublication(fields.publication, fetchImpl);
+  } catch (error) {
+    // Which publication it was about is worth having and not worth losing the
+    // words over.
+    console.error(`feedback: resolving the publication failed: ${error.message}`);
+  }
+
+  let row;
+  try {
+    row = await record({ fields, publication_id, hash }, { fetchImpl });
+  } catch (error) {
+    console.error(`feedback: ${error.stack || error}`);
+    return said(500, {
+      problem: "Something on our side would not take that. Nothing was recorded, "
+             + "so it is worth trying again.",
+    });
+  }
+
+  const silent = await announce(row, fetchImpl, new URL(request.url).origin);
+  if (silent) console.error(`feedback: ${row.id} recorded, not announced: ${silent}`);
+
+  return said(200, { done: THANKS });
 }

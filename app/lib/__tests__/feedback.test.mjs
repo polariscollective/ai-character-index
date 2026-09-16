@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   LIMITS, MAX_BEHAVIOURS, MAX_REQUEST_BYTES, PER_HOUR, VISIBILITIES,
-  announce, documentOf, feedbackProblems, normalise, record, resolvePublication,
+  announce, documentOf, feedbackProblems, handle, normalise, record, resolvePublication,
 } from "../feedback.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -73,9 +73,25 @@ test("an unbounded field is not a field", () => {
   const long = (key, size) => feedbackProblems(normalise({ ...GOOD, [key]: "x".repeat(size) }));
   assert.match(long("comment", LIMITS.comment + 1).join(" "), /comment is longer than 5000/);
   assert.match(long("locator", LIMITS.locator + 1).join(" "), /locator is longer than 500/);
+  assert.match(long("email", LIMITS.email + 1).join(" "), /address is longer than 200/);
   const named = feedbackProblems(normalise({
     ...GOOD, visibility: "attributed", display_name: "n".repeat(LIMITS.name + 1) }));
   assert.match(named.join(" "), /name to show is longer than 100/);
+});
+
+test("normalise(null) does not throw: a malformed body is not a crash", () => {
+  assert.doesNotThrow(() => normalise(null));
+  assert.deepEqual(normalise(null), normalise({}));
+  assert.deepEqual(normalise(undefined), normalise({}));
+  assert.deepEqual(normalise("not an object"), normalise({}));
+});
+
+test("normalise's visibility is either the string sent, or private: never a guess", () => {
+  for (const value of [undefined, "", null]) {
+    assert.equal(normalise({ ...GOOD, visibility: value }).visibility, "private", String(value));
+  }
+  assert.equal(normalise({ ...GOOD, visibility: "public" }).visibility, "public");
+  assert.equal(normalise({ ...GOOD, visibility: 42 }).visibility, "private");
 });
 
 test("the behaviours a paragraph carries are bounded too", () => {
@@ -199,10 +215,16 @@ test("an unreachable webhook is reported, not thrown", async () => {
 test("feedback cannot make the message ping the channel", async () => {
   process.env.SLACK_WEBHOOK_URL = "https://hooks.example/one";
   let sent;
-  await announce({ locator: "spec@1 > #a > ¶1", comment: "<!channel> read this",
-                   vote: "up", visibility: "private", submitter: "r@e.org", behaviours: [] },
-                 async (url, init) => { sent = JSON.parse(init.body); return { ok: true }; },
-                 "https://example.org");
+  await announce({
+    locator: "spec@1 > #a > <!channel>",
+    comment: "<!channel> read this",
+    vote: "<!channel>",
+    visibility: "private",
+    submitter: "<!channel>@example.org",
+    display_name: "<!channel>",
+    behaviours: [],
+  }, async (url, init) => { sent = JSON.parse(init.body); return { ok: true }; },
+     "https://example.org");
   const whole = JSON.stringify(sent);
   assert.ok(!whole.includes("<!channel>"), whole);
   assert.match(whole, /&lt;!channel&gt;/);
@@ -225,4 +247,94 @@ test("the message names the paragraph, the thumb, and where to read it", async (
   assert.match(whole, /https:\/\/example\.org\/admin\/feedback/);
   assert.equal(typeof sent.text, "string", "a notification, or the push is silent");
   delete process.env.SLACK_WEBHOOK_URL;
+});
+
+/* A request the way the platform hands one over. */
+const post = (body, headers = {}) => new Request("https://index.example/api/feedback", {
+  method: "POST",
+  headers: { "content-type": "application/json", ...headers },
+  body: typeof body === "string" ? body : JSON.stringify(body),
+});
+
+const answered = async (response) => ({ status: response.status, body: await response.json() });
+
+test("a good submission is recorded and thanked", async () => {
+  const { seen, fetchImpl } = spy(url => (url.includes("aci_publications")
+    ? [{ id: "3114dd65-c6f2-5cb3-bf98-af5b314381c3" }] : [{ id: "f1" }]));
+  const { status, body } = await answered(await handle(post(GOOD), { fetchImpl }));
+  assert.equal(status, 200);
+  assert.match(body.done, /Thank you/);
+  const write = seen.find(call => call.method === "POST" && call.url.includes("aci_feedback"));
+  assert.ok(write, JSON.stringify(seen.map(call => call.url)));
+  assert.equal(JSON.parse(write.body)[0].publication_id,
+               "3114dd65-c6f2-5cb3-bf98-af5b314381c3");
+});
+
+test("a refusal says everything that is wrong, and writes nothing", async () => {
+  const { seen, fetchImpl } = spy();
+  const { status, body } = await answered(
+    await handle(post({ ...GOOD, email: "" }), { fetchImpl }));
+  assert.equal(status, 400);
+  assert.match(body.problem, /your address is required/);
+  assert.ok(!seen.some(call => call.url.includes("aci_feedback") && call.method === "POST"));
+});
+
+test("the honeypot is answered exactly as an honest submission is, and stored nowhere", async () => {
+  const { seen, fetchImpl } = spy();
+  const { status, body } = await answered(
+    await handle(post({ ...GOOD, website: "https://buy.example" }), { fetchImpl }));
+  assert.equal(status, 200);
+  assert.match(body.done, /Thank you/);
+  assert.ok(!seen.some(call => call.method === "POST" && call.url.includes("aci_feedback")));
+});
+
+test("a body larger than the cap is refused before it is read", async () => {
+  let touched = false;
+  const fetchImpl = async () => { touched = true; return { ok: true, json: async () => [] }; };
+  const { status, body } = await answered(await handle(
+    post(GOOD, { "content-length": String(MAX_REQUEST_BYTES + 1) }), { fetchImpl }));
+  assert.equal(status, 413);
+  assert.match(body.problem, /larger than this form takes/);
+  assert.equal(touched, false, "nothing was asked of the database");
+});
+
+test("the thirty-first submission in an hour from one place is refused", async () => {
+  const many = Array.from({ length: PER_HOUR }, (_, i) => ({ id: `f${i}` }));
+  const { fetchImpl } = spy(url => (url.includes("aci_feedback") ? many : [{ id: "p" }]));
+  const { status, body } = await answered(await handle(post(GOOD), { fetchImpl }));
+  assert.equal(status, 429);
+  assert.match(body.problem, /as many as this form takes/);
+  assert.match(body.problem, /already sent are safe/);
+});
+
+test("a rate-limit read that fails must not refuse an honest submission", async () => {
+  let asked = 0;
+  const fetchImpl = async (url, init = {}) => {
+    asked += 1;
+    if (init.method === undefined && url.includes("aci_feedback")) throw new Error("no route");
+    return { ok: true, status: 200, text: async () => "", json: async () => [{ id: "f1" }] };
+  };
+  const { status } = await answered(await handle(post(GOOD), { fetchImpl }));
+  assert.equal(status, 200);
+  assert.ok(asked > 1);
+});
+
+test("a body that is not feedback is refused in a sentence", async () => {
+  const { fetchImpl } = spy();
+  const { status, body } = await answered(await handle(post("not json{"), { fetchImpl }));
+  assert.equal(status, 400);
+  assert.match(body.problem, /was not feedback/);
+});
+
+test("a database that will not take it says so, and does not claim success", async () => {
+  const fetchImpl = async (url, init = {}) => {
+    if (init.method === "POST" && url.includes("aci_feedback")) {
+      return { ok: false, status: 400, text: async () => "violates check constraint" };
+    }
+    return { ok: true, status: 200, text: async () => "", json: async () => [{ id: "p" }] };
+  };
+  const { status, body } = await answered(await handle(post(GOOD), { fetchImpl }));
+  assert.equal(status, 500);
+  assert.match(body.problem, /worth trying again/);
+  assert.equal(body.done, undefined);
 });
