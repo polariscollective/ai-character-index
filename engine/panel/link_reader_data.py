@@ -233,7 +233,20 @@ def reading_order(document_ids):
     return order
 
 
-def build(data, judge=None, order=None, arbitration=None):
+def comparison(summary):
+    """The behaviour-level text the reader shows, and nothing the page cannot use.
+
+    A run's summary.json also carries what it cost, how long it took and the
+    digest of the prompt that produced it. Those belong to the record, not to the
+    page: what the reader needs is the text and who wrote it."""
+    if not summary or not summary.get("text"):
+        return None
+    return {"behaviour": summary.get("behaviour"),
+            "writtenBy": summary.get("model"),
+            "text": summary["text"]}
+
+
+def build(data, judge=None, order=None, arbitration=None, summary=None):
     documents = sorted({d[side] for d in data["directions"]
                         for side in ("source", "target")})
     rows = by_locator(data, judge, arbitration)
@@ -249,6 +262,7 @@ def build(data, judge=None, order=None, arbitration=None):
         "judge": judge,
         "arbiter": ((arbitration or {}).get("arbiter")),
         "documents": documents,
+        "comparison": comparison(summary),
         "byLocator": rows,
     }
 
@@ -271,7 +285,9 @@ def main(argv=None):
     beside = Path(args.arbitration) if args.arbitration else \
         Path(args.links_json).with_name("arbitration.json")
     arbitration = json.loads(beside.read_text(encoding="utf-8")) if beside.exists() else None
-    payload = build(data, args.judge, reading_order(documents), arbitration)
+    written = Path(args.links_json).with_name("summary.json")
+    summary = json.loads(written.read_text(encoding="utf-8")) if written.exists() else None
+    payload = build(data, args.judge, reading_order(documents), arbitration, summary)
     out = Path(args.out)
     out.write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
     bubbles = sum(len(v) for v in payload["byLocator"].values())
@@ -280,6 +296,9 @@ def main(argv=None):
                   for link in links if link.get("settled"))
     print(f"  {len(payload['byLocator'])} paragraphs carry links, {bubbles} bubbles in all")
     print(f"  {settled} of them are an arbiter's verdict, {bubbles - settled} one judge's reading")
+    if payload["comparison"]:
+        print(f"  and a comparison of {len(payload['comparison']['text'])} characters, "
+              f"written by {payload['comparison']['writtenBy']}")
     return 0
 
 

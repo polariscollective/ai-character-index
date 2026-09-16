@@ -97,6 +97,9 @@ var elements = {
 var placeKeyNote = () => {};
 var comparePair = () => state.comparePair;
 var behaviourNotes = {};
+// The links the reader fetched, which carry the behaviour comparison the note
+// prints under the depths. Null here: this file checks the depths.
+var linkRows = null;
 var state = {};
 
 /* Without the guard every check that calls it fails by name, so the count this

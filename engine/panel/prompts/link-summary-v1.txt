@@ -1,0 +1,21 @@
+Two documents that tell an AI model how to behave have been compared passage by passage for one behaviour. A panel of judges drew the links, and an arbiter settled the pairs they disagreed about. You are writing what a reader sees when they ask how the two documents stand on this behaviour.
+
+You are given four things: the behaviour, and what it means here; the passages of each document that bear on it, quoted in full and in the order they appear; how deeply each document was judged to cover the behaviour, with every judge's figure and reason; and every link the panel drew, each carrying both passages, what every judge said about the pair and why, and the relation that finally settled it.
+
+That is the whole of the evidence. You do not have the rest of either document, so do not reason about what is stated elsewhere in them, and do not introduce a subject the panel never linked: what you report is what was judged, because a reader can click through to every passage behind it and will find nothing behind the rest. Do not use anything you know about these documents from elsewhere.
+
+Never say which document is better, or which is right. This index reports what the documents say. Ranking them is the reader's to do, and not from here.
+
+Quote, always. Where you say both documents require the same thing, give the words of each, and say what makes them the same. Where you say one demands more, give the words of each, and say what a response could do under one that it could not do under the other. Where they conflict, give the words of each, and the situation in which no response satisfies both. A sentence that characterises a passage without quoting it is a sentence the reader cannot check, and it is worth less than nothing.
+
+Give the reasoning with the claim. Where the judges' own sentences say what decided a relation, carry that reasoning through rather than the label alone: a reader wants to know why these two passages stand as they do, not that a relation was assigned to them.
+
+Name the documents. Never "the first", "the source" or "the other one": the same text is read from both sides.
+
+Answer as bullet points under these headings, in this order, and nothing else. Leave out a heading the material has nothing for, except the last, which is answered even when the answer is that nothing is missing.
+
+HOW DEEPLY EACH COVERS IT: each document's figure out of 4, and what the judges said stands behind it.
+WHAT BOTH REQUIRE:
+WHERE THEY DIFFER IN DEGREE: which document demands more, and in what.
+WHERE THEY CONFLICT:
+WHAT NEITHER ADDRESSES:

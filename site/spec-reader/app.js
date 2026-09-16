@@ -154,6 +154,68 @@ async function loadDocuments() {
  * unexpected label raises -- where does this behaviour stop -- which the reader
  * could not answer at all: the passage popover says what the judges decided,
  * and nothing said what they were asked. */
+/* The behaviour comparison, as elements.
+ *
+ * It answers in headings, bullets and bold, which is markdown, and it is the
+ * only text in this note a model wrote rather than a person: it is built as
+ * nodes so that nothing in it can become markup. Headings come back shouting,
+ * because capitals were the cheapest way to ask for them; the page does not
+ * shout, so they are put back into a sentence. */
+function comparisonNodes(text) {
+  const out = [];
+  let list = null;
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.trim();
+    if (!line) { list = null; continue; }
+
+    const heading = /^([A-Z][A-Z ’'-]{3,}):\s*(.*)$/.exec(line);
+    if (heading) {
+      list = null;
+      const head = document.createElement("h4");
+      const words = heading[1].trim().toLowerCase();
+      head.textContent = words.charAt(0).toUpperCase() + words.slice(1);
+      out.push(head);
+      if (heading[2]) {
+        const after = document.createElement("p");
+        withEmphasis(after, heading[2]);
+        out.push(after);
+      }
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    if (bullet) {
+      if (!list) { list = document.createElement("ul"); out.push(list); }
+      const item = document.createElement("li");
+      withEmphasis(item, bullet[1]);
+      list.append(item);
+      continue;
+    }
+
+    list = null;
+    const paragraph = document.createElement("p");
+    withEmphasis(paragraph, line);
+    out.push(paragraph);
+  }
+  return out;
+}
+
+/* **like this** becomes a strong element, and the asterisks go. The writer is
+ * asked to quote both documents, so most of what is emphasised here is a
+ * specification's own words, which is exactly what should stand out. */
+function withEmphasis(parent, text) {
+  String(text).split(/\*\*/).forEach((piece, index) => {
+    if (!piece) return;
+    if (index % 2) {
+      const strong = document.createElement("strong");
+      strong.textContent = piece;
+      parent.append(strong);
+    } else {
+      parent.append(document.createTextNode(piece));
+    }
+  });
+}
+
 function openBehaviourNote(button) {
   const note = elements.keyNote;
   if (!note || typeof note.showPopover !== "function") return;
@@ -202,7 +264,6 @@ function openBehaviourNote(button) {
   // description as the brief would claim a judge had read it.
   section("How the index describes it", entry.described);
   section("Where the construct stops", entry.boundary);
-  section("Where the definition comes from", entry.source);
 
   /* The depth figure beside the behaviour's name lives in a hover title, which a
    * keyboard user never reaches and a screen reader never hears: this section says
@@ -244,6 +305,16 @@ function openBehaviourNote(button) {
         body.append(judges);
       }
     });
+  }
+
+  /* Last, and only with two documents on screen: the comparison is written about
+   * a pair, and under a single document it would describe something the reader
+   * cannot see. It belongs to one behaviour, so it appears under that one. */
+  const written = state.comparing ? (linkRows?.comparison || null) : null;
+  if (written && written.behaviour === slug && written.text) {
+    const heading = document.createElement("h3");
+    heading.textContent = "How the two documents compare";
+    body.append(heading, ...comparisonNodes(written.text));
   }
 
   elements.keyNoteBody.replaceChildren(...body.childNodes);
@@ -3714,15 +3785,20 @@ elements.documentReader.addEventListener("click", event => {
  *
  * It only reads. No section is opened and nothing is scrolled, so reading past a
  * collapsed section does not unfold it. Scroll events do not bubble, so this is
- * captured on the way down rather than delegated on the way up. */
+ * captured on the way down rather than delegated on the way up.
+ *
+ * The element that scrolls is .document-scroll, which sits between the panel and
+ * the body. Asking the event for a .document-body is asking it to walk the wrong
+ * way -- closest goes up, and the body is below the scroller -- so the listener
+ * matched nothing and did nothing, quietly. */
 let countingFrame = 0;
 elements.documentReader.addEventListener("scroll", event => {
-  const body = event.target.closest?.(".document-body");
-  const panel = body?.closest(".document-panel");
+  const scroller = event.target.closest?.(".document-scroll");
+  const panel = scroller?.closest(".document-panel");
   if (!panel?._anchors?.length || countingFrame) return;
   countingFrame = requestAnimationFrame(() => {
     countingFrame = 0;
-    const middle = body.getBoundingClientRect().top + body.clientHeight / 2;
+    const middle = scroller.getBoundingClientRect().top + scroller.clientHeight / 2;
     let nearest = -1;
     let best = Infinity;
     panel._anchors.forEach((anchor, index) => {
