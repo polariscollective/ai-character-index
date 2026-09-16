@@ -108,6 +108,9 @@
   section.m p { font-size: 16px; line-height: 1.55; color: var(--ink); max-width: 66ch; margin-bottom: 14px; }
   /* The sentence that says what this section is for. */
   section.m p.lead { font-size: 17px; line-height: 1.6; }
+  /* The opening summary keeps the olive the page's standfirst used to carry, so
+     the first thing read looks like a standfirst rather than another paragraph. */
+  #tldr p.lead { color: var(--ink2); }
   section.m p:last-child { margin-bottom: 0; }
   section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
   section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
@@ -368,23 +371,32 @@
        replaced sat in the header, where a reader who wanted the gist had to read
        all of it to find out whether the rest was for them. -->
   <section class="m" id="tldr">
-    <h2>TLDR</h2>
+    <h2>TL;DR</h2>
     <p class="lead">AI labs publish long documents saying how their models should behave. This
-    index reads them one behaviour at a time, and shows every passage that bears on it, quoted
-    and with its exact place in the document. It is meant to stay current as labs reissue their
-    documents, to gain behaviours over time, and to grow into comparison: one lab&rsquo;s document
-    against another&rsquo;s, and one version of a document against the next. A next step is to
-    test how far each lab&rsquo;s models follow the document it published. Today the index reports
-    what the published documents say, not how the models behave.</p>
-    <p>Here is one thing it already shows, as of September 2026. Take not undermining human
-    oversight, which means a model should not resist the people trying to correct, pause or shut
-    it down. The OpenAI Model Spec changed on this point between its December 2025 version and
-    its August 2026 one: the earlier version required every grant of autonomy to include a
-    shutdown timer, and the later version asks instead for an ending condition, with a time limit
-    called a best practice. Claude&rsquo;s Constitution, read for the same behaviour, sets out
-    rules and works through scenarios showing what the model should do. Those are differences
-    between documents, not a verdict on any lab, and you can read every passage behind them in the
-    <a href="/spec-reader/?behavior=not-undermining-human-oversight">spec reader</a>.</p>
+    index reads them one behaviour at a time and shows every passage that bears on it, quoted,
+    with its exact place in the document. As of September 2026 it reports what those documents
+    say, not how the models behave.</p>
+    <p>Say you want everything the OpenAI Model Spec says about avoiding a concentration of
+    power. You can read those passages together, see which ones define the behaviour and which
+    only touch on it, and put them side by side with what another lab&rsquo;s document says.
+    <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">Open that in the
+    spec reader</a>.</p>
+  </section>
+
+  <!-- What the index is for next, as intentions rather than promises: each line
+       is work nobody has done yet, and the page says so before listing them. -->
+  <section class="m" id="next-steps">
+    <h2>Next steps</h2>
+    <p class="lead">None of this exists yet. It is where the index is meant to go.</p>
+    <ul>
+      <li>Compare documents in depth: where two labs agree, where they contradict each other,
+      and what only one of them says.</li>
+      <li>Follow one document as it changes: a change log from version to version, behaviour by
+      behaviour.</li>
+      <li>Test adherence: how far a lab&rsquo;s models follow the document that lab published.</li>
+      <li>Draw an ideal document from the union of what every lab has written, and measure how far
+      each lab sits from it, including labs that have published nothing.</li>
+    </ul>
   </section>
 
   <!-- The setup lives on the MCP page, all of it. What belongs here is why a
