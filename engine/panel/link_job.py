@@ -115,6 +115,19 @@ def one_call(store, call, registry, versions, passages_for, retained_for,
     system, user = link_call.compose(
         call["behaviour_slug"], registry, sources, targets,
         compose_links.document_id(source), compose_links.document_id(target))
+    # A call whose links are already stored has been answered: a death between
+    # the insert and the PATCH that marks it done leaves exactly that. The
+    # insert is a single chunk, so any row for this call means the whole set
+    # landed. Finish it rather than paying a frontier model to read a whole
+    # document again, which is the check batch_job makes for the same reason.
+    if store.select("aci_links", {"call_id": f"eq.{call['id']}"}):
+        store.update("aci_link_calls", {"id": call["id"]},
+                     {"status": "done", "error": None,
+                      "finished_at": batch_job.now()})
+        with lock:
+            report["done"] += 1
+        return
+
     provider, model_id = h.resolve(call["model"], config)
 
     try:

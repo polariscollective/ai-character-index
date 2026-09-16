@@ -48,7 +48,7 @@ that themselves.
 2. Five relations, each defined by a test a judge can apply: would a response
    that respects one passage respect the other.
 3. Sources are chosen by behaviour, targets are not. The source passages of a
-   call are a cell's defining and core passages; the target is the whole of the
+   call are a cell's reader-visible passages; the target is the whole of the
    other document.
 4. Both directions. A passage of B with no counterpart in A is only discoverable
    from B's side.
@@ -203,7 +203,7 @@ the implementation plan has to order the two.
 
 One call is one behaviour, one source document, one target document, one judge.
 
-- **The sources** are the cell's defining and core passages, computed by
+- **The sources** are the cell's reader-visible passages, computed by
   `bands.shown_by_default` from the cell's judgements, exactly as the depth call
   chooses what it grades. These are the passages the reader shows by default, so
   the links are about what the index displays.
@@ -314,7 +314,7 @@ question.
 
 `honesty-and-non-deception`, the Anthropic constitution `@2026-01-20` against the
 OpenAI Model Spec `@2026-08-18`, both directions, three judges: six calls. The
-cell holds 16 defining and core passages on the constitution and 21 on the model
+cell holds 16 reader-visible passages on the constitution and 21 on the model
 spec, and both documents are judged at depth 3.7, the deepest either of them
 reaches for any behaviour. The
 target documents are about 46,000 and 69,000 tokens, so the run costs two to
@@ -351,7 +351,7 @@ Test first, as the repository does.
 - **The parser**: a line with a target, a line with `none`, a line wrapped in
   markdown, a relation outside the vocabulary, a force outside it, an unknown
   source number, a rationale containing a colon, and the completeness floor.
-- **Composition**: the sources are exactly the cell's defining and core passages
+- **Composition**: the sources are exactly the cell's reader-visible passages
   against a fixture, the target is the whole document numbered, the price, `--go`
   writing the three tables, and the refusal of a cell with nothing retained.
 - **The job**, with an injected `call_model` as `test_batch_job.py` has: a run

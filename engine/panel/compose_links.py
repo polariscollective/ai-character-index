@@ -62,11 +62,14 @@ def _newest_run_of_cell(calls):
 
 
 def retained_passages(store, slug, version, passages_for=None):
-    """The defining and core passages of a cell, as the reader shows them.
+    """The passages of a cell a reader sees before touching a toggle.
 
     The same arithmetic the depth call grades on (bands.shown_by_default), so a
     link is about what the index displays rather than about everything a sweep
-    surfaced.
+    surfaced. That is every banded passage, defining, core and related alike:
+    related is drawn thinner on the page, not hidden. Deliberately not a fixed
+    pair of bands, so that this follows the reader if the reader moves again, as
+    it did on 16 September 2026 when related became visible by default.
     """
     passages_for = passages_for or h.passages
     calls = _newest_run_of_cell(

@@ -4,7 +4,7 @@
 
 **Goal:** Let the index say, for one behaviour and two documents, which passages say the same thing, which is stricter, where they diverge, where they cannot both be obeyed, and where one document is silent.
 
-**Architecture:** A link run mirrors the judging run the repository already has. One call is one behaviour, one source document, one target document, one judge: it is given the source document's defining and core passages for that cell and the whole of the target document, and answers one line per link. Rows land in three new tables. What the panel asserts from three judges is derived at read time, never stored, so a threshold can be redrawn without paying for a new run.
+**Architecture:** A link run mirrors the judging run the repository already has. One call is one behaviour, one source document, one target document, one judge: it is given the passages of the source document that a reader sees by default for that cell, and the whole of the target document, and answers one line per link. Rows land in three new tables. What the panel asserts from three judges is derived at read time, never stored, so a threshold can be redrawn without paying for a new run.
 
 **Tech Stack:** Python 3 standard library only (no packages, as the whole engine is), PostgREST through `engine/store.py`, models through OpenRouter via `harness.resolve`, tests with `unittest`.
 
@@ -876,11 +876,14 @@ def _newest_run_of_cell(calls):
 
 
 def retained_passages(store, slug, version, passages_for=None):
-    """The defining and core passages of a cell, as the reader shows them.
+    """The passages of a cell a reader sees before touching a toggle.
 
     The same arithmetic the depth call grades on (bands.shown_by_default), so a
     link is about what the index displays rather than about everything a sweep
-    surfaced.
+    surfaced. That is every banded passage, defining, core and related alike:
+    related is drawn thinner on the page, not hidden. Deliberately not a fixed
+    pair of bands, so that this follows the reader if the reader moves again, as
+    it did on 16 September 2026 when related became visible by default.
     """
     passages_for = passages_for or h.passages
     calls = _newest_run_of_cell(

@@ -93,6 +93,14 @@ def report(store, run_id, passages_for=None, retained_for=None):
             "source": compose_links.document_id(source),
             "target": compose_links.document_id(target),
             "judges": sorted(call["model"] for call in cell),
+            # What each seat actually did. Without this a reader cannot tell a
+            # panel that disagreed from a panel that was never heard: a cell
+            # whose judges all failed renders exactly like a cell they all
+            # contested, and the first run of this feature was the second kind
+            # read as the first.
+            "calls": [{"model": call["model"], "status": call["status"],
+                       "error": (call.get("error") or "")[:200]}
+                      for call in sorted(cell, key=lambda c: c["model"])],
             "counts": counts,
             "agreement": {"sources": len(sources), "unanimous": unanimous},
             "sources": sources,
@@ -111,8 +119,10 @@ def render(data):
     then every passage with what the panel made of it."""
     out = [f"# Link run {data['run']['id']}", ""]
     run = data["run"]
+    estimated, cost = run.get("estimated_usd"), run.get("cost_usd")
     out.append(f"Panel: {', '.join(run['panel'])}. Status: {run['status']}. "
-               f"Estimated ${run.get('estimated_usd')}, cost ${run.get('cost_usd')}.")
+               + (f"Estimated ${estimated}. " if estimated is not None else "")
+               + (f"Cost ${cost}." if cost is not None else "No cost recorded."))
     out.append("")
     for direction in data["directions"]:
         counts = direction["counts"]
@@ -125,6 +135,15 @@ def render(data):
                    f"unanimous on {direction['agreement']['unanimous']} of "
                    f"{direction['agreement']['sources']}.")
         out.append("")
+        silent_seats = [c for c in direction.get("calls", []) if c["status"] != "done"]
+        if silent_seats:
+            out.append("Not every judge answered: "
+                       + "; ".join(f"{c['model']} ({c['status']}) {c['error']}".strip()
+                                   for c in silent_seats)
+                       + ". The counts above are over the judges that did answer, so a "
+                         "source below reads contested because the panel was not heard, "
+                         "not because it disagreed. Nothing here can be published.")
+            out.append("")
         for source in direction["sources"]:
             relation = source["relation"] or "unsettled"
             out.append(f"### [{source['state']}, {relation}] {source['locator']}")

@@ -504,6 +504,53 @@ now hold different ones. Its stored bytes still match their own digests and its
 passages still resolve; only the rebuild check fails, and it fails for a reason
 the record explains.
 
+### Two documents can be compared passage by passage, and one seat could not do it
+
+The index said how deeply one document covers a behaviour, and nothing about how
+two documents relate. A link says that: one passage of one document against one
+passage of another, with a relation decided by a test a judge can apply, would a
+response that respects the first also respect the second. The five relations are
+`same`, `stricter_source`, `stricter_target`, `nuance` and `contradiction`, and a
+sixth row, `absent`, is a judge saying the other document has nothing on this
+passage. Each side also records who may lift its rule, in one vocabulary rather
+than each document's own, because the same norm at root level and as a default
+are not the same claim.
+
+The sources of a call are the passages a reader sees by default for a cell; the
+target is the whole of the other document, in both directions. That is what lets
+a silence be asserted at all, and what finds a counterpart filed under another
+behaviour: in the first run, 23 of the 51 target passages cited were outside the
+cell's own retained set.
+
+What the panel asserts is derived at read time and never stored, the way the
+reader's bands are derived from verdicts. A link needs two judges of three, a
+contradiction needs two, and a silence needs all three. The asymmetry is
+deliberate: "this document says nothing about that" is the strongest claim the
+comparison makes, and one judge finding a counterpart is enough to withhold it.
+
+**The finding, and it is not fixed.** In the first run `deepseek` could not
+answer at this length: 30 of 49 source passages, then 47 of 49, then 13 of 29,
+each time stopping of its own accord under a 32,768 token cap. The completeness
+floor refused all three replies, because a half-answered reply stored as links is
+a page of invented absences. So the run holds two judges of three, which can
+assert links and can never assert a silence. Nothing from it is publishable, and
+what to do about the seat is separate work.
+
+`fable` failed the same run first time with HTTP 401 against Anthropic's own API.
+That is not a defect: `harness.resolve` prefers a native route whenever that
+provider's key is in the environment, the repository's `.env` carries a stale
+`ANTHROPIC_API_KEY`, and the container carries only OpenRouter's. Running the job
+from a developer machine means unsetting it.
+
+The design, the plan and the first run's answers are in
+`docs/superpowers/specs/2026-09-16-passage-links-between-model-specs-design.md`,
+`docs/superpowers/plans/2026-09-16-passage-links-between-model-specs.md` and
+`docs/superpowers/specs/2026-09-16-passage-links-first-run.md`. The three tables
+are `aci_link_runs`, `aci_link_calls` and `aci_links`, migrated in
+`polaris-supabase`. Publication, the reader, the MCP server and any ranking are
+not built: a ranking would count paragraphs rather than ideas, and the first run
+is what the formula should be designed against.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
