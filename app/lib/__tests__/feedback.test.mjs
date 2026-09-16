@@ -308,15 +308,17 @@ test("the thirty-first submission in an hour from one place is refused", async (
 });
 
 test("a rate-limit read that fails must not refuse an honest submission", async () => {
-  let asked = 0;
+  let rateLimitThrows = 0;
   const fetchImpl = async (url, init = {}) => {
-    asked += 1;
-    if (init.method === undefined && url.includes("aci_feedback")) throw new Error("no route");
+    if (init.method === "GET" && url.includes("aci_feedback")) {
+      rateLimitThrows += 1;
+      throw new Error("no route");
+    }
     return { ok: true, status: 200, text: async () => "", json: async () => [{ id: "f1" }] };
   };
   const { status } = await answered(await handle(post(GOOD), { fetchImpl }));
-  assert.equal(status, 200);
-  assert.ok(asked > 1);
+  assert.equal(status, 200, "submission succeeds even when rate-limit read fails");
+  assert.equal(rateLimitThrows, 1, "the rate-limit read threw exactly once");
 });
 
 test("a body that is not feedback is refused in a sentence", async () => {
