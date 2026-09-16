@@ -157,8 +157,8 @@ def by_locator(data, judge=None, arbitration=None):
 
     Where an arbiter settled a pair, its relation is the one shown and its
     sentence is the explanation; a pair it called `none` carries no bubble at
-    all. A settled pair is shown whichever judge found it, including one the
-    `judge` filter would otherwise hide: it is no longer that judge's opinion.
+    all. The arbiter corrects the judge on screen and never adds to it: a pair
+    this judge did not draw does not appear, however well settled it is.
     """
     verdicts = verdicts_by_pair(arbitration)
     document_ids = {d[side] for d in data["directions"] for side in ("source", "target")}
@@ -168,8 +168,20 @@ def by_locator(data, judge=None, arbitration=None):
         for source in direction["sources"]:
             for target in source["targets"]:
                 key = tuple(sorted((source["locator"], target["locator"])))
-                if pairs.get(key, {}).get("settled"):
+                if key in pairs:
                     continue
+                relations = target.get("judge_relations") or {}
+                if not relations:
+                    relations = {j: target["relation"] for j in target.get("judges", [])}
+                if judge is not None:
+                    relations = {seat: r for seat, r in relations.items() if seat == judge}
+                relations = {seat: r for seat, r in relations.items() if r}
+                # The judge's own pairs, and nobody else's. An arbiter corrects
+                # what this judge said; it does not add links this judge never
+                # drew, however well settled they are elsewhere.
+                if not relations:
+                    continue
+
                 verdict = verdicts.get(key)
                 if verdict:
                     shown, trace = explain(verdict, source["locator"],
@@ -179,31 +191,16 @@ def by_locator(data, judge=None, arbitration=None):
                                   "settled": True,
                                   "judge": verdict["settled"]["arbiter"]}
                     continue
-                relations = target.get("judge_relations") or {}
-                if not relations:
-                    relations = {j: target["relation"] for j in target.get("judges", [])}
-                for seat, relation in relations.items():
-                    if judge is not None and seat != judge:
-                        continue
-                    if not relation or key in pairs:
-                        continue
-                    pairs[key] = {
-                        "named": named_relation(relation, source["locator"],
-                                                target["locator"]),
-                        "comment": in_plain_words(
-                            say_which((target["rationales"] or {}).get(seat, ""),
-                                      source["locator"], target["locator"]), document_ids),
-                        "trace": "", "settled": False, "judge": seat,
-                    }
 
-    # Settled pairs no direction of this run reached: the judge filter hid them.
-    for key, verdict in verdicts.items():
-        if key in pairs:
-            continue
-        shown, trace = explain(verdict, key[0], key[1], document_ids)
-        pairs[key] = {"named": verdict["settled"]["relation"], "comment": shown,
-                      "trace": trace, "settled": True,
-                      "judge": verdict["settled"]["arbiter"]}
+                seat, relation = next(iter(relations.items()))
+                pairs[key] = {
+                    "named": named_relation(relation, source["locator"],
+                                            target["locator"]),
+                    "comment": in_plain_words(
+                        say_which((target["rationales"] or {}).get(seat, ""),
+                                  source["locator"], target["locator"]), document_ids),
+                    "trace": "", "settled": False, "judge": seat,
+                }
 
     out = {}
     for (left, right), entry in pairs.items():
