@@ -2485,16 +2485,85 @@ body.no-behaviours .sidebar-export { display: none; }
   margin-top: 6px;
 }
 .link-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 6px 1px 9px;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+}
+.link-goto {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font-family: var(--ui);
   font-size: 11px;
   line-height: 1.4;
-  padding: 1px 9px;
-  border: 1px solid var(--faint);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ink);
   cursor: pointer;
 }
+/* The reader's own "why" affordance, borrowed rather than reinvented: the same
+   circle, the same character, the same tooltip mechanism as .passage-why. It
+   travels AND explains, so the sentence is open where the reader is standing
+   once the other panel has moved. */
+.link-why {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-family: var(--ui);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .55;
+}
+.link-why:hover,
+.link-why:focus-visible,
+.link-why[aria-expanded="true"] { opacity: 1; }
+.link-why::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 5px);
+  right: 0;
+  padding: 3px 7px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.link-why:hover::after,
+.link-why:focus-visible::after { opacity: 1; }
+
+/* The judge's sentence, disclosed under the bubbles. A note rather than a
+   tooltip: it can be read twice, copied, and kept open beside the paragraph it
+   is about. */
+.link-note {
+  display: block;
+  margin: 4px 0 7px;
+  padding: 6px 9px;
+  border-left: 2px solid var(--faint);
+  border-radius: 0 3px 3px 0;
+  background: rgb(0 0 0 / .03);
+  font-family: var(--ui);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.link-note[hidden] { display: none; }
 .link-bubble[data-relation="contradiction"] { border-color: var(--fail); color: var(--fail); }
 .link-bubble[data-relation="nuance"] { border-color: var(--adjacent-mark); }
 .link-bubble[data-relation="stricter_source"],

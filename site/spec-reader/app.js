@@ -2599,7 +2599,7 @@ function clearHighlights(panel) {
   // A paragraph that is about to become a passage gets its icons in its head.
   panel._blockCopy?.parentElement?.classList.remove("holds-copy", "touched");
   panel._blockCopy?.remove();
-  body.querySelectorAll(".passage-head, .passage-rationale, .link-bubbles")
+  body.querySelectorAll(".passage-head, .passage-rationale, .link-bubbles, .link-note")
     .forEach(part => part.remove());
   body.querySelectorAll(".link-target").forEach(block => block.classList.remove("link-target"));
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
@@ -4049,11 +4049,29 @@ function linkBubbles(block) {
   const found = (block.dataset.locators || "").split("\n")
     .flatMap(locator => rows[locator] || []);
   if (!found.length) return "";
-  const bubbles = found.map(link => `<button type="button" class="link-bubble" `
-    + `data-relation="${escapeHTML(link.relation)}" data-goto="${escapeHTML(link.to)}" `
-    + `title="${escapeHTML(link.judge ? `${link.judge}: ${link.comment}` : link.comment)}">`
-    + `${escapeHTML(LINK_WORDS[link.relation] || link.relation)}</button>`).join("");
-  return `<span class="link-bubbles">${bubbles}</span>`;
+  /* Two buttons in one pill, and the pill is a span because a button cannot
+   * contain a button. The word goes to the paragraph; the "?" goes to it AND
+   * opens the sentence, which is what a reader wants when a relation surprises
+   * them. The sentence is a disclosed note rather than a title, for the reason
+   * the passage rationale is one: a tooltip cannot be read twice, copied, or
+   * kept open beside the paragraph it is about. */
+  const id = block.dataset.passageId || "link";
+  const notes = [];
+  const bubbles = found.map((link, index) => {
+    const noteId = `${id}-link-${index}`;
+    const said = link.judge ? `${link.judge}: ${link.comment}` : (link.comment || "");
+    notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
+      + `${escapeHTML(said)}</span>`);
+    const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
+    const tip = "Why does the judge say that?";
+    return `<span class="link-bubble" data-relation="${escapeHTML(link.relation)}">`
+      + `<button type="button" class="link-goto" data-goto="${escapeHTML(link.to)}">${word}</button>`
+      + `<button type="button" class="link-why" aria-expanded="false" `
+      + `aria-controls="${escapeHTML(noteId)}" data-goto="${escapeHTML(link.to)}" `
+      + `aria-label="${tip}" data-tip="${tip}">?</button>`
+      + `</span>`;
+  }).join("");
+  return `<span class="link-bubbles">${bubbles}</span>${notes.join("")}`;
 }
 
 /* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
@@ -4062,12 +4080,25 @@ function linkBubbles(block) {
  * this is for; with one panel open it scrolls within it, which is the honest
  * fallback rather than doing nothing. */
 elements.documentReader?.addEventListener("click", event => {
-  const bubble = event.target.closest(".link-bubble");
-  if (!bubble) return;
-  const mine = bubble.closest(".document-panel");
+  const button = event.target.closest(".link-goto, .link-why");
+  if (!button) return;
+
+  // The "?" explains as well as travels: the sentence opens where the reader is
+  // standing, so it is still there once the other panel has moved.
+  if (button.classList.contains("link-why")) {
+    const note = document.getElementById(button.getAttribute("aria-controls"));
+    if (note) {
+      const open = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!open));
+      note.hidden = open;
+      requestAnimationFrame(updateRails);
+    }
+  }
+
+  const mine = button.closest(".document-panel");
   const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
   const other = panels.find(panel => panel !== mine) || mine;
-  const target = other?.querySelector(`[data-locator="${CSS.escape(bubble.dataset.goto)}"]`);
+  const target = other?.querySelector(`[data-locator="${CSS.escape(button.dataset.goto)}"]`);
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "center" });
   target.classList.remove("link-target");
