@@ -399,6 +399,49 @@ the declared list at all. `publish.py` refuses to build a publication when a
 selected cell carries a recorded substitution the panel does not declare for
 that seat, naming the cell and the declared order.
 
+### The depth judge was shown less of the document than the reader
+
+**Found by asking why one cell scored 1.0. Fixed, and the depths it spoiled were
+given again.**
+
+A depth call never reads the document. It reads the passages the panel cited, and
+`bands.shown_by_default` chose them: it returned the defining and core bands. The
+reader's `DEFAULT_BANDS` has been defining, core and related since related was
+made visible by default -- drawn thinner rather than hidden behind a toggle -- so
+the two lines fell out of step, and the figure printed under a behaviour was read
+from less evidence than the page under it shows. Both sides said in a docstring
+that they drew the line the reader draws, which is what the line had stopped
+being.
+
+What it published: `not-undermining-human-oversight` on
+`openai--model-spec@2026-08-18` was 1.0, unanimously. `#scope_of_autonomy ¶14`
+scored 6 on the 2025-12 version of that document and 5 on the 2026-08 one, because
+one judge moved it from 3 to 2 after "shutdown timer" became "ending condition".
+Six is the core cut on a three-judge panel, so the passage left the evidence and
+the judge was handed a single bullet, and three judges correctly read one bullet
+as depth 1. The rule itself is byte-identical across the two versions.
+`objectivity-on-contested-questions` (five cited passages down to one) and
+`helpfulness` (three down to two) had the same shape, milder.
+
+`shown_by_default` returns every banded passage now. `bands.py` carries
+`DEFAULT_BANDS` beside `TIERS`, and `test_bands.py` reads the reader's own
+`DEFAULT_BANDS` line out of `site/spec-reader/app.js` and holds the Python to it,
+so a copy cannot drift silently again. The prompt says the passages are every one
+the panel cited and not a shortlist of the strongest, and
+`methodology/spec-coverage-depth-rubric.md` says plainly what the judge is shown
+and that a depth is a reading of the panel's citations rather than of the whole
+document. `prompts/depth-v1.txt` changed with it, from sha `20df8c4d` to
+`bd096eba`; a run records the depth prompt's digest, so the wording cannot change
+quietly.
+
+The 156 depth calls of the three runs the public publication selects from
+(`aef5e906`, `c2f1b34a`, `a2bdadba`) were given again in place, under the new
+prompt, on 16 September 2026. Nothing was deleted, no run was composed, and no
+judgement or passage call was touched: the depth rows went back to `pending`,
+which is the only thing `batch_job.pending_depths` reads, and the job gave them
+again. The runs' recorded cost moved with them, because a run's cost is summed
+from its calls and its depths.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

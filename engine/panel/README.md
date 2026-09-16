@@ -22,9 +22,10 @@ provider's key is present.
   that parses for fewer than 98% of the passages writes no judgement.
 - `depth_call.py`: one depth call, a 0 to 4 depth per judge per cell on
   `methodology/spec-coverage-depth-rubric.md`, from the passages a reader sees by
-  default (`prompts/depth-v1.txt`).
+  default -- defining, core and related (`prompts/depth-v1.txt`). The judge never
+  sees the document, so a depth reads the panel's citations, not the text.
 - `bands.py`: the reader's tier bands in Python, held to `app/lib/bands.mjs` by
-  `test_bands.py`.
+  `test_bands.py`, which also holds its `DEFAULT_BANDS` to the reader's own.
 - `compose_run.py`: writes a run's calls, priced first. Nothing is written
   without `--go`; `--again` judges cells that are already covered.
 - `batch_job.py`: executes a run's pending calls, then its depths. There is no
