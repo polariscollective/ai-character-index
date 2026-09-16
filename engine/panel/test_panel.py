@@ -433,7 +433,7 @@ class TestAppJSDepth(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("24 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("45 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestAppJSCiteBlocks(unittest.TestCase):
