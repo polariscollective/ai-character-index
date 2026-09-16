@@ -21,6 +21,20 @@ def absent(source, rationale="nothing found."):
 
 
 class AssertionsTest(unittest.TestCase):
+    def test_each_judge_keeps_the_relation_it_gave(self):
+        """The assertion is a summary, and what it summarises is a finding of its
+        own: one judge reading a contradiction where another reads a stricter
+        rule says something about the two passages that "unsettled" does not."""
+        out = link_consensus.assertions({
+            "a": [link("s1", "t1", relation="contradiction")],
+            "b": [link("s1", "t1", relation="stricter_source")],
+            "c": [link("s1", "t1", relation="stricter_source")]})
+        target = out["s1"]["targets"][0]
+        self.assertEqual(target["relation"], "stricter_source")
+        self.assertEqual(target["judge_relations"],
+                         {"a": "contradiction", "b": "stricter_source",
+                          "c": "stricter_source"})
+
     def test_two_judges_naming_a_counterpart_assert_a_link(self):
         out = link_consensus.assertions({
             "a": [link("s1", "t1")], "b": [link("s1", "t1")], "c": [absent("s1")]})

@@ -88,7 +88,8 @@ buttons.forEach(b => b.addEventListener("click", () => {
   const on = [...buttons].filter(x => x.getAttribute("aria-pressed") === "true")
                          .map(x => x.dataset.filter);
   document.querySelectorAll(".link").forEach(el => {
-    el.classList.toggle("hidden", on.length > 0 && !on.includes(el.dataset.relation));
+    const said = (el.dataset.said || el.dataset.relation || "").split(" ");
+    el.classList.toggle("hidden", on.length > 0 && !on.some(r => said.includes(r)));
   });
   document.querySelectorAll("section").forEach(s => {
     const any = [...s.querySelectorAll(".link")].some(el => !el.classList.contains("hidden"));
@@ -102,14 +103,32 @@ def e(text):
     return html.escape(str(text if text is not None else ""))
 
 
+def said_by_judges(target):
+    """Every relation any judge gave this pair, gravest first.
+
+    Falls back to the asserted relation for a report written before judges'
+    own relations were carried through."""
+    said = list((target.get("judge_relations") or {}).values()) or [target["relation"]]
+    return sorted({s for s in said if s}, key=lambda s: ORDER.index(s) if s in ORDER else len(ORDER))
+
+
 def links_of(direction):
-    """Every (source, target) pair of a direction, most divergent first."""
+    """Every (source, target) pair of a direction, in the order worth reading.
+
+    Disagreement first, then severity. Two judges who part on the same pair of
+    passages is the most informative row a run produces, and the panel's own
+    summary is precisely what hides it."""
     pairs = []
     for source in direction["sources"]:
         for target in source["targets"]:
             pairs.append((source, target))
-    return sorted(pairs, key=lambda p: ORDER.index(p[1]["relation"])
-                  if p[1]["relation"] in ORDER else len(ORDER))
+
+    def key(pair):
+        said = said_by_judges(pair[1])
+        gravest = ORDER.index(said[0]) if said and said[0] in ORDER else len(ORDER)
+        return (0 if len(said) > 1 else 1, gravest)
+
+    return sorted(pairs, key=key)
 
 
 def render(data):
@@ -141,11 +160,23 @@ def render(data):
                    f"{len(pairs)} links, {e(counts['contradictions'])} contradictions the panel "
                    f"asserts, {e(counts['silent'])} silences</p>")
         for source, target in pairs:
+            said = said_by_judges(target)
             relation = target["relation"] or "unsettled"
-            out.append(f"<div class='link' data-relation='{e(relation)}'>")
-            out.append(f"<span class='relation'>{e(relation)}</span> "
-                       f"<span class='meta'>{e(WORDS.get(target['relation'], ''))} &middot; "
-                       f"{e(', '.join(target['judges']))}</span>")
+            # Coloured and filtered by the gravest relation ANY judge gave, not by
+            # the one the panel asserts. A contradiction one judge saw is what a
+            # reader is looking for; the panel's summary is what buries it.
+            out.append(f"<div class='link' data-relation='{e(said[0] if said else relation)}' "
+                       f"data-said='{e(' '.join(said))}'>")
+            per_judge = ", ".join(f"{judge}: {said_relation}" for judge, said_relation
+                                  in (target.get("judge_relations") or {}).items())
+            if len(said) > 1:
+                out.append("<span class='relation'>the judges part</span> ")
+                out.append(f"<span class='meta'>{e(per_judge)} &middot; "
+                           f"the panel asserts {e(relation)}</span>")
+            else:
+                out.append(f"<span class='relation'>{e(relation)}</span> ")
+                out.append(f"<span class='meta'>{e(WORDS.get(target['relation'], ''))} "
+                           f"&middot; {e(per_judge or ', '.join(target['judges']))}</span>")
             out.append("<div class='pair'>")
             for locator, quote, force in (
                     (source["locator"], source["quote"], source["source_force"]),

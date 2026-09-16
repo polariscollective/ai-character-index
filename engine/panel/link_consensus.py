@@ -87,6 +87,14 @@ def assertions(rows_by_judge):
             "targets": [{
                 "locator": locator,
                 "relation": _agreed([row["relation"] for row in named.values()]),
+                # What each judge said, beside what the panel asserts from it. The
+                # assertion is a summary and drops the most interesting case there
+                # is: one judge reading a contradiction where another reads a
+                # stricter rule. That disagreement is a finding about the two
+                # passages, and a reader who only sees "unsettled" cannot tell it
+                # from a pair nobody looked at closely.
+                "judge_relations": {judge: row["relation"]
+                                    for judge, row in sorted(named.items())},
                 "target_force": _agreed([row["target_force"] for row in named.values()],
                                         fallback="unstated"),
                 "judges": sorted(named),
