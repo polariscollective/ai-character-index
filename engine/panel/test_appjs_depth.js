@@ -65,7 +65,13 @@ class FakeElement {
   constructor(tag) { this.tag = tag; this.childNodes = []; this.textContent = ""; this.className = ""; }
   append(...nodes) { this.childNodes.push(...nodes); }
 }
-var document = { createElement: tag => new FakeElement(tag) };
+// createTextNode too: the behaviour comparison is the one part of the note built
+// from a model's words, so it is assembled as nodes rather than as markup, and
+// its emphasis lands as text nodes between strong elements.
+var document = {
+  createElement: tag => new FakeElement(tag),
+  createTextNode: text => ({ tag: "#text", textContent: text, childNodes: [] }),
+};
 var cells = [];
 var noteShown = false;
 /* The depth note is never opened here -- what it prints is checked through the
@@ -125,6 +131,10 @@ eval(extractFn("function depthSpoken(depths) {"));
 eval(extractFn("function payloadBehaviours() {"));
 eval(extractFn("function visibleDocuments() {"));
 eval(extractFn("function updateBehaviourDepths() {"));
+// The two the note reaches for to print the behaviour comparison under the
+// depths. Extracted before their caller, which is the only thing that uses them.
+eval(extractFn("function comparisonNodes(text) {"));
+eval(extractFn("function withEmphasis(parent, text) {"));
 eval(extractFn("function openBehaviourNote(button) {"));
 
 let checks = 0, failures = 0;
@@ -484,6 +494,31 @@ check("on one document it opens at the width of the column it hangs off",
         note("helpfulness");
         return elements.keyNote.classes.has("key-note-wide");
       }, false);
+
+/* ---- the behaviour comparison, under everything else ---- */
+function withComparison(behaviour, text, { comparing = true } = {}) {
+  show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
+  linkRows = { comparison: { behaviour, writtenBy: "sol", text } };
+  note("helpfulness");
+  const tail = elements.keyNoteBody.children.slice(-3)
+    .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""));
+  linkRows = null;
+  return tail;
+}
+
+check("comparing, the comparison is the last thing in the note",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no."),
+      ["h3 How the two documents compare", "h4 What both require", "ul"]);
+check("a comparison written about another behaviour is not shown under this one",
+      () => withComparison("no-sycophancy",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.")
+              .every(node => !node.includes("How the two documents compare")), true);
+check("on one document there is no comparison to make",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { comparing: false })
+              .every(node => !node.includes("How the two documents compare")), true);
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);
