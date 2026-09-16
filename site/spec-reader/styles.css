@@ -1702,6 +1702,16 @@ body.sidebar-collapsed .sidebar-resizer {
   .passage.current .passage-copy,
   .passage.touched .passage-copy { opacity: .55; }
 }
+/* The tick a successful copy shows for two seconds (markCopied, in app.js). Full
+   opacity and --accent, whether or not the pointer is still over the button: a
+   plain .passage-copy.copied would be as specific as .passage-copy itself and lose
+   to .passage .passage-copy:hover above it, dimming the tick back to .55 under a
+   pointer that has not moved since the click. Matching the same .passage ancestor
+   here keeps this rule at least as specific, and it is written after what it must
+   beat. */
+.passage .passage-copy.copied,
+.passage .passage-copy.copied:hover,
+.passage .passage-copy.copied:focus-visible { opacity: 1; color: var(--accent); }
 /* What a refused clipboard selects instead of copying the link. */
 .passage-link {
   display: block;
@@ -1735,6 +1745,14 @@ body.sidebar-collapsed .sidebar-resizer {
   .holds-copy.touched > .block-copy .passage-copy,
   .linked-block > .block-copy .passage-copy { opacity: .55; }
 }
+/* The same tick as the passage-head rule above, reached through the toolbar's own
+   ancestor chain. This is the specificity trap the gutter sets: .holds-copy .block-copy
+   .passage-copy:hover is more specific than the passage-head rule, so a .copied selector
+   built for that rule alone would win in a passage's head and still lose here, at .55
+   opacity, while the pointer sits over the gutter icon it was just pressed with. */
+.holds-copy .block-copy .passage-copy.copied,
+.holds-copy .block-copy .passage-copy.copied:hover,
+.holds-copy .block-copy .passage-copy.copied:focus-visible { opacity: 1; color: var(--accent); }
 /* What a refused clipboard selects under a paragraph with no note to open. */
 .block-copy-fallback {
   display: block;

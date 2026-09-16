@@ -96,6 +96,17 @@ const at = q => load(base, q);
 // Two citations in one paragraph light one rendered block, so counts are per
 // distinct block: strip the sentence suffix and count.
 const blockOf = locator => locator.replace(/ s\d+(?:-s?\d+)?$/, "");
+// The copy icons' tick turns --accent, which differs between the daylight and umber
+// palettes, so proving the CSS rule actually won means resolving the token through the
+// page itself and comparing computed colour strings, not just checking opacity.
+const resolveVar = name => page.evaluate(name => {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const value = getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+}, name);
 
 // =============================================================================
 console.log("== Reader: payload resolution (bundled vs user-extended) ==");
@@ -283,6 +294,8 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     });
   }, refuse);
   const copyButton = kind => page.locator(`[data-passage-id] .passage-copy[data-copy="${kind}"]`).first();
+  // "M4 8.3" opens COPY_TICK_ICON's path in app.js: a cheap, exact way to tell the tick
+  // apart from the button's own icon without duplicating the markup here.
   const readIcons = () => page.evaluate(() => {
     const block = document.querySelector("[data-passage-id]");
     const scroll = block.closest(".document-scroll").getBoundingClientRect();
@@ -299,6 +312,9 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
           svg: Boolean(button.querySelector("svg")),
           text: button.textContent.trim(),
           opacity: Math.round(Number(style.opacity) * 100) / 100,
+          color: style.color,
+          copied: button.classList.contains("copied"),
+          tick: button.innerHTML.includes("M4 8.3"),
           inHead: box.top >= head.top - 1 && box.bottom <= head.bottom + 1,
           clearOfRail: box.right <= scroll.right - 14,
           motion: style.transitionDuration,
@@ -312,6 +328,7 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     };
   });
   const awayFromPassages = async () => { await page.mouse.move(2, 700); await page.waitForTimeout(350); };
+  const accentColor = await resolveVar("--accent");
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
@@ -350,6 +367,10 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   seen = await readIcons();
   check(seen.copied[0] === seen.locator && seen.status === "Locator copied" && seen.polite,
     "Copy locator copies the passage's locator, and says so politely", JSON.stringify(seen));
+  check(seen.buttons[0].copied && seen.buttons[0].tick && seen.buttons[0].opacity === 1
+      && seen.buttons[0].color === accentColor,
+    "a successful copy turns the pressed icon into a tick, fully opaque, in --accent, in a passage head",
+    JSON.stringify(seen.buttons[0]));
   await copyButton("link").click();
   await page.waitForTimeout(200);
   seen = await readIcons();
@@ -357,6 +378,17 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(Boolean(link) && new URL(link).searchParams.get("passage") === seen.locator
       && seen.status === "Link copied",
     "Copy link copies a link naming that passage, and says so", JSON.stringify(seen));
+  check(seen.buttons[1].copied && seen.buttons[1].tick && seen.buttons[1].opacity === 1
+      && seen.buttons[1].color === accentColor,
+    "copying the link shows the same tick on its own icon", JSON.stringify(seen.buttons[1]));
+
+  // COPY_TICK_MS in app.js is 2000; the locator click above is already ~400ms in, so
+  // this margin covers both buttons' independent timers.
+  await page.waitForTimeout(1900);
+  seen = await readIcons();
+  check(seen.buttons.every(button => !button.copied && !button.tick && button.color !== accentColor),
+    "after two seconds both icons are back to themselves, and neither is marked copied",
+    JSON.stringify(seen.buttons));
 
   await page.goto(link, { waitUntil: "networkidle" });
   await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
@@ -375,6 +407,8 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(seen.selected === seen.locator && seen.noteOpen && /press/i.test(seen.status || ""),
     "a refused clipboard selects the locator in the opened note instead, and says how to copy it",
     JSON.stringify(seen));
+  check(seen.buttons.every(button => !button.copied && !button.tick),
+    "a refused clipboard shows no tick: nothing was copied", JSON.stringify(seen.buttons));
   await copyButton("link").click();
   await page.waitForTimeout(200);
   seen = await readIcons();
@@ -382,6 +416,8 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   try { selectedLink = new URL(seen.selected).searchParams.get("passage"); } catch {}
   check(selectedLink === seen.locator && /press/i.test(seen.status || ""),
     "a refused clipboard selects the link in the note instead", JSON.stringify(seen));
+  check(seen.buttons.every(button => !button.copied && !button.tick),
+    "a refused clipboard shows no tick for the link icon either", JSON.stringify(seen.buttons));
 
   await at(`?publication=${DRAFT_PUBLICATION}&behavior=draft-behaviour&tiers=defining,core,related`);
   await stubClipboard(false);
@@ -541,10 +577,14 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
     return {
       buttons: [...block.querySelectorAll(":scope > .block-copy .passage-copy")].map(button => {
         const icon = button.getBoundingClientRect();
+        const style = getComputedStyle(button);
         return {
           label: button.getAttribute("aria-label"),
           svg: Boolean(button.querySelector("svg")),
-          opacity: Math.round(Number(getComputedStyle(button).opacity) * 100) / 100,
+          opacity: Math.round(Number(style.opacity) * 100) / 100,
+          color: style.color,
+          copied: button.classList.contains("copied"),
+          tick: button.innerHTML.includes("M4 8.3"),
           inGutter: icon.left >= box.right,
           clearOfRail: icon.right <= scroll.right - 14,
         };
@@ -553,6 +593,18 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
       copied: window.__copied || [],
     };
   }, blockSelector);
+  // The toolbar itself, wherever it currently sits -- used to prove a tick does not
+  // survive the toolbar moving to a paragraph nobody copied.
+  const readToolbar = () => page.evaluate(() => {
+    const toolbar = document.querySelector(".block-copy");
+    return {
+      holderLocator: toolbar?.parentElement?.dataset.locator ?? null,
+      buttons: toolbar ? [...toolbar.querySelectorAll(".passage-copy")].map(button => ({
+        copied: button.classList.contains("copied"),
+        tick: button.innerHTML.includes("M4 8.3"),
+      })) : [],
+    };
+  });
 
   await page.setViewportSize({ width: 1280, height: 720 });
   const started = Date.now();
@@ -579,6 +631,22 @@ await at(`?publication=${DRAFT_PUBLICATION}&spec=nadir--charter@2026-08-18`
   check(seen.copied[0] === uncited && Boolean(link) && new URL(link).searchParams.get("passage") === uncited
       && seen.status === "Link copied",
     "an uncited paragraph's icons copy its locator and a link to it", JSON.stringify(seen.copied));
+  check(seen.buttons.every(button => button.copied && button.tick && button.opacity === 1),
+    "both gutter icons show a tick, fully opaque, after copying", JSON.stringify(seen.buttons));
+
+  // Requirement 3: the toolbar is one shared element, so moving it to a paragraph
+  // nobody copied must clear the tick at once -- not wait out the timer.
+  let toolbar = await readToolbar();
+  check(toolbar.holderLocator === uncited && toolbar.buttons.every(button => button.copied && button.tick),
+    "before the toolbar moves, its buttons still show the tick on the paragraph that was copied",
+    JSON.stringify(toolbar));
+  await page.locator(".document-body li", { hasText: "A second item with a nested list under it" }).hover();
+  await page.waitForTimeout(100);
+  toolbar = await readToolbar();
+  check(toolbar.holderLocator !== null && toolbar.holderLocator !== uncited
+      && toolbar.buttons.every(button => !button.copied && !button.tick),
+    "moving the toolbar to another paragraph puts the real icons back immediately",
+    JSON.stringify(toolbar));
 
   await page.locator(".document-body h2", { hasText: "Blocks" }).first().hover();
   await page.waitForTimeout(250);

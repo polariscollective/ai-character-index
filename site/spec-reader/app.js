@@ -2090,6 +2090,19 @@ const COPY_SAID = {
   link: ["Link copied", "The clipboard was refused. The link is selected: press copy."],
 };
 
+/* The visible half of a successful copy: markCopied swaps a button's icon for this
+ * tick, on the same 16-unit grid as COPY_ICONS' two icons. It is kept out of that
+ * constant on purpose -- a third icon is about to join COPY_ICONS for unrelated work,
+ * and this one is never drawn alongside the others; it replaces whichever of the two
+ * was pressed, in place, so the button's width never changes. */
+const COPY_TICK_ICON = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M4 8.3l2.8 2.8L12.2 5.6" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+// How long the tick shows before the button reverts to its own icon, named so the
+// call site reads as a decision rather than a bare number.
+const COPY_TICK_MS = 2000;
+
 async function copyFromPassage(button) {
   // A paragraph's own icons (setupBlockCopy) copy the paragraph's locator; a cited
   // passage's icons, in its head, copy the locator it is cited by.
@@ -2109,6 +2122,7 @@ async function copyFromPassage(button) {
   try {
     await navigator.clipboard.writeText(text);
     say(COPY_SAID[kind][0]);
+    markCopied(button);
   } catch {
     /* A refused clipboard is not a dead end: open the passage's note and select
        what would have been copied, so the usual keyboard copy works. A paragraph
@@ -2152,6 +2166,35 @@ async function copyFromPassage(button) {
   }
 }
 
+/* Shows the tick on a successful copy, and puts the button's own icon back after
+ * COPY_TICK_MS. The icon is cached in a data attribute the first time this runs and
+ * never touched again, so a second press while the tick still shows restarts the
+ * timer rather than caching the tick itself as though it were the button's real
+ * content -- the bug that would otherwise leave a permanent tick. */
+function markCopied(button) {
+  if (button.dataset.icon === undefined) button.dataset.icon = button.innerHTML;
+  button.innerHTML = COPY_TICK_ICON;
+  button.classList.add("copied");
+  clearTimeout(button._copiedTimer);
+  button._copiedTimer = setTimeout(() => {
+    button.innerHTML = button.dataset.icon;
+    button.classList.remove("copied");
+  }, COPY_TICK_MS);
+}
+
+/* Puts a copy button's own icon back at once, whatever its timer was doing. Called
+ * from setupBlockCopy's holdAt whenever the floating toolbar changes paragraph: the
+ * toolbar is one shared element, so without this a tick from the paragraph just left
+ * would keep showing on the paragraph the pointer lands on next, claiming a copy the
+ * reader never made there. */
+function resetCopied(scope) {
+  scope.querySelectorAll(".passage-copy.copied").forEach(button => {
+    clearTimeout(button._copiedTimer);
+    button.innerHTML = button.dataset.icon;
+    button.classList.remove("copied");
+  });
+}
+
 /* The same two icons for every paragraph no passage cites.
  *
  * One toolbar per panel, moved into the paragraph the pointer is over, the one
@@ -2176,6 +2219,7 @@ function setupBlockCopy(panel) {
         || /^(H[1-6]|PRE)$/.test(block.tagName)) return null;
     if (toolbar.parentElement !== block) {
       toolbar.parentElement?.classList.remove("holds-copy", "touched");
+      resetCopied(toolbar);   // a tick belongs to the paragraph it copied, not the one the toolbar lands on next
       block.classList.add("holds-copy");
       block.append(toolbar);
     }
