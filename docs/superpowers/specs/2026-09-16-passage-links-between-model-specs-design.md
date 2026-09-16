@@ -315,8 +315,8 @@ question.
 `honesty-and-non-deception`, the Anthropic constitution `@2026-01-20` against the
 OpenAI Model Spec `@2026-08-18`, both directions, three judges: six calls. The
 cell holds 16 defining and core passages on the constitution and 21 on the model
-spec, and both documents are judged at depth 3.7: the deepest the model spec
-reaches for any behaviour, and one step under the constitution's own deepest. The
+spec, and both documents are judged at depth 3.7, the deepest either of them
+reaches for any behaviour. The
 target documents are about 46,000 and 69,000 tokens, so the run costs two to
 three dollars, before the judges' reasoning, which no estimate here counts.
 
