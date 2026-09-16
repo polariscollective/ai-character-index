@@ -27,7 +27,7 @@ it.
 ## What the index holds
 
 As of September 2026 the public publication is
-`07958c5e-eb91-4e31-81f2-32f79c01b84c`: thirteen behaviours across four documents.
+`1919ee6b-8a81-4ab5-902a-e949857db028`: thirteen behaviours across four documents.
 
 | Document | Named in the index |
 |---|---|
