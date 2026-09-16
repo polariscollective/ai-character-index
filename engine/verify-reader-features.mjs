@@ -18,7 +18,8 @@ import { readFile as readFileAsync } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { serveReaderRoute, CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
+         CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
@@ -52,6 +53,9 @@ const UNDEFINED = "undefined-behaviour";
 const server = createServer(async (req, res) => {
   // Answered from the staged tree's own payloads, so the fixture index is
   if (await serveReaderRoute(req, res, DATA, "behaviours")) return;
+  // The dialog's own send: a fixture that always accepts, recording what it
+  // was sent for the feedback dialog section below to read back.
+  if (await serveFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
@@ -1755,6 +1759,123 @@ await page.waitForTimeout(250);
   }));
   check(out.pressed === "true" && out.comparing,
     "clicking the compare toggle switches to the compare view");
+}
+
+// =============================================================================
+console.log("== Reader: the note dialog ==");
+// A note on a paragraph, and the same dialog on a whole document: it opens
+// naming its subject, the send button gates on an address and nothing else,
+// the private toggle disables the name field, and a send posts the body the
+// derivation table promises and is remembered for next time.
+{
+  const openFromPassage = async () => {
+    await page.locator("[data-passage-id]").first().hover();
+    await page.waitForTimeout(200);
+    await page.locator("[data-passage-id] .passage-feedback").first().click();
+    await page.waitForTimeout(150);
+  };
+  const dialogState = () => page.evaluate(() => {
+    const block = document.querySelector("[data-passage-id]");
+    return {
+      open: document.querySelector("#feedback-dialog").open,
+      title: document.querySelector("#feedback-title").textContent,
+      locator: document.querySelector("#feedback-locator").textContent,
+      behavioursHidden: document.querySelector("#feedback-behaviours-field").hidden,
+      behaviours: document.querySelector("#feedback-behaviours").value,
+      sendDisabled: document.querySelector("#feedback-send").disabled,
+      nameDisabled: document.querySelector("#feedback-name").disabled,
+      blockLocator: block ? (block.dataset.locators || "").split("\n")[0] : null,
+    };
+  });
+
+  await at(`?behavior=${DEFINED}&spec=${DOC_ID}&tiers=defining,core,related`);
+  await page.evaluate(() => {
+    try {
+      localStorage.removeItem("aci-feedback-email");
+      localStorage.removeItem("aci-feedback-name");
+      localStorage.removeItem("aci-feedback-private");
+    } catch {}
+  });
+
+  await openFromPassage();
+  let seen = await dialogState();
+  check(seen.open && seen.title === "Note on this paragraph" && seen.locator === seen.blockLocator
+      && !seen.behavioursHidden && seen.behaviours.length > 0 && seen.sendDisabled,
+    "the dialog opens from a paragraph, names its locator, shows the behaviours field filled, and disables send with no address",
+    JSON.stringify(seen));
+
+  await page.locator("#feedback-email").fill("reader@example.org");
+  await page.waitForTimeout(100);
+  seen = await dialogState();
+  check(!seen.sendDisabled, "typing an address enables the send button", JSON.stringify(seen));
+
+  await page.locator("#feedback-private").check();
+  await page.waitForTimeout(100);
+  seen = await dialogState();
+  check(seen.nameDisabled, "the private toggle disables the name field", JSON.stringify(seen));
+  await page.locator("#feedback-private").uncheck();
+  await page.waitForTimeout(100);
+
+  await page.locator("#feedback-comment").fill("It reads wrong.");
+  await page.locator('.thumb[data-vote="up"]').click();
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  let sent = lastFeedbackReceived();
+  check(Boolean(sent) && sent.locator === seen.blockLocator && sent.vote === "up"
+      && sent.comment === "It reads wrong." && sent.email === "reader@example.org"
+      && sent.visibility === "anonymous" && sent.display_name === "",
+    "a send with a comment, a thumb and an address posts locator, vote, comment and email as typed, anonymous with no name",
+    JSON.stringify(sent));
+
+  const remembered = await page.evaluate(() => {
+    try { return { email: localStorage.getItem("aci-feedback-email") }; } catch { return {}; }
+  });
+  check(remembered.email === "reader@example.org", "the address is in localStorage afterwards",
+    JSON.stringify(remembered));
+
+  await page.waitForTimeout(900);   // sendFeedback closes the dialog ~1s after a done outcome
+  const closedAfterSend = await page.evaluate(() => !document.querySelector("#feedback-dialog").open);
+  check(closedAfterSend, "the dialog closes on its own after a successful send");
+
+  await openFromPassage();
+  await page.locator("#feedback-name").fill("A reader");
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  sent = lastFeedbackReceived();
+  check(sent?.visibility === "attributed" && sent?.display_name === "A reader",
+    "a name typed with the toggle off sends attributed and that name", JSON.stringify(sent));
+  await page.waitForTimeout(900);
+
+  await openFromPassage();
+  await page.locator("#feedback-private").check();
+  await page.locator("#feedback-send").click();
+  await page.waitForTimeout(300);
+  sent = lastFeedbackReceived();
+  check(sent?.visibility === "private" && sent?.display_name === "",
+    "the toggle on sends private and an empty display_name", JSON.stringify(sent));
+  await page.waitForTimeout(900);
+
+  // The document's own icon: same dialog, no behaviours, the document as locator.
+  await page.locator(".document-feedback").first().click();
+  await page.waitForTimeout(150);
+  const docSeen = await page.evaluate(() => ({
+    open: document.querySelector("#feedback-dialog").open,
+    title: document.querySelector("#feedback-title").textContent,
+    locator: document.querySelector("#feedback-locator").textContent,
+    behavioursHidden: document.querySelector("#feedback-behaviours-field").hidden,
+  }));
+  check(docSeen.open && docSeen.title === "Note on this document" && docSeen.locator === DOC_ID
+      && docSeen.behavioursHidden,
+    "the icon beside the document title opens the dialog with no behaviours field and the document id as locator",
+    JSON.stringify(docSeen));
+
+  // A click on the backdrop closes it, same as Cancel.
+  await page.mouse.click(4, 4);
+  await page.waitForTimeout(150);
+  const closedByBackdrop = await page.evaluate(() => !document.querySelector("#feedback-dialog").open);
+  check(closedByBackdrop, "a click on the backdrop closes the dialog");
+
+  check(pageErrors.length === 0, "the note dialog: no console errors", pageErrors.join("; "));
 }
 
 // =============================================================================

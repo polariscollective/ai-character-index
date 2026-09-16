@@ -531,6 +531,17 @@ function saveFlag(key, value) {
   try { localStorage.setItem(key, value ? "1" : "0"); } catch (error) {}
 }
 
+/* A plain string remembered across sessions, empty rather than absent when
+ * nothing was ever saved or the browser refuses storage -- the feedback
+ * dialog's address and name fields read these back as "", never "null". */
+function savedString(key) {
+  try { return localStorage.getItem(key) || ""; } catch (error) { return ""; }
+}
+
+function saveString(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) {}
+}
+
 function setSidebarWidth(width, persist = false) {
   const desktop = window.matchMedia("(min-width: 901px)").matches;
   const maximum = desktop
@@ -997,7 +1008,6 @@ setupSidebarResizer();
 setupSidebarToggle();
 setupKeyNotes();
 setupDepthNotes();
-setupFeedbackDialog();
 
 function behaviourGroups() {
   const groups = new Map();
@@ -2266,11 +2276,20 @@ function feedbackSubject(button) {
 /* What is sent. Pure, and given everything it needs, so the harness can hold it
  * to its output without a browser.
  *
+ * Visibility is derived, never asked for twice:
+ *
+ *   private | name    | visibility  | display_name
+ *   --------|---------|-------------|-------------
+ *   on      | either  | private     | ""
+ *   off     | empty   | anonymous   | ""
+ *   off     | filled  | attributed  | the name
+ *
  * `display_name` is emptied for anything but "attributed": a name typed before
- * the reader chose to be unnamed is not a name they asked us to show. The route
- * does the same on arrival and the database says it as a check constraint, so
- * all three agree. */
+ * the reader chose to be private is not a name they asked us to show. The
+ * route does the same on arrival and the database says it as a check
+ * constraint, so all three agree. */
 function feedbackBody(subject, form, pinned) {
+  const visibility = form.private ? "private" : (form.name ? "attributed" : "anonymous");
   return {
     locator: subject.locator,
     behaviours: subject.behaviours,
@@ -2278,8 +2297,8 @@ function feedbackBody(subject, form, pinned) {
     vote: form.vote,
     comment: form.comment,
     email: form.email,
-    visibility: form.visibility,
-    display_name: form.visibility === "attributed" ? form.name : "",
+    visibility,
+    display_name: visibility === "attributed" ? form.name : "",
     website: form.website,
   };
 }
@@ -2289,7 +2308,11 @@ function feedbackBody(subject, form, pinned) {
  * may have left behind is reset, because nothing about a paragraph is
  * remembered between paragraphs: a comment or a vote belongs to the paragraph
  * it was written against. Native <dialog> modality traps focus and closes the
- * dialog on Escape on its own; only its own buttons close it otherwise. */
+ * dialog on Escape on its own; only its own buttons close it otherwise.
+ *
+ * The address, the name and the private toggle are the exception: they are the
+ * reader's own standing answers, not the paragraph's, so they come back from
+ * localStorage (see sendFeedback) rather than being blanked here. */
 function openFeedbackDialog(button) {
   const subject = feedbackSubject(button);
   if (!subject) return;
@@ -2306,15 +2329,14 @@ function openFeedbackDialog(button) {
   elements.feedbackForm.querySelectorAll(".thumb").forEach(thumb =>
     thumb.setAttribute("aria-pressed", "false"));
   elements.feedbackComment.value = "";
-  elements.feedbackEmail.value = "";
-  elements.feedbackPrivate.checked = false;
-  elements.feedbackName.value = "";
-  elements.feedbackName.disabled = false;
+  elements.feedbackEmail.value = savedString("aci-feedback-email");
+  elements.feedbackPrivate.checked = savedFlag("aci-feedback-private");
+  elements.feedbackName.value = savedString("aci-feedback-name");
+  elements.feedbackName.disabled = elements.feedbackPrivate.checked;
   elements.feedbackWebsite.value = "";
   elements.feedbackOutcome.textContent = "";
   elements.feedbackOutcome.className = "feedback-outcome";
-  // Nothing is typed yet, and the route needs an address to write back to.
-  elements.feedbackSend.disabled = true;
+  elements.feedbackSend.disabled = elements.feedbackEmail.value.trim() === "";
 
   elements.feedbackDialog.showModal();
   elements.feedbackComment.focus();
@@ -2325,13 +2347,72 @@ function closeFeedbackDialog() {
   elements.feedbackDialog.close();
 }
 
+/* What "Send" does: posts feedbackBody(...) to /api/feedback and shows
+ * whatever the route said. Disabled for the whole round trip, as a lock
+ * against a second click sending the same note twice; a refusal or a network
+ * failure re-enables it so the reader can fix what was wrong and try again,
+ * and only a success leaves it disabled, because the dialog is about to close
+ * on its own.
+ *
+ * What is remembered is remembered only once something was accepted: an
+ * address the route refused is not offered back next time. */
+async function sendFeedback() {
+  const subject = state.feedbackTarget;
+  if (!subject) return;
+  const pressed = elements.feedbackForm.querySelector('.thumb[aria-pressed="true"]');
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const form = {
+    vote: pressed?.dataset.vote || null,
+    comment: elements.feedbackComment.value,
+    email: elements.feedbackEmail.value.trim(),
+    private: elements.feedbackPrivate.checked,
+    name: elements.feedbackName.value.trim(),
+    website: elements.feedbackWebsite.value,
+  };
+
+  elements.feedbackSend.disabled = true;
+  elements.feedbackOutcome.textContent = "";
+  elements.feedbackOutcome.className = "feedback-outcome";
+
+  let outcome;
+  try {
+    const response = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(feedbackBody(subject, form, pinned)),
+    });
+    outcome = await response.json();
+  } catch (error) {
+    elements.feedbackOutcome.textContent = "That did not reach us. Check your connection and try again.";
+    elements.feedbackOutcome.classList.add("problem");
+    elements.feedbackSend.disabled = false;
+    return;
+  }
+
+  if (outcome.problem) {
+    elements.feedbackOutcome.textContent = outcome.problem;
+    elements.feedbackOutcome.classList.add("problem");
+    elements.feedbackSend.disabled = false;
+    return;
+  }
+
+  elements.feedbackOutcome.textContent = outcome.done || "Thank you.";
+  elements.feedbackOutcome.classList.add("done");
+  saveString("aci-feedback-email", form.email);
+  saveString("aci-feedback-name", form.name);
+  saveFlag("aci-feedback-private", form.private);
+  setTimeout(closeFeedbackDialog, 1000);
+}
+
 /* The dialog's own controls: closing it, the two-way thumbs (a second press on
  * the pressed one clears the vote, since it is optional), the private toggle
  * disabling the name field it would otherwise attach a name to nobody reads,
  * the send button staying disabled until there is an address to write back to,
- * and a submit that does not yet send anything but must not reload the page
- * while it waits to. */
-function setupFeedbackDialog() {
+ * a click on the backdrop, and the submit that actually sends. Called once
+ * from initialize(), not eagerly at module load: its wiring only needs the
+ * dialog's own elements, which exist as soon as the page does, but it belongs
+ * beside the rest of what initialize() sets up rather than ahead of it. */
+function setupFeedback() {
   elements.feedbackClose.addEventListener("click", closeFeedbackDialog);
   elements.feedbackCancel.addEventListener("click", closeFeedbackDialog);
 
@@ -2352,7 +2433,17 @@ function setupFeedbackDialog() {
     elements.feedbackSend.disabled = elements.feedbackEmail.value.trim() === "";
   });
 
-  elements.feedbackForm.addEventListener("submit", event => event.preventDefault());
+  // <dialog> attributes a click on its own backdrop to the dialog element
+  // itself, since the backdrop is outside every element in it: the form fills
+  // the whole of the dialog's box, so this only fires outside that box.
+  elements.feedbackDialog.addEventListener("click", event => {
+    if (event.target === elements.feedbackDialog) closeFeedbackDialog();
+  });
+
+  elements.feedbackForm.addEventListener("submit", event => {
+    event.preventDefault();
+    sendFeedback();
+  });
 }
 
 /* The same two icons for every paragraph no passage cites.
@@ -3856,6 +3947,7 @@ function revealPassageLink(linked) {
 }
 
 async function initialize() {
+  setupFeedback();
   renderBehaviourList();
   try {
     // The payload first: which publication it resolved to decides where the

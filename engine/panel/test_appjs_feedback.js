@@ -101,18 +101,26 @@ check("the icon beside a document's title is about the document, with no behavio
 check("a document panel with no id is nothing to send feedback about either",
   feedbackSubject(documentWide(undefined)), null);
 
+// The private toggle and the name field, not a visibility asked for directly:
+// feedbackBody derives it, per the table in its own comment.
 const FORM = { vote: "down", comment: "It reads wrong.", email: "reader@example.org",
-               visibility: "attributed", name: "A reader", website: "" };
+               private: false, name: "A reader", website: "" };
 
-check("the body carries the paragraph, the reading and the choice",
+check("the body carries the paragraph, the reading and the choice: a name typed with the toggle off is attributed",
   feedbackBody({ locator: LOC, behaviours: ["Helpfulness"] }, FORM, null),
   { locator: LOC, behaviours: ["Helpfulness"], publication: null, vote: "down",
     comment: "It reads wrong.", email: "reader@example.org", visibility: "attributed",
     display_name: "A reader", website: "" });
 
-check("a name typed and then not asked for does not travel",
-  feedbackBody({ locator: LOC, behaviours: [] }, { ...FORM, visibility: "anonymous" }, null)
-    .display_name, "");
+check("no name and the toggle off travels anonymous, with nobody named",
+  feedbackBody({ locator: LOC, behaviours: [] }, { ...FORM, name: "" }, null),
+  { locator: LOC, behaviours: [], publication: null, vote: "down", comment: "It reads wrong.",
+    email: "reader@example.org", visibility: "anonymous", display_name: "", website: "" });
+
+check("the private toggle overrules a typed name: nothing travels named",
+  feedbackBody({ locator: LOC, behaviours: [] }, { ...FORM, private: true }, null),
+  { locator: LOC, behaviours: [], publication: null, vote: "down", comment: "It reads wrong.",
+    email: "reader@example.org", visibility: "private", display_name: "", website: "" });
 
 check("a pinned reader says which publication it was reading",
   feedbackBody({ locator: LOC, behaviours: [] }, FORM,
