@@ -55,11 +55,13 @@ facing, and a paragraph written from all of it. A relation there is named by the
 document it is about and never by a direction, so stricter comes with the
 document that demands more.
 
-That answer is long: tens of thousands of characters where both documents cover
-the behaviour fully. It is one answer rather than a walk, because a comparison
-split across pages is one a client has to reassemble before it can say anything.
-Pass detail counts to learn its exact size and shape first, then ask for it
-whole.
+That answer is very long: hundreds of thousands of characters where both
+documents cover the behaviour fully. The first pair measured came to 315,569
+characters, about 79,000 tokens. It is one answer rather than a walk, because a
+comparison split across pages is one a client has to reassemble before it can
+say anything. Pass detail counts first, which costs about 2,600 characters and
+reports the exact size of the full answer rather than an estimate of it, and
+decide from that whether to ask for the whole thing.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
@@ -158,10 +160,13 @@ const handler = createMcpHandler(
         + "passages one document has nothing facing, and the paragraph written "
         + "from all of it. A relation is named by the document it is about and "
         + "never by a direction: stricter arrives with stricter_document. "
-        + "THIS ANSWER IS LONG, tens of thousands of characters where both "
-        + "documents cover the behaviour fully, and it comes whole rather than "
-        + "in pages. Pass detail counts first to learn its exact size and shape, "
-        + "then ask for it in full.",
+        + "THIS ANSWER IS VERY LONG: hundreds of thousands of characters where "
+        + "both documents cover the behaviour fully, and it comes whole rather "
+        + "than in pages. The first pair measured came to 315,569 characters, "
+        + "about 79,000 tokens. Pass detail counts first: it costs about 2,600 "
+        + "characters, reports the exact size of the full answer rather than an "
+        + "estimate of it, and lets you decide whether to ask for the whole "
+        + "thing.",
       inputSchema: z.object({
         behaviour: z.string().describe(
           "One behaviour slug, from list_behaviours. A comparison is about one "

@@ -477,7 +477,12 @@ export function compareDocuments({ publication, payload, documents, notes },
       // still a verdict. It says which it is so a caller can weigh it.
       arbiter_was_a_party: settled.arbiter_was_a_party,
       why_disputed: settled.why_disputed,
-      readings: settled.readings,
+      // What was put to the arbiter is not repeated here: `judges` above is the
+      // same readings, and echoing them cost 27,651 of the first comparison's
+      // 344,001 characters to say twice what the answer already says once.
+      // aci_link_arbitrations keeps them, because an answer stored without its
+      // question is not evidence; an answer that carries the question twice is
+      // only long.
       relation: settled.relation,
       stricter_document: settled.stricter_document,
       agrees: settled.agrees,

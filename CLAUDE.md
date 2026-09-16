@@ -680,6 +680,25 @@ are about and never by a direction, because `stricter_source` read from the othe
 side is `stricter_target` and two judges who agree would look like two who do
 not.
 
+The size is worth writing down, because it is larger than it sounds.
+`honesty-and-non-deception` over the constitution and the model spec answers in
+**315,569 characters**, about 79,000 tokens: 29 passages against 49, 106 pairs of
+which 82 were arbitrated and none left unsettled, and a 15,786-character summary.
+The `counts` probe of the same call is 2,638 characters, a hundred and twentieth
+of it. The tool's description gives those figures rather than calling the answer
+long, because an agent reads that description to decide whether to pull it, and
+"long" is not a size.
+
+Measuring it found duplication worth removing. The answer first came to 344,001
+characters, of which `arbitration.readings` was 27,651: what was put to the
+arbiter, which the same answer already carries as each pair's `judges`.
+`aci_link_arbitrations` still stores it, because an answer kept without its
+question is not evidence, but an answer that carries the question twice is only
+long. One duplication is left and is not removed: 101 distinct passages fill 212
+slots inside the pairs, because a passage is quoted in every pair it belongs to.
+Quoting each once in a map keyed by locator would save about 63,000 characters
+more and lose nothing, and it would change the shape of a pair.
+
 The fetching lives in `app/lib/links.mjs` and the shaping in `mcp-tools.mjs`,
 which keeps its own rule that a tool is a pure function of its arguments and a
 fixture can exercise it with no network. Link evidence is read per call rather
