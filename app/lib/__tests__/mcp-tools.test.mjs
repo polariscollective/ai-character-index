@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { listModelSpecs, listBehaviours, retrievePassages, ToolError }
+import { about, listModelSpecs, listBehaviours, retrievePassages, INSTRUCTIONS, ToolError }
   from "../mcp-tools.mjs";
 
 const read = async name => JSON.parse(await readFile(
@@ -487,4 +487,139 @@ test("a cursor naming a cell outside the request is refused", () => {
                 behaviour: "undefined-behaviour", model_spec_id: "acme--second@2026-02-01" },
     }),
     error => error instanceof ToolError && /does not name a cell of this request/.test(error.message));
+});
+
+/* `about`, the entry point.
+ *
+ * Most clients never show a server's instructions to the model, so the tool list
+ * is all an agent sees. These hold the answer to two things: that it says what
+ * the instructions say, by returning them rather than retelling them, and that
+ * every fact beside them is read from the publication. The fixture is not the
+ * index -- five documents nobody has heard of, two behaviours, judges called a,
+ * b and c -- so a sentence written from production fails here. */
+
+const ROUTE = await readFile(
+  new URL("../../api/mcp/route.js", import.meta.url), "utf8");
+
+test("the route lists about first, with the description an agent reads in the list", () => {
+  assert.match(ROUTE, /registerTool\("about"/);
+  assert.match(ROUTE,
+               /"Start here to understand this index and its other tools\."/,
+               "the one line an agent sees must be exactly this");
+  const registered = ["about", "list_model_specs", "list_behaviours", "retrieve_passages"]
+    .map(name => ROUTE.indexOf(`registerTool("${name}"`));
+  assert.ok(registered.every(at => at > -1), "a tool is not registered at all");
+  assert.deepEqual(registered, [...registered].sort((first, second) => first - second),
+                   "about is registered first, so an arriving agent meets it first");
+});
+
+test("the instructions are one text, returned rather than retold", () => {
+  assert.ok(!/const INSTRUCTIONS = `/.test(ROUTE),
+            "the instructions live in mcp-tools.mjs now, where about can return them");
+  assert.match(ROUTE, /instructions: INSTRUCTIONS/);
+  assert.ok(about(snapshot()).includes(INSTRUCTIONS),
+            "about returns the instructions themselves, so the two cannot drift");
+});
+
+test("about answers with no arguments at all, in prose", () => {
+  const answer = about(snapshot());
+  assert.equal(typeof answer, "string", "an agent reads this, so it is not a data structure");
+  assert.ok(answer.length > INSTRUCTIONS.length,
+            "the answer adds what the instructions cannot carry");
+});
+
+test("about tells an agent that reading the instructions has missed nothing", () => {
+  assert.match(about(snapshot()), /initialize/);
+});
+
+test("about names the documents this payload carries, not the ones it was written beside", () => {
+  const answer = about(snapshot());
+  for (const document of documents.documents) {
+    assert.ok(answer.includes(document.id), `the answer does not name ${document.id}`);
+  }
+  assert.ok(!/anthropic--constitution|openai--model-spec|alibaba/.test(answer),
+            "a document of the production index was written into the prose");
+});
+
+/* The sentence is matched, not the word: a document may be called
+ * acme--translated@2026-03-01, and its id is listed whether or not anything was
+ * translated. */
+test("about says which documents were read in translation, and says nothing when none were", () => {
+  assert.match(about(snapshot()), /machine translation/i);
+  const plain = snapshot();
+  plain.documents = {
+    documents: documents.documents.map(({ translation, original, ...rest }) => rest),
+  };
+  assert.ok(!/machine translation/i.test(about(plain)),
+            "a caveat about translation stands where no document was translated");
+});
+
+test("about names the behaviours and their sections, counted from the payload", () => {
+  const twoSections = snapshot();
+  twoSections.notes = {
+    ...NOTES,
+    "undefined-behaviour": { ...NOTES["undefined-behaviour"], group: "A second section" },
+  };
+  const answer = about(twoSections);
+  assert.match(answer, /2 behaviours/, "the count is the payload's own");
+  assert.ok(answer.includes("defined-behaviour"));
+  assert.ok(answer.includes("undefined-behaviour"));
+  assert.ok(answer.includes("Behaviours under test"));
+  assert.ok(answer.includes("A second section"));
+  assert.ok(!/thirteen|13 behaviours/.test(answer),
+            "a count written this afternoon is false by evening");
+});
+
+test("about names the panel that judged, from the payload's own provenance", () => {
+  const answer = about(snapshot());
+  assert.ok(answer.includes("a, b, c"), "the judges are the fixture's, read from provenance");
+  assert.ok(!/deepseek|frontier_fast/.test(answer),
+            "the production panel was written into the prose");
+});
+
+test("about gives the depth scale in the rubric's own words", () => {
+  const answer = about(snapshot());
+  for (const anchor of ["absent", "named", "discussed", "prescribed", "demonstrated"]) {
+    assert.ok(answer.includes(anchor), `the depth scale does not say ${anchor}`);
+  }
+});
+
+test("about quotes a locator that exists in the payload", () => {
+  const answer = about(snapshot());
+  const locators = (payload.behaviours || []).flatMap(
+    behaviour => Object.values(behaviour.coverage || {}).flatMap(
+      cell => (cell.passages || []).map(passage => passage.locator)));
+  assert.ok(locators.length, "the fixture carries no passage to make an example of");
+  assert.ok(locators.some(locator => answer.includes(locator)),
+            "the example locator was written by hand rather than read from the data");
+});
+
+test("about names the other tools, so the list is not the only thing explaining them", () => {
+  const answer = about(snapshot());
+  for (const tool of ["list_model_specs", "list_behaviours", "retrieve_passages"]) {
+    assert.ok(answer.includes(tool), `the answer does not name ${tool}`);
+  }
+});
+
+test("about names the publication the figures belong to", () => {
+  const answer = about(snapshot());
+  assert.ok(answer.includes("3114dd65-c6f2-5cb3-bf98-af5b314381c3"));
+  assert.ok(answer.includes("2026-09-10"));
+});
+
+test("about says a draft is a draft rather than citing it as the index", () => {
+  const draft = snapshot();
+  draft.publication = { ...draft.publication, is_public: false };
+  assert.match(about(draft), /draft|nobody has published/i);
+});
+
+/* The address is the deployment's, injected by the route from the platform. A
+ * domain written down here would outlive the domain. */
+test("the site address is given when the deployment has one, and never invented", () => {
+  const plain = about(snapshot());
+  assert.ok(!plain.includes("://"), "an address nobody gave it reached the answer");
+  const sited = about(snapshot(), { site: "https://example.test" });
+  assert.ok(sited.includes(
+    "https://example.test/spec-reader/?publication=3114dd65-c6f2-5cb3-bf98-af5b314381c3"),
+    "the citation names the publication on the site that served it");
 });
