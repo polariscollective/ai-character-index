@@ -9,6 +9,7 @@ import {
   LIMITS, MAX_BEHAVIOURS, MAX_REQUEST_BYTES, PER_HOUR, VISIBILITIES,
   announce, documentOf, feedbackProblems, handle, normalise, record, resolvePublication,
 } from "../feedback.mjs";
+import { feedback as adminFeedback } from "../admin-data.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
@@ -339,4 +340,16 @@ test("a database that will not take it says so, and does not claim success", asy
   assert.equal(status, 500);
   assert.match(body.problem, /worth trying again/);
   assert.equal(body.done, undefined);
+});
+
+test("the portal reads feedback newest first", async () => {
+  let asked;
+  const fetchImpl = async (url) => {
+    asked = url;
+    return { ok: true, status: 200, text: async () => "",
+             json: async () => [{ id: "f1", locator: "a > b > ¶1" }] };
+  };
+  const rows = await adminFeedback(50, fetchImpl);
+  assert.equal(rows.length, 1);
+  assert.match(asked, /aci_feedback\?select=\*&order=created_at\.desc&limit=50/);
 });
