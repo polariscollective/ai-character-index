@@ -448,7 +448,7 @@ The evidence the judges were handed grew from 403 retained passages to 1079, and
 `not-undermining-human-oversight` on `openai--model-spec@2026-08-18`, went from
 1.0 to 3.3 on 1 passage becoming 10; no cell that moved fell by more than 0.4.
 
-Four of the 156 did not come back with a depth, and two of them still have not.
+Four of the 156 did not come back with a depth on the first asking.
 `deepseek` answered `DEPTH: -1` on `avoiding-over-and-under-caution` and
 `how-to-approach-tradeoffs` against the Alibaba Model Spec, `no-sycophancy`
 against the constitution, and `proportionate-risk-mitigation` against
@@ -475,8 +475,31 @@ depth, because `how-to-approach-tradeoffs` answered `-3` twice and `-1` three
 times with materially the same rationale. The sign is not a mistake with a
 recoverable magnitude behind it.
 
-Until those two cells carry a `deepseek` depth, `publish.py` refuses the whole
-grid, because a cell must carry a depth from every judge of its run.
+A ladder of user-message variants finished it, cheapest first, a cell leaving the
+ladder the moment it answered on scale, and the system prompt untouched
+throughout. A one-shot example -- the two lines of a correct answer carrying a
+number that is not the one expected back, so it shows the shape and suggests
+nothing -- took `how-to-approach-tradeoffs` on its second attempt, at the panel's
+temperature 0, to depth 3. `avoiding-over-and-under-caution` refused that,
+refused the scale restated inline one line per level, refused both together with
+a sentence saying a negative number is not on the scale, and refused all three
+again at temperature 0.2. It answered at temperature 0.5, on the second attempt,
+`DEPTH: III`, which the parser reads because 0f32b79 taught it Roman numerals;
+the attempt before had answered `DEPTH: (4) DEMONSTRATED`, which it does not.
+
+That one figure was obtained at a temperature the panel does not use, and the
+publication's notes say so beside it: a reader must be able to see that it was
+got differently from every other figure in the grid. Nothing else was bent to
+reach it -- no substitute seated, no rule relaxed, no parser taught to read a
+number that is not on the scale.
+
+Publication `1919ee6b` carries the result: the same thirteen behaviours over the
+same four documents as `07958c5e`, from the same runs, built as a draft and
+verified. Re-judging depths in place has a cost worth knowing: `07958c5e` no
+longer rebuilds to its stored digest, because its payload carries the depths it
+was published with and the rows now hold different ones. Its stored bytes still
+match their own digests and its passages still resolve; only the rebuild check
+fails, and it fails for a reason the record explains.
 
 ## Where the fork is heading
 
