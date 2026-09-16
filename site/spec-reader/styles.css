@@ -2521,6 +2521,14 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 .link-note[hidden] { display: none; }
 
+/* The bubble that brought the reader here, on a paragraph that carries several.
+   A ring rather than a fill: it says "this one" without claiming to be pressed,
+   and it survives the flash fading under it. */
+.link-goto.link-back {
+  box-shadow: 0 0 0 2px var(--energy);
+  border-color: var(--energy);
+}
+
 .link-target { animation: link-target-flash 1.6s ease-out; }
 @keyframes link-target-flash {
   from { background: var(--energy); }

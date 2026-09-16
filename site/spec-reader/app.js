@@ -4136,6 +4136,20 @@ elements.documentReader?.addEventListener("click", event => {
   target.classList.remove("link-target");
   void target.offsetWidth;
   target.classList.add("link-target");
+
+  /* Which of the destination's bubbles brought you here. A paragraph can carry
+   * three, and landing among them without knowing which one is the counterpart
+   * leaves the reader to guess. Links are carried on both paragraphs, so the
+   * reciprocal is always there: it is the one pointing back at where the click
+   * came from. Marked, not opened, because only one reason is read at a time and
+   * the one just opened is the one that was asked for. */
+  elements.documentReader.querySelectorAll(".link-goto.link-back")
+    .forEach(previous => previous.classList.remove("link-back"));
+  const from = new Set((button.closest("[data-passage-id]")?.dataset.locators || "")
+    .split("\n").filter(Boolean));
+  const back = [...target.querySelectorAll(".link-goto")]
+    .find(pill => from.has(pill.dataset.goto));
+  if (back) back.classList.add("link-back");
 });
 
 async function initialize() {
