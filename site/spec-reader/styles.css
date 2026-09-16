@@ -2215,3 +2215,28 @@ body.no-behaviours .sidebar-export { display: none; }
   font-size: 12px;
   font-weight: 400;
 }
+
+/* "Copied!", beside the tick, for the two seconds the tick shows.
+   Absolutely positioned against the button, so the button keeps its box and
+   nothing on the line moves: these icons sit in a 30px gutter and the word is
+   twice that wide. It sits to the left of the icon on the paper ground, over
+   whatever is beneath it, and takes no pointer events, so the paragraph under it
+   stays selectable while it shows. A 1px rule and a pill, like every other small
+   control here; no shadow, and it does not fade or slide in. */
+.passage-copy.copied { position: relative; }
+.copied-word {
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--accent);
+  font-family: var(--ui);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: nowrap;
+  pointer-events: none;
+}
