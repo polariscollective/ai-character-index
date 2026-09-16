@@ -338,7 +338,6 @@ const elements = {
   feedbackBehaviours: document.querySelector("#feedback-behaviours"),
   feedbackComment: document.querySelector("#feedback-comment"),
   feedbackCommentLabel: document.querySelector("#feedback-comment-label"),
-  feedbackCommentNote: document.querySelector("#feedback-comment-note"),
   feedbackVote: document.querySelector("#feedback-vote"),
   feedbackVoteLegend: document.querySelector("#feedback-vote-legend"),
   feedbackEmail: document.querySelector("#feedback-email"),
@@ -2344,11 +2343,17 @@ function openFeedbackDialog(button) {
    * the document id there was printing a machine's name for something the reader
    * is looking at. It says what it is about, in words, and drops the mono. */
   if (documentWide) {
+    /* The publisher first, because without it the line names a document without
+     * saying whose: "Model spec, April 2026" describes three of the four
+     * documents this index carries. The id that travels has carried the lab all
+     * along -- it is the head of every locator -- and this is the reader's half
+     * of the same fact. */
     const header = button.closest(".document-panel");
+    const lab = header?.querySelector('.provider-tab[aria-pressed="true"]')?.textContent.trim() || "";
     const name = header?.querySelector(".document-name")?.textContent.trim() || "";
     const version = header?.querySelector(".document-version")?.textContent.trim() || "";
-    elements.feedbackLocator.textContent =
-      `General comment about ${[name, version].filter(Boolean).join(" ") || subject.locator}`;
+    const named = [lab, [name, version].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    elements.feedbackLocator.textContent = `General comment about ${named || subject.locator}`;
   } else {
     elements.feedbackLocator.textContent = subject.locator;
   }
@@ -2373,7 +2378,6 @@ function openFeedbackDialog(button) {
   elements.feedbackCommentLabel.textContent = state.feedbackCanVote
     ? "Your comment (optional)"
     : "Your comment";
-  elements.feedbackCommentNote.hidden = state.feedbackCanVote;
 
   elements.feedbackForm.querySelectorAll(".thumb").forEach(thumb =>
     thumb.setAttribute("aria-pressed", "false"));
