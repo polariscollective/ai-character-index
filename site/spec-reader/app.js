@@ -3787,24 +3787,35 @@ elements.documentReader.addEventListener("scroll", event => {
   if (!panel?._anchors?.length || countingFrame) return;
   countingFrame = requestAnimationFrame(() => {
     countingFrame = 0;
-    const middle = scroller.getBoundingClientRect().top + scroller.clientHeight / 2;
-    let nearest = -1;
-    let best = Infinity;
+    /* The last passage to have crossed a reading line, not the one nearest the
+     * middle of the page. Nearest-the-middle flickers: two passages straddle the
+     * centre, a few pixels decide which is closer, and the count reads 21, 20,
+     * 21 on its way from 20 to 21. A line being crossed is monotonic in the
+     * scroll position, so moving forward can never count backwards.
+     *
+     * A third of the way down, which is about where a reader's eye sits, rather
+     * than halfway, which is only where the box is. */
+    const line = scroller.getBoundingClientRect().top + scroller.clientHeight * 0.34;
+    let reading = -1;
+    let first = -1;
     panel._anchors.forEach((anchor, index) => {
       const box = anchor.getBoundingClientRect();
       // A passage inside a collapsed section is `hidden` and has no rectangle at
       // all, which would read as sitting at the very top of the page. It is not
       // where anybody is looking.
       if (!box.height) return;
-      const distance = Math.abs(box.top + box.height / 2 - middle);
-      if (distance < best) { best = distance; nearest = index; }
+      if (first < 0) first = index;
+      if (box.top <= line) reading = index;
     });
-    if (nearest < 0 || nearest === panel._passageIndex) return;
-    panel._passageIndex = nearest;
+    // Before the first passage has reached the line there is nothing behind it,
+    // and the passage the reader is arriving at is the honest answer.
+    if (reading < 0) reading = first;
+    if (reading < 0 || reading === panel._passageIndex) return;
+    panel._passageIndex = reading;
     state.activePanel = panel;
     panel.querySelectorAll(".passage.current, .rail-mark.current")
       .forEach(item => item.classList.remove("current"));
-    const anchor = panel._anchors[nearest];
+    const anchor = panel._anchors[reading];
     anchor.classList.add("current");
     panel
       .querySelector(`.rail-mark[data-for-passage="${CSS.escape(anchor.dataset.passageId)}"]`)
