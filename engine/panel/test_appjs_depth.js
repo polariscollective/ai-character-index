@@ -224,17 +224,14 @@ function figure(slug) {
            spoken: spoken.textContent };
 }
 
+/* The note no longer repeats the depths, so there is no heading to slice at.
+ * What a cell was judged at, and which seat a substitute sat in, is asserted
+ * against depthCellNote further down, where the popover behind the figure
+ * assembles it. */
 function note(slug) {
   noteShown = false;
   openBehaviourNote({ dataset: { behaviourNote: slug } });
-  const nodes = elements.keyNoteBody.children;
-  const after = nodes.findIndex(node => node.textContent === "How deeply the documents on screen cover it");
-  return {
-    shown: noteShown,
-    depth: nodes.slice(after + 1).map(node => node.tag === "ul"
-      ? node.childNodes.map(item => item.textContent)
-      : node.textContent),
-  };
+  return { shown: noteShown };
 }
 
 /* ---- the guard ---- */
@@ -263,19 +260,13 @@ check("the figure beside a behaviour is a dash for a curation's integer",
         title: "Claude’s Constitution 2026-01-20: no depth given.",
         description: "Claude’s Constitution 2026-01-20: no depth given.",
         spoken: "no depth given" });
-check("the note says no depth was given, and lists no judge",
-      () => note("helpfulness"),
-      { shown: true, depth: ["Claude’s Constitution 2026-01-20: no depth given."] });
+check("a behaviour note opens", () => note("helpfulness").shown, true);
 
 show(LEGACY_DOCUMENTS, LEGACY_HELPFULNESS, { comparing: true });
 check("comparing, both documents of the grandfathered publication show a dash",
       () => figure("helpfulness").text, "– / –");
 check("comparing, a behaviour with no depth on either document is spoken as none given",
       () => figure("helpfulness").spoken, "no depth given");
-check("comparing, the note names both documents with no depth given",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: no depth given.",
-       "Model Spec 2025-12-18: no depth given."]);
 
 /* ---- a publication the current builder writes still renders its depths ---- */
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS);
@@ -285,11 +276,6 @@ check("the figure is the panel's bare mean; its title and spoken form say out of
         title: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
         description: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
         spoken: "depth 2.7 out of 4" });
-check("the note's sentence gives the mean out of 4, and every judge's depth and rationale",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
-       ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
-        "sol: 2. Discussed in general terms."]]);
 
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
 check("comparing, a mean of zero shows as 0.0 and not as a dash",
@@ -313,52 +299,18 @@ check("a change to the documents on screen releases an open note's trigger",
       },
       ["aria-expanded=false", null]);
 
-/* ---- a seat another model judged is said beside its document ---- */
+/* ---- a seat another model judged ----
+ *
+ * The note used to name the substitute beside its document and no longer does:
+ * what a cell was judged at, and who sat in whose seat, is what the popover
+ * behind the figure says. The three cases the note's checks covered, an
+ * ordinary reason, one with no closing punctuation and a field that is not a
+ * list, are asserted against depthCellNote below. */
 const SEATED_DEPTH = {
   mean: 2,
   judges: { deepseek: { depth: 2, rationale: "" }, opus: { depth: 2, rationale: "" },
             sol: { depth: 2, rationale: "" } },
 };
-const SUBSTITUTED_HELPFULNESS = {
-  id: 1, slug: "helpfulness", name: "Helpfulness",
-  coverage: {
-    "anthropic--constitution@2026-01-20": { depth: PANEL_DEPTH, passages: [] },
-    "openai--model-spec@2025-12-18": {
-      depth: SEATED_DEPTH, passages: [],
-      substitutions: [{ seat: "fable", substitute: "opus",
-                        reason: "fable's output was content-filtered on every attempt." }],
-    },
-  },
-};
-show(JUDGED_DOCUMENTS, SUBSTITUTED_HELPFULNESS, { comparing: true });
-check("comparing, the note names the substitute on its own document and nowhere else",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
-       ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
-        "sol: 2. Discussed in general terms."],
-       "Model Spec 2025-12-18: 2.0 out of 4, discussed.",
-       "On Model Spec 2025-12-18, opus judged in place of fable: "
-         + "fable's output was content-filtered on every attempt.",
-       ["deepseek: 2.", "opus: 2.", "sol: 2."]]);
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
-  [{ seat: "fable", substitute: "opus",
-     reason: "fable's output was content-filtered on every attempt" }];
-check("a reason with no closing punctuation ends as a sentence",
-      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
-      "On Model Spec 2025-12-18, opus judged in place of fable: "
-        + "fable's output was content-filtered on every attempt.");
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
-  [{ seat: "fable", substitute: "opus", reason: "content-filtered every time!" }];
-check("a reason already ending in punctuation is not given a second one",
-      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
-      "On Model Spec 2025-12-18, opus judged in place of fable: content-filtered every time!");
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions = "fable";
-check("a substitutions field that is not a list says nothing and throws nothing",
-      () => note("helpfulness").depth.filter(line => String(line).includes("in place of")),
-      []);
 
 /* ---- what the two depth popovers print ----
  *

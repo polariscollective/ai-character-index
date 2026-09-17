@@ -260,41 +260,12 @@ function openBehaviourNote(button) {
    * the figure's own tooltip, not a second copy of the formatting. The judges'
    * individual depths and rationale live only here -- the figure has no room for
    * them and the tooltip never carried them past a parenthesis. */
-  const behaviour = payloadBehaviours().find(b => b.slug === slug);
-  const shownDocuments = visibleDocuments().filter(Boolean);
-  if (shownDocuments.length) {
-    const depthHeading = document.createElement("h3");
-    depthHeading.textContent = "How deeply the documents on screen cover it";
-    body.append(depthHeading);
-    shownDocuments.forEach(doc => {
-      const depth = panelDepth(behaviour, doc.id);
-      const p = document.createElement("p");
-      p.textContent = depthSummaryLine(doc, depth);   // never innerHTML: rationale is model output
-      body.append(p);
-      /* A judge that could not answer this cell at all was replaced here, and the
-       * database published the cell only because the substitution was recorded.
-       * The judges listed below then name the substitute, which is true; this says
-       * why, beside the document it happened on and no other. */
-      const substitutions = behaviour?.coverage?.[doc.id]?.substitutions;
-      (Array.isArray(substitutions) ? substitutions : []).forEach(({ seat, substitute, reason }) => {
-        const said = document.createElement("p");
-        // The reason is a database column, not composed copy: it may end mid-sentence.
-        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${endedSentence(reason)}`;
-        body.append(said);
-      });
-      if (depth) {
-        const judges = document.createElement("ul");
-        judges.className = "behaviour-note-depth-judges";
-        Object.entries(depth.judges || {}).forEach(([judge, given]) => {
-          const item = document.createElement("li");
-          const rationale = given.rationale ? ` ${given.rationale}` : "";
-          item.textContent = `${judge}: ${given.depth}.${rationale}`;
-          judges.append(item);
-        });
-        body.append(judges);
-      }
-    });
-  }
+  /* The depths were repeated here and are not any more. The figure in the menu
+   * opens a popover carrying the same mean, the same judges with their
+   * rationales and the same substitution sentence, assembled by depthCellNote,
+   * so this said all of it a second time and made the note longer than the
+   * thing it was explaining. A reader who wants a figure explained presses the
+   * figure. */
 
   /* Last, and only with two documents on screen: the comparison is written about
    * a pair, and under a single document it would describe something the reader
