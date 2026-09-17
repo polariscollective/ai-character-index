@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overview — AI Character Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* The palette is the framework's, written out here rather than imported: this
+   page is provisional and will be rebuilt inside the application, so it is kept
+   whole and movable rather than tangled into the reader's stylesheet. */
+:root {
+  --paper: #F1EFE3;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --on-accent: #F1EFE3;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0 16px 96px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.shell { max-width: 1100px; margin: 0 auto; }
+
+/* Navigation. None existed: the site was one page redirecting to the reader, so
+   this is the first thing that has ever needed to say where else you can go. */
+.site-nav {
+  display: flex;
+  gap: 20px;
+  align-items: baseline;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.site-nav a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 var(--energy);
+}
+.site-nav a:hover { background: var(--energy); }
+.site-nav a[aria-current="page"] { box-shadow: none; color: var(--faint); }
+
+h1 {
+  margin: 34px 0 6px;
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+h1::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 14px;
+  background: var(--energy);
+}
+.lede { margin: 0 0 28px; max-width: 66ch; color: var(--muted); }
+
+/* The grid. A table because it is one: a behaviour reads across, a
+   specification reads down, and a screen reader needs the headers to say so. */
+.grid-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; padding-bottom: 10px; color: var(--faint); font-size: 13px; }
+th, td { text-align: left; padding: 0; }
+thead th {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--muted);
+  font-weight: 600;
+  color: var(--muted);
+  vertical-align: bottom;
+}
+thead th.subject { width: 40%; }
+thead th .lab { display: block; }
+thead th .version {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+}
+tbody tr { border-bottom: 1px solid var(--line-light); }
+tbody th {
+  padding: 0;
+  font-weight: 400;
+  vertical-align: middle;
+}
+.subject-button {
+  width: 100%;
+  padding: 10px 10px 10px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.subject-button:hover span,
+.subject-button:focus-visible span { background: var(--energy); }
+.cell { padding: 4px 6px 4px 0; }
+.cell-button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: rgb(51 61 34 / var(--tint, .1));
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cell-button:hover,
+.cell-button:focus-visible { border-color: var(--accent); outline: none; }
+.cell-figure {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cell-word { display: block; font-size: 12px; color: var(--muted); }
+.cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
+
+/* The scale, under the grid rather than beside it: it is read once and then
+   rarely, and the rubric's own words are what it says. */
+.legend { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 16px; }
+.legend h2 { margin: 0 0 10px; font-family: var(--display); font-size: 17px; font-weight: 600; }
+.legend ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.legend li { display: flex; gap: 10px; align-items: baseline; }
+.legend .swatch {
+  flex: none;
+  width: 30px;
+  height: 16px;
+  border-radius: 2px;
+  background: rgb(51 61 34 / var(--tint));
+}
+.legend .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+
+dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+dialog::backdrop { background: rgb(35 40 27 / .55); }
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 0;
+}
+.sheet-head h2 { margin: 0; font-family: var(--display); font-size: 19px; font-weight: 600; }
+.sheet-close {
+  flex: none;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--energy); color: var(--ink); }
+.sheet-body { padding: 6px 20px 22px; overflow-y: auto; max-height: calc(min(86vh, 820px) - 62px); }
+.sheet-body h3 {
+  margin: 20px 0 6px;
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+.sheet-body p { margin: 0 0 10px; max-width: 66ch; }
+.sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.judges li { padding-left: 14px; border-left: 2px solid var(--line); }
+.judges .who { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.missing { color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- The reader's own primary navigation, with this page added to it. Kept in
+       the same order and with the same destinations so that moving between the
+       two does not feel like arriving somewhere else. -->
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a href="/spec-reader/">Spec reader</a>
+    <a href="/overview.html" aria-current="page">Overview</a>
+    <a href="/how-it-works">How it works and contribute</a>
+    <a href="/mcp">MCP</a>
+  </nav>
+
+  <h1>How deeply each specification covers each behaviour</h1>
+  <p class="lede">
+    One column per specification, at its most recent version. One row per behaviour.
+    Each figure is the mean of the panel's judges on the nought to four scale below.
+    Press a behaviour to read what it means here, or a figure to see how it was
+    reached and where that specification stands beside the others.
+  </p>
+
+  <div class="grid-scroll">
+    <table id="grid">
+      <caption id="grid-caption">Loading.</caption>
+      <thead><tr id="grid-head"></tr></thead>
+      <tbody id="grid-body"></tbody>
+    </table>
+  </div>
+
+  <section class="legend" id="legend" hidden>
+    <h2>The scale</h2>
+    <ol id="legend-list"></ol>
+  </section>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-head">
+    <h2 id="sheet-title"></h2>
+    <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</dialog>
+
+<script type="module" src="./overview.js"></script>
+</body>
+</html>

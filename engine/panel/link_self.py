@@ -274,6 +274,18 @@ def paragraphs(args):
     return link_paragraph.main(argv, call_model=through_files(folder, "paragraph"))
 
 
+def overview(args):
+    """Stage five, once per cell of the grid: questions out, then passages in.
+
+    Unlike the stages above this one belongs to no run. Its material is every
+    comparison already stored, whichever run wrote it, so it takes a folder of
+    its own rather than a report's."""
+    import link_overview                                  # noqa: PLC0415
+    folder = ROOT / "artefacts" / "overview"
+    argv = ["--go", f"--model={SEAT}", f"--out={args.out}"]
+    return link_overview.main(argv, call_model=through_files(folder, "overview"))
+
+
 def store_answers(args):
     folder = Path(args.folder)
     index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
@@ -351,6 +363,12 @@ def main(argv=None):
     each.add_argument("--floor", type=int, default=2,
                       help="counterparts a passage needs before it gets a paragraph")
     each.set_defaults(handler=paragraphs)
+
+    grid = sub.add_parser("overview",
+                          help="write where each specification stands on each behaviour")
+    grid.add_argument("--out", default=str(ROOT / "site" / "overview.json"),
+                      help="where the grid's passages are written")
+    grid.set_defaults(handler=overview)
 
     args = parser.parse_args(argv)
     # Both commands ask for the same cell more than once, and each ask is a full
