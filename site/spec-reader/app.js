@@ -1166,6 +1166,13 @@ function renderBehaviourList() {
               <span class="name">${escapeHTML(behaviour.name)}</span>
               <span class="depth-spoken visually-hidden"></span>
             </label>
+            <!-- The figures and the way into the comparison, stacked in a column of
+                 their own. The name beside them wraps over several lines on a narrow
+                 sidebar, and a control laid across the whole frame would be pushed to
+                 the bottom of whatever height that made. In its own column it stays
+                 under the figures, which is where it belongs and where it is looked
+                 for. -->
+            <span class="behaviour-stack">
             <!-- The figure, and the way into the cell behind it: the mean, each judge
                  with its own score and its rationale, and any recorded substitute.
                  updateBehaviourDepths writes its text and its name. -->
@@ -1176,6 +1183,24 @@ function renderBehaviourList() {
               aria-haspopup="dialog"
               aria-expanded="false"
             ></button>
+            <!-- The way into the comparison written for this behaviour over the two
+                 documents on screen. Inside the frame and after the figure, taking
+                 the frame's whole width, so it wraps onto a line of its own and ends
+                 where the figure ends: it inherits the frame's padding instead of
+                 guessing an offset that has to be kept in step by hand. Hidden rather
+                 than absent while there is nothing to compare, so the row keeps its
+                 shape as the reader moves between one document and two, which
+                 updateBehaviourDepths decides. It sits outside the label, like the
+                 figure above it, because a click inside the label would tick the
+                 row on its way past. -->
+            <button
+              type="button"
+              class="behaviour-diff"
+              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
+              aria-haspopup="dialog"
+              hidden
+            >Compare</button>
+            </span>
             </span>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
@@ -1187,20 +1212,6 @@ function renderBehaviourList() {
               aria-label="What ${escapeHTML(behaviour.name)} means"
               title="What this behaviour means"
             >i</button>
-            <!-- The way into the comparison written for this behaviour over the two
-                 documents on screen. Last in the row and full width, so it wraps onto
-                 its own line under the two figures rather than crowding in beside
-                 them; last in the markup too, so reading order and tab order follow
-                 what the eye does. Hidden rather than absent while there is nothing
-                 to compare, so the row keeps its shape as the reader moves between
-                 one document and two. updateBehaviourDepths decides that. -->
-            <button
-              type="button"
-              class="behaviour-diff"
-              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
-              aria-haspopup="dialog"
-              hidden
-            >Compare</button>
           </li>
         `;}).join("")}
       </ul>
@@ -2813,8 +2824,15 @@ function annotatePassages(panel, doc) {
       .join(" · ");
     // One per line: a locator carries " > " and "·" is prose here, so neither can
     // separate them. What a ?passage= link finds its passage by.
-    block.dataset.locators = marks
-      .flatMap(mark => mark.anchored.map(passage => passage.locator))
+    //
+    // Distinct: `marks` holds one entry per behaviour, so a paragraph anchored
+    // under two of them listed its locator twice, and everything reading this
+    // list took it twice over. It showed as a paragraph carrying every bubble it
+    // has, doubled, the moment a second behaviour was ticked. Four readers
+    // depend on this list, the bubbles, the arrows, the reciprocal bubble and a
+    // ?passage= link, and a repeated locator means nothing to any of them.
+    block.dataset.locators = [...new Set(marks
+      .flatMap(mark => mark.anchored.map(passage => passage.locator)))]
       .join("\n");
     block._railTint = railTint(marks);
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
