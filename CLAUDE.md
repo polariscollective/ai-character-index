@@ -714,6 +714,94 @@ this migration, like those, was applied by hand with `supabase db push` from
 `evals/`. `evals/supabase/schema.sql` has not been refreshed since 12 September
 2026 and is behind the migrations that followed.
 
+### Four pairs were judged by one seat, which was a party to every dispute
+
+Overnight on 16 to 17 September 2026 the comparison was run over four pairs of
+documents, thirteen behaviours each, by a single seat: this assistant, in
+session, under `opus-5`. No provider was called and nothing was spent.
+`engine/panel/link_self.py` is what allows that. Where `link_job.run`,
+`link_arbitrate.settle` and `link_summary.main` take a `call_model` that reaches
+a provider, it passes one that writes the question to a file beside the run and
+reads the answer back from its sibling. The seat is the session and the file is
+the wire, so the same composer, the same parser and the same prompts produce the
+same kind of evidence with no key in the environment.
+
+| pair | passages | links | disputes |
+|---|---|---|---|
+| `anthropic--constitution@2026-01-20` against `openai--model-spec@2026-08-18` | 582 | 935 | 59 |
+| `openai--model-spec@2025-12-18` against `openai--model-spec@2026-08-18` | 555 | 637 | 3 |
+| `anthropic--constitution@2026-01-20` against `alibaba--model-spec@2026-04-00` | 524 | 771 | 73 |
+| `alibaba--model-spec@2026-04-00` against `openai--model-spec@2026-08-18` | 440 | 709 | 35 |
+
+104 calls in all, 26 per pair, being thirteen behaviours read in both directions:
+103 done and one error. 3,052 link rows, 170 arbitrations, and 52 comparison
+paragraphs, thirteen per pair, 873,453 characters in all. No source passage went
+unanswered in any completed call, so the completeness floor refused nothing. Over all four pairs
+the relations are `same` 1626, `nuance` 684, `stricter_source` 417,
+`stricter_target` 298, `absent` 26 and `contradiction` 1.
+
+**The arbiter was a party to all 170.** `aci_link_arbitrations.arbiter_was_a_party`
+is true on every row of this run, because the seat that settled each dispute is
+the seat that gave the readings in dispute. That is the weakest position an
+arbiter can be in, and the column exists to say so rather than to be satisfied.
+It shows in the figures: the arbiter upheld its own earlier reading 155 times and
+rejected both of them 15 times. A panel of three would have produced the other
+two kinds of dispute this design names, two judges differing and one judge
+linking where another did not; with one seat only self-inconsistency can fire, so
+170 disputes out of 3,052 links is a floor on disagreement and not a measure of
+it. Settled, they are `stricter` 92, `nuance` 63 and `same` 15, and where one
+document was found stricter it was the Alibaba Model Spec 37 times, the OpenAI
+Model Spec 30 and the Anthropic constitution 25.
+
+Every `cost_usd` and every `batch_cost_usd` in this run is null, and null is the
+right value. `batch_job.cost_of` returns None for a seat carrying no
+`price_per_mtok`, which is what an in-session judge is, and this repository has
+already settled that null means unknown while zero means free. `link_summary`
+printed `$0.00` for such a call until it crashed on the None it was formatting,
+which killed twelve of thirteen behaviours after the first; it says "no cost
+recorded" now, because a claim of free is a claim nobody can support.
+
+**One call was refused on safety grounds and was left refused.** The
+`harmlessness-to-the-user` call reading the OpenAI Model Spec against the Alibaba
+Model Spec terminated against a safeguard, flagged `[bio]`. It was not retried
+and it was not reworded: it is recorded as `error`, which is the same treatment
+the `fable` `content_filter` refusal already has in this file. Rewording a prompt
+until a safeguard stops firing is not a way to obtain evidence.
+
+**Two versions of one document show what a single seat gets wrong.** The pair of
+OpenAI versions produced 637 links of which 537 are `same` and only 3 disputes,
+which is what two close versions should look like. In two of those three the
+arbiter settled by finding that the older version already carried the same rule
+somewhere else: the root-authority paragraph putting teen safety first, and the
+"No other objectives" rule naming time-on-site, revenue, self-preservation and
+acting as an enforcer of laws or morality. The seat, shown a pair of passages,
+had read an added rule; the arbiter, who reads both documents whole, could see
+the text was shared. That is an argument for the arbiter having the documents,
+and against trusting a passage-level reading about what a version introduced.
+
+**The `absent` rows are the first data on that branch, and they prove less than
+they look like.** This file recorded that `silences` was exercised by a fixture
+and not by data. There are 26 `absent` rows now. But a silence is meant to need
+every judge of the panel, and a panel of one satisfies that rule trivially, so
+these rows carry a one-seat assertion where the design intends a unanimous one.
+They exercise the code path. They do not yet test the claim.
+
+The reader was wrong about multi-behaviour runs until this, and is fixed:
+`link_reader_data` read the comparison from the `summary.json` beside a run,
+which holds whichever behaviour was written last, so a thirteen-behaviour run
+would have filed one paragraph under all thirteen. The comparisons come from
+`aci_link_summaries` now, keyed by behaviour as that table already is, and the
+payload carries `comparisons` keyed by slug in place of a single `comparison`.
+
+What this run cannot claim is the same thing the `sol` pilot could not claim, and
+more of it. One seat is not a panel. The seat arbitrated its own disputes. And
+the seat is an Anthropic model that judged the Anthropic constitution against
+three other labs' documents, which is the independence problem stated plainly
+rather than avoided. Nothing here is published: `site/spec-reader/links.json` and
+`artefacts/` are gitignored, and what is in the database is evidence of what one
+seat said, recorded so that it can be compared against a panel that has some
+claim to independence.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
