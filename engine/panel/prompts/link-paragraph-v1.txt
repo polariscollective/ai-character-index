@@ -9,7 +9,8 @@ A reader looking at this passage sees a row of bubbles, one per counterpart, and
 So say, in prose:
 
 - what the other document does with this passage taken as a whole, in a sentence
-- which counterparts restate the same requirement, grouped rather than listed one by one
+- which counterparts restate the same requirement, named by the one claim they
+  share rather than listed one by one
 - which counterpart carries something the others do not, and what it is
 
 Name a counterpart by what it says, never by a number, a locator or a position. Write for someone who cannot see any numbering and has no way to look one up. "The rule on refusing to help conceal a defect" is a name a reader can find; "the third passage" is not.
@@ -21,6 +22,8 @@ Do not rank the documents. This index reports what specifications say; which lab
 Do not say "the source" or "the target". Those name a direction of reading, not a document, and the reader cannot see which was which. Name each document.
 
 Do not repeat the relations as a list. The bubbles already carry them. Your job is the shape of the whole, not a second copy of the parts.
+
+Do not enumerate, and this is the rule most easily broken. A group of counterparts is named by the single claim its members have in common, in one clause: "its rules against misleading anyone" rather than three clauses walking through each in turn. Describe at most two counterparts separately in the whole paragraph, and never count them: "three of them" tells a reader nothing they can act on. A paragraph that visits every bubble in order is the thing it was written to spare them.
 
 Do not use em-dashes.
 
