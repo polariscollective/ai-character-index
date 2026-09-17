@@ -296,6 +296,18 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .judges li { padding-left: 14px; border-left: 2px solid var(--line); }
 .judges .who { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* The panel's own readings, closed. The paragraph above is written from them and
+   names nobody; these are what it was written from, kept reachable rather than
+   kept in the way. */
+.panel-readings { margin: 2px 0 0; }
+.panel-readings summary {
+  width: fit-content;
+  color: var(--faint);
+  font-size: 12px;
+  cursor: pointer;
+}
+.panel-readings summary:hover { color: var(--ink); }
+.panel-readings[open] summary { margin-bottom: 10px; }
 .missing { color: var(--faint); }
 </style>
 </head>

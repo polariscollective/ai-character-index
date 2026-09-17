@@ -67,3 +67,6 @@ site/spec-reader/links.json
 # stored. Generated data the reader reads locally, like links.json above: it
 # belongs in the database once its shape has been read and judged, not here.
 site/overview.json
+# Why each figure of the grid is what it is, written by link_depth from the
+# judges' own reasons. Generated data, like the two above.
+site/depths.json

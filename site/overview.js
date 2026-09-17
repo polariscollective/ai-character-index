@@ -1,11 +1,12 @@
 /* The grid: how deeply each specification covers each behaviour.
  *
- * Three sources, and only the third is ours to lose. The payload and the
+ * Four sources, and only the last two are ours to lose. The payload and the
  * documents are the reader's own endpoints, so the figures here and the figures
- * there are the same publication's. overview.json is written beside the site by
- * engine/panel/link_overview.py and is not deployed: the page renders without it
- * and simply has less to say when a figure is pressed, which is the honest
- * behaviour for a file that may not be there.
+ * there are the same publication's. overview.json and depths.json are written
+ * beside the site by engine/panel/link_overview.py and link_depth.py and are not
+ * deployed: the page renders without either and simply has less to say when a
+ * figure is pressed, which is the honest behaviour for a file that may not be
+ * there.
  *
  * Nothing is built with innerHTML. The passages are a model's words and the
  * rationales are a model's words, so every one of them lands as a text node.
@@ -61,7 +62,7 @@ const elements = {
   sheetClose: document.querySelector("#sheet-close"),
 };
 
-const state = { behaviours: [], columns: [], passages: {}, registry: {} };
+const state = { behaviours: [], columns: [], passages: {}, depths: {}, registry: {} };
 
 /* The rubric each judge scored against, copied from the reader's own
  * DEPTH_LEVELS. Copied rather than fetched because this page is standalone and
@@ -259,9 +260,28 @@ function openCell(behaviour, document_, depth) {
       document.createTextNode(` out of 4, ${DEPTH_WORDS[Math.round(depth.mean)]}.`));
     body.append(figure);
 
+    /* Why the figure is what it is, in one voice rather than in three named
+     * ones. A reader has no way to weigh one model's name against another's, so
+     * the names were noise laid over the only thing that was wanted, which is
+     * the reason. Where the panel divided the paragraph says so, because a mean
+     * that hides a split is a figure a reader would be wrong to trust. */
+    const why = state.depths[`${behaviour.slug}\n${document_.id}`];
+    body.append(heading("Why this figure"));
+    body.append(why && why.text
+      ? paragraph(why.text)
+      : paragraph("Not written yet for this specification and behaviour.",
+                  "missing"));
+
+    /* The readings it was written from, closed. They are the record, and a
+     * record that cannot be reached is a claim; but they are evidence rather
+     * than reading, so they sit one press away instead of in the path. */
     const judges = Object.entries(depth.judges || {});
-    body.append(heading("How this figure was reached"));
     if (judges.length) {
+      const fold = document.createElement("details");
+      fold.className = "panel-readings";
+      const label = document.createElement("summary");
+      label.textContent = `The ${judges.length} readings this was written from`;
+      fold.append(label);
       const list = document.createElement("ul");
       list.className = "judges";
       judges.sort(([a], [b]) => a.localeCompare(b)).forEach(([judge, given]) => {
@@ -273,9 +293,8 @@ function openCell(behaviour, document_, depth) {
         if (given.rationale) item.append(paragraph(given.rationale));
         list.append(item);
       });
-      body.append(list);
-    } else {
-      body.append(paragraph("No judge's reasoning is recorded.", "missing"));
+      fold.append(list);
+      body.append(fold);
     }
 
     const passage = state.passages[`${behaviour.slug}\n${document_.id}`];
@@ -415,11 +434,12 @@ function render() {
 }
 
 async function initialize() {
-  const [payload, documents, registry, passages] = await Promise.all([
+  const [payload, documents, registry, passages, depths] = await Promise.all([
     loadJSON("/api/reader/payload", null),
     loadJSON("/api/reader/documents", null),
     loadJSON("/api/reader/behaviours", null),
     loadJSON("./overview.json", null),
+    loadJSON("./depths.json", null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";
@@ -428,6 +448,7 @@ async function initialize() {
   state.behaviours = payload.behaviours;
   state.columns = newestPerSpecification(documents.documents);
   state.passages = passages?.cells || {};
+  state.depths = depths?.cells || {};
   state.registry = registry || {};
   render();
 }

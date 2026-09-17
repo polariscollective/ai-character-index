@@ -286,6 +286,18 @@ def overview(args):
     return link_overview.main(argv, call_model=through_files(folder, "overview"))
 
 
+def depths(args):
+    """Stage six, once per figure of the grid: questions out, then paragraphs in.
+
+    Small calls, like the paragraph stage: a figure's explanation is written
+    from three rationales rather than from any document, so the questions are a
+    few thousand characters each."""
+    import link_depth                                     # noqa: PLC0415
+    folder = ROOT / "artefacts" / "depths"
+    argv = ["--go", f"--model={SEAT}", f"--out={args.out}"]
+    return link_depth.main(argv, call_model=through_files(folder, "depth"))
+
+
 def store_answers(args):
     folder = Path(args.folder)
     index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
@@ -369,6 +381,12 @@ def main(argv=None):
     grid.add_argument("--out", default=str(ROOT / "site" / "overview.json"),
                       help="where the grid's passages are written")
     grid.set_defaults(handler=overview)
+
+    deep = sub.add_parser("depths",
+                          help="write why each figure of the grid is what it is")
+    deep.add_argument("--out", default=str(ROOT / "site" / "depths.json"),
+                      help="where the figures' paragraphs are written")
+    deep.set_defaults(handler=depths)
 
     args = parser.parse_args(argv)
     # Both commands ask for the same cell more than once, and each ask is a full

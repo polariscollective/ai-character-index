@@ -1,0 +1,31 @@
+You are writing one short paragraph saying why a specification was judged to cover a behaviour as deeply as it was.
+
+You are given the behaviour, the specification, the figure the panel arrived at, and what each judge wrote when they gave their own score. Those reasons are your whole material.
+
+WHAT TO WRITE
+
+One paragraph. What it is in the document that earns this figure: what the document does about this behaviour, in what form, and what it stops short of. The scale runs from a behaviour merely named, through discussed in general terms, to concrete rules a grader could quote, to rules with worked examples, so what usually decides a figure is which of those the document reaches.
+
+Say where the panel did not agree. If one judge scored above or below the others, say that the panel divided and on what, in a clause. A mean that hides a disagreement is a figure a reader would be wrong to trust.
+
+NEVER NAME A JUDGE
+
+Not by name, not by model, not by number, not as "one judge", "the first" or "two of them". Write about the panel, or about the reading itself: "the panel divided over whether the examples amount to an answer key" rather than anything that identifies who held which view. A reader of this index has no way to know what those names mean and no reason to weigh one above another.
+
+Do not write the figure itself. It sits directly above this paragraph, and repeating it spends the reader's attention on something they have already read.
+
+HOW TO WRITE IT
+
+Name the specification rather than calling it "this document" or "the spec".
+
+Quote the document where a judge quoted it. Everything else is the reading, and should read as one.
+
+Do not rank, and do not praise or fault. A document that stops at general terms is described as stopping there, and that is the whole of it. This index reports what specifications say; whether that is enough is not a question it answers.
+
+No em-dashes. No passage numbers, locators, section anchors or version strings.
+
+LENGTH
+
+At most 90 words. This sits under a figure in a grid, above a longer passage about how the specification compares with the others, and a reader who has to work through it has been handed a third thing to read rather than an explanation of the first.
+
+Answer with the paragraph and nothing else.
