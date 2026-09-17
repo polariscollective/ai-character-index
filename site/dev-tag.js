@@ -51,6 +51,16 @@ const STYLE = `
 .dev-tag:hover { background: #A0522D; color: #F1EFE3; }
 .dev-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
 .dev-note {
+  /* What centres a modal is its auto margin, and two of the four pages carry a
+     universal reset that zeroes every margin: without this the note opens in the
+     top left corner there and centred everywhere else. Their own proposal dialog
+     puts it back the same way, with the same note beside it.
+
+     No backticks in here, ever. This block is a template literal, and one
+     backtick in a comment closes it: what followed became an object literal
+     applied to a parenthesis, the page threw on load, and the tag never built.
+     node --check saw nothing, because the result is still valid JavaScript. */
+  margin: auto;
   width: min(460px, calc(100vw - 32px));
   padding: 18px 20px 20px;
   border: 1px solid #5C6B3C;

@@ -32,6 +32,20 @@
   --accent: #333D22;
   --energy: #B7C94B;
   --on-accent: #F1EFE3;
+  --footer-height: 30px;
+  /* The page's measure, and the gutter that aligns a full-bleed bar with it.
+     The bars run edge to edge because their ground should; their contents must
+     start where the page's own text starts, or the eye reads two left margins.
+     The 16px is the shell's own padding, so the two agree exactly. */
+  /* A share of the window and nothing else. Any pixel cap here stops the
+     margins growing with the screen, which is the opposite of proportional:
+     capped at 1280 the margins were 336px at 1920 and 118px at 1280. */
+  --measure: 84vw;
+  /* 24px, the same as the reader's bar and the two prose pages'. The bars were
+     briefly indented to meet the page's own text, which put the brand a hundred
+     pixels in and made this page's header read as a different one. Chrome runs
+     to the edge of the window; only the content is held to a measure. */
+  --gutter: 24px;
   --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -39,16 +53,30 @@
 * { box-sizing: border-box; }
 /* No side padding here any more: the header runs to both edges of the window,
    as the reader's does, so the gutter belongs to the shell under it. */
+/* No padding at the foot any more: the footer ends the page, and 96px under it
+   would leave the bar floating above the bottom of the window. The room between
+   the grid and the bar belongs to the shell. */
 body {
   margin: 0;
-  padding: 0 0 96px;
+  padding: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--ui);
   font-size: 15px;
   line-height: 1.6;
 }
-.shell { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+/* The foot of the shell clears the fixed bar below it: its own height, and then
+   the room the page wanted anyway. Written as a sum rather than as one number,
+   so changing the bar's height moves this with it. */
+.shell {
+  /* Proportional, within reason. 1100px was a cap chosen once, and on a wide
+     screen it left the grid a ribbon down the middle with empty margin either
+     side. It grows with the window now and stops at 1700, past which a row runs
+     wider than an eye tracks across. */
+  width: var(--measure);
+  margin: 0 auto;
+  padding: 0 16px calc(var(--footer-height) + 24px);
+}
 
 /* The reader's header, rule for rule. Copied rather than imported, like the
    palette above and for the same reason: this page is provisional and will be
@@ -60,15 +88,51 @@ body {
    over, both darken. The chartreuse highlight the framework gives links in
    prose is not used here, because it would fill a block behind the name that
    the mark beside it cannot take. */
+/* Stuck to the top. The page is a little taller than a window and is meant to be
+   read at a glance, so the few dozen pixels of scrolling it does take should not
+   cost the reader the way back out of it. Its own ground is opaque, which is
+   what keeps the grid from showing through as it passes underneath. */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   height: var(--header-height);
-  padding: 0 24px;
+  padding: 0 var(--gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
 }
+
+/* Where the project came from, and who runs it now, in the reader's own slim
+   bar: one line, the same height and the same tones, so the two pages end the
+   same way.
+
+   Held at the foot of the window rather than at the end of the document. On the
+   reader it is the last row of a full-height application and needs no holding;
+   here the page scrolls, and a bar that scrolled away would leave the credit
+   visible only to whoever reached the bottom. The shell below carries room for
+   it, so nothing is read through it. */
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: var(--footer-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--faint);
+  font-size: 12px;
+}
+.site-footer a { color: var(--muted); text-decoration: none; }
+.site-footer a:hover { background: var(--energy); color: var(--ink); }
 /* On the baseline, not on the boxes: the wordmark is 17px and the collective's
    name 15px, so centred their boxes would line up while their letters did not. */
 .site-brand {
@@ -144,7 +208,7 @@ h1::before {
 /* Wider than the 66ch the framework asks for prose. This is a tool rather than
    a page of prose, and at 66ch the four sentences ran to six lines above a grid
    that wants the room. */
-.lede { margin: 0 0 28px; max-width: 82ch; color: var(--muted); }
+.lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
 
 /* The grid. A table because it is one: a behaviour reads across, a
    specification reads down, and a screen reader needs the headers to say so. */
@@ -152,9 +216,13 @@ h1::before {
    their names on the way down. A height in pixels rather than a count of rows,
    because the stylesheet cannot count rows: if a row's height changes this
    number has to change with it. */
+/* The height the window leaves it, set by fitGrid in overview.js. The 430px
+   below is what it falls back to before that runs, and what it keeps if the
+   script never does: a guess at a laptop, which is what this was everywhere
+   until the grid learned to measure. */
 .grid-scroll {
   overflow: auto;
-  max-height: 430px;
+  max-height: var(--grid-max, 430px);
   border-bottom: 1px solid var(--line);
 }
 /* How many rows are still below, under the grid on the left. Kept in the flow
@@ -260,7 +328,11 @@ tbody th {
    taller than the window, and a column that cannot fit has nothing to stick. */
 .scale-rail {
   flex: none;
-  width: 220px;
+  /* A share of the width rather than a fixed column: it holds five sentences,
+     and at 220px on a wide screen they set as narrow ribbons while the grid
+     beside them had room to spare. Floored so the sentences never set in a
+     gutter, capped so they never set as a page. */
+  width: clamp(230px, 20%, 340px);
   padding-right: 18px;
   border-right: 1px solid var(--line);
 }
@@ -406,14 +478,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 <div class="shell">
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
-    One column per specification, at its most recent version. One row per behaviour.
-    Each figure is the mean of the panel's judges on the nought to four scale below.
-    Press a behaviour to read what it means here, or a figure to see how it was
-    reached and where that specification stands beside the others.
-    If a specification is missing, or a behaviour the index should be asking
-    about, you can
+    Press a behaviour for what it means here, or a figure for how it was reached.
+    <br>
+    Missing a specification, or a behaviour the index should be asking about?
     <a href="/how-it-works?kind=specification#propose" target="_blank"
-      rel="noopener noreferrer">propose a model spec</a>
+      rel="noopener noreferrer">Propose a model spec</a>
     or
     <a href="/how-it-works?kind=behaviour#propose" target="_blank"
       rel="noopener noreferrer">propose a behaviour</a>.
@@ -461,6 +530,14 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   </div>
   <div class="sheet-body" id="sheet-body"></div>
 </dialog>
+
+<!-- The reader's own footer, word for word, including the line about where the
+     project came from: the two pages should end the same way, and this page is
+     no less the index than that one. -->
+<footer class="site-footer">
+  <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
+  <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
+</footer>
 
 <script type="module" src="/overview.js"></script>
 <!-- The development mark beside the wordmark, which appears only where the

@@ -49,6 +49,21 @@ const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
+/* Three files the reader asks for and no checkout has: the links of a run, and
+ * the two kinds of paragraph written beside them. All three are gitignored
+ * generated data, absent from every deployment until a run is stored, and the
+ * reader renders without them. Their absence is the committed state, so it is
+ * declared rather than left to fail everywhere but on the machine that made
+ * them. verify-reader-test.mjs carries the same list for the same reason. */
+const GENERATED_AND_ABSENT = [
+  "/spec-reader/links.json", "/depths.json", "/overview.json",
+];
+/* Every 404 this server emitted, audited at the end. Chrome logs each one into
+ * the console, and the collector below cannot tell which file it was: the
+ * message carries no URL. So the console line is dropped there and the real
+ * check lives here, where the path is known. */
+const missingPaths = [];
+
 // --- Serve the staged site ----------------------------------------------------
 const server = createServer(async (req, res) => {
   // Answered from the staged tree's own payloads, so the fixture index is
@@ -65,7 +80,7 @@ const server = createServer(async (req, res) => {
     const body = await readFileAsync(join(SITE, path));
     res.writeHead(200, { "content-type": MIME[extname(path)] || "application/octet-stream" });
     res.end(body);
-  } catch { res.writeHead(404).end("not found"); }
+  } catch { missingPaths.push(path); res.writeHead(404).end("not found"); }
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/spec-reader/`;
@@ -73,7 +88,15 @@ const base = `http://127.0.0.1:${server.address().port}/spec-reader/`;
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage();
 let pageErrors = [];
-page.on("console", m => { if (m.type() === "error") pageErrors.push(m.text()); });
+page.on("console", m => {
+  // Chrome echoes every 404 here as one fixed sentence carrying no URL, so a
+  // file that is meant to be missing and one that has been lost read alike.
+  // The audit at the foot tells them apart; this would only report both.
+  if (m.type() === "error"
+      && m.text() !== "Failed to load resource: the server responded with a status of 404 (Not Found)") {
+    pageErrors.push(m.text());
+  }
+});
 page.on("pageerror", e => pageErrors.push(String(e)));
 
 let failures = 0;
@@ -912,12 +935,38 @@ await page.waitForTimeout(250);
 check((await cards()) > 0, "select-all-behaviours restores the view");
 await at("?behavior=${DEFINED}");
 {
+  /* The umber surface is no longer offered. Its switch, its palette and
+   * setPalette all remain -- the button carries `hidden` and ?palette=umber
+   * still reaches the surface -- but nothing on the page presses it, because the
+   * Overview page has no second palette and a control the menus disagreed about
+   * was worse than none.
+   *
+   * So this no longer clicks it: a click on a hidden control never resolves, and
+   * this walker hung on it for fifty-eight retries rather than failing. What is
+   * checked instead is that the switch is there and not offered, and that the
+   * surface it used to reach still works when asked for directly, which is how
+   * every other palette check in this file already drives it. */
+  const offered = await page.evaluate(() => {
+    const button = document.querySelector("#mode");
+    return { present: Boolean(button), hidden: button?.hidden ?? null };
+  });
+  check(offered.present && offered.hidden === true,
+    "the palette switch is kept and not offered", JSON.stringify(offered));
+
   const before = await page.evaluate(() => document.body.dataset.palette);
-  await page.click("#mode");
+  await page.evaluate(() => { document.body.dataset.palette = "umber"; });
   await page.waitForTimeout(150);
-  const after = await page.evaluate(() => document.body.dataset.palette);
-  check(before !== after && ["daylight", "umber"].includes(after),
-    "mode button toggles the palette", `${before} -> ${after}`);
+  const ground = await page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor);
+  await page.evaluate(name => { document.body.dataset.palette = name; }, before);
+  const daylight = await page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor);
+  // That the ground changes, not what it changes to: the body takes --chrome
+  // rather than --paper, and a colour written in here is a fourth place the
+  // palette would have to be kept true.
+  check(before === "daylight" && ground !== daylight,
+    "the umber surface still answers when it is asked for",
+    `${daylight} -> ${ground}`);
 }
 
 // =============================================================================
@@ -1909,6 +1958,11 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
+const unexpectedMissing = [...new Set(missingPaths)]
+  .filter(path => !GENERATED_AND_ABSENT.includes(path));
+check(unexpectedMissing.length === 0, "nothing unexpected 404s",
+  unexpectedMissing.join(", ") || "only the generated files no checkout carries");
+
 await browser.close();
 server.close();
 console.log(failures ? `${failures} FAILURES` : "ALL FEATURE CHECKS PASSED.");

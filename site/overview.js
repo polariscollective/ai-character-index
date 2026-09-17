@@ -132,6 +132,39 @@ const shownVersion = version => String(version || "").replace(/-00$/, "");
  *
  * Nothing is said at the end of the list rather than "0 more below", which is a
  * line that tells a reader what they can already see. */
+/* What sits under the grid and must stay on screen: the count of what is below,
+ * the caption, and the room the shell keeps for the footer fixed over it. */
+const BELOW_THE_GRID = 54;
+/* Never less than this, however short the window: a grid showing one row is a
+ * list, and a list is not what this page is. */
+const LEAST_GRID = 240;
+/* How much of the room left under the grid it actually takes. */
+const GRID_SHARE = 0.88;
+
+/* The grid takes the height the window leaves it.
+ *
+ * It was 430px everywhere, which is five rows on a laptop, four on a short
+ * window with the caption pushed under the fold, and a third of the screen
+ * wasted on a tall one. Measured from where the grid actually begins, so a lede
+ * that wraps to three lines at a narrow width moves the grid down and the grid
+ * shortens with it, and nothing here has to be kept in step by hand.
+ *
+ * From the document's top rather than the viewport's, so the answer does not
+ * change with how far the page happens to be scrolled. */
+function fitGrid() {
+  const scroll = elements.gridScroll;
+  if (!scroll) return;
+  const top = scroll.getBoundingClientRect().top + window.scrollY;
+  const below = (elements.remaining?.offsetHeight || 0)
+    + (elements.caption?.offsetHeight || 0) + BELOW_THE_GRID;
+  /* A share of what is left rather than all of it. Taking the whole of the room
+     filled the window to its last pixel, which reads as a page with no end; at
+     four fifths the grid still grows with the screen and the page still breathes
+     under it. */
+  const room = (window.innerHeight - top - below) * GRID_SHARE;
+  scroll.style.setProperty("--grid-max", `${Math.max(LEAST_GRID, Math.round(room))}px`);
+}
+
 function updateRemaining() {
   const scroll = elements.gridScroll;
   if (!scroll || !elements.remaining) return;
@@ -422,6 +455,7 @@ function render() {
 
   const judged = columns.filter(column => !column.absent).length;
   const unjudged = columns.filter(column => column.absent).map(c => c.lab);
+  fitGrid();
   updateRemaining();
   elements.caption.textContent =
     `${behaviours.length} behaviours over ${judged} specifications. `
@@ -456,8 +490,10 @@ async function initialize() {
 }
 
 elements.gridScroll?.addEventListener("scroll", updateRemaining, { passive: true });
-// A narrower window rewraps the behaviour names, which changes how many rows fit.
-window.addEventListener("resize", updateRemaining, { passive: true });
+// A narrower window rewraps the behaviour names, which changes how many rows
+// fit; a shorter one changes how many there is room for at all.
+window.addEventListener("resize", () => { fitGrid(); updateRemaining(); },
+                        { passive: true });
 
 elements.sheetClose.addEventListener("click", () => elements.sheet.close());
 elements.sheet.addEventListener("click", event => {
