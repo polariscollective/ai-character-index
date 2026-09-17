@@ -257,7 +257,7 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.absent ? "no specification" : column.version;
+    version.textContent = column.absent ? "not published" : column.version;
     cell.append(lab, version);
     head.append(cell);
   });
@@ -293,15 +293,22 @@ function render() {
         button.type = "button";
         button.className = "cell-button";
         paint(button, mean);
-        button.setAttribute("aria-label", column.absent
-          ? `${behaviour.name} in ${column.lab}: no specification in the index`
-          : `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4`);
+        // The accessible name says what the cell shows. A screen reader that
+        // heard something the sighted reader cannot see would be reading a
+        // different grid.
+        button.setAttribute("aria-label",
+          `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
+          + DEPTH_WORDS[Math.round(mean)]);
         const number = document.createElement("span");
         number.className = "cell-figure";
         number.textContent = mean.toFixed(1);
         const word = document.createElement("span");
         word.className = "cell-word";
-        word.textContent = column.absent ? "no specification" : DEPTH_WORDS[Math.round(mean)];
+        // The rubric's own word either way: nought is "absent" on this scale,
+        // and a column with no document is nought, so the cell says the same
+        // thing every other cell says. What that nought means differently is
+        // the caption's job and the note's, not the cell's.
+        word.textContent = DEPTH_WORDS[Math.round(mean)];
         button.append(number, word);
         button.addEventListener("click", () => column.absent
           ? openAbsent(behaviour, column)
