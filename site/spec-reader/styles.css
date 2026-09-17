@@ -2543,9 +2543,13 @@ body.no-behaviours .sidebar-export { display: none; }
   gap: 4px;
   margin-top: 6px;
 }
+/* The colour is the behaviour, set once on the row. It used to be the relation,
+   which is now carried by the pill's own word: two meanings on one channel left
+   a reader unable to use either. The fallback triplet is --faint, for a row with
+   no behaviour to colour it. */
 .link-goto {
   padding: 1px 9px;
-  border: 1px solid var(--faint);
+  border: 1px solid rgb(var(--bh, 103 108 88));
   border-radius: 999px;
   background: transparent;
   color: var(--ink);
@@ -2554,17 +2558,12 @@ body.no-behaviours .sidebar-export { display: none; }
   line-height: 1.4;
   cursor: pointer;
 }
-.link-goto[data-relation="contradiction"] { border-color: var(--fail); color: var(--fail); }
-.link-goto[data-relation="nuance"] { border-color: var(--adjacent-mark); }
-.link-goto[data-relation="stricter_source"],
-.link-goto[data-relation="stricter_target"] { border-color: var(--accent); }
-.link-goto[data-relation="same"] { border-color: var(--muted); color: var(--muted); }
 /* The reading of all the counterparts rather than one of them, so it is filled
    where the others are outlined: it is the one to press first, and it is the
    only pill that goes nowhere. */
 .link-goto[data-relation="summary"] {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: rgb(var(--bh, 51 61 34));
+  background: rgb(var(--bh, 51 61 34));
   color: var(--on-accent);
 }
 .link-goto:hover,
@@ -2576,17 +2575,6 @@ body.no-behaviours .sidebar-export { display: none; }
    and only when several behaviours are ticked. It borrows the gutter's
    vocabulary rather than inventing one: same name, same hue, one step further
    in, so a reader meeting it already knows what it means. */
-.link-behaviour {
-  /* The row is a flex line of pills, so a bare label would stretch to their
-     height and sit a little high against them. */
-  align-self: center;
-  color: rgb(var(--bh));
-  font-family: var(--ui);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
 /* The reason for one link, under the row rather than inside it: the pills keep
    their places when it opens, and only one is ever open. */
 .link-note {

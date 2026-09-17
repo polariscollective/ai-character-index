@@ -105,7 +105,8 @@ function render(rows, ticked, { comparing = true } = {}) {
 }
 
 const pills = html => (html.match(/class="link-goto"/g) || []).length;
-const labels = html => (html.match(/class="link-behaviour"/g) || []).length;
+const bubbleRows = html => (html.match(/class="link-bubbles"/g) || []).length;
+const hues = html => (html.match(/--bh: var\(--hue-/g) || []).length;
 
 let checks = 0, failures = 0;
 function check(name, run, expected) {
@@ -132,20 +133,23 @@ check("every ticked behaviour that drew a link keeps it",
                          [POWER.slug, HARM.slug])), 2);
 
 /* ---- naming the behaviour, which only earns its place when several are ticked ---- */
-check("with one behaviour ticked no name is printed beside the pill",
-      () => labels(render([row(THERE, "same", [POWER.slug])], [POWER.slug])), 0);
-check("with several ticked each link names the behaviour that drew it",
+check("with several ticked, each behaviour gets a row of its own",
+      () => bubbleRows(render([row(THERE, "same", [POWER.slug]),
+                               row(THERE, "nuance", [HARM.slug])],
+                              [POWER.slug, HARM.slug])), 2);
+check("and each row is drawn in that behaviour's own colour",
+      () => hues(render([row(THERE, "same", [POWER.slug]),
+                         row(THERE, "nuance", [HARM.slug])],
+                        [POWER.slug, HARM.slug])), 2);
+check("the behaviour is said by the colour and never written beside the pill",
       () => render([row(THERE, "same", [POWER.slug])], [POWER.slug, HARM.slug])
-              .includes(">Concentrations of power</span>"), true);
-check("a link drawn under two ticked behaviours names both, once each",
-      () => labels(render([row(THERE, "same", [POWER.slug, HARM.slug])],
-                          [POWER.slug, HARM.slug])), 2);
-check("but it is still one bubble, not one per behaviour",
+              .includes(POWER.name), false);
+check("a link drawn under two ticked behaviours is claimed by the first, not drawn twice",
       () => pills(render([row(THERE, "same", [POWER.slug, HARM.slug])],
                          [POWER.slug, HARM.slug])), 1);
-check("a behaviour that drew the link but is not ticked is not named",
-      () => render([row(THERE, "same", [POWER.slug, HONESTY.slug])],
-                   [POWER.slug, HARM.slug]).includes("Honesty"), false);
+check("so the second behaviour is left no row of its own",
+      () => bubbleRows(render([row(THERE, "same", [POWER.slug, HARM.slug])],
+                              [POWER.slug, HARM.slug])), 1);
 
 /* ---- the reading of the counterparts, which is not one of them ---- */
 const summary = (behaviours, text) => ({
@@ -159,6 +163,14 @@ check("and it offers nowhere to go, because it is about all of them",
               .includes("data-goto"), false);
 check("a summary drawn under a behaviour nobody ticked is not shown either",
       () => render([summary([HONESTY.slug], "In short, they agree.")], [POWER.slug]), "");
+/* Found by reading one run's payload against a different pair of documents. The
+ * counterparts were dropped for naming a document not on screen and the summary,
+ * having no locator to hold against that test, stayed behind on its own: a pill
+ * about a comparison the reader was not looking at, which travelled nowhere when
+ * pressed because a summary has nothing to travel to. */
+check("a summary goes when its counterparts go, whatever pair is on screen",
+      () => render([summary([POWER.slug], "In short, they agree."),
+                    row(ELSEWHERE, "same", [POWER.slug])], [POWER.slug]), "");
 
 /* ---- what the filter must not break ---- */
 check("a row written before rows carried behaviours is still shown",

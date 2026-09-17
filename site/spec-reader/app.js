@@ -4261,16 +4261,21 @@ function linkBubbles(block) {
    * empties itself against an older file is worse than one showing too much. */
   const ticked = selectedBehaviours();
   const tickedSlugs = new Set(ticked.map(behaviour => behaviour.slug));
-  const hues = new Map(ticked.map(behaviour => [behaviour.slug, behaviourHue(behaviour)]));
-  const names = new Map(ticked.map(behaviour => [behaviour.slug, behaviour.name]));
   const ticksOf = link => (link.behaviours || []).filter(slug => tickedSlugs.has(slug));
-  const found = (block.dataset.locators || "").split("\n")
-    .flatMap(locator => rows[locator] || [])
-    /* A row with no locator to travel to is the summary of this paragraph's
-     * counterparts rather than one of them, so the pair on screen cannot rule it
-     * out: it is about the very links that survive that test. */
-    .filter(link => !link.to || onScreen.has(link.to.split(" > ", 1)[0]))
-    .filter(link => !link.behaviours || ticksOf(link).length);
+  /* Passage by passage, because a summary belongs to one of them and is about
+   * that one's counterparts. It carries no locator of its own to hold against
+   * the pair on screen, so it is kept only where at least one of its
+   * counterparts was kept. Letting it through on its own showed the summaries
+   * of one run against a pair it was never written about: every counterpart was
+   * filtered away for naming a document not on screen, the summaries stayed,
+   * and pressing one went nowhere because it has nothing to travel to. */
+  const shown = link => !link.behaviours || ticksOf(link).length;
+  const found = (block.dataset.locators || "").split("\n").flatMap(locator => {
+    const here = (rows[locator] || []).filter(shown);
+    const travels = here.filter(link => link.to
+      && onScreen.has(link.to.split(" > ", 1)[0]));
+    return travels.length ? here.filter(link => !link.to || travels.includes(link)) : [];
+  });
   if (!found.length) return "";
   /* Two buttons in one pill, and the pill is a span because a button cannot
    * contain a button. The word goes to the paragraph; the "?" goes to it AND
@@ -4285,37 +4290,58 @@ function linkBubbles(block) {
    * three of them side by side, not a column that reads like a list of
    * corrections. The reasons live after the row, one shown at a time, so opening
    * one never shifts the pills about. */
-  const id = block.dataset.passageId || "link";
-  const pills = [];
-  const notes = [];
-  found.forEach((link, index) => {
-    // The sentence alone. Which model produced it answers a question the reader
-    // did not ask, and the trail of who said what before is kept in the file
-    // rather than put on the page.
-    const said = link.comment || "";
-    const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
-    const noteId = `${id}-link-${index}`;
-    pills.push(`<button type="button" class="link-goto" `
-      + `data-relation="${escapeHTML(link.relation)}"`
-      + (link.to ? ` data-goto="${escapeHTML(link.to)}"` : "")
-      + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
-      + `>${word}</button>`);
-    /* Which ticked behaviour drew this link, and only when several are ticked:
-     * with one subject on screen every bubble belongs to it, and a label saying
-     * so on every pill is noise. A link drawn under two ticked behaviours names
-     * both, each in its own colour, which is the vocabulary the gutter above
-     * already uses for a passage shared between behaviours. */
-    if (ticked.length > 1) {
-      ticksOf(link).forEach(slug => pills.push(
-        `<span class="link-behaviour" style="--bh: ${hues.get(slug)}">`
-        + `${escapeHTML(names.get(slug) || slug)}</span>`));
-    }
-    if (said) {
-      notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
-        + `${escapeHTML(said)}</span>`);
-    }
+  /* One row per ticked behaviour, in menu order, each drawn in that behaviour's
+   * own colour. The name is not written beside the pills: with two subjects on
+   * screen a label on every pill doubled the length of the row and made it
+   * unreadable, and the colour of the line already says which subject it
+   * belongs to. Three signals share the pill without colliding: the word is the
+   * relation, the colour is the behaviour, and a filled pill is the reading of
+   * the whole row rather than one counterpart.
+   *
+   * A link drawn under two ticked behaviours is claimed by the first of them
+   * rather than drawn in both. A pill appearing twice reads as a mistake, which
+   * is what a duplicated locator looked like until it was fixed. */
+  const claimed = new Set();
+  const groups = [];
+  ticked.forEach(behaviour => {
+    const mine = found.filter(link => !claimed.has(link)
+      && (link.behaviours || []).includes(behaviour.slug));
+    mine.forEach(link => claimed.add(link));
+    if (mine.length) groups.push({ hue: behaviourHue(behaviour), links: mine });
   });
-  return `<span class="link-bubbles">${pills.join("")}</span>${notes.join("")}`;
+  // A payload written before rows carried their behaviours has nothing to group
+  // by, and is shown in one uncoloured row rather than dropped.
+  const loose = found.filter(link => !claimed.has(link));
+  if (loose.length) groups.push({ hue: null, links: loose });
+
+  const id = block.dataset.passageId || "link";
+  const notes = [];
+  // Counted across every row rather than within one: two notes sharing an id
+  // would leave a pill opening another pill's sentence.
+  let index = 0;
+  const lines = groups.map(group => {
+    const pills = group.links.map(link => {
+      // The sentence alone. Which model produced it answers a question the
+      // reader did not ask, and the trail of who said what before is kept in the
+      // file rather than put on the page.
+      const said = link.comment || "";
+      const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
+      const noteId = `${id}-link-${index++}`;
+      if (said) {
+        notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
+          + `${escapeHTML(said)}</span>`);
+      }
+      return `<button type="button" class="link-goto" `
+        + `data-relation="${escapeHTML(link.relation)}"`
+        + (link.to ? ` data-goto="${escapeHTML(link.to)}"` : "")
+        + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
+        + `>${word}</button>`;
+    });
+    return `<span class="link-bubbles"`
+      + (group.hue ? ` style="--bh: ${group.hue}"` : "")
+      + `>${pills.join("")}</span>`;
+  });
+  return `${lines.join("")}${notes.join("")}`;
 }
 
 /* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
