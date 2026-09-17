@@ -83,7 +83,7 @@ h1::before {
    number has to change with it. */
 .grid-scroll {
   overflow: auto;
-  max-height: 320px;
+  max-height: 430px;
   border-bottom: 1px solid var(--line);
 }
 /* How many rows are still below, under the grid on the left. Kept in the flow
@@ -121,7 +121,7 @@ thead th {
   color: var(--muted);
   vertical-align: bottom;
 }
-thead th.subject { width: 26%; }
+thead th.subject { width: 21%; }
 thead th .lab { display: block; }
 thead th .version {
   display: block;
@@ -287,6 +287,13 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   color: var(--muted);
 }
 .sheet-body p { margin: 0 0 10px; max-width: 66ch; }
+.sheet-body a, .lede a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.sheet-body a:hover, .sheet-body a:focus-visible,
+.lede a:hover, .lede a:focus-visible { background: var(--energy); }
 .sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
 .judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .judges li { padding-left: 14px; border-left: 2px solid var(--line); }
@@ -312,6 +319,13 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     Each figure is the mean of the panel's judges on the nought to four scale below.
     Press a behaviour to read what it means here, or a figure to see how it was
     reached and where that specification stands beside the others.
+    If a specification is missing, or a behaviour the index should be asking
+    about, you can
+    <a href="/how-it-works?kind=specification#propose" target="_blank"
+      rel="noopener noreferrer">propose a model spec</a>
+    or
+    <a href="/how-it-works?kind=behaviour#propose" target="_blank"
+      rel="noopener noreferrer">propose a behaviour</a>.
   </p>
 
   <div class="layout">

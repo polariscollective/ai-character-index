@@ -214,13 +214,27 @@ function openBehaviour(behaviour) {
  * figure, so pressing one says it in words. */
 function openAbsent(behaviour, column) {
   sheet(`${column.lab}: ${behaviour.name}`, body => {
+    /* What we know, rather than what the lab has done. "Meta has published no
+     * specification" is a claim about Meta; "we know of none" is a claim about
+     * us, and it is the only one of the two this index can stand behind. */
     body.append(paragraph(
-      `The index carries no specification from ${column.lab}, so there is `
-      + "nothing here to have been judged."));
+      `We know of no model specification from ${column.lab}. None appears to `
+      + "have been published, and that is worth saying plainly rather than "
+      + "leaving as a blank: there is no public document to hold beside the "
+      + "others."));
     body.append(paragraph(
-      "The nought is the absence of a document to read. It is not a reading of "
-      + `one: nobody has examined a ${column.lab} specification and found it `
-      + "silent on this behaviour.", "missing"));
+      "So the nought is that absence. It is not a reading: nobody has examined "
+      + `a ${column.lab} specification and found it silent on this behaviour.`,
+      "missing"));
+    const ask = document.createElement("p");
+    const link = document.createElement("a");
+    link.href = "/how-it-works?kind=specification#propose";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "propose it";
+    ask.append(document.createTextNode("If that seems wrong to you, "), link,
+               document.createTextNode("."));
+    body.append(ask);
   });
 }
 
