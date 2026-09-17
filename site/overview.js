@@ -112,7 +112,11 @@ function openBehaviour(behaviour) {
  * may not be, in which case the note says so rather than showing an empty
  * heading. */
 function openCell(behaviour, document_, depth) {
-  sheet(`${behaviour.name} in ${document_.shortTitle || document_.title}`, body => {
+  /* Named by the column that was pressed rather than by the document's short
+   * title. The passage below is written from the comparisons, which call the
+   * constitution Anthropic's, and a heading calling it Claude's would leave two
+   * documents on screen where there is one. */
+  sheet(`${document_.lab}: ${behaviour.name}`, body => {
     const figure = paragraph("");
     const number = document.createElement("span");
     number.className = "sheet-figure";
