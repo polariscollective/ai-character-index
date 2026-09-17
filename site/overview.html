@@ -74,7 +74,21 @@ h1::before {
 
 /* The grid. A table because it is one: a behaviour reads across, a
    specification reads down, and a screen reader needs the headers to say so. */
-.grid-scroll { overflow-x: auto; }
+/* Ten rows and then scroll. Thirteen behaviours over a header and a legend runs
+   past the fold on a laptop, and a grid you have to leave the page to finish is
+   one you cannot compare across. The head stays put while the body moves, or
+   the columns lose their names on the way down. */
+.grid-scroll {
+  overflow: auto;
+  max-height: 560px;
+  border-bottom: 1px solid var(--line);
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+}
 table { border-collapse: collapse; width: 100%; }
 caption { text-align: left; padding-bottom: 10px; color: var(--faint); font-size: 13px; }
 th, td { text-align: left; padding: 0; }
@@ -149,6 +163,28 @@ tbody th {
   background: rgb(51 61 34 / var(--tint));
 }
 .legend .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.scale-toggle {
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.scale-toggle:hover, .scale-toggle:focus-visible { background: var(--energy); }
+/* Small, because it is the long answer to a question most readers will not ask,
+   and it sits under the thing it explains rather than above it. */
+.scale-detail { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.scale-detail p { margin: 0 0 10px; max-width: 66ch; }
+.scale-detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+.scale-detail dt { font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: nowrap; }
+.scale-detail dd { margin: 0; max-width: 60ch; }
+.scale-detail[hidden] { display: none; }
 
 dialog {
   width: min(720px, calc(100vw - 32px));
@@ -228,6 +264,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section class="legend" id="legend" hidden>
     <h2>The scale</h2>
     <ol id="legend-list"></ol>
+    <button type="button" class="scale-toggle" id="scale-toggle" aria-expanded="false"
+      aria-controls="scale-detail">What was judged, exactly</button>
+    <div class="scale-detail" id="scale-detail" hidden></div>
   </section>
 </div>
 

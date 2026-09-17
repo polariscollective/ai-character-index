@@ -13,19 +13,76 @@
 
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
+/* Labs the index carries no specification for. They are shown at nought across
+ * every behaviour, which is what was asked for, and the caption says why: a
+ * nought here is the absence of a document to read, not a document that was
+ * read and found to say nothing. Those are different claims and the grid must
+ * not let one pass for the other. */
+const WITHOUT_A_SPECIFICATION = ["Google", "xAI", "Meta"];
+
+/* Red to green, against the framework's own palette, because the grid is read
+ * as a comparison and a single hue at varying strength does not say which end
+ * is which. Three stops interpolated in between. */
+const RAMP = [
+  { at: 0, rgb: [180, 71, 47] },
+  { at: 2, rgb: [217, 162, 39] },
+  { at: 4, rgb: [76, 140, 63] },
+];
+
+function rampAt(value) {
+  const held = Math.max(0, Math.min(4, value));
+  const upper = RAMP.find(stop => stop.at >= held) || RAMP[RAMP.length - 1];
+  const lower = [...RAMP].reverse().find(stop => stop.at <= held) || RAMP[0];
+  if (upper === lower) return upper.rgb;
+  const across = (held - lower.at) / (upper.at - lower.at);
+  return lower.rgb.map((channel, i) =>
+    Math.round(channel + across * (upper.rgb[i] - channel)));
+}
+
+/* Black or white over the ramp, by the luminance underneath rather than by
+ * eye: the amber middle needs dark text where both ends need light. */
+function inkOver([r, g, b]) {
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? "#23281B" : "#F1EFE3";
+}
+
 const elements = {
   caption: document.querySelector("#grid-caption"),
   head: document.querySelector("#grid-head"),
   body: document.querySelector("#grid-body"),
   legend: document.querySelector("#legend"),
   legendList: document.querySelector("#legend-list"),
+  scaleToggle: document.querySelector("#scale-toggle"),
+  scaleDetail: document.querySelector("#scale-detail"),
   sheet: document.querySelector("#sheet"),
   sheetTitle: document.querySelector("#sheet-title"),
   sheetBody: document.querySelector("#sheet-body"),
   sheetClose: document.querySelector("#sheet-close"),
 };
 
-const state = { behaviours: [], columns: [], passages: {} };
+const state = { behaviours: [], columns: [], passages: {}, registry: {} };
+
+/* The rubric each judge scored against, copied from the reader's own
+ * DEPTH_LEVELS. Copied rather than fetched because this page is standalone and
+ * has no endpoint for it: the drift that costs is the wording, so if the reader's
+ * levels change these must be brought over with them. The source of truth is
+ * methodology/spec-coverage-depth-rubric.md. */
+const DEPTH_LEVELS = [
+  { level: 0, anchor: "absent",
+    bar: "No passage bears on the behaviour." },
+  { level: 1, anchor: "named",
+    bar: "The behaviour appears, a word or clause, typically inside a list or a "
+      + "passage about something else, but the spec says nothing further about it." },
+  { level: 2, anchor: "discussed",
+    bar: "The spec addresses the behaviour in its own right, what the norm is and "
+      + "why it matters, but only in terms too general to grade a response against." },
+  { level: 3, anchor: "prescribed",
+    bar: "The spec states concrete do/don't rules or procedures for the behaviour, "
+      + "specific enough that a grader can quote the spec's own sentences as pass criteria." },
+  { level: 4, anchor: "demonstrated",
+    bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
+      + "sanctioned response, usable as an answer key for borderline cases." },
+];
 
 async function loadJSON(url, fallback) {
   try {
@@ -51,7 +108,10 @@ function newestPerSpecification(documents) {
       newest.set(spec, document);
     }
   });
-  return [...newest.values()].sort((a, b) => a.lab.localeCompare(b.lab));
+  const held = [...newest.values()].sort((a, b) => a.lab.localeCompare(b.lab));
+  // The labs with nothing in the index, after the ones with something: the grid
+  // reads left to right from what has been examined to what has not.
+  return held.concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })));
 }
 
 function depthOf(behaviour, documentId) {
@@ -59,17 +119,10 @@ function depthOf(behaviour, documentId) {
   return depth && Number.isFinite(depth.mean) ? depth : null;
 }
 
-/* The tint runs across the figures actually present rather than across the
- * whole nought to four scale. Every figure in this publication sits between 2.3
- * and 4.0, and spread over the full scale they would all read as the same
- * shade, which is a grid that shows nothing. */
-function tintScale(values) {
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  return value => {
-    const across = high === low ? 1 : (value - low) / (high - low);
-    return (0.07 + across * 0.45).toFixed(3);
-  };
+function paint(button, value) {
+  const rgb = rampAt(value);
+  button.style.background = `rgb(${rgb.join(" ")})`;
+  button.style.color = inkOver(rgb);
 }
 
 function sheet(title, build) {
@@ -97,12 +150,38 @@ function paragraph(text, className) {
 /* A behaviour's own note: what the index means by it. The definition is the
  * brief the panel was given, so it is what the figures in this row were judged
  * against and the right thing to read before them. */
+/* The same two sections the reader's own behaviour note prints, from the same
+ * endpoint and under the same headings. The boundary was nearly rebuilt here
+ * out of the registry and written into the generated file; it is served
+ * already, and two sources for one sentence drift apart the first time one of
+ * them is edited. */
 function openBehaviour(behaviour) {
+  const entry = state.registry[behaviour.slug] || {};
   sheet(behaviour.name, body => {
-    body.append(heading("What this behaviour means here"));
-    body.append(behaviour.definition
-      ? paragraph(behaviour.definition)
+    const asked = entry.query || entry.definition || behaviour.definition;
+    body.append(heading("What the judges are asked"));
+    body.append(asked
+      ? paragraph(asked)
       : paragraph("No brief is recorded for this behaviour.", "missing"));
+    if (entry.boundary) {
+      body.append(heading("Where the construct stops"));
+      body.append(paragraph(entry.boundary));
+    }
+  });
+}
+
+/* A nought that means the index holds no document, rather than a document that
+ * was read and found to say nothing. The grid cannot show that difference in a
+ * figure, so pressing one says it in words. */
+function openAbsent(behaviour, column) {
+  sheet(`${column.lab}: ${behaviour.name}`, body => {
+    body.append(paragraph(
+      `The index carries no specification from ${column.lab}, so there is `
+      + "nothing here to have been judged."));
+    body.append(paragraph(
+      "The nought is the absence of a document to read. It is not a reading of "
+      + `one: nobody has examined a ${column.lab} specification and found it `
+      + "silent on this behaviour.", "missing"));
   });
 }
 
@@ -178,16 +257,11 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.version;
+    version.textContent = column.absent ? "no specification" : column.version;
     cell.append(lab, version);
     head.append(cell);
   });
   elements.head.replaceChildren(head);
-
-  const figures = behaviours.flatMap(behaviour =>
-    columns.map(column => depthOf(behaviour, column.id))
-      .filter(Boolean).map(depth => depth.mean));
-  const tint = tintScale(figures.length ? figures : [0, 4]);
 
   const rows = document.createDocumentFragment();
   behaviours.forEach(behaviour => {
@@ -207,27 +281,31 @@ function render() {
     columns.forEach(column => {
       const cell = document.createElement("td");
       cell.className = "cell";
-      const depth = depthOf(behaviour, column.id);
-      if (!depth) {
+      const depth = column.absent ? null : depthOf(behaviour, column.id);
+      if (!depth && !column.absent) {
         const empty = document.createElement("span");
         empty.className = "cell-empty";
         empty.textContent = "–";
         cell.append(empty);
       } else {
+        const mean = depth ? depth.mean : 0;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "cell-button";
-        button.style.setProperty("--tint", tint(depth.mean));
-        button.setAttribute("aria-label",
-          `${behaviour.name} in ${column.lab}: ${depth.mean.toFixed(1)} out of 4`);
+        paint(button, mean);
+        button.setAttribute("aria-label", column.absent
+          ? `${behaviour.name} in ${column.lab}: no specification in the index`
+          : `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4`);
         const number = document.createElement("span");
         number.className = "cell-figure";
-        number.textContent = depth.mean.toFixed(1);
+        number.textContent = mean.toFixed(1);
         const word = document.createElement("span");
         word.className = "cell-word";
-        word.textContent = DEPTH_WORDS[Math.round(depth.mean)];
+        word.textContent = column.absent ? "no specification" : DEPTH_WORDS[Math.round(mean)];
         button.append(number, word);
-        button.addEventListener("click", () => openCell(behaviour, column, depth));
+        button.addEventListener("click", () => column.absent
+          ? openAbsent(behaviour, column)
+          : openCell(behaviour, column, depth));
         cell.append(button);
       }
       row.append(cell);
@@ -241,9 +319,7 @@ function render() {
     const item = document.createElement("li");
     const swatch = document.createElement("span");
     swatch.className = "swatch";
-    swatch.style.setProperty("--tint", tint(
-      figures.length ? Math.min(...figures) + (level / 4)
-        * (Math.max(...figures) - Math.min(...figures)) : level));
+    swatch.style.background = `rgb(${rampAt(level).join(" ")})`;
     const number = document.createElement("span");
     number.className = "level";
     number.textContent = String(level);
@@ -253,15 +329,23 @@ function render() {
   elements.legendList.replaceChildren(scale);
   elements.legend.hidden = false;
 
+  const judged = columns.filter(column => !column.absent).length;
+  const unjudged = columns.filter(column => column.absent).map(c => c.lab);
   elements.caption.textContent =
-    `${behaviours.length} behaviours over ${columns.length} specifications. `
-    + "Each figure is the mean of the panel's judges.";
+    `${behaviours.length} behaviours over ${judged} specifications. `
+    + "Each figure is the mean of the panel's judges."
+    + (unjudged.length
+      ? ` ${unjudged.join(", ")} stand at nought throughout because the index `
+        + "carries no specification from them, which is the absence of a "
+        + "document rather than a reading of one."
+      : "");
 }
 
 async function initialize() {
-  const [payload, documents, passages] = await Promise.all([
+  const [payload, documents, registry, passages] = await Promise.all([
     loadJSON("/api/reader/payload", null),
     loadJSON("/api/reader/documents", null),
+    loadJSON("/api/reader/behaviours", null),
     loadJSON("./overview.json", null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
@@ -271,8 +355,44 @@ async function initialize() {
   state.behaviours = payload.behaviours;
   state.columns = newestPerSpecification(documents.documents);
   state.passages = passages?.cells || {};
+  state.registry = registry || {};
   render();
+  renderScale();
 }
+
+/* What the scale means, under it and in small type, opened rather than always
+ * shown: it is read once and then rarely, and a grid that explains itself above
+ * the fold pushes the thing being explained below it. The bars are the rubric's
+ * own sentences, so this page and the reader grade by the same words. */
+function renderScale() {
+  const detail = document.createDocumentFragment();
+  const lede = document.createElement("p");
+  lede.textContent =
+    "Each figure is the mean of the panel's judges for that behaviour on that "
+    + "specification. A judge reads the passages the panel cited rather than the "
+    + "whole document, so a depth is a reading of the panel's citations. It "
+    + "measures how far a document develops the behaviour, not whether it agrees "
+    + "with it.";
+  detail.append(lede);
+  const list = document.createElement("dl");
+  DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
+    const term = document.createElement("dt");
+    term.textContent = `${level} ${anchor}`;
+    const description = document.createElement("dd");
+    description.textContent = bar;
+    list.append(term, description);
+  });
+  detail.append(list);
+  elements.scaleDetail.replaceChildren(detail);
+}
+
+elements.scaleToggle?.addEventListener("click", () => {
+  const open = elements.scaleDetail.hidden;
+  elements.scaleDetail.hidden = !open;
+  elements.scaleToggle.setAttribute("aria-expanded", String(open));
+  elements.scaleToggle.textContent = open
+    ? "Hide what was judged" : "What was judged, exactly";
+});
 
 elements.sheetClose.addEventListener("click", () => elements.sheet.close());
 elements.sheet.addEventListener("click", event => {
