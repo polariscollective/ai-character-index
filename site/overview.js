@@ -468,14 +468,14 @@ function render() {
 }
 
 async function initialize() {
-  const [payload, documents, registry, passages, depths] = await Promise.all([
+  const [payload, documents, registry, links] = await Promise.all([
     loadJSON("/api/reader/payload", null),
     loadJSON("/api/reader/documents", null),
     loadJSON("/api/reader/behaviours", null),
-    // From the site root, not from beside the page: the page is served at
-    // /overview, so a relative path would look for these a directory down.
-    loadJSON("/overview.json", null),
-    loadJSON("/depths.json", null),
+    /* One route for both, where two gitignored files used to sit. They were
+     * never on any deployment, so this page has shown its figures with nothing
+     * under them everywhere but on the machine that wrote the files. */
+    loadJSON("/api/reader/links", null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";
@@ -483,8 +483,8 @@ async function initialize() {
   }
   state.behaviours = payload.behaviours;
   state.columns = newestPerSpecification(documents.documents);
-  state.passages = passages?.cells || {};
-  state.depths = depths?.cells || {};
+  state.passages = links?.notes?.standing || {};
+  state.depths = links?.notes?.depth || {};
   state.registry = registry || {};
   render();
 }

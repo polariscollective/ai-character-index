@@ -4596,22 +4596,24 @@ const LINK_WORDS = {
 };
 
 async function loadReaderLinks() {
+  /* One route, three answers. These were three gitignored files beside the
+   * reader, which meant no deployment ever carried them: the bubbles, the
+   * comparisons and the readings existed only on the machine that generated
+   * them. They are rows in the database, and this is the route that serves them.
+   *
+   * A failure leaves all three null, which is the reader as it was before any of
+   * this existed: no bubbles, no paragraph under a figure, and nothing said about
+   * it. A page that renders less is better than one that says the index is
+   * broken because a fetch stuttered. */
   try {
-    linkRows = await loadJSON("links.json");
+    const answered = await loadJSON("/api/reader/links");
+    linkRows = answered;
+    depthRows = { cells: answered.notes?.depth || {} };
+    overviewRows = { cells: answered.notes?.standing || {} };
   } catch {
-    linkRows = null;   // no run published to this deployment: simply no bubbles
-  }
-  try {
-    // At the site root rather than beside the reader: the grid reads the same
-    // file from its own page, and two copies would be two things to keep true.
-    depthRows = await loadJSON("/depths.json");
-  } catch {
-    depthRows = null;  // no paragraphs written: the note keeps its judges alone
-  }
-  try {
-    overviewRows = await loadJSON("/overview.json");
-  } catch {
-    overviewRows = null;   // no passages written: the note simply omits them
+    linkRows = null;
+    depthRows = null;
+    overviewRows = null;
   }
 }
 

@@ -1,140 +1,367 @@
 /**
- * What one run found between two documents on one behaviour, read from the
- * database.
+ * What one document's passage does to another's, read from the tables.
  *
- * The publication is not the source here, and that is the point. A publication
- * says how deeply each document covers a behaviour; a link says what one
- * document's passage does to another's, and links belong to a run rather than to
- * a publication. So this reads the five link tables directly, bounded by the
- * behaviour and the pair of documents a caller named.
+ * A port of engine/panel/link_reader_data.py, which built the same shape into a
+ * file beside the reader. That file was a rendering of rows that were already in
+ * the database, and being a file it could only ever hold one run: the reader has
+ * been showing a single pair of documents because link_reader_data was pointed at
+ * one run's report at a time. Reading the tables lifts that limit, so every pair
+ * the index has compared arrives at once and the reader picks the pair it is
+ * showing.
  *
- * Read per call rather than memoised like index-snapshot.mjs. A snapshot is one
- * row and every tool needs it; link evidence is hundreds of rows per pair, and
- * holding every pair anyone ever asked for would trade a request for a leak.
+ * The rules below are the Python's, and the reasons are its reasons. Where the
+ * two differ it is because the arbitration table is flat and the file it replaced
+ * was nested: `relation` plus `stricter_document` here, one `settled` object
+ * there.
  *
- * Shaping this into an answer is mcp-tools.mjs's job, which stays pure so a
- * fixture can exercise it with no network. Everything here is the fetching.
+ * ORDER IS NOT SET HERE
+ *
+ * The Python sorted a paragraph's bubbles into the order their targets appear in
+ * the other document, which it could do because it had the document text to
+ * number. A route would have to load megabytes to answer the same question, and
+ * the reader already computes that order to render the page. So bubbles come
+ * unsorted and the reader sorts them.
  */
+
 import { select } from "./supabase.mjs";
 
-/** `<spec_id>@<version>`, which is the head of every locator into a document. */
-function documentId(version) {
-  return `${version.spec_id}@${version.version}`;
-}
+/* Labs name themselves. capitalize() would write "Openai". */
+const LABS = { openai: "OpenAI", anthropic: "Anthropic", alibaba: "Alibaba" };
 
-/** PostgREST's in.(…) list, with each value quoted so commas cannot split it. */
-function inList(values) {
-  return `in.(${values.map(value => `"${value}"`).join(",")})`;
+/**
+ * "the Anthropic constitution", from a locator or a document id.
+ *
+ * The id is <lab>--<document>@<version>, and a reader wants the lab and the
+ * document, not the version they are already looking at.
+ */
+export function documentName(locator) {
+  const head = String(locator || "").split(" > ")[0].split("@")[0];
+  const cut = head.indexOf("--");
+  const lab = cut < 0 ? head : head.slice(0, cut);
+  const name = cut < 0 ? "" : head.slice(cut + 2);
+  const said = LABS[lab] || (lab ? lab[0].toUpperCase() + lab.slice(1) : lab);
+  return `the ${said} ${name.replace(/-/g, " ")}`.trimEnd();
 }
 
 /**
- * The version rows for a set of document ids, keyed both ways.
+ * A sentence with our document ids replaced by their names.
  *
- * A locator carries the document id and a call carries version uuids, so
- * answering about a pair needs both directions of that map.
+ * A judge writes "openai--model-spec@2026-08-18 permits...", which is exact and
+ * unreadable. The reader is a person looking at two specifications, not at our
+ * identifier scheme. Longest first, so a bare spec id inside a full document id
+ * is not replaced before the whole of it.
  */
-export async function versionsOf(documentIds, fetchImpl = fetch) {
-  const rows = await select(
-    "aci_spec_versions", "select=id,spec_id,version", fetchImpl);
-  const byDocument = new Map();
-  const byVersionId = new Map();
-  for (const row of rows) {
-    const id = documentId(row);
-    byVersionId.set(row.id, id);
-    if (documentIds.includes(id)) byDocument.set(id, row.id);
+export function inPlainWords(sentence, documentIds) {
+  let said = String(sentence || "");
+  for (const id of [...documentIds].sort((a, b) => b.length - a.length)) {
+    said = said.split(id).join(documentName(id));
+    said = said.split(id.split("@")[0]).join(documentName(id));
   }
-  return { byDocument, byVersionId };
+  return said;
 }
 
 /**
- * `{ run, calls, links, arbitrations, summary }` for one behaviour over one pair
- * of documents, or null when no run has compared them.
+ * A judge's sentence with its deictics replaced by the documents they meant.
  *
- * The newest run that produced calls for this cell wins, the way the engine
- * already takes the newest run of a cell: a pair judged twice is two readings,
- * and the answer is the later one rather than both interleaved.
- *
- * A call that failed is carried, not dropped. `deepseek` could not answer this
- * task at all on the first run, and an answer that silently reported two judges
- * where three were asked would be describing a panel that never sat.
+ * The judges wrote "the source requires... while the target imposes...", which is
+ * true of the call they answered and false of the reader's page: the same link is
+ * shown under both documents, and there "the source" points at whichever one you
+ * are standing in. The referent is known exactly, so it is substituted.
  */
-export async function linkEvidence(behaviourSlug, documentIds, fetchImpl = fetch) {
-  const { byDocument, byVersionId } = await versionsOf(documentIds, fetchImpl);
-  const versionIds = documentIds.map(id => byDocument.get(id)).filter(Boolean);
-  if (versionIds.length !== 2) return null;
+export function sayWhich(comment, sourceLocator, targetLocator) {
+  let said = String(comment || "");
+  if (!said) return said;
+  for (const [word, locator] of [["source", sourceLocator], ["target", targetLocator]]) {
+    const name = documentName(locator);
+    for (const phrase of [`the ${word} document`, `The ${word} document`,
+                          `the ${word}`, `The ${word}`]) {
+      const replacement = phrase[0] === phrase[0].toLowerCase()
+        ? name
+        : name[0].toUpperCase() + name.slice(1);
+      said = said.split(phrase).join(replacement);
+    }
+  }
+  return said;
+}
 
-  const calls = await select(
-    "aci_link_calls",
-    "select=id,run_id,behaviour_slug,source_version_id,target_version_id,model,"
-    + "status,sources,uncovered,finish_reason,cost_usd"
-    + `&behaviour_slug=eq.${encodeURIComponent(behaviourSlug)}`
-    + `&source_version_id=${inList(versionIds)}`
-    + `&target_version_id=${inList(versionIds)}`,
-    fetchImpl);
-  if (!calls.length) return null;
+/**
+ * An arbiter's relation, expressed from the passage the bubble sits on.
+ *
+ * The arbiter names the document that demands more, which is the same claim from
+ * either side. A bubble is read from one side, so the relative word is put back
+ * here, at the last moment, where the side is known.
+ */
+export function asSeenFrom(relation, sourceLocator) {
+  if (!relation || !relation.startsWith("stricter ")) return relation;
+  const stricter = relation.slice("stricter ".length).trim();
+  return String(sourceLocator).startsWith(stricter) ? "stricter_source" : "stricter_target";
+}
 
-  const runs = await select(
-    "aci_link_runs",
-    `select=id,status,panel,prompt_sha256,created_at,cost_usd&id=${inList(
-      [...new Set(calls.map(call => call.run_id))])}`,
-    fetchImpl);
-  // Newest first, and only a run that finished: a run still going would answer
-  // with whichever calls happen to have landed.
-  const [run] = runs
-    .filter(row => row.status === "done")
-    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  if (!run) return null;
+/**
+ * A judge's direction-relative relation, with the document named instead.
+ *
+ * "stricter_source" is a fact about the call, not about the pair: read from the
+ * other side the same claim is "stricter_target". Named once, it survives being
+ * read from either end.
+ */
+export function namedRelation(relation, sourceLocator, targetLocator) {
+  if (relation === "stricter_source") return `stricter ${String(sourceLocator).split(" > ")[0]}`;
+  if (relation === "stricter_target") return `stricter ${String(targetLocator).split(" > ")[0]}`;
+  return relation;
+}
 
-  const ofRun = calls.filter(call => call.run_id === run.id);
-  const answered = ofRun.filter(call => call.status === "done");
-  const links = answered.length
-    ? await select(
-        "aci_links",
-        "select=call_id,source_locator,target_locator,relation,source_force,"
-        + `target_force,rationale&call_id=${inList(answered.map(call => call.id))}`,
-        fetchImpl)
-    : [];
+const pairKey = (a, b) => [a, b].sort().join("\n");
 
-  const arbitrations = await select(
-    "aci_link_arbitrations",
-    "select=first_locator,second_locator,first_quote,second_quote,why_disputed,"
-    + "readings,arbiter,arbiter_was_a_party,relation,stricter_document,agrees,why"
-    + `&run_id=eq.${run.id}&behaviour_slug=eq.${encodeURIComponent(behaviourSlug)}`,
-    fetchImpl);
+/**
+ * {pair: verdict} for every dispute an arbiter answered.
+ *
+ * The table is flat where the file this replaced was nested: a relation of
+ * "stricter" carries the document in its own column, and the named form the rest
+ * of this module speaks is rebuilt here rather than stored twice.
+ */
+export function verdictsByPair(arbitrations) {
+  const out = new Map();
+  for (const row of arbitrations) {
+    if (!row.relation) continue;
+    const named = row.relation === "stricter"
+      ? `stricter ${row.stricter_document}`
+      : row.relation;
+    out.set(pairKey(row.first_locator, row.second_locator), {
+      named,
+      why: row.why || "",
+      agrees: row.agrees,
+      arbiter: row.arbiter,
+      readings: row.readings || {},
+    });
+  }
+  return out;
+}
 
-  // Newest wins: the prompt digest is part of that table's key, so improving the
-  // wording leaves the older text in place beside the newer one.
-  const summaries = await select(
-    "aci_link_summaries",
-    "select=model,prompt_sha256,body,finish_reason,cost_usd,created_at,document_ids"
-    + `&run_id=eq.${run.id}&behaviour_slug=eq.${encodeURIComponent(behaviourSlug)}`,
-    fetchImpl);
-  const [summary] = summaries
-    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+/**
+ * (what the page shows, what the record keeps).
+ *
+ * The page gets the sentence that decided the relation and nothing else: a reader
+ * wants to know how these two paragraphs stand to each other, and a name like
+ * "fable" answers a question they did not ask. The rest is kept beside it, where
+ * it is what a bug report needs.
+ */
+export function explain(verdict, sourceLocator, targetLocator, documentIds) {
+  const shown = inPlainWords(verdict.why, documentIds);
+  const trace = [];
+  for (const judge of Object.keys(verdict.readings).sort()) {
+    for (const reading of verdict.readings[judge] || []) {
+      const was = asSeenFrom(reading.relation, sourceLocator);
+      const said = sayWhich(reading.comment || "", sourceLocator, targetLocator);
+      trace.push(`${judge} had said ${was}${said ? `: ${said}` : ""}`);
+    }
+  }
+  if (verdict.agrees) trace.push(`${verdict.arbiter} agrees with ${verdict.agrees}`);
+  return { shown, trace: trace.join("; ") };
+}
+
+/**
+ * {locator: [{to, relation, comment, judge, settled, trace, behaviours}]}.
+ *
+ * A relation is a fact about a PAIR of paragraphs, so both of them carry it.
+ * Emitting it only under the passage a call happened to start from left one
+ * paragraph pointing at another that pointed back at nothing, which reads as an
+ * inconsistency and is only an artefact of which direction found it first.
+ *
+ * `behaviours` is every behaviour whose call drew the pair, so the reader can
+ * show a bubble under the subject it was found for rather than under all of them
+ * at once. A pair drawn under several keeps one entry and lists them all: a
+ * relation is a fact about two paragraphs, and the behaviour is the context the
+ * question was asked in, not part of the answer.
+ *
+ * Where an arbiter settled a pair, its relation is the one shown and its sentence
+ * is the explanation; a pair it called `none` carries no bubble at all. The
+ * arbiter corrects the judge on screen and never adds to it: a pair no judge drew
+ * does not appear, however well settled it is.
+ */
+export function byLocator(links, verdicts, documentIds) {
+  const pairs = new Map();
+
+  /* A pair found from both sides carries two rationales, one written looking
+   * each way. Both are true and only one is shown, so which one is kept must not
+   * depend on the order rows came back in: sorted here, the same pair yields the
+   * same sentence on every read. The side whose document sorts first wins, for
+   * no reason beyond needing a rule that is stable and can be stated. */
+  const ordered = [...links].sort((a, b) =>
+    String(a.source_locator).localeCompare(String(b.source_locator))
+    || String(a.target_locator || "").localeCompare(String(b.target_locator || "")));
+
+  for (const link of ordered) {
+    if (!link.target_locator) continue;      // an absence is not a bubble
+    const key = pairKey(link.source_locator, link.target_locator);
+    const held = pairs.get(key);
+    if (held) {
+      held.behaviours.add(link.behaviour_slug);
+      continue;
+    }
+    const verdict = verdicts.get(key);
+    if (verdict) {
+      const { shown, trace } = explain(verdict, link.source_locator,
+                                       link.target_locator, documentIds);
+      pairs.set(key, {
+        named: verdict.named, comment: shown, trace, settled: true,
+        judge: verdict.arbiter, behaviours: new Set([link.behaviour_slug]),
+        locators: [link.source_locator, link.target_locator],
+      });
+      continue;
+    }
+    pairs.set(key, {
+      named: namedRelation(link.relation, link.source_locator, link.target_locator),
+      comment: inPlainWords(
+        sayWhich(link.rationale || "", link.source_locator, link.target_locator),
+        documentIds),
+      trace: "", settled: false, judge: link.model,
+      behaviours: new Set([link.behaviour_slug]),
+      locators: [link.source_locator, link.target_locator],
+    });
+  }
+
+  const out = {};
+  for (const entry of pairs.values()) {
+    const [left, right] = entry.locators;
+    for (const [from, to] of [[left, right], [right, left]]) {
+      const relation = asSeenFrom(entry.named, from);
+      if (!relation || relation === "none") continue;
+      const row = {
+        to, relation, judge: entry.judge, settled: entry.settled,
+        comment: entry.comment, behaviours: [...entry.behaviours].sort(),
+      };
+      if (entry.trace) row.trace = entry.trace;
+      (out[from] ||= []).push(row);
+    }
+  }
+  return out;
+}
+
+/**
+ * The newest row per key wins.
+ *
+ * Every table here carries the prompt's digest in its unique key, so improving a
+ * prompt writes a new row beside the old one rather than over it. A reader takes
+ * the newest, the way the engine already takes the newest run of a cell.
+ */
+function newestBy(rows, key) {
+  const out = new Map();
+  for (const row of [...rows].sort((a, b) =>
+    String(a.created_at || "").localeCompare(String(b.created_at || "")))) {
+    if (row.body) out.set(key(row), row);
+  }
+  return out;
+}
+
+/* The runs whose readings the reader shows. Everything the panel judged in
+ * session, and not the earlier pilot: that one seated three other models on a
+ * single behaviour and one pair, and mixing it in would put two panels' readings
+ * under one bubble with nothing to tell them apart. */
+export async function panelRuns(fetchImpl = fetch) {
+  const runs = await select("aci_link_runs", "select=id,created_by,status", fetchImpl);
+  return runs.filter(run => run.status === "done"
+    && String(run.created_by || "").startsWith("link_self.py"));
+}
+
+/**
+ * Everything the reader needs about links, in the shape its file carried.
+ *
+ * One request per table rather than one per run: the tables are small enough to
+ * read whole, and four round trips beat sixteen.
+ */
+export async function readerLinks(fetchImpl = fetch) {
+  const runs = await panelRuns(fetchImpl);
+  const runIds = new Set(runs.map(run => run.id));
+  if (!runIds.size) return { documents: [], byLocator: {}, comparisons: {}, notes: {} };
+
+  const [calls, versions, arbitrations, summaries, passageNotes, documentNotes] =
+    await Promise.all([
+      select("aci_link_calls",
+             "select=id,run_id,behaviour_slug,model,status,source_version_id,target_version_id",
+             fetchImpl),
+      select("aci_spec_versions", "select=id,spec_id,version", fetchImpl),
+      select("aci_link_arbitrations",
+             "select=run_id,first_locator,second_locator,relation,stricter_document,"
+             + "why,agrees,arbiter,readings", fetchImpl),
+      select("aci_link_summaries",
+             "select=run_id,behaviour_slug,model,body,created_at", fetchImpl),
+      select("aci_passage_notes",
+             "select=run_id,behaviour_slug,locator,body,model,created_at", fetchImpl),
+      select("aci_document_notes",
+             "select=behaviour_slug,document_id,kind,body,created_at", fetchImpl),
+    ]);
+
+  const documentOf = new Map(versions.map(v => [v.id, `${v.spec_id}@${v.version}`]));
+  const mine = calls.filter(call => runIds.has(call.run_id) && call.status === "done");
+  const callById = new Map(mine.map(call => [call.id, call]));
+  const documentIds = new Set();
+  for (const call of mine) {
+    documentIds.add(documentOf.get(call.source_version_id));
+    documentIds.add(documentOf.get(call.target_version_id));
+  }
+  documentIds.delete(undefined);
+
+  const rows = await select(
+    "aci_links", "select=call_id,source_locator,target_locator,relation,rationale", fetchImpl);
+  const links = [];
+  for (const row of rows) {
+    const call = callById.get(row.call_id);
+    if (!call) continue;                       // another run's, or the pilot's
+    links.push({ ...row, behaviour_slug: call.behaviour_slug, model: call.model });
+  }
+
+  const verdicts = verdictsByPair(arbitrations.filter(row => runIds.has(row.run_id)));
+
+  const comparisons = {};
+  for (const [slug, row] of newestBy(
+    summaries.filter(s => runIds.has(s.run_id)), s => s.behaviour_slug)) {
+    comparisons[slug] = { writtenBy: row.model, text: row.body };
+  }
+
+  const cells = (map) => Object.fromEntries(
+    [...map.values()].map(row => [
+      row.locator ? `${row.behaviour_slug}\n${row.locator}`
+                  : `${row.behaviour_slug}\n${row.document_id}`,
+      { text: row.body },
+    ]));
+
+  const rowsByLocator = byLocator(links, verdicts, documentIds);
+
+  /* The reading of a paragraph's counterparts, at the head of its own row.
+   *
+   * It is not a counterpart itself, so it carries no locator to travel to, and
+   * its words ride in `comment` because that is the field the reader already
+   * discloses under a pill. A paragraph gets one per behaviour: the bubbles
+   * under it are filtered by behaviour, and a summary of a row the reader is not
+   * looking at would describe the wrong thing.
+   *
+   * These were briefly returned beside the bubbles rather than among them, which
+   * reads as a tidier shape and loses every "in short" pill on the page: the
+   * reader looks for them in byLocator and nowhere else. */
+  for (const note of newestBy(
+    passageNotes.filter(n => runIds.has(n.run_id)),
+    n => `${n.behaviour_slug}\n${n.locator}`).values()) {
+    (rowsByLocator[note.locator] ||= []).unshift({
+      relation: "summary",
+      comment: note.body,
+      behaviours: [note.behaviour_slug],
+      settled: false,
+      judge: note.model || null,
+    });
+  }
 
   return {
-    run: {
-      id: run.id,
-      panel: run.panel || [],
-      prompt_sha256: run.prompt_sha256,
-      run_date: run.created_at,
+    documents: [...documentIds].sort(),
+    runs: runs.map(run => run.id),
+    byLocator: rowsByLocator,
+    comparisons,
+    notes: {
+      passage: cells(newestBy(passageNotes.filter(n => runIds.has(n.run_id)),
+                              n => `${n.behaviour_slug}\n${n.locator}`)),
+      depth: cells(newestBy(documentNotes.filter(n => n.kind === "depth"),
+                            n => `${n.behaviour_slug}\n${n.document_id}`)),
+      standing: cells(newestBy(documentNotes.filter(n => n.kind === "standing"),
+                               n => `${n.behaviour_slug}\n${n.document_id}`)),
     },
-    calls: ofRun.map(call => ({
-      judge: call.model,
-      status: call.status,
-      source_document: byVersionId.get(call.source_version_id) || null,
-      target_document: byVersionId.get(call.target_version_id) || null,
-      passages_given: call.sources,
-      passages_unanswered: call.uncovered,
-      finish_reason: call.finish_reason,
-    })),
-    // The judge is on the call, not on the link, so it is carried onto each row
-    // here once rather than looked up by every reader downstream.
-    links: links.map(link => ({
-      ...link,
-      judge: answered.find(call => call.id === link.call_id)?.model || null,
-    })),
-    arbitrations,
-    summary: summary || null,
   };
 }

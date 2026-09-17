@@ -914,14 +914,16 @@ if (behaviours.length === 0) {
 /* 404 audit: every path the page asks for must exist. There used to be one
  * exception, the manifest, whose absence was the fresh-clone state the reader
  * fell through; the chain that needed it is gone. */
-/* Three files the reader asks for and no checkout has: the links of a run, and
- * the two kinds of paragraph written beside them. All three are gitignored
- * generated data, absent from every deployment until a run is stored, and the
- * reader is built to render without them. Their absence is the committed state,
- * the way the manifest's once was, so it is declared here rather than left to
- * fail on every machine but the one that generated them. */
+/* The one address the reader asks for that this walker cannot answer.
+ *
+ * It was three gitignored files -- a run's links and the two kinds of paragraph
+ * beside them -- and they are rows in the database now, served by a Next route.
+ * This walker serves the page from a static tree and has no routes, so the
+ * request 404s and the reader renders without bubbles, which is exactly what it
+ * did when the files were missing. The page under test is the same either way;
+ * what the bubbles contain is tested in app/lib/__tests__/links.test.mjs. */
 const GENERATED_AND_ABSENT = [
-  "/spec-reader/links.json", "/depths.json", "/overview.json",
+  "/api/reader/links",
 ];
 const unexpectedMissing = [...new Set(missingPaths)]
   .filter(path => !GENERATED_AND_ABSENT.includes(path));

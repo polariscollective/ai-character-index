@@ -49,14 +49,16 @@ const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
-/* Three files the reader asks for and no checkout has: the links of a run, and
- * the two kinds of paragraph written beside them. All three are gitignored
- * generated data, absent from every deployment until a run is stored, and the
- * reader renders without them. Their absence is the committed state, so it is
- * declared rather than left to fail everywhere but on the machine that made
- * them. verify-reader-test.mjs carries the same list for the same reason. */
+/* The one address the reader asks for that this walker cannot answer.
+ *
+ * It was three gitignored files -- a run's links and the two kinds of paragraph
+ * beside them -- and they are rows in the database now, served by a Next route.
+ * This walker serves the page from a static tree and has no routes, so the
+ * request 404s and the reader renders without bubbles, which is exactly what it
+ * did when the files were missing. The page under test is the same either way;
+ * what the bubbles contain is tested in app/lib/__tests__/links.test.mjs. */
 const GENERATED_AND_ABSENT = [
-  "/spec-reader/links.json", "/depths.json", "/overview.json",
+  "/api/reader/links",
 ];
 /* Every 404 this server emitted, audited at the end. Chrome logs each one into
  * the console, and the collector below cannot tell which file it was: the
