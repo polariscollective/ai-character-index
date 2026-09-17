@@ -16,7 +16,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   documentName, inPlainWords, sayWhich, asSeenFrom, namedRelation,
-  verdictsByPair, byLocator, pairsByRun, summaryRow,
+  verdictsByPair, byLocator, pairsByRun, summaryRow, comparisonKey, passageNoteKey,
 } from "../links.mjs";
 
 const ANTHROPIC = "anthropic--constitution@2026-01-20 > Being honest > ¶5";
@@ -170,6 +170,10 @@ test("which sentence a pair shows does not depend on the order rows arrive in", 
  * so a note could not land on the wrong comparison. Merging four runs into one
  * answer lost it, and the reader showed the note written about the Anthropic
  * constitution under a paragraph being compared with another OpenAI version. */
+const ANTHROPIC_DOC = "anthropic--constitution@2026-01-20";
+const OPENAI_DOC = "openai--model-spec@2026-08-18";
+const OPENAI_OLD = "openai--model-spec@2025-12-18";
+
 const DOCUMENT_OF = new Map([
   ["v-anthropic", "anthropic--constitution@2026-01-20"],
   ["v-openai-new", "openai--model-spec@2026-08-18"],
@@ -205,6 +209,58 @@ test("a summary carries the pair it was written about", () => {
   assert.equal(row.to, undefined);          // it has nowhere to travel, and must not pretend to
   assert.deepEqual(row.about,
     ["anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18"]);
+});
+
+/* A comparison text is written about two documents and names them throughout.
+ *
+ * Keyed by behaviour alone, the four pairs collapsed and the newest won: every
+ * behaviour served the Alibaba against OpenAI paragraph, so comparing the
+ * OpenAI model spec with its own earlier version opened a text about Alibaba. */
+test("a comparison is addressed by its behaviour and its two documents", () => {
+  assert.equal(comparisonKey("honesty", [OPENAI_DOC, ANTHROPIC_DOC]),
+               `honesty\n${ANTHROPIC_DOC}\n${OPENAI_DOC}`);
+});
+
+test("the two documents sort, so either order addresses the same text", () => {
+  // The reader builds this key from the pair on screen and cannot know which
+  // side each document was read from, so the order must not matter.
+  assert.equal(comparisonKey("honesty", [OPENAI_DOC, ANTHROPIC_DOC]),
+               comparisonKey("honesty", [ANTHROPIC_DOC, OPENAI_DOC]));
+});
+
+test("two pairs of one behaviour do not collapse onto each other", () => {
+  const withAnthropic = comparisonKey("honesty", [OPENAI_DOC, ANTHROPIC_DOC]);
+  const withItsOwnPast = comparisonKey("honesty", [OPENAI_DOC, OPENAI_OLD]);
+  assert.notEqual(withAnthropic, withItsOwnPast);
+});
+
+test("a comparison with no documents still yields a key, not a crash", () => {
+  assert.equal(comparisonKey("honesty", undefined), "honesty");
+});
+
+/* The same collapse, a third time, and the one that would have wasted the work.
+ *
+ * A passage in three comparisons gets three readings, one per pair. Keyed by
+ * behaviour and locator alone they overwrite each other, so generating the 739
+ * missing ones would have produced rows the reader then threw away, and two
+ * comparisons out of three would still have shown nothing. */
+test("one passage read against two documents keeps both readings", () => {
+  const here = `${OPENAI_DOC} > #red_line_principles > ¶2`;
+  const againstAnthropic = passageNoteKey("honesty", here, [OPENAI_DOC, ANTHROPIC_DOC]);
+  const againstItsOwnPast = passageNoteKey("honesty", here, [OPENAI_DOC, OPENAI_OLD]);
+  assert.notEqual(againstAnthropic, againstItsOwnPast);
+});
+
+test("a passage reading sorts its pair, like a comparison does", () => {
+  const here = `${OPENAI_DOC} > #red_line_principles > ¶2`;
+  assert.equal(passageNoteKey("honesty", here, [OPENAI_DOC, ANTHROPIC_DOC]),
+               passageNoteKey("honesty", here, [ANTHROPIC_DOC, OPENAI_DOC]));
+});
+
+test("the behaviour still separates two readings of one passage", () => {
+  const here = `${OPENAI_DOC} > #red_line_principles > ¶2`;
+  assert.notEqual(passageNoteKey("honesty", here, [OPENAI_DOC, ANTHROPIC_DOC]),
+                  passageNoteKey("no-sycophancy", here, [OPENAI_DOC, ANTHROPIC_DOC]));
 });
 
 test("a summary whose run has no pair carries an empty one, not undefined", () => {

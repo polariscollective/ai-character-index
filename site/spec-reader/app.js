@@ -292,7 +292,14 @@ function openBehaviourNote(button) {
 function comparisonFor(slug) {
   if (!state.comparing) return null;
   const legacy = linkRows?.comparison || null;
-  const written = linkRows?.comparisons?.[slug]
+  /* Behaviour AND pair. A comparison is written about two documents and names
+   * them throughout, so keying it by behaviour alone made every pair serve the
+   * newest run's text: comparing the OpenAI model spec with its own earlier
+   * version opened a paragraph about the Alibaba model spec. The key is built
+   * the way comparisonKey in app/lib/links.mjs builds it, sorted, and the two
+   * spellings have to agree. */
+  const key = [slug, ...comparePair().slice().sort()].join("\n");
+  const written = linkRows?.comparisons?.[key]
     || (legacy && legacy.behaviour === slug ? legacy : null);
   return written && written.text ? written : null;
 }

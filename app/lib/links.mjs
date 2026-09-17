@@ -303,6 +303,32 @@ export function summaryRow(note, about) {
 }
 
 /**
+ * How a comparison text is addressed: its behaviour, then its two documents.
+ *
+ * The documents are sorted, so the reader can build the same key from the pair
+ * on screen without knowing which side each document was read from. The reader
+ * writes this key by hand, in comparisonFor: the two spellings must agree, and
+ * the test below is what holds them to it.
+ */
+export function comparisonKey(slug, documents) {
+  return [slug, ...[...(documents || [])].sort()].join("\n");
+}
+
+/**
+ * How a passage's reading is addressed: behaviour, paragraph, then its pair.
+ *
+ * The pair is the load-bearing part, and it was missing. A passage that takes
+ * part in three comparisons gets three readings, one per pair, each naming the
+ * document it was written against. Deduplicating them on behaviour and locator
+ * alone keeps one and drops the rest, so two comparisons out of three would show
+ * no reading at all: the same collapse that served one pair's text everywhere,
+ * in a third place. It is invisible today only because these exist for one pair.
+ */
+export function passageNoteKey(slug, locator, documents) {
+  return [slug, locator, ...[...(documents || [])].sort()].join("\n");
+}
+
+/**
  * Everything the reader needs about links, in the shape its file carried.
  *
  * One request per table rather than one per run: the tables are small enough to
@@ -323,7 +349,7 @@ export async function readerLinks(fetchImpl = fetch) {
              "select=run_id,first_locator,second_locator,relation,stricter_document,"
              + "why,agrees,arbiter,readings", fetchImpl),
       select("aci_link_summaries",
-             "select=run_id,behaviour_slug,model,body,created_at", fetchImpl),
+             "select=run_id,behaviour_slug,document_ids,model,body,created_at", fetchImpl),
       select("aci_passage_notes",
              "select=run_id,behaviour_slug,locator,body,model,created_at", fetchImpl),
       select("aci_document_notes",
@@ -352,10 +378,17 @@ export async function readerLinks(fetchImpl = fetch) {
 
   const verdicts = verdictsByPair(arbitrations.filter(row => runIds.has(row.run_id)));
 
+  /* One text per behaviour AND per pair, because that is how they were written.
+   *
+   * Keyed by behaviour alone, the four pairs collapsed onto one another and the
+   * newest won: all thirteen behaviours served the Alibaba against OpenAI text,
+   * whichever two documents the reader had on screen. The pair was in the table
+   * the whole time, in document_ids, and this did not even ask for it. */
   const comparisons = {};
-  for (const [slug, row] of newestBy(
-    summaries.filter(s => runIds.has(s.run_id)), s => s.behaviour_slug)) {
-    comparisons[slug] = { writtenBy: row.model, text: row.body };
+  for (const [key, row] of newestBy(
+    summaries.filter(s => runIds.has(s.run_id)),
+    s => comparisonKey(s.behaviour_slug, s.document_ids))) {
+    comparisons[key] = { writtenBy: row.model, text: row.body };
   }
 
   const cells = (map) => Object.fromEntries(
@@ -378,9 +411,10 @@ export async function readerLinks(fetchImpl = fetch) {
    * These were briefly returned beside the bubbles rather than among them, which
    * reads as a tidier shape and loses every "in short" pill on the page: the
    * reader looks for them in byLocator and nowhere else. */
-  for (const note of newestBy(
+  const passageNewest = newestBy(
     passageNotes.filter(n => runIds.has(n.run_id)),
-    n => `${n.behaviour_slug}\n${n.locator}`).values()) {
+    n => passageNoteKey(n.behaviour_slug, n.locator, pairOf.get(n.run_id)));
+  for (const note of passageNewest.values()) {
     (rowsByLocator[note.locator] ||= []).unshift(
       summaryRow(note, pairOf.get(note.run_id)));
   }
@@ -391,8 +425,8 @@ export async function readerLinks(fetchImpl = fetch) {
     byLocator: rowsByLocator,
     comparisons,
     notes: {
-      passage: cells(newestBy(passageNotes.filter(n => runIds.has(n.run_id)),
-                              n => `${n.behaviour_slug}\n${n.locator}`)),
+      passage: Object.fromEntries(
+        [...passageNewest].map(([key, row]) => [key, { text: row.body }])),
       depth: cells(newestBy(documentNotes.filter(n => n.kind === "depth"),
                             n => `${n.behaviour_slug}\n${n.document_id}`)),
       standing: cells(newestBy(documentNotes.filter(n => n.kind === "standing"),
