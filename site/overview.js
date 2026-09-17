@@ -50,6 +50,8 @@ const elements = {
   caption: document.querySelector("#grid-caption"),
   head: document.querySelector("#grid-head"),
   body: document.querySelector("#grid-body"),
+  gridScroll: document.querySelector("#grid-scroll"),
+  remaining: document.querySelector("#grid-remaining"),
   legend: document.querySelector("#legend"),
   legendList: document.querySelector("#legend-list"),
   sheet: document.querySelector("#sheet"),
@@ -121,6 +123,24 @@ function newestPerSpecification(documents) {
  * day rather than a day. Written as a rule rather than a case, so the next
  * specification dated to the month is handled without an edit here. */
 const shownVersion = version => String(version || "").replace(/-00$/, "");
+
+/* How many behaviours are still below the fold of the scrolling grid. Measured
+ * from the rows themselves rather than from a scroll offset and a row height,
+ * because a row's height is whatever its longest name makes it and a sum of
+ * assumed heights drifts from what is actually on screen.
+ *
+ * Nothing is said at the end of the list rather than "0 more below", which is a
+ * line that tells a reader what they can already see. */
+function updateRemaining() {
+  const scroll = elements.gridScroll;
+  if (!scroll || !elements.remaining) return;
+  const foot = scroll.getBoundingClientRect().bottom;
+  const below = [...elements.body.querySelectorAll("tr")]
+    .filter(row => row.getBoundingClientRect().top >= foot - 1).length;
+  elements.remaining.textContent = below
+    ? `${below} more ${below === 1 ? "behaviour" : "behaviours"} below`
+    : "";
+}
 
 function depthOf(behaviour, documentId) {
   const depth = (behaviour.coverage || {})[documentId]?.depth;
@@ -369,6 +389,7 @@ function render() {
 
   const judged = columns.filter(column => !column.absent).length;
   const unjudged = columns.filter(column => column.absent).map(c => c.lab);
+  updateRemaining();
   elements.caption.textContent =
     `${behaviours.length} behaviours over ${judged} specifications. `
     + "Each figure is the mean of the panel's judges."
@@ -396,6 +417,10 @@ async function initialize() {
   state.registry = registry || {};
   render();
 }
+
+elements.gridScroll?.addEventListener("scroll", updateRemaining, { passive: true });
+// A narrower window rewraps the behaviour names, which changes how many rows fit.
+window.addEventListener("resize", updateRemaining, { passive: true });
 
 elements.sheetClose.addEventListener("click", () => elements.sheet.close());
 elements.sheet.addEventListener("click", event => {

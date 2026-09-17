@@ -70,18 +70,30 @@ h1::before {
   margin-bottom: 14px;
   background: var(--energy);
 }
-.lede { margin: 0 0 28px; max-width: 66ch; color: var(--muted); }
+/* Wider than the 66ch the framework asks for prose. This is a tool rather than
+   a page of prose, and at 66ch the four sentences ran to six lines above a grid
+   that wants the room. */
+.lede { margin: 0 0 28px; max-width: 82ch; color: var(--muted); }
 
 /* The grid. A table because it is one: a behaviour reads across, a
    specification reads down, and a screen reader needs the headers to say so. */
-/* Ten rows and then scroll. Thirteen behaviours over a header and a legend runs
-   past the fold on a laptop, and a grid you have to leave the page to finish is
-   one you cannot compare across. The head stays put while the body moves, or
-   the columns lose their names on the way down. */
+/* Five rows and then scroll, with the head held in place or the columns lose
+   their names on the way down. A height in pixels rather than a count of rows,
+   because the stylesheet cannot count rows: if a row's height changes this
+   number has to change with it. */
 .grid-scroll {
   overflow: auto;
-  max-height: 560px;
+  max-height: 320px;
   border-bottom: 1px solid var(--line);
+}
+/* How many rows are still below, under the grid on the left. Kept in the flow
+   even when empty so that reaching the end does not shift the page. */
+.grid-remaining {
+  margin: 8px 0 0;
+  min-height: 1.4em;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
 }
 thead th {
   position: sticky;
@@ -94,7 +106,13 @@ thead th {
    look more considered than another for no reason but the length of a word.
    Below the minimum the grid scrolls sideways rather than squashing. */
 table { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 880px; }
-caption { text-align: left; padding-bottom: 10px; color: var(--faint); font-size: 13px; }
+.grid-note {
+  margin: 4px 0 0;
+  max-width: 78ch;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1.5;
+}
 th, td { text-align: left; padding: 0; }
 thead th {
   padding: 0 10px 8px;
@@ -190,7 +208,6 @@ tbody th {
   .scale-rail ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
 .scale-rail h2 { margin: 0 0 10px; font-family: var(--display); font-size: 15px; font-weight: 600; }
-.scale-lede { margin: 0 0 14px; font-size: 12px; line-height: 1.5; color: var(--faint); }
 .scale-rail ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
 .scale-rail li { font-size: 13px; }
 .scale-head { display: flex; gap: 10px; align-items: baseline; }
@@ -305,23 +322,20 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
          two hundred pixel rail is prose nobody reads. -->
     <aside class="scale-rail" id="legend" hidden aria-label="The scale">
       <h2>The scale</h2>
-      <p class="scale-lede">
-        Each figure is the mean of the panel's judges. A judge reads the passages
-        the panel cited rather than the whole document, so a depth is a reading
-        of those citations. It measures how far a document develops the
-        behaviour, not whether it agrees with it.
-      </p>
       <ol id="legend-list"></ol>
     </aside>
 
     <div class="grid-area">
-      <div class="grid-scroll">
+      <div class="grid-scroll" id="grid-scroll">
         <table id="grid">
-          <caption id="grid-caption">Loading.</caption>
           <thead><tr id="grid-head"></tr></thead>
           <tbody id="grid-body"></tbody>
         </table>
       </div>
+      <p class="grid-remaining" id="grid-remaining" aria-live="polite"></p>
+      <!-- Outside the table rather than its caption: inside, it sat in the
+           scrolling box and left the view with the rows it describes. -->
+      <p class="grid-note" id="grid-caption">Loading.</p>
     </div>
   </div>
 </div>
