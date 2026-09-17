@@ -298,9 +298,11 @@ function openBehaviourNote(button) {
 
   /* Last, and only with two documents on screen: the comparison is written about
    * a pair, and under a single document it would describe something the reader
-   * cannot see. It belongs to one behaviour, so it appears under that one. */
-  const written = state.comparing ? (linkRows?.comparison || null) : null;
-  if (written && written.behaviour === slug && written.text) {
+   * cannot see. A run carries one comparison per behaviour, keyed by slug, so
+   * the lookup itself does the matching a behaviour field used to be checked
+   * for: a note opened on a behaviour the run did not cover finds nothing. */
+  const written = state.comparing ? (linkRows?.comparisons?.[slug] || null) : null;
+  if (written && written.text) {
     const heading = document.createElement("h3");
     heading.textContent = "How the two documents compare";
     body.append(heading, ...comparisonNodes(written.text));

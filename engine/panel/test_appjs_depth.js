@@ -498,7 +498,7 @@ check("on one document it opens at the width of the column it hangs off",
 /* ---- the behaviour comparison, under everything else ---- */
 function withComparison(behaviour, text, { comparing = true } = {}) {
   show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
-  linkRows = { comparison: { behaviour, writtenBy: "sol", text } };
+  linkRows = { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
   note("helpfulness");
   const tail = elements.keyNoteBody.children.slice(-3)
     .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""));

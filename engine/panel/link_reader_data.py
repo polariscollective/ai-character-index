@@ -233,20 +233,34 @@ def reading_order(document_ids):
     return order
 
 
-def comparison(summary):
-    """The behaviour-level text the reader shows, and nothing the page cannot use.
+def comparisons(store, run_id):
+    """{behaviour slug: {writtenBy, text}} for one run, from the database.
 
-    A run's summary.json also carries what it cost, how long it took and the
-    digest of the prompt that produced it. Those belong to the record, not to the
-    page: what the reader needs is the text and who wrote it."""
-    if not summary or not summary.get("text"):
-        return None
-    return {"behaviour": summary.get("behaviour"),
-            "writtenBy": summary.get("model"),
-            "text": summary["text"]}
+    Read from aci_link_summaries rather than from the summary.json beside a run,
+    because that file holds a single behaviour: link_summary writes it once per
+    behaviour and each pass overwrites the last. A run covering thirteen
+    behaviours would put one behaviour's paragraph under all thirteen, which is a
+    wrong answer shaped like a right one. The table is keyed by behaviour for
+    exactly this reason.
+
+    The newest row per behaviour wins, the way the engine already takes the
+    newest run of a cell: the prompt digest is part of that table's key, so
+    improving the wording writes a new row beside the old one rather than
+    replacing it.
+
+    What travels is the text and who wrote it. The cost, the duration and the
+    prompt digest belong to the record, not to the page.
+    """
+    rows = store.select("aci_link_summaries", {"select": "*", "run_id": f"eq.{run_id}"})
+    newest = {}
+    for row in sorted(rows, key=lambda r: r.get("created_at") or ""):
+        if row.get("body"):
+            newest[row["behaviour_slug"]] = {"writtenBy": row.get("model"),
+                                             "text": row["body"]}
+    return newest
 
 
-def build(data, judge=None, order=None, arbitration=None, summary=None):
+def build(data, judge=None, order=None, arbitration=None, summaries=None):
     documents = sorted({d[side] for d in data["directions"]
                         for side in ("source", "target")})
     rows = by_locator(data, judge, arbitration)
@@ -262,7 +276,9 @@ def build(data, judge=None, order=None, arbitration=None, summary=None):
         "judge": judge,
         "arbiter": ((arbitration or {}).get("arbiter")),
         "documents": documents,
-        "comparison": comparison(summary),
+        # One per behaviour, keyed by slug: a run carries as many comparisons as
+        # it has behaviours, and the page picks the one whose note is open.
+        "comparisons": summaries or {},
         "byLocator": rows,
     }
 
@@ -277,17 +293,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     data = json.loads(Path(args.links_json).read_text(encoding="utf-8"))
-    # The database, for the reading order alone: the links themselves come from
-    # the run's own report, and nothing here asks it for a judgement.
-    index_store.install_registry(Store.from_env())
+    # The database, for the reading order and the behaviour comparisons: the
+    # links themselves come from the run's own report, and nothing here asks it
+    # for a judgement.
+    store = Store.from_env()
+    index_store.install_registry(store)
     documents = sorted({d[side] for d in data["directions"]
                         for side in ("source", "target")})
     beside = Path(args.arbitration) if args.arbitration else \
         Path(args.links_json).with_name("arbitration.json")
     arbitration = json.loads(beside.read_text(encoding="utf-8")) if beside.exists() else None
-    written = Path(args.links_json).with_name("summary.json")
-    summary = json.loads(written.read_text(encoding="utf-8")) if written.exists() else None
-    payload = build(data, args.judge, reading_order(documents), arbitration, summary)
+    payload = build(data, args.judge, reading_order(documents), arbitration,
+                    comparisons(store, data["run"]["id"]))
     out = Path(args.out)
     out.write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
     bubbles = sum(len(v) for v in payload["byLocator"].values())
@@ -296,9 +313,11 @@ def main(argv=None):
                   for link in links if link.get("settled"))
     print(f"  {len(payload['byLocator'])} paragraphs carry links, {bubbles} bubbles in all")
     print(f"  {settled} of them are an arbiter's verdict, {bubbles - settled} one judge's reading")
-    if payload["comparison"]:
-        print(f"  and a comparison of {len(payload['comparison']['text'])} characters, "
-              f"written by {payload['comparison']['writtenBy']}")
+    if payload["comparisons"]:
+        written = payload["comparisons"]
+        chars = sum(len(c["text"]) for c in written.values())
+        print(f"  and {len(written)} behaviour comparisons, {chars:,} characters in all, "
+              f"written by {', '.join(sorted({c['writtenBy'] for c in written.values()}))}")
     return 0
 
 
