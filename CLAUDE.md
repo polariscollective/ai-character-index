@@ -779,6 +779,28 @@ had read an added rule; the arbiter, who reads both documents whole, could see
 the text was shared. That is an argument for the arbiter having the documents,
 and against trusting a passage-level reading about what a version introduced.
 
+**The two directions almost never meet, so most readings are never crossed.** A
+call hands the judge the retained passages of one document and the whole of the
+other, and the run makes that call both ways. It is tempting to read the second
+direction as a cross-check on the first: whatever a judge misses about its own
+document, the opposite call has that document whole. It does not work out that
+way. Counting the distinct pairs of each run, the two directions land on the same
+pair 9% of the time for the constitution against the OpenAI spec, 8% for the
+constitution against Alibaba and 16% for Alibaba against OpenAI. Only the two
+OpenAI versions reach 59%, and only because documents that alike retain
+overlapping passages. Each direction starts from its own retained set and
+searches the other document, so the pairs found from one side are mostly not the
+pairs found from the other.
+
+The cost is measurable. Of the 2,092 readings on pairs that only one direction
+ever saw, 568, or 27%, assert that one document demands more than the other,
+which is precisely the claim a judge cannot check without its own document whole.
+Where both directions did see a pair, that assertion is made 145 times. And the
+arbiter does not cover the gap: the version pair this section opened with became
+a dispute because two behaviours read it differently in the same direction, not
+because two directions disagreed. A dispute needs two readings of one pair, and a
+pair only one direction ever saw has one.
+
 **The `absent` rows are the first data on that branch, and they prove less than
 they look like.** This file recorded that `silences` was exercised by a fixture
 and not by data. There are 26 `absent` rows now. But a silence is meant to need
