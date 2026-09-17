@@ -373,6 +373,28 @@ class TestAppJSTiers(unittest.TestCase):
         self.assertIn("72 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSLinks(unittest.TestCase):
+    """Which counterpart bubbles a paragraph shows while two documents compare.
+
+    Nothing exercised linkBubbles until this harness, and that is how a
+    paragraph came to show every bubble it had ever received whatever the
+    reader had ticked: seven of one paragraph's seventeen had been drawn while
+    judging behaviours the reader was not reading. Skips (not fails) without
+    `node`."""
+
+    HARNESS = HERE / "test_appjs_links.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_link_bubbles_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("12 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSQuotes(unittest.TestCase):
     """The quote-anchoring guard in app.js (containsInOrder): a quote that
     normalizes to zero fragments must be treated as unresolved, because an

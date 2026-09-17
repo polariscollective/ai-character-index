@@ -4194,9 +4194,21 @@ function linkBubbles(block) {
    * screen decides which links belong to it. */
   if (!state.comparing) return "";
   const onScreen = new Set(comparePair());
+  /* A bubble also belongs to the behaviour whose call drew it, and showing every
+   * bubble a paragraph ever received, whatever the reader has ticked, is how one
+   * paragraph came to carry seventeen of them: most were answers to a question
+   * this reader is not asking. A row written before rows carried their
+   * behaviours has none, and those are still shown: a reader that silently
+   * empties itself against an older file is worse than one showing too much. */
+  const ticked = selectedBehaviours();
+  const tickedSlugs = new Set(ticked.map(behaviour => behaviour.slug));
+  const hues = new Map(ticked.map(behaviour => [behaviour.slug, behaviourHue(behaviour)]));
+  const names = new Map(ticked.map(behaviour => [behaviour.slug, behaviour.name]));
+  const ticksOf = link => (link.behaviours || []).filter(slug => tickedSlugs.has(slug));
   const found = (block.dataset.locators || "").split("\n")
     .flatMap(locator => rows[locator] || [])
-    .filter(link => onScreen.has(link.to.split(" > ", 1)[0]));
+    .filter(link => onScreen.has(link.to.split(" > ", 1)[0]))
+    .filter(link => !link.behaviours || ticksOf(link).length);
   if (!found.length) return "";
   /* Two buttons in one pill, and the pill is a span because a button cannot
    * contain a button. The word goes to the paragraph; the "?" goes to it AND
@@ -4225,6 +4237,16 @@ function linkBubbles(block) {
       + `data-relation="${escapeHTML(link.relation)}" data-goto="${escapeHTML(link.to)}"`
       + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
       + `>${word}</button>`);
+    /* Which ticked behaviour drew this link, and only when several are ticked:
+     * with one subject on screen every bubble belongs to it, and a label saying
+     * so on every pill is noise. A link drawn under two ticked behaviours names
+     * both, each in its own colour, which is the vocabulary the gutter above
+     * already uses for a passage shared between behaviours. */
+    if (ticked.length > 1) {
+      ticksOf(link).forEach(slug => pills.push(
+        `<span class="link-behaviour" style="--bh: ${hues.get(slug)}">`
+        + `${escapeHTML(names.get(slug) || slug)}</span>`));
+    }
     if (said) {
       notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
         + `${escapeHTML(said)}</span>`);

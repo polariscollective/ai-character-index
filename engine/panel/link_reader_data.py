@@ -148,7 +148,13 @@ def named_relation(relation, source_locator, target_locator):
 
 
 def by_locator(data, judge=None, arbitration=None):
-    """{locator: [{to, relation, comment, judge, settled, trace}]}.
+    """{locator: [{to, relation, comment, judge, settled, trace, behaviours}]}.
+
+    `behaviours` is every behaviour whose call drew the pair, so the reader can
+    show a bubble under the subject it was found for rather than under all of
+    them at once. A pair drawn under several keeps one entry and lists them all:
+    a relation is a fact about two paragraphs, and the behaviour is the context
+    the question was asked in, not part of the answer.
 
     A relation is a fact about a PAIR of paragraphs, so both of them carry it.
     Emitting it only under the passage a call happened to start from left one
@@ -169,6 +175,13 @@ def by_locator(data, judge=None, arbitration=None):
             for target in source["targets"]:
                 key = tuple(sorted((source["locator"], target["locator"])))
                 if key in pairs:
+                    # Found again under another behaviour: the same two
+                    # paragraphs, so one entry that remembers every behaviour
+                    # that drew it. Which of the readings is kept decides
+                    # nothing, because where two behaviours disagreed the pair
+                    # carries an arbiter's verdict and the verdict is what is
+                    # printed below.
+                    pairs[key]["behaviours"].add(direction["behaviour"])
                     continue
                 relations = target.get("judge_relations") or {}
                 if not relations:
@@ -189,6 +202,7 @@ def by_locator(data, judge=None, arbitration=None):
                     pairs[key] = {"named": verdict["settled"]["relation"],
                                   "comment": shown, "trace": trace,
                                   "settled": True,
+                                  "behaviours": {direction["behaviour"]},
                                   "judge": verdict["settled"]["arbiter"]}
                     continue
 
@@ -200,6 +214,7 @@ def by_locator(data, judge=None, arbitration=None):
                         say_which((target["rationales"] or {}).get(seat, ""),
                                   source["locator"], target["locator"]), document_ids),
                     "trace": "", "settled": False, "judge": seat,
+                    "behaviours": {direction["behaviour"]},
                 }
 
     out = {}
@@ -210,7 +225,8 @@ def by_locator(data, judge=None, arbitration=None):
                 continue
             row = {"to": target_locator, "relation": relation,
                    "judge": entry["judge"], "settled": entry["settled"],
-                   "comment": entry["comment"]}
+                   "comment": entry["comment"],
+                   "behaviours": sorted(entry["behaviours"])}
             if entry["trace"]:
                 row["trace"] = entry["trace"]
             out.setdefault(source_locator, []).append(row)
