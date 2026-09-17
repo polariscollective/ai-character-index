@@ -5,7 +5,8 @@
  * digests of the two files it serves. A citation of a dataset that changes has
  * to name the version it read, and this is how a page learns that without
  * downloading three hundred kilobytes of coverage to find a date. */
-import { isPublicationId, publicationRow } from "../../../lib/publications.mjs";
+import { isPublicationId, publicationRow, servesDevelopment }
+  from "../../../lib/publications.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,16 @@ export async function GET(request) {
     return Response.json({ error: pin ? "no such publication" : "nothing published yet" },
                          { status: 404 });
   }
-  return Response.json(row, {
+  /* Whether this deployment serves development, said alongside the build it is
+   * serving. It is a fact about where the code is running and not about the
+   * publication, which is why it rides on the response rather than in the row.
+   *
+   * A page needs it because is_public alone cannot mark a development site: a
+   * development deployment serves the newest build whether or not anyone
+   * published it, and when the newest happens to be public there is nothing for
+   * is_public to say. The site would then look like production to a reader while
+   * being the place unreviewed work lands. */
+  return Response.json({ ...row, development: servesDevelopment() }, {
     headers: {
       "Cache-Control": pin
         ? "public, max-age=31536000, immutable"

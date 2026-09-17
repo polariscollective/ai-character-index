@@ -9,11 +9,16 @@
  * is_public, which is an operator saying they have looked at this build. A
  * development deployment serves the newest build whether or not anyone has.
  *
- * So the tag appears when the publication on screen has not been published. That
- * is a claim about what you are reading rather than about where it is hosted,
- * which is the honest version of the warning: a development deployment serving a
- * published build has nothing to warn anyone about, and a published surface that
- * somehow served a draft would want to say so.
+ * Two conditions, either of which raises it.
+ *
+ * The publication on screen has not been published -- a claim about what you are
+ * reading -- or this deployment serves development, which is a claim about where
+ * you are. The first alone was not enough, and the reason is worth keeping: a
+ * development deployment serves the NEWEST build whether or not anyone published
+ * it, so when the newest happens to be public there is nothing for is_public to
+ * say and the dev site looked exactly like production. It is still the place
+ * unreviewed work lands, and a reader following a shared link deserves to know
+ * that before they quote a figure from it.
  *
  * A request that fails changes nothing. A warning raised because the network
  * stuttered would teach a reader to ignore it.
@@ -161,9 +166,12 @@ async function start() {
     const response = await fetch("/api/reader/publication");
     if (!response.ok) return;
     const publication = await response.json();
-    // Exactly false, not merely falsy: a route that answered without the field
-    // would otherwise raise a warning it has no grounds for.
-    if (publication.is_public === false) build(brand);
+    /* Exactly false and exactly true, never merely falsy or truthy: a route that
+     * answered without either field would otherwise raise a warning it has no
+     * grounds for, or withhold one it does. */
+    if (publication.is_public === false || publication.development === true) {
+      build(brand);
+    }
   } catch {
     // No answer is no claim.
   }
