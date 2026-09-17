@@ -4648,11 +4648,24 @@ function linkBubbles(block) {
    * filtered away for naming a document not on screen, the summaries stayed,
    * and pressing one went nowhere because it has nothing to travel to. */
   const shown = link => !link.behaviours || ticksOf(link).length;
+  /* A summary names the two documents it was written about, and only those two.
+   * It was written against one other document and says so in its first sentence,
+   * so it belongs to that comparison and to no other. Keeping it whenever any
+   * counterpart survived, which is what this did, put the note written about the
+   * Anthropic constitution under a paragraph being compared with another version
+   * of the OpenAI model spec: one bubble on screen, and a sentence about seven
+   * that were not. A summary with no pair is dropped rather than shown, because
+   * showing it is the defect. */
+  const pairOnScreen = [...onScreen].sort().join("\n");
+  const aboutThisPair = link =>
+    Array.isArray(link.about) && link.about.slice().sort().join("\n") === pairOnScreen;
   const found = (block.dataset.locators || "").split("\n").flatMap(locator => {
     const here = (rows[locator] || []).filter(shown);
     const travels = here.filter(link => link.to
       && onScreen.has(link.to.split(" > ", 1)[0]));
-    return travels.length ? here.filter(link => !link.to || travels.includes(link)) : [];
+    return travels.length
+      ? here.filter(link => link.to ? travels.includes(link) : aboutThisPair(link))
+      : [];
   });
   if (!found.length) return "";
   /* Two buttons in one pill, and the pill is a span because a button cannot

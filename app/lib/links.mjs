@@ -264,6 +264,45 @@ export async function panelRuns(fetchImpl = fetch) {
 }
 
 /**
+ * The two documents each run compared, sorted, by run id.
+ *
+ * A run IS a pair: every call in it names the same two versions, in one order or
+ * the other. That was implicit while the Python built one file per run, and it
+ * has to be carried explicitly now that four runs are merged into one answer.
+ */
+export function pairsByRun(calls, documentOf) {
+  const pairs = new Map();
+  for (const call of calls) {
+    const seen = pairs.get(call.run_id) || new Set();
+    seen.add(documentOf.get(call.source_version_id));
+    seen.add(documentOf.get(call.target_version_id));
+    seen.delete(undefined);
+    pairs.set(call.run_id, seen);
+  }
+  return new Map([...pairs].map(([id, seen]) => [id, [...seen].sort()]));
+}
+
+/**
+ * The reading of a paragraph's counterparts, as a row the reader can filter.
+ *
+ * `about` is the whole point. This paragraph's note was written against ONE
+ * other document, and it names that document in its first sentence. Without the
+ * pair on the row the reader cannot tell which comparison it belongs to, and it
+ * showed the Anthropic note beside an OpenAI-against-OpenAI bubble: one bubble
+ * on screen, and a sentence summarising seven that were not.
+ */
+export function summaryRow(note, about) {
+  return {
+    relation: "summary",
+    comment: note.body,
+    behaviours: [note.behaviour_slug],
+    settled: false,
+    judge: note.model || null,
+    about: about || [],
+  };
+}
+
+/**
  * Everything the reader needs about links, in the shape its file carried.
  *
  * One request per table rather than one per run: the tables are small enough to
@@ -293,6 +332,7 @@ export async function readerLinks(fetchImpl = fetch) {
 
   const documentOf = new Map(versions.map(v => [v.id, `${v.spec_id}@${v.version}`]));
   const mine = calls.filter(call => runIds.has(call.run_id) && call.status === "done");
+  const pairOf = pairsByRun(mine, documentOf);
   const callById = new Map(mine.map(call => [call.id, call]));
   const documentIds = new Set();
   for (const call of mine) {
@@ -341,13 +381,8 @@ export async function readerLinks(fetchImpl = fetch) {
   for (const note of newestBy(
     passageNotes.filter(n => runIds.has(n.run_id)),
     n => `${n.behaviour_slug}\n${n.locator}`).values()) {
-    (rowsByLocator[note.locator] ||= []).unshift({
-      relation: "summary",
-      comment: note.body,
-      behaviours: [note.behaviour_slug],
-      settled: false,
-      judge: note.model || null,
-    });
+    (rowsByLocator[note.locator] ||= []).unshift(
+      summaryRow(note, pairOf.get(note.run_id)));
   }
 
   return {

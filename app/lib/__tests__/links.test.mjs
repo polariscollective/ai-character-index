@@ -16,7 +16,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   documentName, inPlainWords, sayWhich, asSeenFrom, namedRelation,
-  verdictsByPair, byLocator,
+  verdictsByPair, byLocator, pairsByRun, summaryRow,
 } from "../links.mjs";
 
 const ANTHROPIC = "anthropic--constitution@2026-01-20 > Being honest > ¶5";
@@ -162,4 +162,54 @@ test("which sentence a pair shows does not depend on the order rows arrive in", 
   const one = byLocator([a, b], new Map(), IDS);
   const other = byLocator([b, a], new Map(), IDS);
   assert.equal(one[ANTHROPIC][0].comment, other[ANTHROPIC][0].comment);
+});
+
+/* A run is a pair of documents, and a summary belongs to its run's pair.
+ *
+ * This was implicit while the Python built one file per run: a file WAS a pair,
+ * so a note could not land on the wrong comparison. Merging four runs into one
+ * answer lost it, and the reader showed the note written about the Anthropic
+ * constitution under a paragraph being compared with another OpenAI version. */
+const DOCUMENT_OF = new Map([
+  ["v-anthropic", "anthropic--constitution@2026-01-20"],
+  ["v-openai-new", "openai--model-spec@2026-08-18"],
+  ["v-openai-old", "openai--model-spec@2025-12-18"],
+]);
+
+test("both directions of a run collapse into one pair, sorted", () => {
+  const pairs = pairsByRun([
+    { run_id: "r1", source_version_id: "v-anthropic", target_version_id: "v-openai-new" },
+    { run_id: "r1", source_version_id: "v-openai-new", target_version_id: "v-anthropic" },
+  ], DOCUMENT_OF);
+  assert.deepEqual(pairs.get("r1"),
+    ["anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18"]);
+  // Sorted, because the reader compares it against its own sorted pair on screen.
+});
+
+test("two runs over the same document keep their own pairs apart", () => {
+  const pairs = pairsByRun([
+    { run_id: "r1", source_version_id: "v-anthropic", target_version_id: "v-openai-new" },
+    { run_id: "r2", source_version_id: "v-openai-old", target_version_id: "v-openai-new" },
+  ], DOCUMENT_OF);
+  assert.deepEqual(pairs.get("r2"),
+    ["openai--model-spec@2025-12-18", "openai--model-spec@2026-08-18"]);
+  assert.notDeepEqual(pairs.get("r1"), pairs.get("r2"));
+});
+
+test("a summary carries the pair it was written about", () => {
+  const row = summaryRow(
+    { body: "The Anthropic constitution covers this twice.", behaviour_slug: "honesty",
+      model: "opus-5" },
+    ["anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18"]);
+  assert.equal(row.relation, "summary");
+  assert.equal(row.to, undefined);          // it has nowhere to travel, and must not pretend to
+  assert.deepEqual(row.about,
+    ["anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18"]);
+});
+
+test("a summary whose run has no pair carries an empty one, not undefined", () => {
+  // The reader drops a summary it cannot place. An absent field and an empty
+  // array must therefore behave alike, or the drop depends on which it got.
+  const row = summaryRow({ body: "x", behaviour_slug: "honesty", model: null }, undefined);
+  assert.deepEqual(row.about, []);
 });
