@@ -300,8 +300,17 @@ function openBehaviourNote(button) {
    * a pair, and under a single document it would describe something the reader
    * cannot see. A run carries one comparison per behaviour, keyed by slug, so
    * the lookup itself does the matching a behaviour field used to be checked
-   * for: a note opened on a behaviour the run did not cover finds nothing. */
-  const written = state.comparing ? (linkRows?.comparisons?.[slug] || null) : null;
+   * for: a note opened on a behaviour the run did not cover finds nothing.
+   *
+   * A payload built before that change carries a single `comparison` with its
+   * own behaviour field, and is still read. Those files exist on disk, and a
+   * reader that silently dropped their comparison would be worse than one that
+   * reads them: nothing would appear and nothing would say why. */
+  const legacy = linkRows?.comparison || null;
+  const written = state.comparing
+    ? (linkRows?.comparisons?.[slug]
+       || (legacy && legacy.behaviour === slug ? legacy : null))
+    : null;
   if (written && written.text) {
     const heading = document.createElement("h3");
     heading.textContent = "How the two documents compare";

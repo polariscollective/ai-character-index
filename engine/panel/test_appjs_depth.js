@@ -496,9 +496,14 @@ check("on one document it opens at the width of the column it hangs off",
       }, false);
 
 /* ---- the behaviour comparison, under everything else ---- */
-function withComparison(behaviour, text, { comparing = true } = {}) {
+function withComparison(behaviour, text, { comparing = true, legacy = false } = {}) {
   show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
-  linkRows = { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
+  // `legacy` is the shape payloads carried before a run held one comparison per
+  // behaviour. Files in that shape are still on disk, so the reader still reads
+  // them, and a test that only covered the new shape would not have noticed.
+  linkRows = legacy
+    ? { comparison: { behaviour, writtenBy: "sol", text } }
+    : { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
   note("helpfulness");
   const tail = elements.keyNoteBody.children.slice(-3)
     .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""));
@@ -518,6 +523,16 @@ check("on one document there is no comparison to make",
       () => withComparison("helpfulness",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
                            { comparing: false })
+              .every(node => !node.includes("How the two documents compare")), true);
+check("a payload written before the per-behaviour change is still read",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { legacy: true }),
+      ["h3 How the two documents compare", "h4 What both require", "ul"]);
+check("a legacy comparison about another behaviour is not shown under this one",
+      () => withComparison("no-sycophancy",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { legacy: true })
               .every(node => !node.includes("How the two documents compare")), true);
 
 console.log(`\n${checks} checks, ${failures} failures`);
