@@ -4206,6 +4206,9 @@ let linkRows = null;
 const LINK_WORDS = {
   same: "same rule", nuance: "nuance", stricter_source: "stricter here",
   stricter_target: "stricter there", contradiction: "contradiction",
+  /* Not a counterpart but the reading of all of them, so it leads nowhere and
+   * says so: it carries no locator to travel to, and its words are the note. */
+  summary: "in short",
 };
 
 async function loadReaderLinks() {
@@ -4243,7 +4246,10 @@ function linkBubbles(block) {
   const ticksOf = link => (link.behaviours || []).filter(slug => tickedSlugs.has(slug));
   const found = (block.dataset.locators || "").split("\n")
     .flatMap(locator => rows[locator] || [])
-    .filter(link => onScreen.has(link.to.split(" > ", 1)[0]))
+    /* A row with no locator to travel to is the summary of this paragraph's
+     * counterparts rather than one of them, so the pair on screen cannot rule it
+     * out: it is about the very links that survive that test. */
+    .filter(link => !link.to || onScreen.has(link.to.split(" > ", 1)[0]))
     .filter(link => !link.behaviours || ticksOf(link).length);
   if (!found.length) return "";
   /* Two buttons in one pill, and the pill is a span because a button cannot
@@ -4270,7 +4276,8 @@ function linkBubbles(block) {
     const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
     const noteId = `${id}-link-${index}`;
     pills.push(`<button type="button" class="link-goto" `
-      + `data-relation="${escapeHTML(link.relation)}" data-goto="${escapeHTML(link.to)}"`
+      + `data-relation="${escapeHTML(link.relation)}"`
+      + (link.to ? ` data-goto="${escapeHTML(link.to)}"` : "")
       + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
       + `>${word}</button>`);
     /* Which ticked behaviour drew this link, and only when several are ticked:

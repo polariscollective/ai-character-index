@@ -147,6 +147,19 @@ check("a behaviour that drew the link but is not ticked is not named",
       () => render([row(THERE, "same", [POWER.slug, HONESTY.slug])],
                    [POWER.slug, HARM.slug]).includes("Honesty"), false);
 
+/* ---- the reading of the counterparts, which is not one of them ---- */
+const summary = (behaviours, text) => ({
+  relation: "summary", comment: text, behaviours, settled: false, judge: "opus-5",
+});
+check("a row with no counterpart to travel to is shown beside the ones that have one",
+      () => pills(render([summary([POWER.slug], "In short, they agree."),
+                          row(THERE, "same", [POWER.slug])], [POWER.slug])), 2);
+check("and it offers nowhere to go, because it is about all of them",
+      () => render([summary([POWER.slug], "In short, they agree.")], [POWER.slug])
+              .includes("data-goto"), false);
+check("a summary drawn under a behaviour nobody ticked is not shown either",
+      () => render([summary([HONESTY.slug], "In short, they agree.")], [POWER.slug]), "");
+
 /* ---- what the filter must not break ---- */
 check("a row written before rows carried behaviours is still shown",
       () => pills(render([row(THERE, "same")], [POWER.slug])), 1);

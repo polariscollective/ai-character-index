@@ -2546,6 +2546,14 @@ body.no-behaviours .sidebar-export { display: none; }
 .link-goto[data-relation="stricter_source"],
 .link-goto[data-relation="stricter_target"] { border-color: var(--accent); }
 .link-goto[data-relation="same"] { border-color: var(--muted); color: var(--muted); }
+/* The reading of all the counterparts rather than one of them, so it is filled
+   where the others are outlined: it is the one to press first, and it is the
+   only pill that goes nowhere. */
+.link-goto[data-relation="summary"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
 .link-goto:hover,
 .link-goto:focus-visible,
 .link-goto[aria-expanded="true"] { background: var(--energy); border-color: var(--energy);

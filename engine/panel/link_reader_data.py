@@ -276,7 +276,8 @@ def comparisons(store, run_id):
     return newest
 
 
-def build(data, judge=None, order=None, arbitration=None, summaries=None):
+def build(data, judge=None, order=None, arbitration=None, summaries=None,
+          paragraphs=None):
     documents = sorted({d[side] for d in data["directions"]
                         for side in ("source", "target")})
     rows = by_locator(data, judge, arbitration)
@@ -286,7 +287,21 @@ def build(data, judge=None, order=None, arbitration=None, summaries=None):
         # which puts a paragraph 19 before a paragraph 5 and asks the reader to
         # jump backwards for no reason.
         for links in rows.values():
-            links.sort(key=lambda link: order.get(link["to"], 1 << 30))
+            links.sort(key=lambda link: order.get(link.get("to"), 1 << 30))
+    # The reading of a paragraph's counterparts, at the head of its own row. It
+    # is not a counterpart itself, so it carries no locator to travel to, and its
+    # words ride in `comment` because that is the field the reader already
+    # discloses under a pill. A paragraph gets one per behaviour: the bubbles
+    # under it are filtered by behaviour, and a summary of a row the reader is
+    # not looking at would describe the wrong thing.
+    for cell in ((paragraphs or {}).get("cells") or {}).values():
+        rows.setdefault(cell["locator"], []).insert(0, {
+            "relation": "summary",
+            "comment": cell["text"],
+            "behaviours": [cell["behaviour"]],
+            "settled": False,
+            "judge": (paragraphs or {}).get("model"),
+        })
     return {
         "run": data["run"]["id"],
         "judge": judge,
@@ -319,8 +334,12 @@ def main(argv=None):
     beside = Path(args.arbitration) if args.arbitration else \
         Path(args.links_json).with_name("arbitration.json")
     arbitration = json.loads(beside.read_text(encoding="utf-8")) if beside.exists() else None
+    # Written beside the run by link_paragraph, and absent until it has run: a
+    # payload without them is the reader as it was, not a broken one.
+    told = Path(args.links_json).with_name("paragraphs.json")
+    paragraphs = json.loads(told.read_text(encoding="utf-8")) if told.exists() else None
     payload = build(data, args.judge, reading_order(documents), arbitration,
-                    comparisons(store, data["run"]["id"]))
+                    comparisons(store, data["run"]["id"]), paragraphs)
     out = Path(args.out)
     out.write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
     bubbles = sum(len(v) for v in payload["byLocator"].values())
