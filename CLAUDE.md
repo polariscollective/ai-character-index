@@ -753,6 +753,40 @@ it. Settled, they are `stricter` 92, `nuance` 63 and `same` 15, and where one
 document was found stricter it was the Alibaba Model Spec 37 times, the OpenAI
 Model Spec 30 and the Anthropic constitution 25.
 
+**What those disputes are is not what a single seat suggests.** 125 of the 170,
+74%, are one pair of paragraphs read differently under two different behaviours,
+and every one of the 125 was caught: none escaped arbitration. Their substrate
+is the passage shared between behaviours, which is a third of the retained set
+(139 of 419 passages for the constitution against the OpenAI spec, 124 of 381
+against Alibaba), and 91% to 100% of the divergences carry one. The seat is
+therefore not mainly inconsistent with itself inside a call. It is inconsistent
+across the question it was asked: shown the same two paragraphs under two
+subjects, it answered differently.
+
+That the readings are incompatible rather than merely different is what makes
+arbitrating across behaviours right. The relation is defined without reference
+to a subject, would a response respecting one passage respect the other, so
+`same`, `nuance` and `stricter` exclude each other whatever the behaviour. The
+125 break down as 60 `same` against `stricter`, 34 `nuance` against `stricter`,
+25 `same` against `nuance`, and 6 that are flagrant: 5 where each document was
+called the stricter one and 1 where a contradiction faced a compatible reading.
+
+It also explains a figure this section reports without explaining it. The two
+OpenAI versions produced 3 disputes not because two close documents are easy,
+but because that pair is 98% consistent between behaviours where the cross-lab
+pairs run 56% to 75%. The dispute count measured the seat's steadiness under
+rephrasing, not the difficulty of the documents.
+
+The reader was showing all of it at once, and no longer is. A row of
+`byLocator` now carries every behaviour whose call drew the pair, and a bubble
+appears only under a behaviour the reader has ticked. Before that, one paragraph
+of the OpenAI Model Spec carried seventeen bubbles, seven of them drawn while
+judging behaviours the reader was not reading. Restricting what a judge may cite
+to the other document's retained set was measured as the alternative and
+rejected: it would drop 59% to 62% of the links on cross-lab pairs, take that
+paragraph from 13 bubbles to 12, and cost the whole-document reading that makes
+`absent` an honest answer.
+
 Every `cost_usd` and every `batch_cost_usd` in this run is null, and null is the
 right value. `batch_job.cost_of` returns None for a seat carrying no
 `price_per_mtok`, which is what an in-session judge is, and this repository has
