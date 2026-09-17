@@ -169,7 +169,9 @@ function updateRemaining() {
   const scroll = elements.gridScroll;
   if (!scroll || !elements.remaining) return;
   const foot = scroll.getBoundingClientRect().bottom;
-  const below = [...elements.body.querySelectorAll("tr")]
+  // Behaviours, not rows: the dividers between groups are rows too, and counting
+  // them would promise more below the fold than there is to read.
+  const below = [...elements.body.querySelectorAll("tr:not(.group-row)")]
     .filter(row => row.getBoundingClientRect().top >= foot - 1).length;
   elements.remaining.textContent = below
     ? `${below} more ${below === 1 ? "behaviour" : "behaviours"} below`
@@ -370,61 +372,87 @@ function render() {
   });
   elements.head.replaceChildren(head);
 
-  const rows = document.createDocumentFragment();
+  /* Grouped the way the reader's menu groups them, from the same field and by
+   * first appearance rather than alphabetically, so the two pages carve the set
+   * the same way. Collected into a map rather than compared with the row before,
+   * because a payload is free to interleave its categories and a "changed since
+   * last" test would then head the same group twice.
+   *
+   * A divider row inside the one table, not a table per group: one table is what
+   * keeps every column aligned down the whole grid, which is the point of it. */
+  const grouped = new Map();
   behaviours.forEach(behaviour => {
-    const row = document.createElement("tr");
-    const name = document.createElement("th");
-    name.scope = "row";
-    const open = document.createElement("button");
-    open.type = "button";
-    open.className = "subject-button";
-    const label = document.createElement("span");
-    label.textContent = behaviour.name;
-    open.append(label);
-    open.addEventListener("click", () => openBehaviour(behaviour));
-    name.append(open);
-    row.append(name);
+    const name = behaviour.category || "Behaviours under test";
+    if (!grouped.has(name)) grouped.set(name, []);
+    grouped.get(name).push(behaviour);
+  });
 
-    columns.forEach(column => {
-      const cell = document.createElement("td");
-      cell.className = "cell";
-      const depth = column.absent ? null : depthOf(behaviour, column.id);
-      if (!depth && !column.absent) {
-        const empty = document.createElement("span");
-        empty.className = "cell-empty";
-        empty.textContent = "–";
-        cell.append(empty);
-      } else {
-        const mean = depth ? depth.mean : 0;
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "cell-button";
-        paint(button, mean);
-        // The accessible name says what the cell shows. A screen reader that
-        // heard something the sighted reader cannot see would be reading a
-        // different grid.
-        button.setAttribute("aria-label",
-          `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
-          + DEPTH_WORDS[Math.round(mean)]);
-        const number = document.createElement("span");
-        number.className = "cell-figure";
-        number.textContent = mean.toFixed(1);
-        const word = document.createElement("span");
-        word.className = "cell-word";
-        // The rubric's own word either way: nought is "absent" on this scale,
-        // and a column with no document is nought, so the cell says the same
-        // thing every other cell says. What that nought means differently is
-        // the caption's job and the note's, not the cell's.
-        word.textContent = DEPTH_WORDS[Math.round(mean)];
-        button.append(number, word);
-        button.addEventListener("click", () => column.absent
-          ? openAbsent(behaviour, column)
-          : openCell(behaviour, column, depth));
-        cell.append(button);
-      }
-      row.append(cell);
+  const rows = document.createDocumentFragment();
+  grouped.forEach((members, groupName) => {
+    const divider = document.createElement("tr");
+    divider.className = "group-row";
+    const heading = document.createElement("th");
+    heading.scope = "rowgroup";
+    heading.colSpan = 1 + columns.length;
+    heading.textContent = groupName;
+    divider.append(heading);
+    rows.append(divider);
+
+    members.forEach(behaviour => {
+      const row = document.createElement("tr");
+      const name = document.createElement("th");
+      name.scope = "row";
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "subject-button";
+      const label = document.createElement("span");
+      label.textContent = behaviour.name;
+      open.append(label);
+      open.addEventListener("click", () => openBehaviour(behaviour));
+      name.append(open);
+      row.append(name);
+
+      columns.forEach(column => {
+        const cell = document.createElement("td");
+        cell.className = "cell";
+        const depth = column.absent ? null : depthOf(behaviour, column.id);
+        if (!depth && !column.absent) {
+          const empty = document.createElement("span");
+          empty.className = "cell-empty";
+          empty.textContent = "–";
+          cell.append(empty);
+        } else {
+          const mean = depth ? depth.mean : 0;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cell-button";
+          paint(button, mean);
+          // The accessible name says what the cell shows. A screen reader that
+          // heard something the sighted reader cannot see would be reading a
+          // different grid.
+          button.setAttribute("aria-label",
+            `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
+            + DEPTH_WORDS[Math.round(mean)]);
+          const number = document.createElement("span");
+          number.className = "cell-figure";
+          number.textContent = mean.toFixed(1);
+          const word = document.createElement("span");
+          word.className = "cell-word";
+          // The rubric's own word either way: nought is "absent" on this scale,
+          // and a column with no document is nought, so the cell says the same
+          // thing every other cell says. What that nought means differently is
+          // the caption's job and the note's, not the cell's.
+          word.textContent = DEPTH_WORDS[Math.round(mean)];
+          button.append(number, word);
+          button.addEventListener("click", () => column.absent
+            ? openAbsent(behaviour, column)
+            : openCell(behaviour, column, depth));
+          cell.append(button);
+        }
+        row.append(cell);
+      });
+      rows.append(row);
     });
-    rows.append(row);
   });
   elements.body.replaceChildren(rows);
 

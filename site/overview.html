@@ -320,6 +320,24 @@ tbody th {
 }
 .cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
 
+/* The line between one group of behaviours and the next. The reader's menu heads
+   its groups the same way -- 12px, semibold, muted -- so the two pages read as
+   one set carved once rather than two sets that happen to agree. The rule under
+   it is the divider; the name sits on it rather than floating above the rows it
+   introduces. */
+.group-row th {
+  padding: 20px 0 6px;
+  border-bottom: 1px solid var(--muted);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+}
+/* The first group opens the grid and needs no air above it: the header's own
+   rule is directly overhead. */
+.group-row:first-child th { padding-top: 4px; }
+
 /* The scale, under the grid rather than beside it: it is read once and then
    rarely, and the rubric's own words are what it says. */
 .layout { display: flex; gap: 28px; align-items: flex-start; }
@@ -479,7 +497,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
     AI labs publish documents setting out how their models should behave. This
-    grid shows, subject by subject, how far each one actually goes.
+    grid shows, behaviour by behaviour, how far each one actually goes.
     <br>
     Missing a specification, or a behaviour the index should be asking about?
     <a href="/how-it-works?kind=specification#propose" target="_blank"
