@@ -104,8 +104,9 @@ thead th {
 /* Fixed layout so every specification gets the same width whatever its name or
    its version is: columns that size themselves to their contents make one lab
    look more considered than another for no reason but the length of a word.
-   Below the minimum the grid scrolls sideways rather than squashing. */
-table { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 880px; }
+   No minimum width, so the table is exactly its container and never scrolls
+   sideways. Narrow, the cells wrap rather than overflow. */
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .grid-note {
   margin: 4px 0 0;
   max-width: 78ch;
@@ -129,9 +130,6 @@ thead th .version {
   font-size: 12px;
   font-weight: 400;
   color: var(--faint);
-  /* One line. A version that wraps pushes its column's header taller than its
-     neighbours and the row of labs stops reading as a row. */
-  white-space: nowrap;
 }
 tbody tr { border-bottom: 1px solid var(--line-light); }
 tbody th {
