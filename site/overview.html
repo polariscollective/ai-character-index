@@ -151,18 +151,39 @@ tbody th {
 
 /* The scale, under the grid rather than beside it: it is read once and then
    rarely, and the rubric's own words are what it says. */
-.legend { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 16px; }
-.legend h2 { margin: 0 0 10px; font-family: var(--display); font-size: 17px; font-weight: 600; }
-.legend ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.legend li { display: flex; gap: 10px; align-items: baseline; }
-.legend .swatch {
+.layout { display: flex; gap: 28px; align-items: flex-start; }
+.grid-area { flex: 1; min-width: 0; }
+.scale-rail {
+  flex: none;
+  width: 190px;
+  position: sticky;
+  top: 18px;
+  padding-right: 18px;
+  border-right: 1px solid var(--line);
+}
+@media (max-width: 880px) {
+  .layout { display: block; }
+  .scale-rail {
+    width: auto;
+    position: static;
+    margin-bottom: 22px;
+    padding: 0 0 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .scale-rail ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+}
+.scale-rail h2 { margin: 0 0 10px; font-family: var(--display); font-size: 15px; font-weight: 600; }
+.scale-rail ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.scale-rail li { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.scale-rail .swatch {
   flex: none;
   width: 30px;
   height: 16px;
   border-radius: 2px;
   background: rgb(51 61 34 / var(--tint));
 }
-.legend .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.scale-rail .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
 .scale-toggle {
   margin-top: 14px;
   padding: 0;
@@ -177,14 +198,6 @@ tbody th {
   cursor: pointer;
 }
 .scale-toggle:hover, .scale-toggle:focus-visible { background: var(--energy); }
-/* Small, because it is the long answer to a question most readers will not ask,
-   and it sits under the thing it explains rather than above it. */
-.scale-detail { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--muted); }
-.scale-detail p { margin: 0 0 10px; max-width: 66ch; }
-.scale-detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
-.scale-detail dt { font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: nowrap; }
-.scale-detail dd { margin: 0; max-width: 60ch; }
-.scale-detail[hidden] { display: none; }
 
 dialog {
   width: min(720px, calc(100vw - 32px));
@@ -205,6 +218,17 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   padding: 18px 20px 0;
 }
 .sheet-head h2 { margin: 0; font-family: var(--display); font-size: 19px; font-weight: 600; }
+.sheet-link {
+  margin-left: auto;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.sheet-link:hover, .sheet-link:focus-visible { background: var(--energy); }
+.sheet-link[hidden] { display: none; }
 .sheet-close {
   flex: none;
   border: 0;
@@ -253,26 +277,37 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     reached and where that specification stands beside the others.
   </p>
 
-  <div class="grid-scroll">
-    <table id="grid">
-      <caption id="grid-caption">Loading.</caption>
-      <thead><tr id="grid-head"></tr></thead>
-      <tbody id="grid-body"></tbody>
-    </table>
-  </div>
+  <div class="layout">
+    <!-- The scale in the margin, beside the grid it explains rather than under
+         it: a reader meeting an unfamiliar tint should not have to scroll past
+         the thing they are reading to find out what it means. The long form of
+         the rubric opens in the note instead, because five bars of prose in a
+         two hundred pixel rail is prose nobody reads. -->
+    <aside class="scale-rail" id="legend" hidden aria-label="The scale">
+      <h2>The scale</h2>
+      <ol id="legend-list"></ol>
+      <button type="button" class="scale-toggle" id="scale-toggle"
+        aria-haspopup="dialog">What was judged, exactly</button>
+    </aside>
 
-  <section class="legend" id="legend" hidden>
-    <h2>The scale</h2>
-    <ol id="legend-list"></ol>
-    <button type="button" class="scale-toggle" id="scale-toggle" aria-expanded="false"
-      aria-controls="scale-detail">What was judged, exactly</button>
-    <div class="scale-detail" id="scale-detail" hidden></div>
-  </section>
+    <div class="grid-area">
+      <div class="grid-scroll">
+        <table id="grid">
+          <caption id="grid-caption">Loading.</caption>
+          <thead><tr id="grid-head"></tr></thead>
+          <tbody id="grid-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <dialog id="sheet" aria-labelledby="sheet-title">
   <div class="sheet-head">
     <h2 id="sheet-title"></h2>
+    <!-- Out of the grid and into the passages the figure was judged from. Hidden
+         for a column with no document, where there is nothing to open. -->
+    <a class="sheet-link" id="sheet-link" hidden>Read the passages in the spec reader</a>
     <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
   </div>
   <div class="sheet-body" id="sheet-body"></div>

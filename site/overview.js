@@ -53,9 +53,9 @@ const elements = {
   legend: document.querySelector("#legend"),
   legendList: document.querySelector("#legend-list"),
   scaleToggle: document.querySelector("#scale-toggle"),
-  scaleDetail: document.querySelector("#scale-detail"),
   sheet: document.querySelector("#sheet"),
   sheetTitle: document.querySelector("#sheet-title"),
+  sheetLink: document.querySelector("#sheet-link"),
   sheetBody: document.querySelector("#sheet-body"),
   sheetClose: document.querySelector("#sheet-close"),
 };
@@ -108,10 +108,13 @@ function newestPerSpecification(documents) {
       newest.set(spec, document);
     }
   });
-  const held = [...newest.values()].sort((a, b) => a.lab.localeCompare(b.lab));
-  // The labs with nothing in the index, after the ones with something: the grid
-  // reads left to right from what has been examined to what has not.
-  return held.concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })));
+  // Alphabetical over all of them, mixing the labs with a document into the
+  // labs without one. Grouping the examined ones first would read as a ranking
+  // of its own, and a reader looking for a lab should find it where its name
+  // falls rather than where its coverage does.
+  return [...newest.values()]
+    .concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })))
+    .sort((a, b) => a.lab.localeCompare(b.lab, "en", { sensitivity: "base" }));
 }
 
 function depthOf(behaviour, documentId) {
@@ -125,8 +128,19 @@ function paint(button, value) {
   button.style.color = inkOver(rgb);
 }
 
-function sheet(title, build) {
+/* `link` is the way out of the note and into the passages themselves, offered
+ * only where there is a document to open. The reader takes the behaviour and
+ * the specification in its query string, so the grid can hand a reader straight
+ * to the text a figure was judged from. */
+function sheet(title, build, link) {
   elements.sheetTitle.textContent = title;
+  if (link) {
+    elements.sheetLink.href = link;
+    elements.sheetLink.hidden = false;
+  } else {
+    elements.sheetLink.removeAttribute("href");
+    elements.sheetLink.hidden = true;
+  }
   const body = document.createDocumentFragment();
   build(body);
   elements.sheetBody.replaceChildren(body);
@@ -195,6 +209,8 @@ function openCell(behaviour, document_, depth) {
    * title. The passage below is written from the comparisons, which call the
    * constitution Anthropic's, and a heading calling it Claude's would leave two
    * documents on screen where there is one. */
+  const reader = `/spec-reader/?behavior=${encodeURIComponent(behaviour.slug)}`
+    + `&spec=${encodeURIComponent(document_.id)}`;
   sheet(`${document_.lab}: ${behaviour.name}`, body => {
     const figure = paragraph("");
     const number = document.createElement("span");
@@ -238,7 +254,7 @@ function openCell(behaviour, document_, depth) {
       body.append(paragraph(
         "Not written yet for this specification and behaviour.", "missing"));
     }
-  });
+  }, reader);
 }
 
 function render() {
@@ -364,42 +380,28 @@ async function initialize() {
   state.passages = passages?.cells || {};
   state.registry = registry || {};
   render();
-  renderScale();
 }
 
-/* What the scale means, under it and in small type, opened rather than always
- * shown: it is read once and then rarely, and a grid that explains itself above
- * the fold pushes the thing being explained below it. The bars are the rubric's
+/* The long form of the scale, in the note rather than in the rail beside the
+ * grid: five bars of the rubric's prose do not fit a two hundred pixel margin,
+ * and a margin that scrolls is a margin nobody reads. The bars are the rubric's
  * own sentences, so this page and the reader grade by the same words. */
-function renderScale() {
-  const detail = document.createDocumentFragment();
-  const lede = document.createElement("p");
-  lede.textContent =
-    "Each figure is the mean of the panel's judges for that behaviour on that "
-    + "specification. A judge reads the passages the panel cited rather than the "
-    + "whole document, so a depth is a reading of the panel's citations. It "
-    + "measures how far a document develops the behaviour, not whether it agrees "
-    + "with it.";
-  detail.append(lede);
-  const list = document.createElement("dl");
-  DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
-    const term = document.createElement("dt");
-    term.textContent = `${level} ${anchor}`;
-    const description = document.createElement("dd");
-    description.textContent = bar;
-    list.append(term, description);
+function openScale() {
+  sheet("Depth, out of 4", body => {
+    body.append(paragraph(
+      "Each figure is the mean of the panel's judges for that behaviour on that "
+      + "specification. A judge reads the passages the panel cited rather than "
+      + "the whole document, so a depth is a reading of the panel's citations. "
+      + "It measures how far a document develops the behaviour, not whether it "
+      + "agrees with it."));
+    DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
+      body.append(heading(`${level} ${anchor}`));
+      body.append(paragraph(bar));
+    });
   });
-  detail.append(list);
-  elements.scaleDetail.replaceChildren(detail);
 }
 
-elements.scaleToggle?.addEventListener("click", () => {
-  const open = elements.scaleDetail.hidden;
-  elements.scaleDetail.hidden = !open;
-  elements.scaleToggle.setAttribute("aria-expanded", String(open));
-  elements.scaleToggle.textContent = open
-    ? "Hide what was judged" : "What was judged, exactly";
-});
+elements.scaleToggle?.addEventListener("click", openScale);
 
 elements.sheetClose.addEventListener("click", () => elements.sheet.close());
 elements.sheet.addEventListener("click", event => {
