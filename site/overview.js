@@ -52,7 +52,6 @@ const elements = {
   body: document.querySelector("#grid-body"),
   legend: document.querySelector("#legend"),
   legendList: document.querySelector("#legend-list"),
-  scaleToggle: document.querySelector("#scale-toggle"),
   sheet: document.querySelector("#sheet"),
   sheetTitle: document.querySelector("#sheet-title"),
   sheetLink: document.querySelector("#sheet-link"),
@@ -116,6 +115,12 @@ function newestPerSpecification(documents) {
     .concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })))
     .sort((a, b) => a.lab.localeCompare(b.lab, "en", { sensitivity: "base" }));
 }
+
+/* A version whose day is 00 has no day recorded, so it is shown without one.
+ * "2026-04-00" is a date nobody can read, and that nought is the absence of a
+ * day rather than a day. Written as a rule rather than a case, so the next
+ * specification dated to the month is handled without an edit here. */
+const shownVersion = version => String(version || "").replace(/-00$/, "");
 
 function depthOf(behaviour, documentId) {
   const depth = (behaviour.coverage || {})[documentId]?.depth;
@@ -273,7 +278,7 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.absent ? "unpublished" : column.version;
+    version.textContent = column.absent ? "unpublished" : shownVersion(column.version);
     cell.append(lab, version);
     head.append(cell);
   });
@@ -337,16 +342,26 @@ function render() {
   });
   elements.body.replaceChildren(rows);
 
+  /* Each level with the rubric's own sentence under it, in the rail rather than
+   * behind a control: a reader meeting a colour needs to know what it was given
+   * for, and a scale that hides its definition is a legend that explains
+   * nothing. It makes the rail tall, which is the right trade. */
   const scale = document.createDocumentFragment();
-  DEPTH_WORDS.forEach((word, level) => {
+  DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
     const item = document.createElement("li");
+    const head = document.createElement("span");
+    head.className = "scale-head";
     const swatch = document.createElement("span");
     swatch.className = "swatch";
     swatch.style.background = `rgb(${rampAt(level).join(" ")})`;
     const number = document.createElement("span");
     number.className = "level";
     number.textContent = String(level);
-    item.append(swatch, number, document.createTextNode(word));
+    head.append(swatch, number, document.createTextNode(anchor));
+    const sentence = document.createElement("span");
+    sentence.className = "scale-bar";
+    sentence.textContent = bar;
+    item.append(head, sentence);
     scale.append(item);
   });
   elements.legendList.replaceChildren(scale);
@@ -381,27 +396,6 @@ async function initialize() {
   state.registry = registry || {};
   render();
 }
-
-/* The long form of the scale, in the note rather than in the rail beside the
- * grid: five bars of the rubric's prose do not fit a two hundred pixel margin,
- * and a margin that scrolls is a margin nobody reads. The bars are the rubric's
- * own sentences, so this page and the reader grade by the same words. */
-function openScale() {
-  sheet("Depth, out of 4", body => {
-    body.append(paragraph(
-      "Each figure is the mean of the panel's judges for that behaviour on that "
-      + "specification. A judge reads the passages the panel cited rather than "
-      + "the whole document, so a depth is a reading of the panel's citations. "
-      + "It measures how far a document develops the behaviour, not whether it "
-      + "agrees with it."));
-    DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
-      body.append(heading(`${level} ${anchor}`));
-      body.append(paragraph(bar));
-    });
-  });
-}
-
-elements.scaleToggle?.addEventListener("click", openScale);
 
 elements.sheetClose.addEventListener("click", () => elements.sheet.close());
 elements.sheet.addEventListener("click", event => {
