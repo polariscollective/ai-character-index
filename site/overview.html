@@ -89,7 +89,11 @@ thead th {
   z-index: 1;
   background: var(--paper);
 }
-table { border-collapse: collapse; width: 100%; }
+/* Fixed layout so every specification gets the same width whatever its name or
+   its version is: columns that size themselves to their contents make one lab
+   look more considered than another for no reason but the length of a word.
+   Below the minimum the grid scrolls sideways rather than squashing. */
+table { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 880px; }
 caption { text-align: left; padding-bottom: 10px; color: var(--faint); font-size: 13px; }
 th, td { text-align: left; padding: 0; }
 thead th {
@@ -99,7 +103,7 @@ thead th {
   color: var(--muted);
   vertical-align: bottom;
 }
-thead th.subject { width: 40%; }
+thead th.subject { width: 26%; }
 thead th .lab { display: block; }
 thead th .version {
   display: block;
@@ -107,6 +111,9 @@ thead th .version {
   font-size: 12px;
   font-weight: 400;
   color: var(--faint);
+  /* One line. A version that wraps pushes its column's header taller than its
+     neighbours and the row of labs stops reading as a row. */
+  white-space: nowrap;
 }
 tbody tr { border-bottom: 1px solid var(--line-light); }
 tbody th {
@@ -146,7 +153,16 @@ tbody th {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.cell-word { display: block; font-size: 12px; color: var(--muted); }
+/* Inherits the button's colour, which the ramp computes against the tint behind
+   it. Fixed to --muted it sat almost invisible on the saturated ends of the
+   scale, which are exactly the cells a reader looks at first. */
+.cell-word {
+  display: block;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
 .cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
 
 /* The scale, under the grid rather than beside it: it is read once and then

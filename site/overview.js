@@ -273,7 +273,7 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.absent ? "not published" : column.version;
+    version.textContent = column.absent ? "unpublished" : column.version;
     cell.append(lab, version);
     head.append(cell);
   });
