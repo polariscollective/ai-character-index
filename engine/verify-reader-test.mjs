@@ -914,19 +914,23 @@ if (behaviours.length === 0) {
 /* 404 audit: every path the page asks for must exist. There used to be one
  * exception, the manifest, whose absence was the fresh-clone state the reader
  * fell through; the chain that needed it is gone. */
-/* Three files the reader asks for and no checkout has: the links of a run, and
- * the two kinds of paragraph written beside them. All three are gitignored
- * generated data, absent from every deployment until a run is stored, and the
- * reader is built to render without them. Their absence is the committed state,
- * the way the manifest's once was, so it is declared here rather than left to
- * fail on every machine but the one that generated them. */
-const GENERATED_AND_ABSENT = [
-  "/spec-reader/links.json", "/depths.json", "/overview.json",
-];
-const unexpectedMissing = [...new Set(missingPaths)]
-  .filter(path => !GENERATED_AND_ABSENT.includes(path));
+/* Nothing is declared missing any more, and the reason is worth keeping.
+ *
+ * The reader used to ask for three gitignored files -- a run's links and the two
+ * kinds of paragraph beside them -- which no checkout carried, so their absence
+ * had to be declared here or every machine but the one that generated them
+ * failed. They are rows in the database now, asked for at /api/reader/links, and
+ * reader-routes.mjs answers that address itself with a 404 for a route it does
+ * not stage. It never reaches the file branch below, so the audit never sees it
+ * and has nothing to forgive. The reader renders without bubbles, exactly as it
+ * did when the files were missing; what the bubbles contain is held to the
+ * Python in app/lib/__tests__/links.test.mjs.
+ *
+ * If that ever changes -- if the fixture router stops answering it -- the audit
+ * should fail, which is why there is no allowance left here to hide it. */
+const unexpectedMissing = [...new Set(missingPaths)];
 report(unexpectedMissing.length === 0, "nothing unexpected 404s",
-  unexpectedMissing.join(", ") || "only the generated files no checkout carries");
+  unexpectedMissing.join(", ") || "nothing");
 /* Chrome echoes every 404 -- including the audited manifest one -- into the
  * console as "Failed to load resource ... 404"; the audit above is the real
  * check, so only that exact message is filtered here. */
