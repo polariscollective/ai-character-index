@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Overview — AI Character Index</title>
+<!-- The site's own mark, the same declaration the other four pages carry: the
+     broken orbit knocked out in paper from an olive-deep rounded square. This
+     page was the only one without it, so it alone fell back to the browser's
+     blank default, and there is no favicon.ico to fall back on. Inline rather
+     than a file, as everywhere else here, so the page stays movable. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -13,6 +19,11 @@
    whole and movable rather than tangled into the reader's stylesheet. */
 :root {
   --paper: #F1EFE3;
+  /* The header's own ground and height, the reader's values rather than an
+     approximation of them: the two bars sit at the same height and the same
+     tone, or moving between the pages is a jump. */
+  --chrome: #E9E6D7;
+  --header-height: 54px;
   --ink: #23281B;
   --muted: #5C6B3C;
   --faint: #676C58;
@@ -26,34 +37,94 @@
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 * { box-sizing: border-box; }
+/* No side padding here any more: the header runs to both edges of the window,
+   as the reader's does, so the gutter belongs to the shell under it. */
 body {
   margin: 0;
-  padding: 0 16px 96px;
+  padding: 0 0 96px;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--ui);
   font-size: 15px;
   line-height: 1.6;
 }
-.shell { max-width: 1100px; margin: 0 auto; }
+.shell { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 
-/* Navigation. None existed: the site was one page redirecting to the reader, so
-   this is the first thing that has ever needed to say where else you can go. */
-.site-nav {
+/* The reader's header, rule for rule. Copied rather than imported, like the
+   palette above and for the same reason: this page is provisional and will be
+   rebuilt inside the application, so it stays whole and movable. What that
+   costs is that a change to the reader's bar has to be brought over by hand,
+   which is the trade this whole file already makes.
+
+   The brand lockup is one target in two halves: whichever half the pointer is
+   over, both darken. The chartreuse highlight the framework gives links in
+   prose is not used here, because it would fill a block behind the name that
+   the mark beside it cannot take. */
+.site-header {
+  height: var(--header-height);
+  padding: 0 24px;
   display: flex;
-  gap: 20px;
-  align-items: baseline;
-  padding: 18px 0 14px;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid var(--line);
+  background: var(--chrome);
 }
-.site-nav a {
-  color: var(--ink);
-  font-weight: 600;
+/* On the baseline, not on the boxes: the wordmark is 17px and the collective's
+   name 15px, so centred their boxes would line up while their letters did not. */
+.site-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  --brand-rest: var(--muted);
+  --brand-lit: var(--accent);
+  --brand-pressed: var(--ink);
+}
+.polaris-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--brand-rest);
+  transition: color .15s ease;
+}
+/* The mark leaves for the same place its name does, so it is kept out of the
+   reading order and the tab order: the name is the one link a keyboard meets. */
+.mark-link { display: flex; flex: none; align-self: center; }
+.collective {
+  color: var(--brand-rest);
   text-decoration: none;
-  box-shadow: inset 0 -2px 0 var(--energy);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color .15s ease;
 }
-.site-nav a:hover { background: var(--energy); }
-.site-nav a[aria-current="page"] { box-shadow: none; color: var(--faint); }
+.mark-link:hover .polaris-mark,
+.site-brand:has(.collective:hover) .polaris-mark,
+.mark-link:hover + .collective,
+.collective:hover { color: var(--brand-lit); }
+.mark-link:active .polaris-mark,
+.site-brand:has(.collective:active) .polaris-mark,
+.mark-link:active + .collective,
+.collective:active { color: var(--brand-pressed); }
+.brand-divider {
+  width: 1px;
+  height: 15px;
+  flex: none;
+  align-self: center;
+  background: var(--line);
+}
+.wordmark {
+  font-family: var(--display);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+}
+.site-header nav { display: flex; align-items: center; gap: 24px; }
+.site-header nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+.site-header nav a:hover { background: var(--energy); color: var(--ink); }
+/* The page you are on carries the chartreuse rule under it. */
+.site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
 
 h1 {
   margin: 34px 0 6px;
@@ -312,17 +383,27 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 </style>
 </head>
 <body>
-<div class="shell">
-  <!-- The reader's own primary navigation, with this page added to it. Kept in
-       the same order and with the same destinations so that moving between the
-       two does not feel like arriving somewhere else. -->
-  <nav class="site-nav" aria-label="Primary navigation">
+<!-- The reader's own header, the same markup in the same order, so that moving
+     between the two pages reads as moving inside one site rather than arriving
+     at another. The one piece deliberately left out is the reader's palette
+     switch: this page carries no second palette, and a control that does
+     nothing is worse than a control that is not there. -->
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a class="active" href="/overview" aria-current="page">Overview</a>
     <a href="/spec-reader/">Spec reader</a>
-    <a href="/overview.html" aria-current="page">Overview</a>
     <a href="/how-it-works">How it works and contribute</a>
     <a href="/mcp">MCP</a>
   </nav>
+</header>
 
+<div class="shell">
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
     One column per specification, at its most recent version. One row per behaviour.
@@ -381,6 +462,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <div class="sheet-body" id="sheet-body"></div>
 </dialog>
 
-<script type="module" src="./overview.js"></script>
+<script type="module" src="/overview.js"></script>
 </body>
 </html>

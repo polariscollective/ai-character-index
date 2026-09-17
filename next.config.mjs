@@ -16,8 +16,15 @@ const nextConfig = {
       { source: "/", destination: "/index.html" },
       { source: "/spec-reader", destination: "/spec-reader/index.html" },
       { source: "/spec-reader/", destination: "/spec-reader/index.html" },
-      // The prose pages. Each is a file on disk and that is an implementation
-      // detail; its address is a name.
+      // The grid and the prose pages. Each is a file on disk and that is an
+      // implementation detail; its address is a name.
+      //
+      // Overview was briefly a directory with an index file instead, which
+      // served locally and would have 404ed here: Next hands a directory URL its
+      // index only where a rewrite below says so, and none said so for that one.
+      // It is a file like its three siblings now, addressed the same way.
+      { source: "/overview", destination: "/overview.html" },
+      { source: "/overview/", destination: "/overview.html" },
       { source: "/how-it-works", destination: "/how-it-works.html" },
       { source: "/how-it-works/", destination: "/how-it-works.html" },
       { source: "/mcp", destination: "/mcp.html" },

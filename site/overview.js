@@ -438,8 +438,10 @@ async function initialize() {
     loadJSON("/api/reader/payload", null),
     loadJSON("/api/reader/documents", null),
     loadJSON("/api/reader/behaviours", null),
-    loadJSON("./overview.json", null),
-    loadJSON("./depths.json", null),
+    // From the site root, not from beside the page: the page is served at
+    // /overview, so a relative path would look for these a directory down.
+    loadJSON("/overview.json", null),
+    loadJSON("/depths.json", null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";
