@@ -49,17 +49,20 @@ const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
-/* The one address the reader asks for that this walker cannot answer.
+/* Nothing is declared missing any more, and the reason is worth keeping.
  *
- * It was three gitignored files -- a run's links and the two kinds of paragraph
- * beside them -- and they are rows in the database now, served by a Next route.
- * This walker serves the page from a static tree and has no routes, so the
- * request 404s and the reader renders without bubbles, which is exactly what it
- * did when the files were missing. The page under test is the same either way;
- * what the bubbles contain is tested in app/lib/__tests__/links.test.mjs. */
-const GENERATED_AND_ABSENT = [
-  "/api/reader/links",
-];
+ * The reader used to ask for three gitignored files -- a run's links and the two
+ * kinds of paragraph beside them -- which no checkout carried, so their absence
+ * had to be declared here or every machine but the one that generated them
+ * failed. They are rows in the database now, asked for at /api/reader/links, and
+ * reader-routes.mjs answers that address itself with a 404 for a route it does
+ * not stage. It never reaches the file branch below, so the audit never sees it
+ * and has nothing to forgive. The reader renders without bubbles, exactly as it
+ * did when the files were missing; what the bubbles contain is held to the
+ * Python in app/lib/__tests__/links.test.mjs.
+ *
+ * If that ever changes -- if the fixture router stops answering it -- the audit
+ * should fail, which is why there is no allowance left here to hide it. */
 /* Every 404 this server emitted, audited at the end. Chrome logs each one into
  * the console, and the collector below cannot tell which file it was: the
  * message carries no URL. So the console line is dropped there and the real
@@ -1960,10 +1963,9 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
-const unexpectedMissing = [...new Set(missingPaths)]
-  .filter(path => !GENERATED_AND_ABSENT.includes(path));
+const unexpectedMissing = [...new Set(missingPaths)];
 check(unexpectedMissing.length === 0, "nothing unexpected 404s",
-  unexpectedMissing.join(", ") || "only the generated files no checkout carries");
+  unexpectedMissing.join(", ") || "nothing");
 
 await browser.close();
 server.close();
