@@ -1177,18 +1177,6 @@ function renderBehaviourList() {
               aria-expanded="false"
             ></button>
             </span>
-            <!-- The way into the comparison written for this behaviour over the two
-                 documents on screen, on its own line under the two figures. Hidden
-                 rather than absent while there is nothing to compare, so the row keeps
-                 its shape as the reader moves between one document and two.
-                 updateBehaviourDepths decides that. -->
-            <button
-              type="button"
-              class="behaviour-diff"
-              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
-              aria-haspopup="dialog"
-              hidden
-            >Compare</button>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
             <span class="depth-description" id="depth-description-${escapeHTML(behaviour.slug)}" hidden></span>
@@ -1199,6 +1187,20 @@ function renderBehaviourList() {
               aria-label="What ${escapeHTML(behaviour.name)} means"
               title="What this behaviour means"
             >i</button>
+            <!-- The way into the comparison written for this behaviour over the two
+                 documents on screen. Last in the row and full width, so it wraps onto
+                 its own line under the two figures rather than crowding in beside
+                 them; last in the markup too, so reading order and tab order follow
+                 what the eye does. Hidden rather than absent while there is nothing
+                 to compare, so the row keeps its shape as the reader moves between
+                 one document and two. updateBehaviourDepths decides that. -->
+            <button
+              type="button"
+              class="behaviour-diff"
+              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
+              aria-haspopup="dialog"
+              hidden
+            >Compare</button>
           </li>
         `;}).join("")}
       </ul>

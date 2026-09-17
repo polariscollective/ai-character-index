@@ -633,6 +633,10 @@ body.resizing-columns {
    the label is the tick target and a click inside it would tick the row. */
 .behaviour-option-row {
   display: flex;
+  /* Wrapping so the comparison control can take a line of its own beneath the
+     figures. Nothing else in the row wraps: the frame shrinks (flex: 1 with
+     min-width: 0) and the information control is 18px and does not grow. */
+  flex-wrap: wrap;
   align-items: center;
 }
 .behaviour-why {
@@ -2300,8 +2304,10 @@ body.no-behaviours .sidebar-export { display: none; }
    link rather than a button: it sits in a menu of behaviours and must not
    compete with the tick target beside it. */
 .behaviour-diff {
-  display: block;
-  margin: 2px 0 0 34px;
+  /* The whole width of the row, which is what pushes it onto the second line:
+     a flex item cannot be made to sit under its siblings by display alone. */
+  flex: 0 0 100%;
+  margin: 0 0 6px 34px;
   padding: 0;
   border: 0;
   background: none;
