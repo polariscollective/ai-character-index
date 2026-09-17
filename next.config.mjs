@@ -13,7 +13,11 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
   async rewrites() {
     return [
-      { source: "/", destination: "/index.html" },
+      /* The grid is the front page. It was the spec reader, reached through a
+         meta refresh in index.html; the grid says what the index holds before a
+         reader has chosen anything to read, which is the better first thing to
+         meet. /overview still answers, so a link already shared still works. */
+      { source: "/", destination: "/overview.html" },
       { source: "/spec-reader", destination: "/spec-reader/index.html" },
       { source: "/spec-reader/", destination: "/spec-reader/index.html" },
       // The grid and the prose pages. Each is a file on disk and that is an
