@@ -77,6 +77,14 @@ const server = createServer(async (req, res) => {
   // was sent for the feedback dialog section below to read back.
   if (await serveFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
+  /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is
+   * also why site/index.html no longer exists: an array returned from rewrites()
+   * is applied after the filesystem, so a real file at / always won and the old
+   * redirect into the reader went on being served whatever the config said.
+   *
+   * Without this line the walker answers 404 for the one address every menu
+   * points at, which would be a check on the walker rather than on the page. */
+  if (path === "/") path = "/overview.html";
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
   // not the file it happens to be stored in.
