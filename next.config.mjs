@@ -16,7 +16,15 @@ const nextConfig = {
       /* The grid is the front page. It was the spec reader, reached through a
          meta refresh in index.html; the grid says what the index holds before a
          reader has chosen anything to read, which is the better first thing to
-         meet. /overview still answers, so a link already shared still works. */
+         meet. /overview still answers, so a link already shared still works.
+
+         index.html is gone rather than left to be shadowed. An array returned
+         from rewrites() is applied AFTER the filesystem, so a real file at a
+         path always wins and this rewrite never fired while that file existed:
+         / went on serving the old redirect into the reader. The comment this
+         replaces claimed Next serves public/index.html "at /index.html but not
+         at /", which was wrong -- it serves it at both, and the rewrite beneath
+         it had been redundant all along. */
       { source: "/", destination: "/overview.html" },
       { source: "/spec-reader", destination: "/spec-reader/index.html" },
       { source: "/spec-reader/", destination: "/spec-reader/index.html" },
