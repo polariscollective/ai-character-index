@@ -1,7 +1,7 @@
 /**
  * The public MCP server.
  *
- * Three read-only tools over the published index, unauthenticated, on the same
+ * Four read-only tools over the published index, unauthenticated, on the same
  * application that serves the reader. Nothing here is disclosed that the
  * reader's own routes do not already serve to anyone who loads the page: this
  * is a second shape over the same rows, not a second door into the database.
@@ -15,61 +15,35 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { indexSnapshot } from "../../lib/index-snapshot.mjs";
 import { linkEvidence } from "../../lib/links.mjs";
-import { listModelSpecs, listBehaviours, retrievePassages, compareDocuments, ToolError }
+import { about, listModelSpecs, listBehaviours, retrievePassages,
+         compareDocuments, INSTRUCTIONS, ToolError }
   from "../../lib/mcp-tools.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const INSTRUCTIONS = `The AI Character Index reports where model specifications
-address a behaviour, and how strongly. It holds published specifications, a set
-of behaviours, and passages of those specifications that a panel of language
-model judges marked as bearing on each behaviour.
+/* The address of the site this deployment serves, for the citation `about`
+ * hands back. Read from the platform rather than written down: a domain can
+ * move, and a URL frozen in prose would go on naming the old one with nothing
+ * to say so. A deployment that knows no address of its own gives none, and the
+ * answer names the path instead. Read per call rather than at module load, so a
+ * long-lived instance cannot answer from the value it booted with. */
+const site = () => {
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  return host ? `https://${host}` : null;
+};
 
-A passage carries a strength: defining is the document's fullest statement of
-the behaviour, core establishes it there, related bears on it without
-establishing it. Every passage is quoted verbatim at the version named in the
-answer.
-
-retrieve_passages answers with every band unless its strength argument narrows
-it, which is what the spec reader shows before any toggle is touched. Every
-passage carries its strength, so a client can also filter what comes back.
-
-Where a behaviour and specification pair carries a depth, it is the mean the
-index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
-with no depth answers null.
-
-Where one judge of the panel could not answer a pair at all, another model judged
-it in that seat, and the pair carries substitutions: the seat, the substitute and
-the reason. A pair without that field was judged by the panel as configured.
-
-Every answer names the publication it was read from. A publication whose
-is_public is false is a build nobody has published, served by a development
-deployment, and what it answers is not the index's published data.
-
-compare_documents answers with everything one run found between two documents on
-one behaviour: every passage each of them carries, every pair of passages the
-judges linked with what each judge said and why, the verdict where two judges
-disagreed and an arbiter settled it, the passages one document has nothing
-facing, and a paragraph written from all of it. A relation there is named by the
-document it is about and never by a direction, so stricter comes with the
-document that demands more.
-
-That answer is very long: hundreds of thousands of characters where both
-documents cover the behaviour fully. The first pair measured came to 315,569
-characters, about 79,000 tokens. It is one answer rather than a walk, because a
-comparison split across pages is one a client has to reassemble before it can
-say anything. Pass detail counts first, which costs about 2,600 characters and
-reports the exact size of the full answer rather than an estimate of it, and
-decide from that whether to ask for the whole thing.
-
-Start with list_behaviours to learn the slugs, then retrieve_passages.`;
-
-/** JSON in one text block, and a caller's mistake reported as one. */
+/** JSON in one text block, prose as itself, and a caller's mistake reported as one. */
 async function answer(work) {
   try {
+    const answered = await work(await indexSnapshot());
     return {
-      content: [{ type: "text", text: JSON.stringify(await work(await indexSnapshot()), null, 2) }],
+      // `about` answers in prose and the rest in JSON. Stringifying prose would
+      // hand an agent a quoted blob to unescape before it could read a word.
+      content: [{
+        type: "text",
+        text: typeof answered === "string" ? answered : JSON.stringify(answered, null, 2),
+      }],
     };
   } catch (error) {
     // A ToolError is the caller's; anything else is ours, and its message may
@@ -93,6 +67,15 @@ const STRENGTH =
 
 const handler = createMcpHandler(
   server => {
+    /* First in the list, because that is the whole of the design. A client that
+     * never shows `instructions` to the model leaves the tool list as the only
+     * introduction there is, and an agent reads a list from the top. */
+    server.registerTool("about", {
+      title: "About this index",
+      description: "Start here to understand this index and its other tools.",
+      inputSchema: z.object({}),
+    }, () => answer(snapshot => about(snapshot, { site: site() })));
+
     server.registerTool("list_model_specs", {
       title: "List model specifications",
       description:

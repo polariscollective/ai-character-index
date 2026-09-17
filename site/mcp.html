@@ -271,7 +271,7 @@
     <div class="m-title">MCP</div>
     <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
     these documents by quoting them, rather than from memory. This page has the whole setup, from
-    a settings menu or from a command line. Three tools, read only, no account and no key.</p>
+    a settings menu or from a command line. Four tools, read only, no account and no key.</p>
   </div>
 
   <section class="m" id="what-this-does">
@@ -367,7 +367,7 @@
 
   <section class="m" id="tools">
     <h2>Tools</h2>
-    <p>Three, and all of them read. Four words recur below. A <b>behaviour</b> is one thing a
+    <p>Four, and all of them read. Four words recur below. A <b>behaviour</b> is one thing a
     document might commit a model to, such as deferring to a user&rsquo;s own decisions. A
     <b>locator</b> is the address of a quote inside a document, naming the document, its version,
     the section and the sentences, as in
@@ -376,6 +376,13 @@
     marked the passages. A <b>depth</b> is the score those judges give a document for a behaviour,
     from 0, absent, to 4, rules with worked examples: it says how much the document gives an
     evaluation to work with, not how much the lab cares.</p>
+    <p><b>about.</b> What the index is, what it does not report, and what the other three tools
+    return, in one answer meant to be read before anything else is asked. No arguments. It names
+    the documents, the behaviours and the sections they sit in, the panel that judged and the
+    publication being served, each read from that publication when you ask rather than written
+    into this page, so it is current whenever it is called. Most assistants never show a
+    server&rsquo;s own instructions to the model, so this is the same text where the model will
+    see it.</p>
     <p><b>list_model_specs.</b> Every specification the current publication carries: id,
     laboratory, title, version, source URL, how many behaviours were judged against it and how
     many passages it holds. No arguments. It does not return the specification text, which runs to

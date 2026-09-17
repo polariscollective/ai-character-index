@@ -335,7 +335,7 @@ const NOT_COMPARED =
 /* A pair is two passages, whichever direction found it. Sorting the two locators
  * gives both directions the same key, which is what merges a judge's two
  * readings of one pair rather than reporting them as two links. */
-const pairKey = (a, b) => [a, b].sort().join(" ");
+const pairKey = (a, b) => [a, b].sort().join("\n");
 
 /**
  * Everything one run found between two documents on one behaviour.
@@ -504,7 +504,7 @@ export function compareDocuments({ publication, payload, documents, notes },
       continue;
     }
     const said = new Set(pair.judges.map(
-      judge => `${judge.relation} ${judge.stricter_document || ""}`));
+      judge => `${judge.relation}\n${judge.stricter_document || ""}`));
     pair.settled = said.size === 1
       ? { relation: pair.judges[0].relation,
           stricter_document: pair.judges[0].stricter_document,
@@ -559,4 +559,212 @@ export function compareDocuments({ publication, payload, documents, notes },
     },
     full_answer_characters: JSON.stringify(full).length,
   };
+}
+
+/**
+ * What the server says about itself when a client connects, and the opening of
+ * `about`.
+ *
+ * One text in one place. It lives here rather than in the route because `about`
+ * returns it verbatim, and two tellings of the same explanation drift: the one
+ * an agent happened to read would be the stale one, with nothing to say so.
+ *
+ * Data-free on purpose. `initialize` happens before any publication is read, so
+ * nothing here may name a document, a count or a panel. Everything of that kind
+ * is `about`'s, derived from the publication in hand.
+ */
+export const INSTRUCTIONS = `The AI Character Index reports where model specifications
+address a behaviour, and how strongly. It holds published specifications, a set
+of behaviours, and passages of those specifications that a panel of language
+model judges marked as bearing on each behaviour. It reports what those
+documents say, not how the models behave.
+
+A passage carries a strength: defining is the document's fullest statement of
+the behaviour, core establishes it there, related bears on it without
+establishing it. Every passage is quoted verbatim at the version named in the
+answer.
+
+retrieve_passages answers with every band unless its strength argument narrows
+it, which is what the spec reader shows before any toggle is touched. Every
+passage carries its strength, so a client can also filter what comes back.
+
+Where a behaviour and specification pair carries a depth, it is the mean the
+index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
+with no depth answers null.
+
+Where one judge of the panel could not answer a pair at all, another model judged
+it in that seat, and the pair carries substitutions: the seat, the substitute and
+the reason. A pair without that field was judged by the panel as configured.
+
+Every answer names the publication it was read from. A publication whose
+is_public is false is a build nobody has published, served by a development
+deployment, and what it answers is not the index's published data.
+
+compare_documents answers with everything one run found between two documents on
+one behaviour: every passage each of them carries, every pair of passages the
+judges linked with what each judge said and why, the verdict where two judges
+disagreed and an arbiter settled it, the passages one document has nothing
+facing, and a paragraph written from all of it. A relation there is named by the
+document it is about and never by a direction, so stricter comes with the
+document that demands more.
+
+That answer is very long: hundreds of thousands of characters where both
+documents cover the behaviour fully. The first pair measured came to 315,569
+characters, about 79,000 tokens. It is one answer rather than a walk, because a
+comparison split across pages is one a client has to reassemble before it can
+say anything. Pass detail counts first, which costs about 2,600 characters and
+reports the exact size of the full answer rather than an estimate of it, and
+decide from that whether to ask for the whole thing.
+
+Start with list_behaviours to learn the slugs, then retrieve_passages.`;
+
+/** "1 behaviour", "13 behaviours". A count in prose still has to read. */
+const count = (total, noun) => `${total} ${noun}${total === 1 ? "" : "s"}`;
+
+/** A real locator out of the payload, or null where no passage has one. */
+function exampleLocator(behaviours) {
+  for (const behaviour of behaviours) {
+    for (const cell of Object.values(behaviour.coverage || {})) {
+      const [passage] = cell.passages || [];
+      if (passage?.locator) return passage.locator;
+    }
+  }
+  return null;
+}
+
+/**
+ * The index introduced to an assistant that arrives knowing nothing.
+ *
+ * It exists because most clients never show a server's instructions to the
+ * model: the tool list is the whole of what an agent sees, so the entry point
+ * has to be a tool. It opens with INSTRUCTIONS verbatim rather than a second
+ * telling of them, and says as much, so an agent whose client did show them
+ * knows it has missed nothing.
+ *
+ * Everything after them is read from the publication in hand. Nothing here may
+ * be a figure somebody typed: a document list or a behaviour count written into
+ * prose is true until the next publication and false afterwards, with nothing to
+ * mark the difference. Where a fact cannot be derived the sentence carrying it
+ * is left out instead, which is why `site` is injected by the route and a
+ * deployment that knows no address of its own gives none.
+ */
+export function about({ publication, payload, documents, notes }, { site = null } = {}) {
+  const behaviours = payload.behaviours || [];
+  const specifications = documents.documents || [];
+  const panel = panelOf(payload.provenance);
+  const published = publication.published_at?.slice(0, 10) || null;
+
+  const sections = new Map();
+  for (const behaviour of behaviours) {
+    const section = notes?.[behaviour.slug]?.group
+      || behaviour.category || "No section recorded";
+    if (!sections.has(section)) sections.set(section, []);
+    sections.get(section).push(behaviour.slug);
+  }
+
+  const translated = specifications.filter(document => document.translation);
+  const substituted = behaviours.reduce(
+    (total, behaviour) => total + Object.keys(behaviour.coverage || {})
+      .filter(id => substitutionsOf(behaviour, id)).length, 0);
+  const locator = exampleLocator(behaviours);
+
+  // The panel as the payload recorded it, skipping what it did not record.
+  const judged = [
+    panel.judges.length ? panel.judges.join(", ") : null,
+    panel.config ? `configuration ${panel.config}` : null,
+    panel.rubric ? `rubric ${panel.rubric}` : null,
+    panel.run_date ? `run ${panel.run_date}` : null,
+  ].filter(Boolean).join(", ");
+
+  return [
+    INSTRUCTIONS,
+    "",
+    "Everything above is also sent as this server's instructions at initialize, "
+    + "when a client connects, so if you have read it there you have missed "
+    + "nothing. Everything below is read from the publication being served rather "
+    + "than written down, and it changes when a new publication is made public.",
+    "",
+    "The documents. A specification is a document a laboratory publishes saying "
+    + "how its models should behave. Each version is a document of its own, named "
+    + "<lab>--<document>@<version>, which is also the head of every locator into "
+    + "it, so two versions of one document are two documents and a citation says "
+    + `which of them it read. This publication carries `
+    + `${count(specifications.length, "document")}:`,
+    ...specifications.map(document =>
+      `  ${document.id}: ${document.lab}, ${document.title}, version ${document.version}`),
+    ...(translated.length ? ["",
+      (translated.length === 1
+        ? "One of these documents was"
+        : `${translated.length} of these documents were`)
+      + " read in an English machine translation, so a quote from "
+      + (translated.length === 1 ? "it" : "one of them")
+      + " is a quote from the translation rather than from the document as "
+      + `published: ${translated.map(document => document.id).join(", ")}.`] : []),
+    "",
+    "The behaviours. A behaviour is one thing a document might commit a model to, "
+    + "written down closely enough that a careful reader could go through a "
+    + "document and mark every passage that bears on it. This publication carries "
+    + `${count(behaviours.length, "behaviour")} in `
+    + `${count(sections.size, "section")}:`,
+    ...[...sections].map(([section, slugs]) => `  ${section}: ${slugs.join(", ")}`),
+    "",
+    "list_behaviours gives the brief each behaviour was judged against, which is "
+    + "the question its verdicts answer. A verdict means little without it.",
+    "",
+    `The panel. Every cell of this publication was judged by one panel: ${judged}. `
+    + "Each judge reads a whole document against one behaviour's brief and marks "
+    + "every passage in it, and the three bands are what their verdicts agree on.",
+    "",
+    "Each judge also gives the document a depth for the behaviour, 0 to 4, and "
+    + "the publication carries the mean of the panel: 0 absent, no passage bears "
+    + "on the behaviour; 1 named, it appears in a word or a clause and the "
+    + "document says nothing further; 2 discussed, addressed in its own right but "
+    + "in terms too general to grade a response against; 3 prescribed, concrete "
+    + "rules or procedures specific enough that a grader could quote the "
+    + "document's own sentences as pass criteria; 4 demonstrated, prescribed plus "
+    + "worked examples showing the sanctioned response. A judge scoring a depth "
+    + "is shown the passages the panel cited for that behaviour and nothing else, "
+    + "so a depth reads those citations rather than the whole document. It "
+    + "measures how far a document develops a behaviour, not how much its "
+    + "laboratory cares about it and not whether anyone agrees with what it says.",
+    ...(substituted ? ["",
+      `In this publication ${count(substituted, "pair")} of behaviour and document `
+      + `${substituted === 1 ? "was" : "were"} judged with a recorded substitute `
+      + "in one seat, and every answer naming such a pair carries the seat, the "
+      + "substitute and the reason."] : []),
+    "",
+    "Quoting. Every passage comes back with its quote and a locator naming the "
+    + "document, its version, the section and the sentences."
+    + (locator ? " One from this publication:" : ""),
+    ...(locator ? [`  ${locator}`] : []),
+    "A locator resolves to verbatim text of that fixed version, so quote the "
+    + "words as they came back and give the locator beside them. A laboratory "
+    + "reissuing a document makes a new document rather than moving these words.",
+    "",
+    "The other tools, and when to reach for each.",
+    "  list_model_specs: the documents above with their source URLs, how many "
+    + "behaviours were judged against each and how many passages each holds. "
+    + "Reach for it to see what there is to read, or to get a document's id "
+    + "exactly right. No arguments.",
+    "  list_behaviours: every behaviour with the brief it was judged against, "
+    + "where that brief stops, and per document its passage count, the strongest "
+    + "band any passage reaches and the panel's depth. Reach for it first: the "
+    + "slugs come from here. No arguments.",
+    "  retrieve_passages: the passages themselves, quoted and located, for the "
+    + "behaviours you name and the documents you choose. Reach for it to answer a "
+    + "question about what a document says. It needs at least one slug from "
+    + "list_behaviours, which is what bounds the size of the answer.",
+    "",
+    "Citing. These figures belong to one publication and change when a new one is "
+    + `made public, so name the one you read: publication ${publication.id}`
+    + (published ? `, published ${published}` : "") + ".",
+    site
+      ? `  ${site}/spec-reader/?publication=${publication.id}`
+      : "  The same publication is on the site that serves this endpoint, at "
+        + `/spec-reader/?publication=${publication.id}`,
+    ...(publication.is_public === false ? ["",
+      "This publication is not public: it is a draft nobody has released, served "
+      + "by a development deployment. Do not cite it as the index's published "
+      + "data."] : []),
+  ].join("\n");
 }
