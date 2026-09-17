@@ -208,6 +208,21 @@
     </form>
   </dialog>
 
+  <!-- How the two documents on screen stand on one behaviour, written by the
+       panel from its own links rather than from a fresh reading. It runs to
+       twenty thousand characters, so it is a modal and not a popover: it needs
+       the width to be read and the focus to be scrolled, and the document behind
+       it stops taking the keyboard while it is open. app.js fills the title and
+       the body from whichever behaviour's Compare was pressed. -->
+  <dialog id="comparison-dialog" class="comparison-dialog" aria-labelledby="comparison-title">
+    <div class="comparison-head">
+      <h2 id="comparison-title"></h2>
+      <button type="button" class="feedback-close" id="comparison-close"
+        aria-label="Close">×</button>
+    </div>
+    <div class="comparison-body" id="comparison-body"></div>
+  </dialog>
+
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
     <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>

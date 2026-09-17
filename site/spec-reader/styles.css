@@ -2262,6 +2262,60 @@ body.no-behaviours .sidebar-export { display: none; }
   font-family: var(--ui);
 }
 .feedback-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+
+/* The comparison window. Wider than the note dialog because what it holds is
+   prose rather than a form: twenty thousand characters at a form's width is a
+   column too narrow to read and too long to scroll. */
+.comparison-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(86vh, 860px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.comparison-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+.comparison-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 0;
+}
+.comparison-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.comparison-body {
+  padding: 4px 20px 20px;
+  overflow-y: auto;
+  max-height: calc(min(86vh, 860px) - 64px);
+}
+
+/* The control that opens it, on its own line under the two figures. A quiet
+   link rather than a button: it sits in a menu of behaviours and must not
+   compete with the tick target beside it. */
+.behaviour-diff {
+  display: block;
+  margin: 2px 0 0 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.behaviour-diff:hover,
+.behaviour-diff:focus-visible { background: var(--energy); }
+.behaviour-diff[hidden] { display: none; }
 .feedback-form { display: block; padding: 18px 20px 20px; overflow-y: auto; max-height: inherit; }
 
 .feedback-head {

@@ -267,31 +267,48 @@ function openBehaviourNote(button) {
    * thing it was explaining. A reader who wants a figure explained presses the
    * figure. */
 
-  /* Last, and only with two documents on screen: the comparison is written about
-   * a pair, and under a single document it would describe something the reader
-   * cannot see. A run carries one comparison per behaviour, keyed by slug, so
-   * the lookup itself does the matching a behaviour field used to be checked
-   * for: a note opened on a behaviour the run did not cover finds nothing.
-   *
-   * A payload built before that change carries a single `comparison` with its
-   * own behaviour field, and is still read. Those files exist on disk, and a
-   * reader that silently dropped their comparison would be worse than one that
-   * reads them: nothing would appear and nothing would say why. */
-  const legacy = linkRows?.comparison || null;
-  const written = state.comparing
-    ? (linkRows?.comparisons?.[slug]
-       || (legacy && legacy.behaviour === slug ? legacy : null))
-    : null;
-  if (written && written.text) {
-    const heading = document.createElement("h3");
-    heading.textContent = "How the two documents compare";
-    body.append(heading, ...comparisonNodes(written.text));
-  }
+  /* The comparison was the last thing in here and is not any more. It runs to
+   * twenty thousand characters, which is a document rather than a note: it read
+   * badly in a popover sized for a definition, and it pushed everything the note
+   * is actually for off the top. It opens as a modal from the row instead. */
 
   elements.keyNoteBody.replaceChildren(...body.childNodes);
   if (note.matches(":popover-open")) note.hidePopover();
   note.showPopover();
   placeKeyNote(button);
+}
+
+/* The comparison written for one behaviour over the pair on screen, or null.
+ *
+ * One lookup for both the control and the window it opens: a button offered for
+ * a comparison the dialog would then fail to find is worse than no button, and
+ * two copies of this rule would drift apart the first time one of them changed.
+ *
+ * It answers null under a single document, because the paragraph is written
+ * about a pair and would describe something the reader cannot see. A payload
+ * built before comparisons were keyed by behaviour carries a single one with
+ * its own behaviour field, and that is still read: those files are on disk, and
+ * a reader that silently dropped their comparison would say nothing about why. */
+function comparisonFor(slug) {
+  if (!state.comparing) return null;
+  const legacy = linkRows?.comparison || null;
+  const written = linkRows?.comparisons?.[slug]
+    || (legacy && legacy.behaviour === slug ? legacy : null);
+  return written && written.text ? written : null;
+}
+
+function openComparisonDialog(slug) {
+  const written = comparisonFor(slug);
+  if (!written || !elements.comparisonDialog) return;
+  const behaviour = payloadBehaviours().find(b => b.slug === slug);
+  elements.comparisonTitle.textContent = behaviour?.name || slug;
+  elements.comparisonBody.replaceChildren(...comparisonNodes(written.text));
+  elements.comparisonDialog.showModal();
+  elements.comparisonBody.scrollTop = 0;
+}
+
+function closeComparisonDialog() {
+  if (elements.comparisonDialog?.open) elements.comparisonDialog.close();
 }
 
 /* Shown for a document when no behaviour is under test. */
@@ -379,6 +396,10 @@ const elements = {
   depthNoteTitle: document.querySelector("#depth-note-title"),
   depthNoteBody: document.querySelector("#depth-note-body"),
   template: document.querySelector("#document-template"),
+  comparisonDialog: document.querySelector("#comparison-dialog"),
+  comparisonTitle: document.querySelector("#comparison-title"),
+  comparisonBody: document.querySelector("#comparison-body"),
+  comparisonClose: document.querySelector("#comparison-close"),
   feedbackDialog: document.querySelector("#feedback-dialog"),
   feedbackForm: document.querySelector("#feedback-form"),
   feedbackTitle: document.querySelector("#feedback-title"),
@@ -1156,6 +1177,18 @@ function renderBehaviourList() {
               aria-expanded="false"
             ></button>
             </span>
+            <!-- The way into the comparison written for this behaviour over the two
+                 documents on screen, on its own line under the two figures. Hidden
+                 rather than absent while there is nothing to compare, so the row keeps
+                 its shape as the reader moves between one document and two.
+                 updateBehaviourDepths decides that. -->
+            <button
+              type="button"
+              class="behaviour-diff"
+              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
+              aria-haspopup="dialog"
+              hidden
+            >Compare</button>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
             <span class="depth-description" id="depth-description-${escapeHTML(behaviour.slug)}" hidden></span>
@@ -1179,6 +1212,13 @@ function renderBehaviourList() {
       event.preventDefault();
       event.stopPropagation();          // the row is a label: a click would tick it
       openBehaviourNote(button);
+    });
+  });
+  elements.behaviourList.querySelectorAll("[data-behaviour-diff]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();          // the row is a label: a click would tick it
+      openComparisonDialog(button.dataset.behaviourDiff);
     });
   });
   elements.behaviourList.querySelectorAll(".depth-head").forEach(button => {
@@ -1368,6 +1408,13 @@ function updateBehaviourDepths() {
     // The figure is aria-hidden; this is the part of the checkbox's name that says it.
     const spoken = cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken");
     if (spoken) spoken.textContent = depthSpoken(depths);
+  });
+  /* The way into the comparison appears only where there is one: two documents
+   * on screen, and a paragraph this run wrote for that behaviour. Whatever
+   * brought us here may have changed both, and a control that opens an empty
+   * window is worse than one that is not offered. */
+  elements.behaviourList.querySelectorAll("[data-behaviour-diff]").forEach(button => {
+    button.hidden = !comparisonFor(button.dataset.behaviourDiff);
   });
 }
 
@@ -2511,6 +2558,24 @@ async function sendFeedback() {
   saveString("aci-feedback-name", form.private ? "" : form.name);
   saveFlag("aci-feedback-private", form.private);
   state.feedbackCloseTimer = setTimeout(closeFeedbackDialog, 1000);
+}
+
+/* The comparison window's own controls, which are only two: the close, and a
+ * click on the backdrop. <dialog> attributes a backdrop click to the dialog
+ * element itself, since the backdrop is outside every element in it, and the
+ * head and the body fill the dialog's box, so this fires only outside them.
+ * Escape closes it natively and needs nothing here. Called once from
+ * initialize(), beside setupFeedback, for the same reason it is. */
+function setupComparison() {
+  /* A page whose markup has no dialog is one this wiring has nothing to attach
+   * to, and initialize() must not fall over on it. An index.html served beside a
+   * newer app.js would otherwise throw here, be caught by initialize, and cost
+   * the reader its whole page rather than one control. */
+  if (!elements.comparisonDialog) return;
+  elements.comparisonClose?.addEventListener("click", closeComparisonDialog);
+  elements.comparisonDialog.addEventListener("click", event => {
+    if (event.target === elements.comparisonDialog) closeComparisonDialog();
+  });
 }
 
 /* The dialog's own controls: closing it, the two-way thumbs (a second press on
@@ -4320,6 +4385,7 @@ elements.documentReader?.addEventListener("click", event => {
 
 async function initialize() {
   setupFeedback();
+  setupComparison();
   renderBehaviourList();
   try {
     // The payload first: which publication it resolved to decides where the

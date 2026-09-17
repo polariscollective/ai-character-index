@@ -134,6 +134,7 @@ eval(extractFn("function updateBehaviourDepths() {"));
 // The two the note reaches for to print the behaviour comparison under the
 // depths. Extracted before their caller, which is the only thing that uses them.
 eval(extractFn("function comparisonNodes(text) {"));
+eval(extractFn("function comparisonFor(slug) {"));
 eval(extractFn("function withEmphasis(parent, text) {"));
 eval(extractFn("function openBehaviourNote(button) {"));
 
@@ -448,44 +449,44 @@ check("on one document it opens at the width of the column it hangs off",
       }, false);
 
 /* ---- the behaviour comparison, under everything else ---- */
+/* The comparison left the note for a modal, so what is asserted here is the
+ * lookup and the nodes it hands over, the way depthCellNote is asserted rather
+ * than the popover it fills. `legacy` is the shape payloads carried before a
+ * run held one comparison per behaviour: files in that shape are still on disk,
+ * so the reader still reads them. */
 function withComparison(behaviour, text, { comparing = true, legacy = false } = {}) {
   show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
-  // `legacy` is the shape payloads carried before a run held one comparison per
-  // behaviour. Files in that shape are still on disk, so the reader still reads
-  // them, and a test that only covered the new shape would not have noticed.
   linkRows = legacy
     ? { comparison: { behaviour, writtenBy: "sol", text } }
     : { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
-  note("helpfulness");
-  const tail = elements.keyNoteBody.children.slice(-3)
-    .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""));
+  const found = comparisonFor("helpfulness");
   linkRows = null;
-  return tail;
+  return found
+    ? comparisonNodes(found.text)
+        .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""))
+    : null;
 }
 
-check("comparing, the comparison is the last thing in the note",
+check("comparing, the behaviour's comparison is found and rendered as nodes",
       () => withComparison("helpfulness",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no."),
-      ["h3 How the two documents compare", "h4 What both require", "ul"]);
-check("a comparison written about another behaviour is not shown under this one",
+      ["h4 What both require", "ul"]);
+check("a comparison written about another behaviour is not offered under this one",
       () => withComparison("no-sycophancy",
-                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.")
-              .every(node => !node.includes("How the two documents compare")), true);
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no."), null);
 check("on one document there is no comparison to make",
       () => withComparison("helpfulness",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
-                           { comparing: false })
-              .every(node => !node.includes("How the two documents compare")), true);
+                           { comparing: false }), null);
 check("a payload written before the per-behaviour change is still read",
       () => withComparison("helpfulness",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
                            { legacy: true }),
-      ["h3 How the two documents compare", "h4 What both require", "ul"]);
-check("a legacy comparison about another behaviour is not shown under this one",
+      ["h4 What both require", "ul"]);
+check("a legacy comparison about another behaviour is not offered under this one",
       () => withComparison("no-sycophancy",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
-                           { legacy: true })
-              .every(node => !node.includes("How the two documents compare")), true);
+                           { legacy: true }), null);
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);
