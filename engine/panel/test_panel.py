@@ -373,6 +373,102 @@ class TestAppJSTiers(unittest.TestCase):
         self.assertIn("72 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestLinkParagraphCells(unittest.TestCase):
+    """Which passages get a paragraph of their own, and what it is told about.
+
+    A link is a fact about a pair, so both of its passages carry it and both
+    must get a cell: a reader standing on either one sees the same bubble and
+    needs the same help reading it. The rest is the floor, which keeps the
+    median passage out of a job it does not need, and the arbiter's verdict
+    winning over the reading it settled."""
+
+    def setUp(self):
+        import link_paragraph
+        self.link_paragraph = link_paragraph
+
+    @staticmethod
+    def _report(directions):
+        return {"run": {"id": "r"}, "directions": directions}
+
+    @staticmethod
+    def _direction(behaviour, source, target, sources):
+        return {"behaviour": behaviour, "source": source, "target": target,
+                "sources": sources}
+
+    def test_a_passage_with_one_counterpart_is_left_alone(self):
+        data = self._report([self._direction("b", "A@1", "B@1", [
+            {"locator": "A@1 > x > ¶1", "quote": "one",
+             "targets": [{"locator": "B@1 > y > ¶1", "quote": "two",
+                          "judge_relations": {"s": "same"}, "rationales": {"s": "why"}}]},
+        ])])
+        cells = self.link_paragraph.cells(data, {}, floor=2)
+        self.assertEqual(dict(cells), {})
+
+    def test_both_ends_of_a_pair_get_a_cell(self):
+        targets = [{"locator": f"B@1 > y > ¶{n}", "quote": f"t{n}",
+                    "judge_relations": {"s": "same"}, "rationales": {"s": "why"}}
+                   for n in (1, 2)]
+        data = self._report([self._direction("b", "A@1", "B@1", [
+            {"locator": "A@1 > x > ¶1", "quote": "one", "targets": targets},
+        ])])
+        cells = self.link_paragraph.cells(data, {}, floor=2)
+        # The source saw two counterparts; each target saw only one, so only the
+        # source clears the floor. Both were offered a cell all the same.
+        self.assertEqual(list(cells), [("b", "A@1 > x > ¶1")])
+        self.assertEqual(len(cells[("b", "A@1 > x > ¶1")]), 2)
+
+    def test_the_same_pair_under_two_behaviours_is_two_cells(self):
+        def targets():
+            return [{"locator": f"B@1 > y > ¶{n}", "quote": f"t{n}",
+                     "judge_relations": {"s": "same"}, "rationales": {"s": "why"}}
+                    for n in (1, 2)]
+        data = self._report([
+            self._direction(beh, "A@1", "B@1",
+                            [{"locator": "A@1 > x > ¶1", "quote": "one",
+                              "targets": targets()}])
+            for beh in ("b", "c")])
+        cells = self.link_paragraph.cells(data, {}, floor=2)
+        self.assertEqual(sorted(cells), [("b", "A@1 > x > ¶1"),
+                                         ("c", "A@1 > x > ¶1")])
+
+    def test_an_arbiters_verdict_replaces_the_reading_it_settled(self):
+        targets = [{"locator": f"B@1 > y > ¶{n}", "quote": f"t{n}",
+                    "judge_relations": {"s": "same"}, "rationales": {"s": "the judge"}}
+                   for n in (1, 2)]
+        data = self._report([self._direction("b", "A@1", "B@1", [
+            {"locator": "A@1 > x > ¶1", "quote": "one", "targets": targets},
+        ])])
+        settled = {tuple(sorted(("A@1 > x > ¶1", "B@1 > y > ¶1"))):
+                   {"relation": "nuance", "why": "the arbiter"}}
+        cells = self.link_paragraph.cells(data, settled, floor=2)
+        first = cells[("b", "A@1 > x > ¶1")][0]
+        self.assertEqual(first["relation"], "nuance")
+        self.assertEqual(first["why"], "the arbiter")
+        self.assertTrue(first["settled"])
+
+
+class TestAppJSLinks(unittest.TestCase):
+    """Which counterpart bubbles a paragraph shows while two documents compare.
+
+    Nothing exercised linkBubbles until this harness, and that is how a
+    paragraph came to show every bubble it had ever received whatever the
+    reader had ticked: seven of one paragraph's seventeen had been drawn while
+    judging behaviours the reader was not reading. Skips (not fails) without
+    `node`."""
+
+    HARNESS = HERE / "test_appjs_links.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_link_bubbles_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("16 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestAppJSQuotes(unittest.TestCase):
     """The quote-anchoring guard in app.js (containsInOrder): a quote that
     normalizes to zero fragments must be treated as unresolved, because an
@@ -433,7 +529,7 @@ class TestAppJSDepth(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("45 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("48 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestAppJSCiteBlocks(unittest.TestCase):

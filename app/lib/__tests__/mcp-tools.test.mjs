@@ -7,7 +7,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { about, listModelSpecs, listBehaviours, retrievePassages, INSTRUCTIONS, ToolError }
+import { about, listModelSpecs, listBehaviours, retrievePassages, compareDocuments,
+         INSTRUCTIONS, ToolError }
   from "../mcp-tools.mjs";
 
 const read = async name => JSON.parse(await readFile(
@@ -622,4 +623,202 @@ test("the site address is given when the deployment has one, and never invented"
   assert.ok(sited.includes(
     "https://example.test/spec-reader/?publication=3114dd65-c6f2-5cb3-bf98-af5b314381c3"),
     "the citation names the publication on the site that served it");
+});
+
+/* ---- compare_documents ---- */
+
+const PAIR = ["acme--corpus@2026-01-01", "acme--second@2026-02-01"];
+const HERE = "acme--corpus@2026-01-01 > Body > ¶1";
+const THERE = "acme--second@2026-02-01 > Body > ¶1";
+const ALONE = "acme--corpus@2026-01-01 > Body > ¶2";
+
+/* One judge read the pair from the corpus side, another from the second
+ * document's side. Both said the corpus demands more, in the two words a call's
+ * own direction makes of that one claim. */
+const evidence = (over = {}) => ({
+  run: { id: "run-1", panel: ["a", "b", "c"], prompt_sha256: "abc",
+         run_date: "2026-09-16T15:00:00Z" },
+  calls: [
+    { judge: "a", status: "done", source_document: PAIR[0], target_document: PAIR[1],
+      passages_given: 2, passages_unanswered: 0, finish_reason: "stop" },
+    { judge: "b", status: "done", source_document: PAIR[1], target_document: PAIR[0],
+      passages_given: 1, passages_unanswered: 0, finish_reason: "stop" },
+    { judge: "c", status: "error", source_document: PAIR[0], target_document: PAIR[1],
+      passages_given: 2, passages_unanswered: 2, finish_reason: "length" },
+  ],
+  links: [
+    { judge: "a", call_id: "call-a", source_locator: HERE, target_locator: THERE,
+      relation: "stricter_source", source_force: "nobody", target_force: "user",
+      rationale: "The corpus forbids what the second only discourages." },
+    { judge: "b", call_id: "call-b", source_locator: THERE, target_locator: HERE,
+      relation: "stricter_target", source_force: "user", target_force: "nobody",
+      rationale: "Read from the other side, the same claim." },
+    { judge: "a", call_id: "call-a", source_locator: ALONE, target_locator: null,
+      relation: "absent", source_force: null, target_force: null,
+      rationale: "The second document says nothing about this." },
+  ],
+  arbitrations: [],
+  summary: null,
+  ...over,
+});
+
+const compare = (over, args = {}) => compareDocuments(
+  snapshot(), evidence(over),
+  { behaviour: "defined-behaviour", model_spec_ids: PAIR, ...args });
+
+test("both directions of one pair are one pair, not two links", () => {
+  const answer = compare();
+  assert.equal(answer.comparison.pairs.length, 1);
+  const [pair] = answer.comparison.pairs;
+  assert.deepEqual(pair.passages.map(passage => passage.locator), [HERE, THERE]);
+  assert.equal(pair.judges.length, 2, "both readings are kept");
+});
+
+/* The whole reason a relation is named. stricter_source and stricter_target are
+ * facts about a call's direction; read from the other end the same claim flips
+ * its label, and two judges who agree would look like two who do not. */
+test("stricter is named by the document that demands more, from either side", () => {
+  const [pair] = compare().comparison.pairs;
+  for (const judge of pair.judges) {
+    assert.equal(judge.relation, "stricter");
+    assert.equal(judge.stricter_document, "acme--corpus@2026-01-01");
+  }
+  assert.deepEqual(pair.settled,
+                   { relation: "stricter", stricter_document: "acme--corpus@2026-01-01",
+                     by: "the judges agreed", why: null });
+});
+
+test("who may lift each rule is reported against the documents, not the direction", () => {
+  const [pair] = compare().comparison.pairs;
+  assert.deepEqual(pair.judges[0].force,
+                   { "acme--corpus@2026-01-01": "nobody", "acme--second@2026-02-01": "user" });
+  assert.deepEqual(pair.judges[1].force,
+                   { "acme--second@2026-02-01": "user", "acme--corpus@2026-01-01": "nobody" });
+});
+
+test("a passage the other document has nothing facing is its own kind, not an empty pair", () => {
+  const answer = compare();
+  assert.equal(answer.comparison.silences.length, 1);
+  assert.equal(answer.comparison.silences[0].locator, ALONE);
+  assert.equal(answer.comparison.silences[0].judge, "a");
+  assert.ok(answer.comparison.pairs.every(pair => pair.passages.every(p => p.locator)));
+});
+
+test("a judge whose call failed is named rather than dropped", () => {
+  const judges = compare().comparison.judges;
+  assert.deepEqual(judges.map(judge => [judge.judge, judge.status]),
+                   [["a", "done"], ["b", "done"], ["c", "error"]]);
+});
+
+test("an arbiter's verdict is what is settled, and says it was a party", () => {
+  const answer = compare({
+    arbitrations: [{
+      first_locator: HERE, second_locator: THERE,
+      first_quote: "the corpus text", second_quote: "the second text",
+      why_disputed: "the judges gave different relations",
+      readings: { a: [{ relation: "stricter acme--corpus@2026-01-01", comment: "..." }] },
+      arbiter: "a", arbiter_was_a_party: true,
+      relation: "nuance", stricter_document: null,
+      agrees: "neither", why: "Neither implies the other.",
+    }],
+  });
+  const [pair] = answer.comparison.pairs;
+  assert.equal(pair.arbitration.arbiter, "a");
+  assert.equal(pair.arbitration.arbiter_was_a_party, true);
+  assert.equal(pair.settled.relation, "nuance", "the verdict overrides the judges");
+  assert.equal(pair.settled.by, "a");
+  assert.equal(pair.judges.length, 2, "what the judges said is still there");
+});
+
+test("judges who disagree with nobody to settle them are unsettled, not counted", () => {
+  const split = evidence();
+  split.links[1] = { ...split.links[1], relation: "nuance" };
+  const answer = compareDocuments(snapshot(), split,
+                                  { behaviour: "defined-behaviour", model_spec_ids: PAIR });
+  assert.equal(answer.comparison.pairs[0].settled, null);
+});
+
+test("an arbitrated pair takes its quotes from the arbitration when the payload has none", () => {
+  const answer = compare({
+    arbitrations: [{
+      first_locator: HERE, second_locator: THERE,
+      first_quote: "the corpus text", second_quote: "the second text",
+      why_disputed: "one judge only", readings: {},
+      arbiter: "c", arbiter_was_a_party: false,
+      relation: "same", stricter_document: null, agrees: "both", why: "Alike.",
+    }],
+  });
+  const quotes = answer.comparison.pairs[0].passages.map(passage => passage.quote);
+  assert.ok(quotes.every(quote => quote !== null));
+});
+
+test("the summary rides with the comparison, named by who wrote it", () => {
+  const answer = compare({
+    summary: { model: "a", prompt_sha256: "def", body: "How they stand.",
+               finish_reason: "stop", created_at: "2026-09-16T17:00:00Z" },
+  });
+  assert.deepEqual(answer.comparison.summary,
+                   { written_by: "a", prompt_sha256: "def", text: "How they stand." });
+});
+
+test("detail counts answers with the shape and the exact size of the full answer", () => {
+  const counted = compare({}, { detail: "counts" });
+  const full = compare();
+  assert.equal(counted.comparison, undefined, "counts carries no pairs");
+  assert.equal(counted.counts.pairs, 1);
+  assert.equal(counted.counts.silences, 1);
+  assert.deepEqual(counted.counts.relations, { stricter: 1 });
+  assert.equal(counted.full_answer_characters, JSON.stringify(full).length,
+               "the figure is the size, not an estimate of it");
+  assert.ok(JSON.stringify(counted).length < JSON.stringify(full).length);
+});
+
+test("two documents no run has compared say so, and not that they agree", () => {
+  const answer = compareDocuments(snapshot(), null,
+                                  { behaviour: "defined-behaviour", model_spec_ids: PAIR });
+  assert.equal(answer.comparison, null);
+  assert.match(answer.note, /No run has compared/);
+  // The same distinction retrieve_passages draws: nobody looked is not a
+  // finding, and an answer that let the two be confused would invite a caller
+  // to publish the second as the first.
+  assert.match(answer.note, /not a finding about either document/);
+});
+
+test("a comparison is between exactly two documents", () => {
+  for (const ids of [[PAIR[0]], PAIR.concat("acme--translated@2026-03-01"), []]) {
+    assert.throws(
+      () => compareDocuments(snapshot(), evidence(),
+                             { behaviour: "defined-behaviour", model_spec_ids: ids }),
+      error => error instanceof ToolError && /exactly two/.test(error.message));
+  }
+});
+
+test("an unknown behaviour or specification is an error naming what there is", () => {
+  assert.throws(
+    () => compareDocuments(snapshot(), evidence(),
+                           { behaviour: "helpfulnes", model_spec_ids: PAIR }),
+    error => error instanceof ToolError && /defined-behaviour/.test(error.message));
+  assert.throws(
+    () => compareDocuments(snapshot(), evidence(),
+                           { behaviour: "defined-behaviour",
+                             model_spec_ids: ["acme--corpus@2026-01-01", "anthropic"] }),
+    error => error instanceof ToolError && /no such model spec: anthropic/.test(error.message));
+});
+
+test("compare_documents carries the publication's is_public like the others", () => {
+  const draft = snapshot();
+  draft.publication = { ...draft.publication, is_public: false };
+  const answer = compareDocuments(draft, evidence(),
+                                  { behaviour: "defined-behaviour", model_spec_ids: PAIR });
+  assert.equal(answer.publication.is_public, false);
+});
+
+test("a cursor naming a cell outside the request is refused", () => {
+  assert.throws(
+    () => retrievePassages(snapshot(), {
+      behaviours: ["defined-behaviour"], model_spec_ids: ["acme--corpus@2026-01-01"],
+      cursor: { publication: "3114dd65-c6f2-5cb3-bf98-af5b314381c3",
+                behaviour: "undefined-behaviour", model_spec_id: "acme--second@2026-02-01" },
+    }),
+    error => error instanceof ToolError && /does not name a cell of this request/.test(error.message));
 });

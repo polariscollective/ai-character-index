@@ -346,10 +346,14 @@
     <a class="wordmark" href="/spec-reader/">AI Character Index</a>
   </span>
   <nav aria-label="Primary navigation">
+    <a href="/overview">Overview</a>
     <a href="/spec-reader/">Spec reader</a>
     <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
     <a href="/mcp">MCP</a>
-    <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
+    <!-- Hidden, not removed. The umber surface is not offered anywhere in the
+         index, and the same button is hidden the same way on the reader. -->
+    <button class="mode" id="mode" type="button" hidden
+      aria-label="Switch to the umber night surface">☾</button>
   </nav>
 </header>
 
@@ -769,9 +773,13 @@ function setPalette(p) {
 }
 modeBtn.addEventListener("click", () =>
   setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber"));
+/* The stored preference is no longer read. The switch above is hidden on every
+   page of the index, and the three pages share one localStorage key, so a reader
+   who had chosen umber before would have come back to a surface with nothing on
+   the page to leave it by. ?palette=umber still reaches it, which is how the
+   surface stays inspectable rather than lost. */
 const qp = new URLSearchParams(location.search).get("palette");
-let saved = null; try { saved = localStorage.getItem("aci-palette"); } catch (e) {}
-setPalette(qp || saved || "daylight");
+setPalette(qp || "daylight");
 
 /* The proposal forms, behind a button.
  *
@@ -1000,5 +1008,9 @@ if (rail) {
 }
 </script>
 
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for four pages:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
 </body>
 </html>

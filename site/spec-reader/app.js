@@ -154,9 +154,78 @@ async function loadDocuments() {
  * unexpected label raises -- where does this behaviour stop -- which the reader
  * could not answer at all: the passage popover says what the judges decided,
  * and nothing said what they were asked. */
+/* The behaviour comparison, as elements.
+ *
+ * It answers in headings, bullets and bold, which is markdown, and it is the
+ * only text in this note a model wrote rather than a person: it is built as
+ * nodes so that nothing in it can become markup. Headings come back shouting,
+ * because capitals were the cheapest way to ask for them; the page does not
+ * shout, so they are put back into a sentence. */
+function comparisonNodes(text) {
+  const out = [];
+  let list = null;
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.trim();
+    if (!line) { list = null; continue; }
+
+    const heading = /^([A-Z][A-Z ’'-]{3,}):\s*(.*)$/.exec(line);
+    if (heading) {
+      list = null;
+      const head = document.createElement("h4");
+      const words = heading[1].trim().toLowerCase();
+      head.textContent = words.charAt(0).toUpperCase() + words.slice(1);
+      out.push(head);
+      if (heading[2]) {
+        const after = document.createElement("p");
+        withEmphasis(after, heading[2]);
+        out.push(after);
+      }
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    if (bullet) {
+      if (!list) { list = document.createElement("ul"); out.push(list); }
+      const item = document.createElement("li");
+      withEmphasis(item, bullet[1]);
+      list.append(item);
+      continue;
+    }
+
+    list = null;
+    const paragraph = document.createElement("p");
+    withEmphasis(paragraph, line);
+    out.push(paragraph);
+  }
+  return out;
+}
+
+/* **like this** becomes a strong element, and the asterisks go. The writer is
+ * asked to quote both documents, so most of what is emphasised here is a
+ * specification's own words, which is exactly what should stand out. */
+function withEmphasis(parent, text) {
+  String(text).split(/\*\*/).forEach((piece, index) => {
+    if (!piece) return;
+    if (index % 2) {
+      const strong = document.createElement("strong");
+      strong.textContent = piece;
+      parent.append(strong);
+    } else {
+      parent.append(document.createTextNode(piece));
+    }
+  });
+}
+
 function openBehaviourNote(button) {
   const note = elements.keyNote;
   if (!note || typeof note.showPopover !== "function") return;
+
+  /* Twice as wide when two documents are on screen. 360px is the width of a note
+   * hanging off a sidebar; comparing, this one is read as prose about both
+   * documents and there is window to spare. Set before the popover opens,
+   * because placeKeyNote measures the box to find its corner. */
+  note.classList.toggle("key-note-wide", state.comparing);
+
   const slug = button.dataset.behaviourNote;
   const entry = (behaviourNotes || {})[slug];
   if (!entry) return;
@@ -164,22 +233,11 @@ function openBehaviourNote(button) {
   elements.keyNoteTitle.textContent = entry.name;
   const body = document.createElement("div");
 
-  /* Four states, not two. Written-for-a-panel and judged are independent, and
-   * the combination that reads like a contradiction is the one that exists: this
-   * index carries a behaviour a panel answered for without the brief it was
-   * given being recorded beside it. Saying "nobody has written what this means"
-   * there would be half a truth; saying nothing would be none. What is NOT
-   * claimed here is anything about the panel's composition -- whether the same
-   * models answered for every specification is a property of a publication, not
-   * of the registry this note reads. */
-  const line = document.createElement("p");
-  line.className = "behaviour-note-state";
-  line.textContent = entry.defined
-    ? (entry.judged ? "Written for a panel, and judged."
-                    : "Written for a panel, not yet judged.")
-    : (entry.judged ? "Judged, but the brief the panel was given was not recorded with the behaviour."
-                    : "Tracked, written for no panel, and not yet judged.");
-  body.append(line);
+  /* No line about whether the behaviour was written for a panel and judged. It
+   * said the same thing under every behaviour the reader shows, which is a
+   * sentence a reader learns to skip, and it was read from two fields the
+   * response does not always carry, so where it did vary it varied wrongly. The
+   * note describes the behaviour; what a panel did with it is the page. */
 
   const section = (heading, text) => {
     if (!text) return;
@@ -195,7 +253,6 @@ function openBehaviourNote(button) {
   // description as the brief would claim a judge had read it.
   section("How the index describes it", entry.described);
   section("Where the construct stops", entry.boundary);
-  section("Where the definition comes from", entry.source);
 
   /* The depth figure beside the behaviour's name lives in a hover title, which a
    * keyboard user never reaches and a screen reader never hears: this section says
@@ -203,46 +260,55 @@ function openBehaviourNote(button) {
    * the figure's own tooltip, not a second copy of the formatting. The judges'
    * individual depths and rationale live only here -- the figure has no room for
    * them and the tooltip never carried them past a parenthesis. */
-  const behaviour = payloadBehaviours().find(b => b.slug === slug);
-  const shownDocuments = visibleDocuments().filter(Boolean);
-  if (shownDocuments.length) {
-    const depthHeading = document.createElement("h3");
-    depthHeading.textContent = "How deeply the documents on screen cover it";
-    body.append(depthHeading);
-    shownDocuments.forEach(doc => {
-      const depth = panelDepth(behaviour, doc.id);
-      const p = document.createElement("p");
-      p.textContent = depthSummaryLine(doc, depth);   // never innerHTML: rationale is model output
-      body.append(p);
-      /* A judge that could not answer this cell at all was replaced here, and the
-       * database published the cell only because the substitution was recorded.
-       * The judges listed below then name the substitute, which is true; this says
-       * why, beside the document it happened on and no other. */
-      const substitutions = behaviour?.coverage?.[doc.id]?.substitutions;
-      (Array.isArray(substitutions) ? substitutions : []).forEach(({ seat, substitute, reason }) => {
-        const said = document.createElement("p");
-        // The reason is a database column, not composed copy: it may end mid-sentence.
-        said.textContent = `On ${doc.title} ${doc.version}, ${substitute} judged in place of ${seat}: ${endedSentence(reason)}`;
-        body.append(said);
-      });
-      if (depth) {
-        const judges = document.createElement("ul");
-        judges.className = "behaviour-note-depth-judges";
-        Object.entries(depth.judges || {}).forEach(([judge, given]) => {
-          const item = document.createElement("li");
-          const rationale = given.rationale ? ` ${given.rationale}` : "";
-          item.textContent = `${judge}: ${given.depth}.${rationale}`;
-          judges.append(item);
-        });
-        body.append(judges);
-      }
-    });
-  }
+  /* The depths were repeated here and are not any more. The figure in the menu
+   * opens a popover carrying the same mean, the same judges with their
+   * rationales and the same substitution sentence, assembled by depthCellNote,
+   * so this said all of it a second time and made the note longer than the
+   * thing it was explaining. A reader who wants a figure explained presses the
+   * figure. */
+
+  /* The comparison was the last thing in here and is not any more. It runs to
+   * twenty thousand characters, which is a document rather than a note: it read
+   * badly in a popover sized for a definition, and it pushed everything the note
+   * is actually for off the top. It opens as a modal from the row instead. */
 
   elements.keyNoteBody.replaceChildren(...body.childNodes);
   if (note.matches(":popover-open")) note.hidePopover();
   note.showPopover();
   placeKeyNote(button);
+}
+
+/* The comparison written for one behaviour over the pair on screen, or null.
+ *
+ * One lookup for both the control and the window it opens: a button offered for
+ * a comparison the dialog would then fail to find is worse than no button, and
+ * two copies of this rule would drift apart the first time one of them changed.
+ *
+ * It answers null under a single document, because the paragraph is written
+ * about a pair and would describe something the reader cannot see. A payload
+ * built before comparisons were keyed by behaviour carries a single one with
+ * its own behaviour field, and that is still read: those files are on disk, and
+ * a reader that silently dropped their comparison would say nothing about why. */
+function comparisonFor(slug) {
+  if (!state.comparing) return null;
+  const legacy = linkRows?.comparison || null;
+  const written = linkRows?.comparisons?.[slug]
+    || (legacy && legacy.behaviour === slug ? legacy : null);
+  return written && written.text ? written : null;
+}
+
+function openComparisonDialog(slug) {
+  const written = comparisonFor(slug);
+  if (!written || !elements.comparisonDialog) return;
+  const behaviour = payloadBehaviours().find(b => b.slug === slug);
+  elements.comparisonTitle.textContent = behaviour?.name || slug;
+  elements.comparisonBody.replaceChildren(...comparisonNodes(written.text));
+  elements.comparisonDialog.showModal();
+  elements.comparisonBody.scrollTop = 0;
+}
+
+function closeComparisonDialog() {
+  if (elements.comparisonDialog?.open) elements.comparisonDialog.close();
 }
 
 /* Shown for a document when no behaviour is under test. */
@@ -330,6 +396,10 @@ const elements = {
   depthNoteTitle: document.querySelector("#depth-note-title"),
   depthNoteBody: document.querySelector("#depth-note-body"),
   template: document.querySelector("#document-template"),
+  comparisonDialog: document.querySelector("#comparison-dialog"),
+  comparisonTitle: document.querySelector("#comparison-title"),
+  comparisonBody: document.querySelector("#comparison-body"),
+  comparisonClose: document.querySelector("#comparison-close"),
   feedbackDialog: document.querySelector("#feedback-dialog"),
   feedbackForm: document.querySelector("#feedback-form"),
   feedbackTitle: document.querySelector("#feedback-title"),
@@ -509,10 +579,17 @@ elements.mode.addEventListener("click", () => {
   setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber");
 });
 
+/* The stored preference is no longer read. With the switch hidden, a reader who
+ * had chosen umber before would have come back to a surface the index no longer
+ * offers, with nothing on the page to leave it by: the three pages share one
+ * localStorage key, so that would have followed them across all of them.
+ *
+ * ?palette=umber still reaches it, which is how the surface stays inspectable
+ * rather than lost. setPalette still writes the choice and nothing now reads it
+ * back; that line stays rather than being unpicked, because it is what makes
+ * offering the control again a matter of unhiding the button. */
 const paletteParam = new URLSearchParams(location.search).get("palette");
-let savedPalette = null;
-try { savedPalette = localStorage.getItem("aci-palette"); } catch (error) {}
-setPalette(paletteParam || savedPalette || "daylight");
+setPalette(paletteParam || "daylight");
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -730,6 +807,9 @@ function setupKeyNotes() {
     button.addEventListener("click", () => {
       const entry = KEY_NOTES[button.dataset.key];
       if (!entry) return;
+      // The key's own notes are two short paragraphs and keep their width,
+      // whatever the behaviour note last did with the popover they share.
+      note.classList.remove("key-note-wide");
       elements.keyNoteTitle.textContent = entry.title;
       // Our own literals, never anything read from a payload.
       elements.keyNoteBody.innerHTML =
@@ -962,6 +1042,16 @@ function openDepthNote(trigger, note) {
         said.textContent = sentence;
         body.append(said);
       });
+      /* The reading first, the judges under it and folded. A reader pressing a
+       * figure wants to know why it is that figure; three names with three
+       * scores is the evidence for the answer rather than the answer, and it
+       * was all this note used to offer. */
+      if (cell.written) {
+        const why = document.createElement("p");
+        why.className = "depth-note-written";
+        why.textContent = cell.written;
+        body.append(why);
+      }
       if (cell.judges.length) {
         const list = document.createElement("ul");
         list.className = "depth-note-judges";
@@ -972,9 +1062,40 @@ function openDepthNote(trigger, note) {
                       span("depth-note-rationale", given.rationale));
           list.append(item);
         });
-        body.append(list);
+        /* Folded only where something was written to fold them under: with no
+         * paragraph they are the whole of the answer, and hiding the answer
+         * behind a press would be worse than the length. */
+        if (cell.written) {
+          const fold = document.createElement("details");
+          fold.className = "depth-note-panel";
+          const label = document.createElement("summary");
+          label.textContent = cell.judges.length === 1
+            ? "The reading behind it"
+            : `The ${cell.judges.length} readings behind it`;
+          fold.append(label, list);
+          body.append(fold);
+        } else {
+          body.append(list);
+        }
+      }
+      /* Read in headings and bullets by comparisonNodes, which is what wrote
+       * this shape: both passages answer under shouted headings, so one reader
+       * serves them and neither gets a second copy of the same parser. */
+      if (cell.stands) {
+        const label = document.createElement("h4");
+        label.className = "depth-note-section";
+        label.textContent = "Where this specification stands";
+        body.append(label, ...comparisonNodes(cell.stands));
       }
     });
+    if (note.comparison) {
+      /* A label, not an h3: an h3 in this note is a document's name and carries
+       * the chartreuse rule that says so, and this section is not a document. */
+      const label = document.createElement("h4");
+      label.className = "depth-note-section";
+      label.textContent = "How the two compare";
+      body.append(label, ...comparisonNodes(note.comparison));
+    }
   }
 
   elements.depthNoteBody.replaceChildren(...body.childNodes);
@@ -1093,6 +1214,13 @@ function renderBehaviourList() {
               <span class="name">${escapeHTML(behaviour.name)}</span>
               <span class="depth-spoken visually-hidden"></span>
             </label>
+            <!-- The figures and the way into the comparison, stacked in a column of
+                 their own. The name beside them wraps over several lines on a narrow
+                 sidebar, and a control laid across the whole frame would be pushed to
+                 the bottom of whatever height that made. In its own column it stays
+                 under the figures, which is where it belongs and where it is looked
+                 for. -->
+            <span class="behaviour-stack">
             <!-- The figure, and the way into the cell behind it: the mean, each judge
                  with its own score and its rationale, and any recorded substitute.
                  updateBehaviourDepths writes its text and its name. -->
@@ -1103,6 +1231,24 @@ function renderBehaviourList() {
               aria-haspopup="dialog"
               aria-expanded="false"
             ></button>
+            <!-- The way into the comparison written for this behaviour over the two
+                 documents on screen. Inside the frame and after the figure, taking
+                 the frame's whole width, so it wraps onto a line of its own and ends
+                 where the figure ends: it inherits the frame's padding instead of
+                 guessing an offset that has to be kept in step by hand. Hidden rather
+                 than absent while there is nothing to compare, so the row keeps its
+                 shape as the reader moves between one document and two, which
+                 updateBehaviourDepths decides. It sits outside the label, like the
+                 figure above it, because a click inside the label would tick the
+                 row on its way past. -->
+            <button
+              type="button"
+              class="behaviour-diff"
+              data-behaviour-diff="${escapeHTML(behaviour.slug)}"
+              aria-haspopup="dialog"
+              hidden
+            >Compare</button>
+            </span>
             </span>
             <!-- Outside the label, so it never joins the checkbox's accessible name; named
                  by aria-describedby instead, which reads a hidden element's text aloud. -->
@@ -1127,6 +1273,13 @@ function renderBehaviourList() {
       event.preventDefault();
       event.stopPropagation();          // the row is a label: a click would tick it
       openBehaviourNote(button);
+    });
+  });
+  elements.behaviourList.querySelectorAll("[data-behaviour-diff]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();          // the row is a label: a click would tick it
+      openComparisonDialog(button.dataset.behaviourDiff);
     });
   });
   elements.behaviourList.querySelectorAll(".depth-head").forEach(button => {
@@ -1239,6 +1392,14 @@ function depthCellNote(behaviour, doc) {
     summary: depth
       ? `${depth.mean.toFixed(1)} out of 4, ${DEPTH_WORDS[Math.round(depth.mean)]}.`
       : "No depth given: this behaviour was not judged on this document.",
+    /* The reading that explains the figure, in one voice rather than three
+     * named ones. Empty where none has been written, and the note then shows
+     * the judges as it always did rather than an empty heading. */
+    written: depthRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
+    /* How this document reads beside the others on this behaviour: the grid's
+     * own passage for this cell. Unlike the pair comparison it is about one
+     * document, so it is here whether or not anything is being compared. */
+    stands: overviewRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
     substitutions: (Array.isArray(recorded) ? recorded : [])
       .map(({ seat, substitute, reason }) =>
         `${substitute} judged in place of ${seat}: ${endedSentence(reason)}`),
@@ -1255,6 +1416,15 @@ function depthFigureNote(behaviour, documents) {
   return {
     title: behaviour?.name || "",
     documents: (documents || []).filter(Boolean).map(doc => depthCellNote(behaviour, doc)),
+    /* The comparison written for this behaviour over the pair on screen, under
+     * the figures rather than beside them: how deeply each document goes and
+     * how the two differ are different questions, and the second is only worth
+     * asking once both figures have been read.
+     *
+     * Empty under a single document. comparisonFor answers null there because
+     * the paragraph is written about a pair, and showing it beside one document
+     * would describe something the reader cannot see. */
+    comparison: comparisonFor(behaviour?.slug)?.text || "",
   };
 }
 
@@ -1316,6 +1486,13 @@ function updateBehaviourDepths() {
     // The figure is aria-hidden; this is the part of the checkbox's name that says it.
     const spoken = cell.closest(".behaviour-option-row")?.querySelector(".depth-spoken");
     if (spoken) spoken.textContent = depthSpoken(depths);
+  });
+  /* The way into the comparison appears only where there is one: two documents
+   * on screen, and a paragraph this run wrote for that behaviour. Whatever
+   * brought us here may have changed both, and a control that opens an empty
+   * window is worse than one that is not offered. */
+  elements.behaviourList.querySelectorAll("[data-behaviour-diff]").forEach(button => {
+    button.hidden = !comparisonFor(button.dataset.behaviourDiff);
   });
 }
 
@@ -2461,6 +2638,24 @@ async function sendFeedback() {
   state.feedbackCloseTimer = setTimeout(closeFeedbackDialog, 1000);
 }
 
+/* The comparison window's own controls, which are only two: the close, and a
+ * click on the backdrop. <dialog> attributes a backdrop click to the dialog
+ * element itself, since the backdrop is outside every element in it, and the
+ * head and the body fill the dialog's box, so this fires only outside them.
+ * Escape closes it natively and needs nothing here. Called once from
+ * initialize(), beside setupFeedback, for the same reason it is. */
+function setupComparison() {
+  /* A page whose markup has no dialog is one this wiring has nothing to attach
+   * to, and initialize() must not fall over on it. An index.html served beside a
+   * newer app.js would otherwise throw here, be caught by initialize, and cost
+   * the reader its whole page rather than one control. */
+  if (!elements.comparisonDialog) return;
+  elements.comparisonClose?.addEventListener("click", closeComparisonDialog);
+  elements.comparisonDialog.addEventListener("click", event => {
+    if (event.target === elements.comparisonDialog) closeComparisonDialog();
+  });
+}
+
 /* The dialog's own controls: closing it, the two-way thumbs (a second press on
  * the pressed one clears the vote, since it is optional), the private toggle
  * disabling the name field it would otherwise attach a name to nobody reads,
@@ -2599,7 +2794,9 @@ function clearHighlights(panel) {
   // A paragraph that is about to become a passage gets its icons in its head.
   panel._blockCopy?.parentElement?.classList.remove("holds-copy", "touched");
   panel._blockCopy?.remove();
-  body.querySelectorAll(".passage-head, .passage-rationale").forEach(part => part.remove());
+  body.querySelectorAll(".passage-head, .passage-rationale, .link-bubbles, .link-note")
+    .forEach(part => part.remove());
+  body.querySelectorAll(".link-target").forEach(block => block.classList.remove("link-target"));
   body.querySelectorAll(":scope > .zero-coverage").forEach(note => note.remove());
   body.querySelectorAll(".passage").forEach(block => {
     block.classList.remove("passage", "passage-continuation", "adjacent", "passage-overlap", "current", "touched");
@@ -2692,11 +2889,22 @@ function annotatePassages(panel, doc) {
       .join(" · ");
     // One per line: a locator carries " > " and "·" is prose here, so neither can
     // separate them. What a ?passage= link finds its passage by.
-    block.dataset.locators = marks
-      .flatMap(mark => mark.anchored.map(passage => passage.locator))
+    //
+    // Distinct: `marks` holds one entry per behaviour, so a paragraph anchored
+    // under two of them listed its locator twice, and everything reading this
+    // list took it twice over. It showed as a paragraph carrying every bubble it
+    // has, doubled, the moment a second behaviour was ticked. Four readers
+    // depend on this list, the bubbles, the arrows, the reciprocal bubble and a
+    // ?passage= link, and a repeated locator means nothing to any of them.
+    block.dataset.locators = [...new Set(marks
+      .flatMap(mark => mark.anchored.map(passage => passage.locator)))]
       .join("\n");
     block._railTint = railTint(marks);
     block.insertAdjacentHTML("afterbegin", passageLabels(marks, block.dataset.passageId));
+    // After the text rather than before it: the labels say what this paragraph
+    // is, the bubbles say what the other document does about it, and that reads
+    // after the paragraph rather than over it.
+    block.insertAdjacentHTML("beforeend", linkBubbles(block));
   });
 
   return { missing };
@@ -3512,6 +3720,177 @@ function setComparePair(side, id) {
   rebuildReader();
 }
 
+/* Find text in one document.
+ *
+ * One search per panel, not one over the reader: comparing, the two documents
+ * are the thing being told apart, and a single count over both would answer
+ * "how often does this phrase appear on screen", which is a question about the
+ * screen rather than about either specification. So the control is in the
+ * document's own header, its bar under that header, and its count is its own.
+ *
+ * Painted through the CSS highlight registry rather than by wrapping each match
+ * in an element. The reader's own passage highlights, copy gutters, note
+ * anchors and link bubbles all live in this DOM and are rebuilt out of it; a
+ * search that wrote itself into the text would be editing the thing it is
+ * searching, and would have to unpick itself before anything else touched the
+ * page. A range leaves no trace, so there is nothing to unpick.
+ *
+ * What it searches is what that panel renders, which in focus mode is the
+ * passages focus leaves standing. That is the honest scope: a count including
+ * text the reader cannot see would send someone hunting for a match that is not
+ * on the page.
+ */
+const FIND_PAINT = typeof Highlight === "function" && CSS?.highlights ? CSS.highlights : null;
+
+/* The reader's own furniture, which is not the document: a passage's label, its
+ * rationale, the copy gutter and the bubbles under a judged block all carry
+ * text nobody opened a search to look for. */
+const FIND_SKIP = ".block-copy, .block-copy-fallback, .passage-label, .passage-reason,"
+  + " .passage-rationale, .passage-head, .link-bubbles, .passage-rail";
+
+/* A panel's own search, on the panel: the reader clones the template per
+ * document, so a panel is where per-document state already lives (_anchors,
+ * _passageIndex, _blockCopy). The ranges are not carried across a rebuild --
+ * they point into text that rebuild destroys -- so only what the reader typed
+ * and where they were up to survive it. */
+function findOf(panel) {
+  if (!panel._find) panel._find = { open: false, query: "", ranges: [], at: 0 };
+  return panel._find;
+}
+
+/* One range per match, in reading order down this panel.
+ *
+ * Within a text node, so a phrase broken across an element boundary -- a word
+ * inside a highlight mark, a link mid-sentence -- is not found. Joining the
+ * nodes to search the join would mean mapping offsets back through the split,
+ * which is a second index of the document to keep true; a search that finds the
+ * ordinary case is worth more than one that is always right and never written. */
+function findMatches(panel, query) {
+  const needle = query.trim().toLowerCase();
+  const body = panel.querySelector(".document-body");
+  if (needle.length < 2 || !body) return [];
+  const found = [];
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      return node.parentElement?.closest(FIND_SKIP)
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const haystack = node.nodeValue.toLowerCase();
+    for (let at = haystack.indexOf(needle); at >= 0;
+         at = haystack.indexOf(needle, at + needle.length)) {
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + needle.length);
+      found.push(range);
+    }
+  }
+  return found;
+}
+
+/* Every panel's matches in one registry and every panel's current match in
+ * another, so the current one is painted over the rest rather than having to be
+ * left out of the first. Two registries for any number of panels: a highlight
+ * name is global to the document, and the searches are told apart by which
+ * panel their ranges sit in rather than by having a name each. */
+function paintFind() {
+  if (!FIND_PAINT) return;
+  const every = [];
+  const current = [];
+  panels().forEach(panel => {
+    const find = findOf(panel);
+    if (!find.open) return;
+    every.push(...find.ranges);
+    if (find.ranges[find.at]) current.push(find.ranges[find.at]);
+  });
+  if (every.length) FIND_PAINT.set("reader-find", new Highlight(...every));
+  else FIND_PAINT.delete("reader-find");
+  if (current.length) FIND_PAINT.set("reader-find-current", new Highlight(...current));
+  else FIND_PAINT.delete("reader-find-current");
+}
+
+/* Where this reader considers you to be looking, as a fraction of a panel's
+ * height. About a third of the way down, which is where an eye sits, rather
+ * than halfway, which is only where the box is.
+ *
+ * One number for the whole reader, and that is the point of it being named.
+ * Three things depend on it and they must agree: the passage count reads the
+ * line to decide which passage you are on, a jump lands a passage on it, and a
+ * search match is brought to it. They did not agree before -- a jump centred
+ * while the count read a third -- and a passage shorter than the gap between
+ * the two landed below the line, so the count answered with the passage before
+ * it. The arrow moved you forward and the number went back. */
+const READING_LINE = 0.34;
+
+/* Four pixels above the line rather than on it. The count asks whether a
+ * passage's top has reached the line, and a smooth scroll settles to a fraction
+ * of a pixel: landing exactly on it decides the answer by rounding. */
+const PAST_THE_LINE = 4;
+
+/* Bring this panel's current match into its own view, and only when it is not
+ * already there: a match a reader can see should not make the page move under
+ * them as they type. To the reading line, so it arrives where the eye already
+ * is and with the sentence it sits in. */
+function revealMatch(panel) {
+  const find = findOf(panel);
+  const range = find.ranges[find.at];
+  const scroller = panel.querySelector(".document-scroll");
+  if (!range || !scroller) return;
+  const box = range.getBoundingClientRect();
+  const frame = scroller.getBoundingClientRect();
+  if (box.top >= frame.top + 40 && box.bottom <= frame.bottom - 40) return;
+  scroller.scrollTop += box.top - frame.top - frame.height * READING_LINE;
+}
+
+function syncFind(panel) {
+  const find = findOf(panel);
+  const total = find.ranges.length;
+  panel.querySelector(".find-count").textContent = find.query.trim().length < 2
+    ? ""
+    : total ? `${find.at + 1} of ${total}` : "none";
+  panel.querySelector(".find-previous").disabled = total < 2;
+  panel.querySelector(".find-next").disabled = total < 2;
+}
+
+/* `keepPlace` is for a rebuild, where the text is the same and the reader has
+ * not retyped: the match they were reading should still be the one in hand. */
+function runFind(panel, keepPlace) {
+  const find = findOf(panel);
+  find.ranges = find.open ? findMatches(panel, find.query) : [];
+  find.at = find.ranges.length
+    ? Math.min(keepPlace ? find.at : 0, find.ranges.length - 1)
+    : 0;
+  paintFind();
+  syncFind(panel);
+}
+
+function stepFind(panel, by) {
+  const find = findOf(panel);
+  const total = find.ranges.length;
+  if (!total) return;
+  find.at = (find.at + by + total) % total;
+  paintFind();
+  syncFind(panel);
+  revealMatch(panel);
+}
+
+function setFindOpen(panel, open) {
+  const find = findOf(panel);
+  find.open = open;
+  panel.querySelector(".find-bar").hidden = !open;
+  panel.querySelector(".find-toggle").setAttribute("aria-pressed", String(open));
+  runFind(panel, false);
+  if (open) {
+    const input = panel.querySelector(".find-input");
+    input.focus();
+    input.select();
+    revealMatch(panel);
+  }
+}
+
 /* Every rebuild discards both panels and clones them afresh, so a panel's place
  * is kept only by carrying it across: taken per side before the panels go, and
  * given back to a side still showing the same document. A side whose document
@@ -3529,6 +3908,9 @@ function rebuildReader() {
     id: panel.dataset.documentId,
     top: panel.querySelector(".document-scroll")?.scrollTop || 0,
     passage: panel._anchors?.[panel._passageIndex]?.dataset.passageId ?? null,
+    // What was typed and where the reader was up to. Not the ranges: they point
+    // into text this rebuild is about to throw away.
+    find: panel._find && { open: panel._find.open, query: panel._find.query, at: panel._find.at },
   }));
   elements.documentReader.classList.toggle("compare", state.comparing);
   const rendered = visibleDocuments().map((doc, side) => renderDocument(doc, side));
@@ -3542,6 +3924,16 @@ function rebuildReader() {
     elements.compareToggle.hidden = false;
     if (compareFocused) elements.compareToggle.focus({ preventScroll: true });
   }
+  // A search belongs to its document, so it is given back to a side still
+  // showing the same one and dropped by a side that changed document.
+  rendered.forEach((panel, side) => {
+    const was = kept[side];
+    if (!was?.find?.open || was.id !== panel.dataset.documentId) return;
+    panel._find = { ...was.find, ranges: [] };
+    panel.querySelector(".find-bar").hidden = false;
+    panel.querySelector(".find-input").value = was.find.query;
+    panel.querySelector(".find-toggle").setAttribute("aria-pressed", "true");
+  });
   {
     elements.documentReader.style.gridTemplateColumns = "";
     if (state.comparing) setCompareFirst(state.compareFirst);
@@ -3549,6 +3941,9 @@ function rebuildReader() {
 
   applyHighlights();
   updateBehaviourDepths();
+  // The matches pointed into text this rebuild has just thrown away. Found
+  // again over the new panel, keeping the reader on the match they were on.
+  rendered.forEach(panel => { if (findOf(panel).open) runFind(panel, true); });
 
   const keepPlace = restoreCursor => rendered.forEach((panel, side) => {
     const was = kept[side];
@@ -3661,7 +4056,26 @@ function focusPassage(panel, index, shouldScroll = true) {
     ?.classList.add("current");
 
   if (shouldScroll) {
-    anchor.scrollIntoView({ behavior: "smooth", block: "center" });
+    holdScrollCursor(panel);
+    /* Onto the reading line, not into the middle of the box. Centring put a
+     * short passage below the line the count reads, so the first wheel after a
+     * jump answered with the passage before the one you had asked for. Landing
+     * where the count looks makes the two agree by construction rather than by
+     * a guard holding them apart.
+     *
+     * Written out rather than left to scrollIntoView, which offers the top, the
+     * middle and the bottom of the box and not the place a reader is actually
+     * looking. The smooth behaviour is asked for only when the reader has not
+     * asked for less motion: passed unconditionally it beats the stylesheet's
+     * own scroll-behaviour, and the preference is then honoured nowhere. */
+    const scroller = panel.querySelector(".document-scroll");
+    const box = anchor.getBoundingClientRect();
+    const frame = scroller.getBoundingClientRect();
+    scroller.scrollTo({
+      top: Math.max(0, scroller.scrollTop + box.top - frame.top
+                       - scroller.clientHeight * READING_LINE - PAST_THE_LINE),
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
   }
   updatePassageCount(panel);
 }
@@ -3687,6 +4101,100 @@ elements.documentReader.addEventListener("click", event => {
   const icon = event.target.closest?.(".document-feedback");
   if (icon) openFeedbackDialog(icon);
 });
+
+/* Scrolling is navigation too, so the count follows the view.
+ *
+ * The arrows kept one place and the reader's eye kept another: scroll past four
+ * passages, press the right arrow, and you travel backwards, to the one after
+ * wherever the arrows were left. Nothing had told the panel the view had moved,
+ * because nothing was listening for it. This listens, and gives the count to
+ * whichever passage holds the middle of the page.
+ *
+ * It only reads. No section is opened and nothing is scrolled, so reading past a
+ * collapsed section does not unfold it. Scroll events do not bubble, so this is
+ * captured on the way down rather than delegated on the way up.
+ *
+ * The element that scrolls is .document-scroll, which sits between the panel and
+ * the body. Asking the event for a .document-body is asking it to walk the wrong
+ * way -- closest goes up, and the body is below the scroller -- so the listener
+ * matched nothing and did nothing, quietly. */
+let countingFrame = 0;
+elements.documentReader.addEventListener("scroll", event => {
+  const scroller = event.target.closest?.(".document-scroll");
+  const panel = scroller?.closest(".document-panel");
+  if (!panel?._anchors?.length || countingFrame) return;
+  // A jump the reader asked for is still travelling, and it has already said
+  // which passage it is going to. Every event it emits puts off its own end.
+  if (panel._jumping) { holdScrollCursor(panel); return; }
+  countingFrame = requestAnimationFrame(() => {
+    countingFrame = 0;
+    /* A jump can begin in the sixteen milliseconds between a scroll event and
+     * the frame that event asked for, which on a trackpad is an ordinary thing
+     * to do: the momentum of the last flick is still arriving as the arrow is
+     * pressed. This frame would count the view the jump is leaving. */
+    if (panel._jumping) return;
+    /* The last passage to have crossed a reading line, not the one nearest the
+     * middle of the page. Nearest-the-middle flickers: two passages straddle the
+     * centre, a few pixels decide which is closer, and the count reads 21, 20,
+     * 21 on its way from 20 to 21. A line being crossed is monotonic in the
+     * scroll position, so moving forward can never count backwards.
+     *
+     * READING_LINE is where that line sits, and focusPassage lands a jump on
+     * the same one: the two used to disagree, and a passage shorter than the
+     * gap between them counted as the passage before it. */
+    const line = scroller.getBoundingClientRect().top
+      + scroller.clientHeight * READING_LINE;
+    let reading = -1;
+    let first = -1;
+    panel._anchors.forEach((anchor, index) => {
+      const box = anchor.getBoundingClientRect();
+      // A passage inside a collapsed section is `hidden` and has no rectangle at
+      // all, which would read as sitting at the very top of the page. It is not
+      // where anybody is looking.
+      if (!box.height) return;
+      if (first < 0) first = index;
+      if (box.top <= line) reading = index;
+    });
+    // Before the first passage has reached the line there is nothing behind it,
+    // and the passage the reader is arriving at is the honest answer.
+    if (reading < 0) reading = first;
+    if (reading < 0 || reading === panel._passageIndex) return;
+    panel._passageIndex = reading;
+    state.activePanel = panel;
+    panel.querySelectorAll(".passage.current, .rail-mark.current")
+      .forEach(item => item.classList.remove("current"));
+    const anchor = panel._anchors[reading];
+    anchor.classList.add("current");
+    panel
+      .querySelector(`.rail-mark[data-for-passage="${CSS.escape(anchor.dataset.passageId)}"]`)
+      ?.classList.add("current");
+    updatePassageCount(panel);
+  });
+}, true);
+
+/* A jump the reader asked for is not the reader scrolling.
+ *
+ * focusPassage sets the cursor and then scrolls to the passage it names, and
+ * .document-scroll carries `scroll-behavior: smooth`, so that one jump arrives
+ * as a few hundred milliseconds of scroll events. The listener above could not
+ * tell them from a wheel: it recounted on every frame of the animation and
+ * overwrote the cursor the arrow had just set, settling on whichever passage
+ * held the reading line instead of the one asked for. That is the arrows
+ * appearing to fight the jump, and the count walking through the passages in
+ * between on the way. It is the lag beside it too, because each of those frames
+ * reads a rectangle per passage in the document.
+ *
+ * Each of the jump's own scroll events puts the end of the hold off again, so
+ * the length of the animation is never guessed at; a fifth of a second after
+ * the last one, the scroller is the reader's again. Two costs, both chosen: a
+ * wheel inside that window does not move the count, which is a shorter wait
+ * than the jump the reader is already watching, and a jump that turns out to
+ * need no scrolling at all holds the same window for nothing. */
+function holdScrollCursor(panel) {
+  panel._jumping = true;
+  clearTimeout(panel._jumpTimer);
+  panel._jumpTimer = setTimeout(() => { panel._jumping = false; }, 200);
+}
 
 /* The arrows belong to a document and are re-cloned with it, so they delegate
  * and each one steps the panel it sits in. */
@@ -3745,6 +4253,45 @@ elements.compareToggle.addEventListener("click", () => {
   elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
   syncURL();
   rebuildReader();
+});
+
+/* The find controls, delegated: they are cloned with the template, so there is
+ * one set per panel and none of them exists when this runs.
+ *
+ * Enter steps forward and Shift with it steps back, which is what a browser's
+ * own find does: a reader who has used one of those already knows this one.
+ * Escape closes and hands the keyboard back to the loupe that opened it, rather
+ * than dropping focus at the top of the page. */
+elements.documentReader.addEventListener("click", event => {
+  const panel = event.target.closest?.(".document-panel");
+  if (!panel) return;
+  if (event.target.closest(".find-toggle")) setFindOpen(panel, !findOf(panel).open);
+  else if (event.target.closest(".find-close")) {
+    setFindOpen(panel, false);
+    panel.querySelector(".find-toggle").focus({ preventScroll: true });
+  } else if (event.target.closest(".find-previous")) stepFind(panel, -1);
+  else if (event.target.closest(".find-next")) stepFind(panel, 1);
+});
+
+elements.documentReader.addEventListener("input", event => {
+  if (!event.target.matches?.(".find-input")) return;
+  const panel = event.target.closest(".document-panel");
+  findOf(panel).query = event.target.value;
+  runFind(panel, false);
+  revealMatch(panel);
+});
+
+elements.documentReader.addEventListener("keydown", event => {
+  if (!event.target.matches?.(".find-input")) return;
+  const panel = event.target.closest(".document-panel");
+  if (event.key === "Enter") {
+    event.preventDefault();
+    stepFind(panel, event.shiftKey ? -1 : 1);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    setFindOpen(panel, false);
+    panel.querySelector(".find-toggle").focus({ preventScroll: true });
+  }
 });
 
 document.addEventListener("keydown", event => {
@@ -4010,8 +4557,264 @@ function revealPassageLink(linked) {
   anchor.focus({ preventScroll: true });
 }
 
+/* Links between two documents: which paragraph of the other one this paragraph
+ * says the same as, demands more than, or cannot be obeyed with. A flat file
+ * beside the reader, written per run by engine/panel/link_reader_data.py, and
+ * absent by default: no file, no bubbles, and the page is exactly what it was.
+ *
+ * Not a route and not part of a publication, deliberately. A link is attached to
+ * a locator and to nothing else, so nothing here needs the run or the
+ * publication it came from. */
+let linkRows = null;
+
+/* Why each figure is what it is, one paragraph per behaviour and document,
+ * written by engine/panel/link_depth.py from the judges' own reasons and naming
+ * none of them. A flat file beside the reader like links.json above, absent by
+ * default: no file, no paragraph, and the note is exactly what it was.
+ *
+ * The same file the grid reads, so the paragraph under a figure here and the
+ * paragraph under that figure there are one text rather than two that agree
+ * until one of them is rewritten. */
+let depthRows = null;
+
+/* Where each specification stands beside the others on a behaviour, one passage
+ * per behaviour and document, written by engine/panel/link_overview.py from
+ * every pairwise comparison the index holds.
+ *
+ * It is about one document, which is what makes it worth having here: the pair
+ * comparison below is written about two, so it says nothing with a single
+ * document on screen, and that was the case this note had nothing to show in.
+ * The grid reads the same file from its own page. */
+let overviewRows = null;
+
+const LINK_WORDS = {
+  same: "same rule", nuance: "nuance", stricter_source: "stricter here",
+  stricter_target: "stricter there", contradiction: "contradiction",
+  /* Not a counterpart but the reading of all of them, so it leads nowhere and
+   * says so: it carries no locator to travel to, and its words are the note. */
+  summary: "in short",
+};
+
+async function loadReaderLinks() {
+  try {
+    linkRows = await loadJSON("links.json");
+  } catch {
+    linkRows = null;   // no run published to this deployment: simply no bubbles
+  }
+  try {
+    // At the site root rather than beside the reader: the grid reads the same
+    // file from its own page, and two copies would be two things to keep true.
+    depthRows = await loadJSON("/depths.json");
+  } catch {
+    depthRows = null;  // no paragraphs written: the note keeps its judges alone
+  }
+  try {
+    overviewRows = await loadJSON("/overview.json");
+  } catch {
+    overviewRows = null;   // no passages written: the note simply omits them
+  }
+}
+
+/* The bubbles under one judged block, one per counterpart. `data-locators` is
+ * the block's own, newline separated, set a few lines above by annotatePassages.
+ * The judge's sentence rides in the title: a relation is an opinion, and the
+ * sentence is what lets a reader weigh it. */
+function linkBubbles(block) {
+  const rows = linkRows?.byLocator;
+  if (!rows) return "";
+  /* A bubble says what the OTHER document does about this paragraph, so it means
+   * nothing with one document on screen, and nothing at all when the document it
+   * names is not the one being compared against: its paragraph would not be
+   * there to scroll to. Comparing is therefore the condition, and the pair on
+   * screen decides which links belong to it. */
+  if (!state.comparing) return "";
+  const onScreen = new Set(comparePair());
+  /* A bubble also belongs to the behaviour whose call drew it, and showing every
+   * bubble a paragraph ever received, whatever the reader has ticked, is how one
+   * paragraph came to carry seventeen of them: most were answers to a question
+   * this reader is not asking. A row written before rows carried their
+   * behaviours has none, and those are still shown: a reader that silently
+   * empties itself against an older file is worse than one showing too much. */
+  const ticked = selectedBehaviours();
+  const tickedSlugs = new Set(ticked.map(behaviour => behaviour.slug));
+  const ticksOf = link => (link.behaviours || []).filter(slug => tickedSlugs.has(slug));
+  /* Passage by passage, because a summary belongs to one of them and is about
+   * that one's counterparts. It carries no locator of its own to hold against
+   * the pair on screen, so it is kept only where at least one of its
+   * counterparts was kept. Letting it through on its own showed the summaries
+   * of one run against a pair it was never written about: every counterpart was
+   * filtered away for naming a document not on screen, the summaries stayed,
+   * and pressing one went nowhere because it has nothing to travel to. */
+  const shown = link => !link.behaviours || ticksOf(link).length;
+  const found = (block.dataset.locators || "").split("\n").flatMap(locator => {
+    const here = (rows[locator] || []).filter(shown);
+    const travels = here.filter(link => link.to
+      && onScreen.has(link.to.split(" > ", 1)[0]));
+    return travels.length ? here.filter(link => !link.to || travels.includes(link)) : [];
+  });
+  if (!found.length) return "";
+  /* Two buttons in one pill, and the pill is a span because a button cannot
+   * contain a button. The word goes to the paragraph; the "?" goes to it AND
+   * opens the sentence, which is what a reader wants when a relation surprises
+   * them. The sentence is a disclosed note rather than a title, for the reason
+   * the passage rationale is one: a tooltip cannot be read twice, copied, or
+   * kept open beside the paragraph it is about. */
+  /* The sentence is shown, not disclosed. A relation is one word and one word is
+   * not enough to trust it: the reason is what a reader weighs, so it reads
+   * beside the pill rather than behind a button they must think to press. */
+  /* The pills sit in a row, wrapping: a paragraph with three counterparts has
+   * three of them side by side, not a column that reads like a list of
+   * corrections. The reasons live after the row, one shown at a time, so opening
+   * one never shifts the pills about. */
+  /* One row per ticked behaviour, in menu order, each drawn in that behaviour's
+   * own colour. The name is not written beside the pills: with two subjects on
+   * screen a label on every pill doubled the length of the row and made it
+   * unreadable, and the colour of the line already says which subject it
+   * belongs to. Three signals share the pill without colliding: the word is the
+   * relation, the colour is the behaviour, and a filled pill is the reading of
+   * the whole row rather than one counterpart.
+   *
+   * A link drawn under two ticked behaviours is claimed by the first of them
+   * rather than drawn in both. A pill appearing twice reads as a mistake, which
+   * is what a duplicated locator looked like until it was fixed. */
+  const claimed = new Set();
+  const groups = [];
+  ticked.forEach(behaviour => {
+    const mine = found.filter(link => !claimed.has(link)
+      && (link.behaviours || []).includes(behaviour.slug));
+    mine.forEach(link => claimed.add(link));
+    if (mine.length) groups.push({ hue: behaviourHue(behaviour), links: mine });
+  });
+  // A payload written before rows carried their behaviours has nothing to group
+  // by, and is shown in one uncoloured row rather than dropped.
+  const loose = found.filter(link => !claimed.has(link));
+  if (loose.length) groups.push({ hue: null, links: loose });
+
+  const id = block.dataset.passageId || "link";
+  const notes = [];
+  // Counted across every row rather than within one: two notes sharing an id
+  // would leave a pill opening another pill's sentence.
+  let index = 0;
+  const lines = groups.map(group => {
+    const pills = group.links.map(link => {
+      // The sentence alone. Which model produced it answers a question the
+      // reader did not ask, and the trail of who said what before is kept in the
+      // file rather than put on the page.
+      const said = link.comment || "";
+      const word = escapeHTML(LINK_WORDS[link.relation] || link.relation);
+      const noteId = `${id}-link-${index++}`;
+      if (said) {
+        notes.push(`<span class="link-note" id="${escapeHTML(noteId)}" role="note" hidden>`
+          + `${escapeHTML(said)}</span>`);
+      }
+      return `<button type="button" class="link-goto" `
+        + `data-relation="${escapeHTML(link.relation)}"`
+        + (link.to ? ` data-goto="${escapeHTML(link.to)}"` : "")
+        + (said ? ` aria-expanded="false" aria-controls="${escapeHTML(noteId)}"` : "")
+        + `>${word}</button>`;
+    });
+    return `<span class="link-bubbles"`
+      + (group.hue ? ` style="--bh: ${group.hue}"` : "")
+      + `>${pills.join("")}</span>`;
+  });
+  return `${lines.join("")}${notes.join("")}`;
+}
+
+/* A bubble scrolls the OTHER panel to the paragraph it names, and flashes it.
+ * Every block carries data-locator from attachLocators, judged or not, so the
+ * target is on screen whenever its document is. Comparing two documents is what
+ * this is for; with one panel open it scrolls within it, which is the honest
+ * fallback rather than doing nothing. */
+elements.documentReader?.addEventListener("click", event => {
+  const button = event.target.closest(".link-goto");
+  if (!button) return;
+
+  /* The pill is the disclosure as well as the journey: one click travels to the
+   * counterpart and shows why the judge called it what it did. There is no
+   * separate icon, because a reader who wants the reason wants it about the link
+   * they are already pressing.
+   *
+   * One reason at a time. Several open at once push the text about and leave a
+   * reader unsure which pill they are reading, so opening one closes the rest. */
+  const note = document.getElementById(button.getAttribute("aria-controls") || "");
+  const open = button.getAttribute("aria-expanded") === "true";
+  elements.documentReader.querySelectorAll('.link-goto[aria-expanded="true"]')
+    .forEach(other => {
+      other.setAttribute("aria-expanded", "false");
+      const its = document.getElementById(other.getAttribute("aria-controls") || "");
+      if (its) its.hidden = true;
+    });
+  if (note && !open) {
+    button.setAttribute("aria-expanded", "true");
+    note.hidden = false;
+  }
+  requestAnimationFrame(updateRails);
+
+  const mine = button.closest(".document-panel");
+  const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
+  const other = panels.find(panel => panel !== mine) || mine;
+  /* Matched in JavaScript rather than by an attribute selector: a locator carries
+   * spaces, chevrons and a pilcrow, and CSS.escape on a value inside a quoted
+   * selector is a way to match nothing at all without saying so. */
+  const wanted = button.dataset.goto;
+  const target = [...(other?.querySelectorAll("[data-locator]") || [])]
+    .find(block => block.dataset.locator === wanted);
+  if (!target) return;
+
+  /* Open what is closed over the destination before travelling to it. A section
+   * carrying no highlight of its own is collapsed, and updateSectionVisibility
+   * marks its blocks `hidden`: an element with no layout is one scrollIntoView
+   * moves to silently, so the pill appears to do nothing at all. Which section is
+   * shut depends on what the reader has selected, which is why only some links
+   * looked broken. The arrows already do this, for the same reason. */
+  const destination = target.closest(".document-body");
+  if (destination) {
+    let sectionChild = target;
+    while (sectionChild.parentElement && sectionChild.parentElement !== destination) {
+      sectionChild = sectionChild.parentElement;
+    }
+    (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
+    updateSectionVisibility(other);
+  }
+
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.remove("link-target");
+  void target.offsetWidth;
+  target.classList.add("link-target");
+
+  /* Which of the destination's bubbles brought you here. A paragraph can carry
+   * three, and landing among them without knowing which one is the counterpart
+   * leaves the reader to guess. Links are carried on both paragraphs, so the
+   * reciprocal is normally there: it is the one pointing back at where the click
+   * came from.
+   *
+   * It opens with the one that was pressed. Two notes are open at once, and they
+   * are always the two halves of one link, which is the whole of the exception to
+   * "one reason at a time": a reader standing on the far paragraph is reading the
+   * same relation from its other end. Where the counterpart carries no pill at
+   * all -- it belongs to no shown behaviour, or is related and related is not on
+   * screen -- nothing opens, and the journey is the whole of what happened. */
+  elements.documentReader.querySelectorAll(".link-goto.link-back")
+    .forEach(previous => previous.classList.remove("link-back"));
+  const from = new Set((button.closest("[data-passage-id]")?.dataset.locators || "")
+    .split("\n").filter(Boolean));
+  const back = [...target.querySelectorAll(".link-goto")]
+    .find(pill => from.has(pill.dataset.goto));
+  if (back) {
+    back.classList.add("link-back");
+    const its = document.getElementById(back.getAttribute("aria-controls") || "");
+    // Only when this click opened a note rather than closing one: a second press
+    // on the same pill collapses the pair, both ends together.
+    if (its && button.getAttribute("aria-expanded") === "true") {
+      back.setAttribute("aria-expanded", "true");
+      its.hidden = false;
+    }
+  }
+});
+
 async function initialize() {
   setupFeedback();
+  setupComparison();
   renderBehaviourList();
   try {
     // The payload first: which publication it resolved to decides where the
@@ -4020,7 +4823,8 @@ async function initialize() {
     const behaviours = await loadBehaviours();
     // The notes beside the documents, not before them: a note that fails to load
     // must not stop the reader rendering, so its failure is swallowed.
-    const [documents] = await Promise.all([loadDocuments(), loadBehaviourNotes()]);
+    const [documents] = await Promise.all([
+      loadDocuments(), loadBehaviourNotes(), loadReaderLinks()]);
     state.rawBehaviours = behaviours.behaviours || [];
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();

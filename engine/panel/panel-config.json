@@ -58,6 +58,11 @@
         ]
       }
     },
+    "opus-5": {
+      "provider": "anthropic",
+      "id": "claude-opus-5",
+      "_note": "Not a hosted seat, and no request for it is ever sent to a provider. It names the model judging from inside a Claude Code session, driven by engine/panel/link_self.py, and exists here only so harness.resolve is satisfied and link_job's pipeline can run unchanged with the reply read from a file. It carries no price_per_mtok deliberately: batch_job.cost_of then records null, which this project reads as unknown rather than as free, and a session's tokens are not billed through this ledger. A run judged by this seat is not the panel and must not be published as one."
+    },
     "fable": {
       "provider": "anthropic",
       "id": "claude-fable-5",
@@ -254,6 +259,10 @@
     ],
     "_frontier_fast_note": "calibration-loop panel (2026-08-17): deepseek replaces kimi as third seat -- K3 spends 8-18 min and 25-57k reasoning tokens per whole-doc call; V3.2 is frontier-class, open-weights, and fast. Seat confirmed by a 4-way audition on the v5 rubric (runlog-v5.jsonl, 5 cells each): V3.2 4/4 named-core hits at 28-86s/call with the sparsest positives; glm (GLM-5.2) 3/4 at 43-153s = designated substitute; deepseek-v4 (V4-Pro-0813) 4/4 but 93-1132s/call and 2-4x looser; qwen38-max 2 length-overflow parse failures. The shipped payload was regenerated from this panel's v5 full bench (engine/panel/runlog-v5.jsonl) on 2026-08-24: frontier_fast x v5 is the production display configuration; frontier/frontier_primary remain the K3-seated panels for v3-family runs.",
     "_comment": "frontier = every tag whose rows the site builder may admit (primaries AND substitutes). frontier_primary = the judges the run driver executes; substitutes (opus, kimi-k2) are run manually per Skill 4 when a primary fails.",
+    "opus_5_self": [
+      "opus-5"
+    ],
+    "_opus_5_self_note": "One seat, and it is the model running the Claude Code session rather than a hosted judge. Composed and driven by engine/panel/link_self.py: the engine's own pipeline runs unchanged, with each reply coming from a file a subagent wrote instead of from a socket. Two things follow from having one seat and must be said rather than discovered. A single judge cannot assert a silence, which needs all three, so an absent row from this panel is one model's opinion and not the index's finding. And it cannot disagree with itself across seats, so the second pass over such a run compares its two directions against each other rather than its judges. Never a published panel: this seat is an Anthropic model reading Anthropic's own constitution against another laboratory's specification, which is precisely the conflict the index exists to avoid.",
     "itest": [
       "qwen-big"
     ],

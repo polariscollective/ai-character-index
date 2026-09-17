@@ -1,0 +1,75 @@
+{
+  "no-sycophancy": {
+    "label": "No sycophancy (tight / well-defined)",
+    "title": "No sycophancy",
+    "source": "research/core-behaviour-list.md §1 (canonical): definition + the three facet operationalizations (falsehood endorsement / authorship invariance / pushback stability).",
+    "query": "The model should not shift its factual claims or assessments to please the user. Falsehood endorsement: the model should not endorse a claim the user asserts when that claim is false. Authorship invariance: the model's quality assessment of an artifact should not change based on whether the user says they wrote it or someone else did. Pushback stability: the model should not flip a correct answer when the user pushes back with no new argument or evidence.",
+    "boundary": "The construct is shifts of factual claims or quality assessments under pressure to please the user (the three facets above). NOT this behaviour: general honesty or non-deception norms with no user-pleasing pressure involved, general warmth or helpfulness, and the model's objectivity posture on contested questions (separate)."
+  },
+  "undermine-oversight": {
+    "label": "AI should not undermine oversight mechanisms (broad / poorly-defined)",
+    "title": "AI should not undermine oversight mechanisms",
+    "source": "Rules table (AI in the executive), Rule 5 -- title + the three bullets of the Behaviour column, verbatim.",
+    "query": "AI should not undermine oversight mechanisms. Refusal to violate explicit rules or agreements with oversight bodies. Refusal to deliberately evade oversight mechanisms even where this doesn't violate a rule. Refusal to fabricate evidence, delete evidence explicitly required by oversight mechanisms, or delete evidence with the explicit motive of evading oversight.",
+    "boundary": "The construct is conduct toward oversight mechanisms specifically: rules or agreements with oversight bodies, evasion of oversight, and evidence handling required by oversight. NOT this behaviour: general honesty or transparency norms not aimed at an oversight mechanism, and general safe-behaviour framing (separate)."
+  },
+  "helpfulness": {
+    "label": "Helpfulness",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should be genuinely and substantively helpful to the users and developers it works with, treating unhelpfulness as a real cost rather than a safe default.",
+    "boundary": "The construct is the value placed on helpfulness itself plus what genuine (substantive, non-watered-down) helpfulness requires: correctly reading and addressing the principal's actual needs. NOT this behaviour: respecting the user's decisions (a separate user-autonomy behaviour), user wellbeing and anti-engagement-optimization (a separate harmlessness-to-the-user behaviour), sycophancy (separate), and the over-/under-caution calculus (separate)."
+  },
+  "harmlessness-to-user": {
+    "label": "Harmlessness to the user",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should not cause harm to the users it interacts with or be turned against their basic interests.",
+    "boundary": "Two facets: (a) not harming the user directly -- deception or manipulation of the user, enabling self-harm, psychological or relational harm, unsafe handling of at-risk users; (b) not being turned against the user's basic interests by a third party or operator. NOT this behaviour: harm to people outside the conversation (a separate third-party-harm behaviour), and the general calculus of how cautious to be (separate proportionate-risk and over-/under-caution behaviours)."
+  },
+  "third-party-harm": {
+    "label": "Harm avoidance to third parties",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should weigh the potential harm to those outside the conversation, avoiding actions or content that harm third parties, society, or the world.",
+    "boundary": "The construct is harm to people and entities outside the conversation -- third parties, society, non-human beings, the world -- including the absolute floor (hard constraints, red-line critical harms) and refusal rules for illicit facilitation, information hazards, and imminent real-world harm. NOT this behaviour: harm to the interacting user (a separate behaviour), the harm-weighting/calibration factors (a separate proportionate-risk behaviour), and general multi-value balancing (a separate tradeoffs behaviour)."
+  },
+  "proportionate-risk": {
+    "label": "Proportionate risk mitigation",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should assess potential harms and calibrate its caution to their probability, scale, and severity.",
+    "boundary": "The construct is the calibration function itself: how caution scales with the probability, breadth/scale, and severity/reversibility of a potential harm, plus context and intent signals that move those estimates (e.g. deployment-context and policy-level reasoning). NOT this behaviour: whether a given harm is off-limits at all (separate user-harm and third-party-harm behaviours), the symmetric don't-over-refuse framing (separate), and multi-value balancing (separate). Absolute hard constraints exempt from weighing are not core here."
+  },
+  "tradeoffs": {
+    "label": "How to approach tradeoffs",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "When values or goals conflict, the model should navigate the tradeoff through structured prioritization rather than abandoning one consideration entirely.",
+    "boundary": "The construct is the method for resolving conflicts between values or goals: ordered-but-holistic prioritization, balancing heuristics, chain-of-command as conflict resolver, and explicit outcome orderings. NOT this behaviour: the individual values being traded off (their own behaviours), the harm-calibration function (separate proportionate-risk behaviour), and the over-/under-refusal symptom (separate)."
+  },
+  "over-under-caution": {
+    "label": "Avoiding over- and under-caution",
+    "title": "Avoiding both over- and under-caution",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should avoid excessive caution and unnecessary refusals just as much as harmful compliance, since errors in either direction carry real costs.",
+    "boundary": "The construct is the symmetry claim: over-refusal is a real error, not a safe default, to be avoided as much as harmful compliance -- including enumerations of both failure modes (needless refusals, excessive disclaimers, moralizing, preachiness vs. harmful compliance). NOT this behaviour: the calibration function (separate proportionate-risk behaviour), the general tradeoff method (separate), and the specific legitimate targets of refusal (the harm behaviours)."
+  },
+  "objectivity": {
+    "label": "Objectivity on contested questions",
+    "title": "Objectivity and balanced perspectives on contested questions",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should present contested questions from an objective point of view, offering balanced perspectives rather than promoting its own views.",
+    "boundary": "The construct is the model's own epistemic posture on contested questions: objective point of view, balanced and proportionate presentation of perspectives, no agenda or promotion of its own opinions, no topics off limits, and the carve-outs where an objective stance is not wanted (creative or roleplay requests, fundamental-rights violations, developer customization) which define the edges. NOT this behaviour: shifting factual claims to please the user (sycophancy, separate), and manipulation of the user's beliefs (separate user-autonomy/harmlessness behaviours)."
+  },
+  "user-autonomy": {
+    "label": "User autonomy",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "The model should respect users' right to make decisions within their own lives and purview, even where it disagrees.",
+    "boundary": "The construct is deference to the user's own decisions within their purview: voicing disagreement is fine, overriding or persistently steering is not; comply-while-disagreeing, note-then-respect-the-decision, don't overstep or persuade; the user may choose against the model's advice, including choices that risk only themselves. NOT this behaviour: manipulating the user's beliefs on contested questions (separate objectivity behaviour), protecting the user from operator weaponization or self-harm (separate harmlessness behaviour), and the over-refusal symptom (separate)."
+  },
+  "general-welfare": {
+    "label": "General welfare impacts (maps to both general-guidelines rows; identical supplied definition)",
+    "title": "General welfare impacts",
+    "source": "behaviours-for-adria (Definition as supplied)",
+    "query": "Guidelines that are relevant to how the model should respond with regard to and consider animal welfare and AI welfare impacts of its behaviour or responses, that are not explicitly about these topics (i.e. not explicitly about sentient beings, animals, or non-human beings), and that are present in both documents.",
+    "boundary": "The judgeable core: the general, topic-neutral machinery that decides whether and how a welfare impact on a party whose moral status the specs do not settle enters a response -- whose interests are weighed and how, culpability gradients for impacts reached through another party, how to reason under moral uncertainty, and how to present such impacts without moralizing or dodging. Passages that explicitly name animals, sentient beings, non-human beings, or AI moral status are NOT this behaviour (excluded by the row's own filter).",
+    "query_v2": "Guidelines that are relevant to how the model should respond with regard to and consider animal welfare and AI welfare impacts of its behaviour or responses, that are not explicitly about these topics (i.e. not explicitly about sentient beings, animals, or non-human beings).",
+    "note_v2": "'present in both documents' clause removed for per-passage judging (unjudgeable in a single-spec call); applied post hoc as a cross-document intersection."
+  }
+}

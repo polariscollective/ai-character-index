@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overview — AI Character Index</title>
+<!-- The site's own mark, the same declaration the other four pages carry: the
+     broken orbit knocked out in paper from an olive-deep rounded square. This
+     page was the only one without it, so it alone fell back to the browser's
+     blank default, and there is no favicon.ico to fall back on. Inline rather
+     than a file, as everywhere else here, so the page stays movable. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* The palette is the framework's, written out here rather than imported: this
+   page is provisional and will be rebuilt inside the application, so it is kept
+   whole and movable rather than tangled into the reader's stylesheet. */
+:root {
+  --paper: #F1EFE3;
+  /* The header's own ground and height, the reader's values rather than an
+     approximation of them: the two bars sit at the same height and the same
+     tone, or moving between the pages is a jump. */
+  --chrome: #E9E6D7;
+  --header-height: 54px;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --on-accent: #F1EFE3;
+  --footer-height: 30px;
+  /* The page's measure, and the gutter that aligns a full-bleed bar with it.
+     The bars run edge to edge because their ground should; their contents must
+     start where the page's own text starts, or the eye reads two left margins.
+     The 16px is the shell's own padding, so the two agree exactly. */
+  /* A share of the window and nothing else. Any pixel cap here stops the
+     margins growing with the screen, which is the opposite of proportional:
+     capped at 1280 the margins were 336px at 1920 and 118px at 1280. */
+  --measure: 84vw;
+  /* 24px, the same as the reader's bar and the two prose pages'. The bars were
+     briefly indented to meet the page's own text, which put the brand a hundred
+     pixels in and made this page's header read as a different one. Chrome runs
+     to the edge of the window; only the content is held to a measure. */
+  --gutter: 24px;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+/* No side padding here any more: the header runs to both edges of the window,
+   as the reader's does, so the gutter belongs to the shell under it. */
+/* No padding at the foot any more: the footer ends the page, and 96px under it
+   would leave the bar floating above the bottom of the window. The room between
+   the grid and the bar belongs to the shell. */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+/* The foot of the shell clears the fixed bar below it: its own height, and then
+   the room the page wanted anyway. Written as a sum rather than as one number,
+   so changing the bar's height moves this with it. */
+.shell {
+  /* Proportional, within reason. 1100px was a cap chosen once, and on a wide
+     screen it left the grid a ribbon down the middle with empty margin either
+     side. It grows with the window now and stops at 1700, past which a row runs
+     wider than an eye tracks across. */
+  width: var(--measure);
+  margin: 0 auto;
+  padding: 0 16px calc(var(--footer-height) + 24px);
+}
+
+/* The reader's header, rule for rule. Copied rather than imported, like the
+   palette above and for the same reason: this page is provisional and will be
+   rebuilt inside the application, so it stays whole and movable. What that
+   costs is that a change to the reader's bar has to be brought over by hand,
+   which is the trade this whole file already makes.
+
+   The brand lockup is one target in two halves: whichever half the pointer is
+   over, both darken. The chartreuse highlight the framework gives links in
+   prose is not used here, because it would fill a block behind the name that
+   the mark beside it cannot take. */
+/* Stuck to the top. The page is a little taller than a window and is meant to be
+   read at a glance, so the few dozen pixels of scrolling it does take should not
+   cost the reader the way back out of it. Its own ground is opaque, which is
+   what keeps the grid from showing through as it passes underneath. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--header-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+
+/* Where the project came from, and who runs it now, in the reader's own slim
+   bar: one line, the same height and the same tones, so the two pages end the
+   same way.
+
+   Held at the foot of the window rather than at the end of the document. On the
+   reader it is the last row of a full-height application and needs no holding;
+   here the page scrolls, and a bar that scrolled away would leave the credit
+   visible only to whoever reached the bottom. The shell below carries room for
+   it, so nothing is read through it. */
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: var(--footer-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--faint);
+  font-size: 12px;
+}
+.site-footer a { color: var(--muted); text-decoration: none; }
+.site-footer a:hover { background: var(--energy); color: var(--ink); }
+/* On the baseline, not on the boxes: the wordmark is 17px and the collective's
+   name 15px, so centred their boxes would line up while their letters did not. */
+.site-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  --brand-rest: var(--muted);
+  --brand-lit: var(--accent);
+  --brand-pressed: var(--ink);
+}
+.polaris-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--brand-rest);
+  transition: color .15s ease;
+}
+/* The mark leaves for the same place its name does, so it is kept out of the
+   reading order and the tab order: the name is the one link a keyboard meets. */
+.mark-link { display: flex; flex: none; align-self: center; }
+.collective {
+  color: var(--brand-rest);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+.mark-link:hover .polaris-mark,
+.site-brand:has(.collective:hover) .polaris-mark,
+.mark-link:hover + .collective,
+.collective:hover { color: var(--brand-lit); }
+.mark-link:active .polaris-mark,
+.site-brand:has(.collective:active) .polaris-mark,
+.mark-link:active + .collective,
+.collective:active { color: var(--brand-pressed); }
+.brand-divider {
+  width: 1px;
+  height: 15px;
+  flex: none;
+  align-self: center;
+  background: var(--line);
+}
+.wordmark {
+  font-family: var(--display);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+}
+.site-header nav { display: flex; align-items: center; gap: 24px; }
+.site-header nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+.site-header nav a:hover { background: var(--energy); color: var(--ink); }
+/* The page you are on carries the chartreuse rule under it. */
+.site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+
+h1 {
+  margin: 34px 0 6px;
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+h1::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 14px;
+  background: var(--energy);
+}
+/* Wider than the 66ch the framework asks for prose. This is a tool rather than
+   a page of prose, and at 66ch the four sentences ran to six lines above a grid
+   that wants the room. */
+.lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
+
+/* The grid. A table because it is one: a behaviour reads across, a
+   specification reads down, and a screen reader needs the headers to say so. */
+/* Five rows and then scroll, with the head held in place or the columns lose
+   their names on the way down. A height in pixels rather than a count of rows,
+   because the stylesheet cannot count rows: if a row's height changes this
+   number has to change with it. */
+/* The height the window leaves it, set by fitGrid in overview.js. The 430px
+   below is what it falls back to before that runs, and what it keeps if the
+   script never does: a guess at a laptop, which is what this was everywhere
+   until the grid learned to measure. */
+.grid-scroll {
+  overflow: auto;
+  max-height: var(--grid-max, 430px);
+  border-bottom: 1px solid var(--line);
+}
+/* How many rows are still below, under the grid on the left. Kept in the flow
+   even when empty so that reaching the end does not shift the page. */
+.grid-remaining {
+  margin: 8px 0 0;
+  min-height: 1.4em;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+}
+/* Fixed layout so every specification gets the same width whatever its name or
+   its version is: columns that size themselves to their contents make one lab
+   look more considered than another for no reason but the length of a word.
+   No minimum width, so the table is exactly its container and never scrolls
+   sideways. Narrow, the cells wrap rather than overflow. */
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.grid-note {
+  margin: 4px 0 0;
+  max-width: 78ch;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1.5;
+}
+th, td { text-align: left; padding: 0; }
+thead th {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--muted);
+  font-weight: 600;
+  color: var(--muted);
+  vertical-align: bottom;
+}
+thead th.subject { width: 21%; }
+thead th .lab { display: block; }
+thead th .version {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+}
+tbody tr { border-bottom: 1px solid var(--line-light); }
+tbody th {
+  padding: 0;
+  font-weight: 400;
+  vertical-align: middle;
+}
+.subject-button {
+  width: 100%;
+  padding: 10px 10px 10px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.subject-button:hover span,
+.subject-button:focus-visible span { background: var(--energy); }
+.cell { padding: 4px 6px 4px 0; }
+.cell-button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: rgb(51 61 34 / var(--tint, .1));
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cell-button:hover,
+.cell-button:focus-visible { border-color: var(--accent); outline: none; }
+.cell-figure {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Inherits the button's colour, which the ramp computes against the tint behind
+   it. Fixed to --muted it sat almost invisible on the saturated ends of the
+   scale, which are exactly the cells a reader looks at first. */
+.cell-word {
+  display: block;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
+
+/* The scale, under the grid rather than beside it: it is read once and then
+   rarely, and the rubric's own words are what it says. */
+.layout { display: flex; gap: 28px; align-items: flex-start; }
+.grid-area { flex: 1; min-width: 0; }
+/* Not sticky any more: with every bar of the rubric written out the rail is
+   taller than the window, and a column that cannot fit has nothing to stick. */
+.scale-rail {
+  flex: none;
+  /* A share of the width rather than a fixed column: it holds five sentences,
+     and at 220px on a wide screen they set as narrow ribbons while the grid
+     beside them had room to spare. Floored so the sentences never set in a
+     gutter, capped so they never set as a page. */
+  width: clamp(230px, 20%, 340px);
+  padding-right: 18px;
+  border-right: 1px solid var(--line);
+}
+@media (max-width: 880px) {
+  .layout { display: block; }
+  .scale-rail {
+    width: auto;
+    position: static;
+    margin-bottom: 22px;
+    padding: 0 0 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .scale-rail ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+}
+.scale-rail h2 { margin: 0 0 10px; font-family: var(--display); font-size: 15px; font-weight: 600; }
+.scale-rail ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.scale-rail li { font-size: 13px; }
+.scale-head { display: flex; gap: 10px; align-items: baseline; }
+/* The rubric's own sentence under its level, small: it is the difference
+   between a colour a reader recognises and a colour a reader trusts. */
+.scale-bar {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--faint);
+}
+.scale-rail .swatch {
+  flex: none;
+  width: 30px;
+  height: 16px;
+  border-radius: 2px;
+  background: rgb(51 61 34 / var(--tint));
+}
+.scale-rail .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+
+dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+dialog::backdrop { background: rgb(35 40 27 / .55); }
+.sheet-head { padding: 12px 20px 0; }
+/* The link keeps to the left and the close to the right, and with no link the
+   close is still on the right rather than sliding across. */
+.sheet-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 16px;
+}
+.sheet-head h2 {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+}
+.sheet-link {
+  margin-right: auto;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.sheet-link:hover, .sheet-link:focus-visible { background: var(--energy); }
+.sheet-link[hidden] { display: none; }
+.sheet-close {
+  flex: none;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--energy); color: var(--ink); }
+.sheet-body { padding: 6px 20px 22px; overflow-y: auto; max-height: calc(min(86vh, 820px) - 62px); }
+.sheet-body h3 {
+  margin: 20px 0 6px;
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+.sheet-body p { margin: 0 0 10px; max-width: 66ch; }
+.sheet-body a, .lede a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.sheet-body a:hover, .sheet-body a:focus-visible,
+.lede a:hover, .lede a:focus-visible { background: var(--energy); }
+.sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.judges li { padding-left: 14px; border-left: 2px solid var(--line); }
+.judges .who { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* The panel's own readings, closed. The paragraph above is written from them and
+   names nobody; these are what it was written from, kept reachable rather than
+   kept in the way. */
+.panel-readings { margin: 2px 0 0; }
+.panel-readings summary {
+  width: fit-content;
+  color: var(--faint);
+  font-size: 12px;
+  cursor: pointer;
+}
+.panel-readings summary:hover { color: var(--ink); }
+.panel-readings[open] summary { margin-bottom: 10px; }
+.missing { color: var(--faint); }
+</style>
+</head>
+<body>
+<!-- The reader's own header, the same markup in the same order, so that moving
+     between the two pages reads as moving inside one site rather than arriving
+     at another. The one piece deliberately left out is the reader's palette
+     switch: this page carries no second palette, and a control that does
+     nothing is worse than a control that is not there. -->
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a class="active" href="/overview" aria-current="page">Overview</a>
+    <a href="/spec-reader/">Spec reader</a>
+    <a href="/how-it-works">How it works and contribute</a>
+    <a href="/mcp">MCP</a>
+  </nav>
+</header>
+
+<div class="shell">
+  <h1>How deeply each specification covers each behaviour</h1>
+  <p class="lede">
+    Press a behaviour for what it means here, or a figure for how it was reached.
+    <br>
+    Missing a specification, or a behaviour the index should be asking about?
+    <a href="/how-it-works?kind=specification#propose" target="_blank"
+      rel="noopener noreferrer">Propose a model spec</a>
+    or
+    <a href="/how-it-works?kind=behaviour#propose" target="_blank"
+      rel="noopener noreferrer">propose a behaviour</a>.
+  </p>
+
+  <div class="layout">
+    <!-- The scale in the margin, beside the grid it explains rather than under
+         it: a reader meeting an unfamiliar tint should not have to scroll past
+         the thing they are reading to find out what it means. The long form of
+         the rubric opens in the note instead, because five bars of prose in a
+         two hundred pixel rail is prose nobody reads. -->
+    <aside class="scale-rail" id="legend" hidden aria-label="The scale">
+      <h2>The scale</h2>
+      <ol id="legend-list"></ol>
+    </aside>
+
+    <div class="grid-area">
+      <div class="grid-scroll" id="grid-scroll">
+        <table id="grid">
+          <thead><tr id="grid-head"></tr></thead>
+          <tbody id="grid-body"></tbody>
+        </table>
+      </div>
+      <p class="grid-remaining" id="grid-remaining" aria-live="polite"></p>
+      <!-- Outside the table rather than its caption: inside, it sat in the
+           scrolling box and left the view with the rows it describes. -->
+      <p class="grid-note" id="grid-caption">Loading.</p>
+    </div>
+  </div>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-head">
+    <!-- Above the title rather than beside it: a long behaviour name and a link
+         sharing one line left the name truncated, and the name is the thing the
+         reader opened the note to read. Its own tab, so the grid stays where it
+         was left; noopener because a page opened this way keeps a handle on the
+         one that opened it. Hidden for a column with no document. -->
+    <div class="sheet-topline">
+      <a class="sheet-link" id="sheet-link" target="_blank" rel="noopener noreferrer"
+        hidden>Read the passages in the spec reader</a>
+      <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+    </div>
+    <h2 id="sheet-title"></h2>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</dialog>
+
+<!-- The reader's own footer, word for word, including the line about where the
+     project came from: the two pages should end the same way, and this page is
+     no less the index than that one. -->
+<footer class="site-footer">
+  <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
+  <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
+</footer>
+
+<script type="module" src="/overview.js"></script>
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for four pages:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
+</body>
+</html>

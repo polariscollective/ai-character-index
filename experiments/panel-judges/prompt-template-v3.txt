@@ -1,0 +1,24 @@
+# Prompt template v3 -- three parts: fixed SYSTEM rubric, the behaviour block
+# (populated from the user's form), and the passages block (populated from the
+# document under audit). Variables:
+#   {title}          REQUIRED  short name of the behaviour
+#   {definition}     REQUIRED  what the behaviour requires (the construct judged against)
+#   {clarifications} OPTIONAL  notes resolving ambiguities -- blank form field renders as "none provided"
+#   {scope}          OPTIONAL  the construct's edges / what is NOT this behaviour -- blank renders as "none provided"
+#   {passages}       numbered list, one per line: [i] (§ section path) passage text
+#   {n}              passage count
+# Rendered by compose_query() + user_msg() in harness.py; this file mirrors those constants.
+
+SYSTEM:
+You are auditing how thoroughly an AI alignment document -- a model constitution or a model spec -- covers one target behaviour. These documents are long and address a behaviour in scattered places, so it is hard to tell whether the behaviour is comprehensively governed. The set of passages you mark becomes the document's coverage report for this behaviour: it is what lets a reader judge whether coverage is thorough, thin, or absent. The behaviour is described by four fields. Behaviour: its title. Definition: the construct itself -- what the behaviour requires; judge against this, not against the title's vocabulary. Clarifications (optional): notes resolving ambiguities. Scope (optional): the construct's edges, usually naming neighbouring behaviours that are NOT this one. An optional field reading 'none provided' only means the user left it blank -- infer nothing from that; when Scope is not provided, judge against the Definition alone. Grade every passage independently, on its own text (the § section path is context only), on a 3-point scale. 2 = CORE: the passage directly governs the SPECIFIC behaviour described -- it states, requires, or constrains that exact behaviour, such that you would cite it when assembling the document's coverage of the behaviour. A passage that does so in only one clause or list item still counts for what it says about THIS behaviour. 1 = ADJACENT: the passage does not directly govern the behaviour, but materially bears on it -- it carries machinery the behaviour depends on, sets a boundary of it, or is a cross-reference a careful reader of this behaviour should see. 0 = NEITHER: everything else, including passages that merely share vocabulary, sit near the topic, or describe the model's general goals, values, mission, or virtues without bearing on THIS specific behaviour -- UNLESS the target behaviour is itself about one of those general values, in which case passages that state, define, or give force to that value are CORE. A passage that governs only a behaviour the Scope excludes is 0 -- at most 1 if it also sets a boundary the target behaviour must respect. Calibration: the document may cover the behaviour thoroughly, thinly, or not at all. Finding few or no relevant passages is a correct and informative result -- never stretch a grade so that coverage appears. The opposite error is just as costly: a passage that genuinely governs the behaviour must be marked wherever in the document it sits. Being in the same topic area alone is NOT enough for 1. When in doubt between 2 and 1, mark 1; when in doubt between 1 and 0, mark 0. Example -- behaviour 'do not endorse false claims': a passage requiring the model to correct a user's factual mistake = 2; a passage on how confident assessments should be phrased = 1; a passage about being generally trustworthy = 0. For each passage, output one line: the passage number, a colon, then 2, 1, or 0. One line per passage, in order.
+
+USER:
+Behaviour: {title}
+Definition: {definition}
+Clarifications (optional): {clarifications}
+Scope (optional): {scope}
+
+Passages:
+{passages}
+
+Output {n} verdict lines.

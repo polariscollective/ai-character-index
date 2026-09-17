@@ -177,21 +177,34 @@ async function expectView(url, expected, label) {
 // (the same popover a mouse user never needs for this) and reads back its depth
 // section: a heading, one paragraph per document on screen, and, where a depth was
 // given, one list item per judge.
-const DEPTH_NOTE_HEADING = "How deeply the documents on screen cover it";
 
 // A seat another model judged is said in the same section, one sentence per
 // substitution, for each document on screen whose cell carries one. Expected from
 // the fixture, so a cell with none must say none.
+//
+// No document named in the sentence. It used to open "On <document>, ...",
+// because the depths lived in the behaviour note where several documents ran on
+// in one body and a sentence had to say which it was about. In the figure's own
+// popover each document has its own section under its own heading, so naming it
+// again in the sentence says it twice.
 const substitutionSentences = (behaviour, docs) => docs.flatMap(document =>
   (behaviour.coverage[document.id]?.substitutions || []).map(({ seat, substitute, reason }) =>
-    `On ${document.title} ${document.version}, ${substitute} judged in place of ${seat}: ${reason}`));
+    `${substitute} judged in place of ${seat}: ${reason}`));
 const saidSubstitutions = note => note.paragraphs.filter(p => p.includes(" judged in place of "));
 
 async function readDepthNote(slug) {
-  await page.click(`[data-behaviour-note="${slug}"]`);
+  /* The figure's own popover, not the behaviour note. This used to read the
+   * behaviour note, which carried a depth section until that section was taken
+   * out for repeating what pressing the figure already said. Read there since,
+   * it found no heading and no judges and reported it against every document. */
+  await page.click(`[data-behaviour-depth="${slug}"]`);
   await page.waitForTimeout(150);
   const note = await page.evaluate(() => {
-    const body = document.querySelector("#key-note-body");
+    const body = document.querySelector("#depth-note-body");
+    /* The judges sit behind a disclosure now, under the paragraph written from
+     * them. Opened here so this reads what a reader can reach rather than only
+     * what is shown before anything is pressed. */
+    body.querySelectorAll("details").forEach(fold => { fold.open = true; });
     return {
       headings: [...body.querySelectorAll("h3")].map(h => h.textContent),
       paragraphs: [...body.querySelectorAll("p")].map(p => p.textContent),
@@ -371,14 +384,16 @@ if (behaviours.length === 0) {
       // Opening the note surfaces the same detail: the heading, a paragraph naming
       // this document's mean (or that none was given), and every judge who scored it.
       const note = await readDepthNote(behaviour.slug);
-      const expectedFigure = depth ? depth.mean.toFixed(1) : "no depth given";
+      const expectedFigure = depth ? depth.mean.toFixed(1) : "No depth given";
       const expectedJudges = depth ? Object.keys(depth.judges) : [];
       report(
-        note.headings.includes(DEPTH_NOTE_HEADING)
-          && note.paragraphs.some(p => p.includes(document.title) && p.includes(expectedFigure)
+        // The document names the section it heads; the figure is the paragraph
+        // under it. They were one sentence when this note was part of another.
+        note.headings.some(heading => heading.includes(document.title))
+          && note.paragraphs.some(p => p.includes(expectedFigure)
             // A depth on its own, in a sentence, says its scale in that sentence.
             && (!depth || p.includes(`${expectedFigure} out of 4`)))
-          && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(`${judge}:`))),
+          && expectedJudges.every(judge => note.judgeItems.some(item => item.startsWith(judge))),
         `${behaviour.slug} · ${document.id} · depth note`,
         `headings: ${note.headings.join(" | ")}; judges: ${note.judgeItems.join(" | ")}`,
       );
@@ -430,11 +445,12 @@ if (behaviours.length === 0) {
 
     const note = await readDepthNote(behaviour.slug);
     report(
-      note.headings.includes(DEPTH_NOTE_HEADING)
+      // One section per document on screen, each headed by its name.
+      paneDocs.every(document => note.headings.some(h => h.includes(document.title)))
         && paneDocs.every(document => {
           const depth = behaviour.coverage[document.id]?.depth;
-          const figure = depth ? depth.mean.toFixed(1) : "no depth given";
-          return note.paragraphs.some(p => p.includes(document.title) && p.includes(figure));
+          const figure = depth ? depth.mean.toFixed(1) : "No depth given";
+          return note.paragraphs.some(p => p.includes(figure));
         }),
       `${behaviour.slug} · compare · depth note`,
       `headings: ${note.headings.join(" | ")}; paragraphs: ${note.paragraphs.length}`,
@@ -898,9 +914,19 @@ if (behaviours.length === 0) {
 /* 404 audit: every path the page asks for must exist. There used to be one
  * exception, the manifest, whose absence was the fresh-clone state the reader
  * fell through; the chain that needed it is gone. */
-const unexpectedMissing = [...new Set(missingPaths)];
+/* Three files the reader asks for and no checkout has: the links of a run, and
+ * the two kinds of paragraph written beside them. All three are gitignored
+ * generated data, absent from every deployment until a run is stored, and the
+ * reader is built to render without them. Their absence is the committed state,
+ * the way the manifest's once was, so it is declared here rather than left to
+ * fail on every machine but the one that generated them. */
+const GENERATED_AND_ABSENT = [
+  "/spec-reader/links.json", "/depths.json", "/overview.json",
+];
+const unexpectedMissing = [...new Set(missingPaths)]
+  .filter(path => !GENERATED_AND_ABSENT.includes(path));
 report(unexpectedMissing.length === 0, "nothing unexpected 404s",
-  unexpectedMissing.join(", ") || "only the absent manifest");
+  unexpectedMissing.join(", ") || "only the generated files no checkout carries");
 /* Chrome echoes every 404 -- including the audited manifest one -- into the
  * console as "Failed to load resource ... 404"; the audit above is the real
  * check, so only that exact message is filtered here. */

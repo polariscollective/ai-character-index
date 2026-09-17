@@ -22,10 +22,17 @@
       <a class="wordmark" href="./">AI Character Index</a>
     </span>
     <nav aria-label="Primary navigation">
+      <a href="/overview">Overview</a>
       <a class="active" href="./" aria-current="page">Spec reader</a>
       <a href="/how-it-works">How it works and contribute</a>
       <a href="/mcp">MCP</a>
-      <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
+      <!-- Hidden, not removed. The umber surface is not offered anywhere in the
+           index: the Overview page has none, so the switch made the two menus
+           disagree about what the site can do. The button and everything behind
+           it stay, so offering it again is a matter of taking this attribute
+           off; ?palette=umber still reaches the surface meanwhile. -->
+      <button class="mode" id="mode" type="button" hidden
+        aria-label="Switch to the umber night surface">☾</button>
     </nav>
   </header>
 
@@ -91,7 +98,9 @@
     <section class="workspace" aria-label="Specification reader">
       <!-- The switch into and out of compare. It belongs to no one document, so
            there is one of it: app.js puts it at the right of the last panel's
-           publisher row whenever the panels are drawn, and until then it is hidden. -->
+           publisher row whenever the panels are drawn, and until then it is hidden.
+           Find is not here, because a search does belong to one document: it is
+           in the template below, one per panel. -->
       <button id="compare-toggle" class="compare-toggle" type="button" aria-pressed="false"
         title="Compare two documents side by side" hidden>
         <span class="split-icon" aria-hidden="true"></span>
@@ -208,6 +217,21 @@
     </form>
   </dialog>
 
+  <!-- How the two documents on screen stand on one behaviour, written by the
+       panel from its own links rather than from a fresh reading. It runs to
+       twenty thousand characters, so it is a modal and not a popover: it needs
+       the width to be read and the focus to be scrolled, and the document behind
+       it stops taking the keyboard while it is open. app.js fills the title and
+       the body from whichever behaviour's Compare was pressed. -->
+  <dialog id="comparison-dialog" class="comparison-dialog" aria-labelledby="comparison-title">
+    <div class="comparison-head">
+      <h2 id="comparison-title"></h2>
+      <button type="button" class="feedback-close" id="comparison-close"
+        aria-label="Close">×</button>
+    </div>
+    <div class="comparison-body" id="comparison-body"></div>
+  </dialog>
+
   <footer class="site-footer">
     <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by <a href="https://github.com/AndresCotton">Andres Cotton</a>.</span>
     <span>The standalone original is <a href="https://ai-character-index.pages.dev">ai-character-index.pages.dev</a>, from <a href="https://github.com/AndresCotton/ai-character-index">AndresCotton/ai-character-index</a></span>
@@ -277,6 +301,12 @@
               viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path
               d="M3.4 2.9h9.2c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H7.2l-2.9 2.2v-2.2H3.4c-.9 0-1.6-.7-1.6-1.6V4.5c0-.9.7-1.6 1.6-1.6Z"
               fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
+            <!-- Searching one document, so it lives in that document's header
+                 and is cloned with it: comparing, there are two of these and each
+                 counts its own matches. Last in the row, past the note icon. -->
+            <button type="button" class="find-toggle" aria-pressed="false"
+              aria-label="Find in this document" title="Find in this document"
+            ><span class="lens-icon" aria-hidden="true"></span></button>
           </div>
         </div>
       </header>
@@ -285,6 +315,19 @@
       <p class="document-translation" role="note" hidden><span class="translation-text"></span><button
         type="button" class="translation-dismiss" aria-label="Dismiss translation notice"
         title="Dismiss translation notice">×</button></p>
+      <!-- Under the header's rule and above the text it searches, so the count
+           and the matches belong visibly to the same document. -->
+      <div class="find-bar" hidden>
+        <input class="find-input" type="text" autocomplete="off" spellcheck="false"
+          aria-label="Find in this document" placeholder="Find in this document">
+        <span class="find-count" role="status"></span>
+        <button type="button" class="find-step find-previous"
+          aria-label="Previous match" title="Previous match">↑</button>
+        <button type="button" class="find-step find-next"
+          aria-label="Next match" title="Next match">↓</button>
+        <button type="button" class="find-step find-close"
+          aria-label="Close find" title="Close find">×</button>
+      </div>
       <div class="document-scroll">
         <div class="passage-rail" role="navigation" aria-label="Highlighted passages in this document"></div>
         <div class="document-body"></div>
@@ -293,5 +336,9 @@
   </template>
 
   <script type="module" src="./app.js"></script>
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for four pages:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
 </body>
 </html>

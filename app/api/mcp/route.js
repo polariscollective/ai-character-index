@@ -14,7 +14,9 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { indexSnapshot } from "../../lib/index-snapshot.mjs";
-import { about, listModelSpecs, listBehaviours, retrievePassages, INSTRUCTIONS, ToolError }
+import { linkEvidence } from "../../lib/links.mjs";
+import { about, listModelSpecs, listBehaviours, retrievePassages,
+         compareDocuments, INSTRUCTIONS, ToolError }
   from "../../lib/mcp-tools.mjs";
 
 export const runtime = "nodejs";
@@ -129,6 +131,43 @@ const handler = createMcpHandler(
           "The next_cursor of the previous page, to continue a walk."),
       }),
     }, args => answer(snapshot => retrievePassages(snapshot, args)));
+
+    server.registerTool("compare_documents", {
+      title: "Compare two documents on one behaviour",
+      description:
+        "Everything one run found between two model specifications on one "
+        + "behaviour: each document's passages quoted with the band the panel "
+        + "put them in, every pair of passages the judges linked with the "
+        + "relation each judge gave, who may lift each rule and the judge's own "
+        + "reasoning, the arbiter's verdict wherever two judges disagreed, the "
+        + "passages one document has nothing facing, and the paragraph written "
+        + "from all of it. A relation is named by the document it is about and "
+        + "never by a direction: stricter arrives with stricter_document. "
+        + "THIS ANSWER IS VERY LONG: hundreds of thousands of characters where "
+        + "both documents cover the behaviour fully, and it comes whole rather "
+        + "than in pages. The first pair measured came to 315,569 characters, "
+        + "about 79,000 tokens. Pass detail counts first: it costs about 2,600 "
+        + "characters, reports the exact size of the full answer rather than an "
+        + "estimate of it, and lets you decide whether to ask for the whole "
+        + "thing.",
+      inputSchema: z.object({
+        behaviour: z.string().describe(
+          "One behaviour slug, from list_behaviours. A comparison is about one "
+          + "behaviour."),
+        model_spec_ids: z.array(z.string()).length(2).describe(
+          "Exactly two specification ids, from list_model_specs. A comparison "
+          + "is between two documents."),
+        detail: z.enum(["counts", "full"]).optional().describe(
+          "full by default, which is everything. counts answers instead with "
+          + "how many passages each document carries, how many pairs were "
+          + "linked, the tally of relations, how many were arbitrated, how many "
+          + "silences there are, and full_answer_characters: the exact size of "
+          + "the full answer, not an estimate of it."),
+      }),
+    }, args => answer(async snapshot => compareDocuments(
+      snapshot,
+      await linkEvidence(args.behaviour, args.model_spec_ids),
+      args)));
   },
   {
     serverInfo: { name: "ai-character-index", version: "1.0.0" },

@@ -38,6 +38,29 @@ provider's key is present.
 - `run_rollout.py`, `select_strata.py` + `smoke-*.txt`: the pre-migration driver
   and validation sampler, kept with their pinned samples as a record.
 
+### Links between two documents
+
+A second kind of run, over the same panel and the same tables' idiom. It says
+what one document's passage does to another's: the same rule, a stricter one, a
+nuance, a contradiction, or nothing at all. Design and first run:
+`docs/superpowers/specs/2026-09-16-passage-links-between-model-specs-design.md`
+and `-first-run.md`.
+
+- `link_call.py`: one link call, on `prompts/link-v1.txt`. A reply that leaves
+  any source passage unanswered writes no link: the floor is completeness, not a
+  share, because the count of links a reply should carry is not knowable first.
+- `compose_links.py`: writes a link run's calls, priced first, `--go` to write,
+  both directions of every pair given. Its sources are the passages a reader sees
+  by default for the cell, as the depth call grades on.
+- `link_job.py`: executes a link run (`ACI_LINK_RUN_ID`). Relaunching is the
+  retry, and a call whose links already landed finishes without paying again.
+- `link_consensus.py`: what three judges let the index assert. A link needs two
+  judges, a silence needs all three, and a contradiction needs two. Derived at
+  read time, never stored, so a threshold can be redrawn without a new run.
+- `link_report.py`: one run as markdown and JSON in `artefacts/`, with the seats
+  that did not answer named, because a panel that was never heard must not read
+  like a panel that disagreed.
+
 ## Run outputs, manifest, pinning
 There are no run files and no manifest any more. A run is rows (`aci_runs`,
 `aci_judge_calls`, `aci_judgements`, `aci_depths`), and a publication stores both

@@ -65,7 +65,13 @@ class FakeElement {
   constructor(tag) { this.tag = tag; this.childNodes = []; this.textContent = ""; this.className = ""; }
   append(...nodes) { this.childNodes.push(...nodes); }
 }
-var document = { createElement: tag => new FakeElement(tag) };
+// createTextNode too: the behaviour comparison is the one part of the note built
+// from a model's words, so it is assembled as nodes rather than as markup, and
+// its emphasis lands as text nodes between strong elements.
+var document = {
+  createElement: tag => new FakeElement(tag),
+  createTextNode: text => ({ tag: "#text", textContent: text, childNodes: [] }),
+};
 var cells = [];
 var noteShown = false;
 /* The depth note is never opened here -- what it prints is checked through the
@@ -75,7 +81,20 @@ var depthNoteTrigger = null;
 var releasedTo = null;
 var figureLabel = null;
 var elements = {
-  keyNote: { showPopover() { noteShown = true; }, hidePopover() {}, matches() { return false; } },
+  // The classes the note opened with. A real popover has a classList and
+  // openBehaviourNote sets its width through one, so a stub without it makes
+  // every check in this file throw on a line that has nothing to do with depth.
+  keyNote: {
+    classes: new Set(),
+    classList: {
+      toggle(name, on) {
+        if (on) elements.keyNote.classes.add(name);
+        else elements.keyNote.classes.delete(name);
+      },
+      remove(name) { elements.keyNote.classes.delete(name); },
+    },
+    showPopover() { noteShown = true; }, hidePopover() {}, matches() { return false; },
+  },
   keyNoteTitle: {},
   keyNoteBody: { children: [], replaceChildren(...nodes) { this.children = nodes; } },
   depthNote: { matches() { return false; }, hidePopover() {} },
@@ -84,6 +103,16 @@ var elements = {
 var placeKeyNote = () => {};
 var comparePair = () => state.comparePair;
 var behaviourNotes = {};
+// The links the reader fetched, which carry the behaviour comparison the note
+// prints under the depths. Null here: this file checks the depths.
+var linkRows = null;
+// The paragraph written about a figure, and the one written about a document
+// beside the others. The note leads with the first and ends with the second, and
+// folds the judges away only where the first exists. Null here for the same
+// reason as the links: with neither, the note shows the judges as it always did,
+// which is the shape these checks read.
+var depthRows = null;
+var overviewRows = null;
 var state = {};
 
 /* Without the guard every check that calls it fails by name, so the count this
@@ -109,6 +138,11 @@ eval(extractFn("function depthSpoken(depths) {"));
 eval(extractFn("function payloadBehaviours() {"));
 eval(extractFn("function visibleDocuments() {"));
 eval(extractFn("function updateBehaviourDepths() {"));
+// The two the note reaches for to print the behaviour comparison under the
+// depths. Extracted before their caller, which is the only thing that uses them.
+eval(extractFn("function comparisonNodes(text) {"));
+eval(extractFn("function comparisonFor(slug) {"));
+eval(extractFn("function withEmphasis(parent, text) {"));
 eval(extractFn("function openBehaviourNote(button) {"));
 
 let checks = 0, failures = 0;
@@ -198,17 +232,14 @@ function figure(slug) {
            spoken: spoken.textContent };
 }
 
+/* The note no longer repeats the depths, so there is no heading to slice at.
+ * What a cell was judged at, and which seat a substitute sat in, is asserted
+ * against depthCellNote further down, where the popover behind the figure
+ * assembles it. */
 function note(slug) {
   noteShown = false;
   openBehaviourNote({ dataset: { behaviourNote: slug } });
-  const nodes = elements.keyNoteBody.children;
-  const after = nodes.findIndex(node => node.textContent === "How deeply the documents on screen cover it");
-  return {
-    shown: noteShown,
-    depth: nodes.slice(after + 1).map(node => node.tag === "ul"
-      ? node.childNodes.map(item => item.textContent)
-      : node.textContent),
-  };
+  return { shown: noteShown };
 }
 
 /* ---- the guard ---- */
@@ -237,19 +268,13 @@ check("the figure beside a behaviour is a dash for a curation's integer",
         title: "Claude’s Constitution 2026-01-20: no depth given.",
         description: "Claude’s Constitution 2026-01-20: no depth given.",
         spoken: "no depth given" });
-check("the note says no depth was given, and lists no judge",
-      () => note("helpfulness"),
-      { shown: true, depth: ["Claude’s Constitution 2026-01-20: no depth given."] });
+check("a behaviour note opens", () => note("helpfulness").shown, true);
 
 show(LEGACY_DOCUMENTS, LEGACY_HELPFULNESS, { comparing: true });
 check("comparing, both documents of the grandfathered publication show a dash",
       () => figure("helpfulness").text, "– / –");
 check("comparing, a behaviour with no depth on either document is spoken as none given",
       () => figure("helpfulness").spoken, "no depth given");
-check("comparing, the note names both documents with no depth given",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: no depth given.",
-       "Model Spec 2025-12-18: no depth given."]);
 
 /* ---- a publication the current builder writes still renders its depths ---- */
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS);
@@ -259,11 +284,6 @@ check("the figure is the panel's bare mean; its title and spoken form say out of
         title: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
         description: "Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
         spoken: "depth 2.7 out of 4" });
-check("the note's sentence gives the mean out of 4, and every judge's depth and rationale",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
-       ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
-        "sol: 2. Discussed in general terms."]]);
 
 show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
 check("comparing, a mean of zero shows as 0.0 and not as a dash",
@@ -287,52 +307,18 @@ check("a change to the documents on screen releases an open note's trigger",
       },
       ["aria-expanded=false", null]);
 
-/* ---- a seat another model judged is said beside its document ---- */
+/* ---- a seat another model judged ----
+ *
+ * The note used to name the substitute beside its document and no longer does:
+ * what a cell was judged at, and who sat in whose seat, is what the popover
+ * behind the figure says. The three cases the note's checks covered, an
+ * ordinary reason, one with no closing punctuation and a field that is not a
+ * list, are asserted against depthCellNote below. */
 const SEATED_DEPTH = {
   mean: 2,
   judges: { deepseek: { depth: 2, rationale: "" }, opus: { depth: 2, rationale: "" },
             sol: { depth: 2, rationale: "" } },
 };
-const SUBSTITUTED_HELPFULNESS = {
-  id: 1, slug: "helpfulness", name: "Helpfulness",
-  coverage: {
-    "anthropic--constitution@2026-01-20": { depth: PANEL_DEPTH, passages: [] },
-    "openai--model-spec@2025-12-18": {
-      depth: SEATED_DEPTH, passages: [],
-      substitutions: [{ seat: "fable", substitute: "opus",
-                        reason: "fable's output was content-filtered on every attempt." }],
-    },
-  },
-};
-show(JUDGED_DOCUMENTS, SUBSTITUTED_HELPFULNESS, { comparing: true });
-check("comparing, the note names the substitute on its own document and nowhere else",
-      () => note("helpfulness").depth,
-      ["Claude’s Constitution 2026-01-20: 2.7 out of 4, prescribed.",
-       ["deepseek: 3. Rules, no examples.", "fable: 3. Rules, no examples.",
-        "sol: 2. Discussed in general terms."],
-       "Model Spec 2025-12-18: 2.0 out of 4, discussed.",
-       "On Model Spec 2025-12-18, opus judged in place of fable: "
-         + "fable's output was content-filtered on every attempt.",
-       ["deepseek: 2.", "opus: 2.", "sol: 2."]]);
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
-  [{ seat: "fable", substitute: "opus",
-     reason: "fable's output was content-filtered on every attempt" }];
-check("a reason with no closing punctuation ends as a sentence",
-      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
-      "On Model Spec 2025-12-18, opus judged in place of fable: "
-        + "fable's output was content-filtered on every attempt.");
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions =
-  [{ seat: "fable", substitute: "opus", reason: "content-filtered every time!" }];
-check("a reason already ending in punctuation is not given a second one",
-      () => note("helpfulness").depth.find(line => typeof line === "string" && line.includes("in place of")),
-      "On Model Spec 2025-12-18, opus judged in place of fable: content-filtered every time!");
-
-SUBSTITUTED_HELPFULNESS.coverage["openai--model-spec@2025-12-18"].substitutions = "fable";
-check("a substitutions field that is not a list says nothing and throws nothing",
-      () => note("helpfulness").depth.filter(line => String(line).includes("in place of")),
-      []);
 
 /* ---- what the two depth popovers print ----
  *
@@ -422,6 +408,11 @@ check("a judged cell gives the mean out of 4, the rubric word, and every judge w
       { document: "Claude’s Constitution 2026-01-20",
         figure: "2.7",
         summary: "2.7 out of 4, prescribed.",
+        // Empty with no file loaded, and asserted rather than omitted: the note
+        // branches on whether these carry anything, so a cell that answered
+        // undefined would read the same here and fold the judges differently.
+        written: "",
+        stands: "",
         substitutions: [],
         judges: [{ judge: "deepseek", depth: 3, rationale: "Rules, no examples." },
                  { judge: "fable", depth: 3, rationale: "Rules, no examples." },
@@ -438,12 +429,46 @@ check("a document a behaviour was not judged on says so plainly, and lists no ju
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[0]),
       { document: "Claude’s Constitution 2026-01-20", figure: null,
         summary: "No depth given: this behaviour was not judged on this document.",
-        substitutions: [], judges: [] });
+        written: "", stands: "", substitutions: [], judges: [] });
 check("a document the behaviour carries no entry for reads the same way",
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[1]).summary,
       "No depth given: this behaviour was not judged on this document.");
 check("a curation's integer is no depth here either",
       () => depthCellNote(LEGACY_HELPFULNESS, LEGACY_DOCUMENTS[0]).judges, []);
+
+/* ---- the two paragraphs the note leads and ends with ----
+ *
+ * Written by engine/panel/link_depth.py and link_overview.py into the files the
+ * grid reads, and read here out of the same two maps the reader loads them into.
+ * Keyed by behaviour and document, newline between, which is the key the files
+ * themselves carry.
+ *
+ * Set for one check and put back, so every other check in this file runs with
+ * neither file present: that is the state a deployment carrying no such file is
+ * in, and the note has to render in it. */
+depthRows = { cells: {
+  "three-judges\nanthropic--constitution@2026-01-20":
+    { text: "The panel divided over whether the examples amount to an answer key." },
+} };
+overviewRows = { cells: {
+  "three-judges\nanthropic--constitution@2026-01-20":
+    { text: "WHAT IT SHARES:\nQuotable rules, in both." },
+} };
+check("the paragraphs written about a figure and about its document reach the cell",
+      () => {
+        const cell = depthCellNote(THREE_JUDGES, JUDGED_DOCUMENTS[0]);
+        return [cell.written, cell.stands];
+      },
+      ["The panel divided over whether the examples amount to an answer key.",
+       "WHAT IT SHARES:\nQuotable rules, in both."]);
+check("a document those files say nothing about carries neither, and not undefined",
+      () => {
+        const cell = depthCellNote(THREE_JUDGES, JUDGED_DOCUMENTS[1]);
+        return [cell.written, cell.stands];
+      },
+      ["", ""]);
+depthRows = null;
+overviewRows = null;
 
 check("the figure's popover is titled with the behaviour it belongs to",
       () => depthFigureNote(THREE_JUDGES, JUDGED_DOCUMENTS).title, "Three judges");
@@ -454,6 +479,60 @@ check("comparing, the figure's popover covers both documents on screen, in pane 
        "Model Spec 2025-12-18: 2.0 out of 4, discussed."]);
 check("a pane with no document on it is not a section of the popover",
       () => depthFigureNote(THREE_JUDGES, [JUDGED_DOCUMENTS[0], null]).documents.length, 1);
+
+/* ---- the width it opens at ---- */
+check("comparing, the behaviour note opens wide",
+      () => {
+        show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing: true });
+        note("helpfulness");
+        return elements.keyNote.classes.has("key-note-wide");
+      }, true);
+check("on one document it opens at the width of the column it hangs off",
+      () => {
+        show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS);
+        note("helpfulness");
+        return elements.keyNote.classes.has("key-note-wide");
+      }, false);
+
+/* ---- the behaviour comparison, under everything else ---- */
+/* The comparison left the note for a modal, so what is asserted here is the
+ * lookup and the nodes it hands over, the way depthCellNote is asserted rather
+ * than the popover it fills. `legacy` is the shape payloads carried before a
+ * run held one comparison per behaviour: files in that shape are still on disk,
+ * so the reader still reads them. */
+function withComparison(behaviour, text, { comparing = true, legacy = false } = {}) {
+  show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
+  linkRows = legacy
+    ? { comparison: { behaviour, writtenBy: "sol", text } }
+    : { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
+  const found = comparisonFor("helpfulness");
+  linkRows = null;
+  return found
+    ? comparisonNodes(found.text)
+        .map(node => node.tag + (node.textContent ? ` ${node.textContent}` : ""))
+    : null;
+}
+
+check("comparing, the behaviour's comparison is found and rendered as nodes",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no."),
+      ["h4 What both require", "ul"]);
+check("a comparison written about another behaviour is not offered under this one",
+      () => withComparison("no-sycophancy",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no."), null);
+check("on one document there is no comparison to make",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { comparing: false }), null);
+check("a payload written before the per-behaviour change is still read",
+      () => withComparison("helpfulness",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { legacy: true }),
+      ["h4 What both require", "ul"]);
+check("a legacy comparison about another behaviour is not offered under this one",
+      () => withComparison("no-sycophancy",
+                           "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
+                           { legacy: true }), null);
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

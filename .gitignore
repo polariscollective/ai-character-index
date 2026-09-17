@@ -57,3 +57,16 @@ public/
 
 # Results of a local run. They are somebody's working output, not the index.
 artefacts/
+
+# One run of passage links, written by engine/panel/link_reader_data.py for a
+# reader to look at locally. It is the output of one run, often filtered to one
+# judge, and the record of the first run says nothing from it is publishable:
+# committing it would ship those bubbles to whoever the reader is deployed to.
+site/spec-reader/links.json
+# The grid's passages, written by link_overview from the comparisons already
+# stored. Generated data the reader reads locally, like links.json above: it
+# belongs in the database once its shape has been read and judged, not here.
+site/overview.json
+# Why each figure of the grid is what it is, written by link_depth from the
+# judges' own reasons. Generated data, like the two above.
+site/depths.json
