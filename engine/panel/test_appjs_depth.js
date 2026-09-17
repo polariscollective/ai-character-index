@@ -106,6 +106,13 @@ var behaviourNotes = {};
 // The links the reader fetched, which carry the behaviour comparison the note
 // prints under the depths. Null here: this file checks the depths.
 var linkRows = null;
+// The paragraph written about a figure, and the one written about a document
+// beside the others. The note leads with the first and ends with the second, and
+// folds the judges away only where the first exists. Null here for the same
+// reason as the links: with neither, the note shows the judges as it always did,
+// which is the shape these checks read.
+var depthRows = null;
+var overviewRows = null;
 var state = {};
 
 /* Without the guard every check that calls it fails by name, so the count this
@@ -401,6 +408,11 @@ check("a judged cell gives the mean out of 4, the rubric word, and every judge w
       { document: "Claude’s Constitution 2026-01-20",
         figure: "2.7",
         summary: "2.7 out of 4, prescribed.",
+        // Empty with no file loaded, and asserted rather than omitted: the note
+        // branches on whether these carry anything, so a cell that answered
+        // undefined would read the same here and fold the judges differently.
+        written: "",
+        stands: "",
         substitutions: [],
         judges: [{ judge: "deepseek", depth: 3, rationale: "Rules, no examples." },
                  { judge: "fable", depth: 3, rationale: "Rules, no examples." },
@@ -417,12 +429,46 @@ check("a document a behaviour was not judged on says so plainly, and lists no ju
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[0]),
       { document: "Claude’s Constitution 2026-01-20", figure: null,
         summary: "No depth given: this behaviour was not judged on this document.",
-        substitutions: [], judges: [] });
+        written: "", stands: "", substitutions: [], judges: [] });
 check("a document the behaviour carries no entry for reads the same way",
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[1]).summary,
       "No depth given: this behaviour was not judged on this document.");
 check("a curation's integer is no depth here either",
       () => depthCellNote(LEGACY_HELPFULNESS, LEGACY_DOCUMENTS[0]).judges, []);
+
+/* ---- the two paragraphs the note leads and ends with ----
+ *
+ * Written by engine/panel/link_depth.py and link_overview.py into the files the
+ * grid reads, and read here out of the same two maps the reader loads them into.
+ * Keyed by behaviour and document, newline between, which is the key the files
+ * themselves carry.
+ *
+ * Set for one check and put back, so every other check in this file runs with
+ * neither file present: that is the state a deployment carrying no such file is
+ * in, and the note has to render in it. */
+depthRows = { cells: {
+  "three-judges\nanthropic--constitution@2026-01-20":
+    { text: "The panel divided over whether the examples amount to an answer key." },
+} };
+overviewRows = { cells: {
+  "three-judges\nanthropic--constitution@2026-01-20":
+    { text: "WHAT IT SHARES:\nQuotable rules, in both." },
+} };
+check("the paragraphs written about a figure and about its document reach the cell",
+      () => {
+        const cell = depthCellNote(THREE_JUDGES, JUDGED_DOCUMENTS[0]);
+        return [cell.written, cell.stands];
+      },
+      ["The panel divided over whether the examples amount to an answer key.",
+       "WHAT IT SHARES:\nQuotable rules, in both."]);
+check("a document those files say nothing about carries neither, and not undefined",
+      () => {
+        const cell = depthCellNote(THREE_JUDGES, JUDGED_DOCUMENTS[1]);
+        return [cell.written, cell.stands];
+      },
+      ["", ""]);
+depthRows = null;
+overviewRows = null;
 
 check("the figure's popover is titled with the behaviour it belongs to",
       () => depthFigureNote(THREE_JUDGES, JUDGED_DOCUMENTS).title, "Three judges");
