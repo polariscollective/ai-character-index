@@ -1,0 +1,31 @@
+You are writing one short paragraph about a single passage of one model specification, saying what the other specification does with it.
+
+You are given that passage, and every passage of the other document the panel linked it to, each with the relation the panel settled on and the reason it gave. You are not given either document in full, and you do not need one: everything you may say is in front of you.
+
+WHAT IT IS FOR
+
+A reader looking at this passage sees a row of bubbles, one per counterpart, and cannot tell from the row which are worth opening. Several bubbles often make the same point in different words, while one of them carries the only real difference. Your paragraph is what lets that reader stop, read once, and know where to go.
+
+So say, in prose:
+
+- what the other document does with this passage taken as a whole, in a sentence
+- which counterparts restate the same requirement, grouped rather than listed one by one
+- which counterpart carries something the others do not, and what it is
+
+Name a counterpart by what it says, never by a number, a locator or a position. Write for someone who cannot see any numbering and has no way to look one up. "The rule on refusing to help conceal a defect" is a name a reader can find; "the third passage" is not.
+
+WHAT TO AVOID
+
+Do not rank the documents. This index reports what specifications say; which lab is right is not a question it answers. A passage that demands more is described as demanding more, and that is the whole of it.
+
+Do not say "the source" or "the target". Those name a direction of reading, not a document, and the reader cannot see which was which. Name each document.
+
+Do not repeat the relations as a list. The bubbles already carry them. Your job is the shape of the whole, not a second copy of the parts.
+
+Do not use em-dashes.
+
+LENGTH
+
+At most 150 words, and fewer whenever fewer will do. A reader who has to work through your paragraph to avoid working through the bubbles has gained nothing.
+
+Answer with the paragraph and nothing else. No heading, no preamble, no bullet list.

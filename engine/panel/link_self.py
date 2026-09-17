@@ -256,6 +256,24 @@ def summarise(args):
     return 0
 
 
+def paragraphs(args):
+    """Stage four, once per passage worth summarising: questions out, then in.
+
+    Unlike stages two and three this one composes many small calls rather than a
+    few large ones: a passage's paragraph is written from that passage and its
+    counterparts, three thousand characters or so, where an arbitration carries
+    both documents whole. So the questions are written in one sweep and answered
+    in batches, and a second pass picks up whatever has been answered since."""
+    import link_paragraph                                  # noqa: PLC0415
+    report = Path(args.report)
+    folder = report / "paragraphs"
+    argv = [str(report / "links.json"), "--go", f"--model={SEAT}",
+            f"--floor={args.floor}"]
+    if args.behaviour:
+        argv.append(f"--behaviour={args.behaviour}")
+    return link_paragraph.main(argv, call_model=through_files(folder, "paragraph"))
+
+
 def store_answers(args):
     folder = Path(args.folder)
     index = json.loads((folder / "index.json").read_text(encoding="utf-8"))
@@ -324,6 +342,15 @@ def main(argv=None):
     last.add_argument("--behaviour", default=None,
                       help="one behaviour; every behaviour of the report by default")
     last.set_defaults(handler=summarise)
+
+    each = sub.add_parser("paragraphs",
+                          help="write what the other document does with each passage")
+    each.add_argument("report", help="the report folder that `report` wrote")
+    each.add_argument("--behaviour", default=None,
+                      help="one behaviour; every behaviour of the report by default")
+    each.add_argument("--floor", type=int, default=2,
+                      help="counterparts a passage needs before it gets a paragraph")
+    each.set_defaults(handler=paragraphs)
 
     args = parser.parse_args(argv)
     # Both commands ask for the same cell more than once, and each ask is a full
