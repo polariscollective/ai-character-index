@@ -787,6 +787,56 @@ rejected: it would drop 59% to 62% of the links on cross-lab pairs, take that
 paragraph from 13 bubbles to 12, and cost the whole-document reading that makes
 `absent` an honest answer.
 
+**A passage with several counterparts now says what they add up to.** Filtering
+by behaviour fixed the wrong bubbles being shown and not the crowding: the worst
+passage of the constitution still carried thirteen counterparts under one
+behaviour, all of them legitimately its own. A row of pills cannot say which of
+thirteen to open, and several usually restate one requirement while one carries
+the only real difference. `link_paragraph` writes the paragraph that says which
+is which, from the panel's own links rather than from a fresh reading, and
+`link_reader_data` folds it in as a row at the head of its passage's list. It is
+not a counterpart, so it carries no locator and travels nowhere; its words ride
+in `comment`, the field the reader already discloses under a pill.
+
+One per behaviour per passage, and only where a passage has more than one
+counterpart: the median passage has a single bubble and needs no help. For the
+constitution against the OpenAI spec that is 430 cells of 1,036, 331,483
+characters, median 126 words and none over 150. The effect on the passage this
+started from: seventeen bubbles shown at once became fourteen under
+`honesty-and-non-deception`, its thirteen counterparts and their reading, with
+three and three under two other behaviours.
+
+Written in session under `opus-5` by sixteen agents, one per hexadecimal bucket
+of the question filename, which partitions the work without any agent needing to
+know what the others hold. Every cost is null. It is written beside the run and
+not to the database, deliberately: `aci_link_summaries` is keyed by behaviour and
+pair of documents and carries no locator, so migrating for a shape nobody had
+read yet would have fixed the wrong thing first.
+
+**What the prompt got wrong, twice, and what is still wrong with it.** A pilot
+over ten passages showed the first wording held at two and three counterparts and
+broke at four or more, producing a semicolon list that walked through each bubble
+in turn, which is the second copy of the parts the paragraph exists to replace.
+The rule that a group is named by the single claim its members share, with at
+most two counterparts described separately and never counted, was added and held
+against the three most crowded passages in the run, at 13, 11 and 9.
+
+Two faults are recorded and not fixed, because no run exists to validate a change
+against. The dominant defect across the sixteen buckets was a paragraph naming
+only the document its passage came from and leaving the other as "it": seven
+agents caught it in their own output and rewrote it, which is the prompt leaning
+on the writer's judgement where it should state a rule. And the ban on "the
+source" and "the target" is read as a ban on the English words, so "the source of
+more specific guidelines" was rewritten twice for no reason; it is meant to
+forbid naming a document by its direction of reading, and it should say so.
+
+One operational note, since it will recur. Subagents dispatched in parallel share
+a single scratchpad directory, and several had helper scripts overwritten
+mid-run by siblings choosing the same obvious filename. Nothing was lost here,
+because the buckets write disjoint files and the writes had already landed, but
+an agent that writes a helper and runs it later executes another agent's code
+with no symptom.
+
 Every `cost_usd` and every `batch_cost_usd` in this run is null, and null is the
 right value. `batch_job.cost_of` returns None for a seat carrying no
 `price_per_mtok`, which is what an in-session judge is, and this repository has
