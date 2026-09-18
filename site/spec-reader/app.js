@@ -34,6 +34,7 @@ const PAYLOAD_URL = "/api/reader/payload";
  * payload, because a payload is materialised at publication time and this
  * changes when someone edits a behaviour. */
 const BEHAVIOUR_NOTES_URL = "/api/reader/behaviours";
+const LINKS_URL = "/api/reader/links";
 const PUBLICATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* Whether a ?publication= pin may be asked for. The route validates it too; this
@@ -4612,8 +4613,15 @@ async function loadReaderLinks() {
    * this existed: no bubbles, no paragraph under a figure, and nothing said about
    * it. A page that renders less is better than one that says the index is
    * broken because a fetch stuttered. */
+  /* Pinned like the payload and the documents, and for the same reason: a
+   * publication carries its own links now, so a pinned page fetching them
+   * unpinned would lay today's readings over yesterday's text. Read from
+   * state.payloadSource rather than from the URL, so a pin that fell back reads
+   * the current publication's links with its payload. */
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   try {
-    const answered = await loadJSON("/api/reader/links");
+    const answered = await loadJSON(
+      pinned ? `${LINKS_URL}?publication=${encodeURIComponent(pinned)}` : LINKS_URL);
     linkRows = answered;
     depthRows = { cells: answered.notes?.depth || {} };
     overviewRows = { cells: answered.notes?.standing || {} };
@@ -4840,8 +4848,8 @@ async function initialize() {
   renderBehaviourList();
   try {
     // The payload first: which publication it resolved to decides where the
-    // documents and the behaviour notes are read from, so all three describe the
-    // same publication.
+    // documents, the behaviour notes and the links are read from, so all four
+    // describe the same publication.
     const behaviours = await loadBehaviours();
     // The notes beside the documents, not before them: a note that fails to load
     // must not stop the reader rendering, so its failure is swallowed.

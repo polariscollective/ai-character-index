@@ -146,3 +146,17 @@ test("a refused query is loud rather than empty", async () => {
   await assert.rejects(() => publicationColumn("payload", null, fetchImpl),
                        /GET aci_publications\?.* -> 403: permission denied/);
 });
+
+test("readerResponse serves the links column, and a pin is immutable for a year", async () => {
+  const { fetchImpl } = stub([{ links: { byLocator: {}, comparisons: {} } }]);
+  const out = await readerResponse("links", new URLSearchParams(`publication=${ID}`), fetchImpl);
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body, { byLocator: {}, comparisons: {} });
+  assert.match(out.cacheControl, /immutable/);
+});
+
+test("readerResponse answers 404 for a publication carrying no links", async () => {
+  const { fetchImpl } = stub([{ links: null }]);
+  const out = await readerResponse("links", new URLSearchParams(), fetchImpl);
+  assert.equal(out.status, 404);
+});
