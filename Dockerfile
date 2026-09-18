@@ -21,14 +21,16 @@ RUN pip install --no-cache-dir "openai>=1.0"
 # Node, for the one builder that is not Python. engine/build-links-data.mjs imports
 # app/lib/links.mjs, the assembly the reader route already used: a Python port would
 # be a second copy of it, and this repository has published wrong figures off exactly
-# that kind of drift before. So the image carries a Node runtime and that one library
-# directory. Not the site, not the reader, not Next: app/lib is shared library code.
+# that kind of drift before. So the image carries a Node runtime and the two files
+# that builder's import graph actually reaches: links.mjs and the supabase.mjs it
+# imports in turn. Not the site, not the reader, not Next, and not the rest of
+# app/lib either -- no Slack client, no submissions, no feedback, no admin data.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
 
 COPY engine/ ./engine/
-COPY app/lib/ ./app/lib/
+COPY app/lib/links.mjs app/lib/supabase.mjs ./app/lib/
 ENV PYTHONPATH=/app/engine
 
 # Only the OpenRouter key reaches this container, and that is a requirement

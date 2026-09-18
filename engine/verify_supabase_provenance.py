@@ -134,7 +134,7 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
             _built, got = publish.build(name, cells, params.get("behaviours") or [],
                                         run_date, panel_name,
                                         link_runs=params.get("link_runs") or (),
-                                        note_prompts=params.get("note_prompts") or ())
+                                        note_prompts=params.get("note_prompts"))
         except SystemExit as refused:
             report(False, label, (str(refused).strip().splitlines() or ["no output"])[-1])
             continue

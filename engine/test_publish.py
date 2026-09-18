@@ -424,6 +424,30 @@ class BuildTest(unittest.TestCase):
         self.assertIn("--link-runs=r0,r1", seen["argv"])
         self.assertIn("--note-prompts=p0,p1", seen["argv"])
 
+    def test_note_prompts_none_omits_the_flag_but_an_empty_list_still_passes_it(self):
+        seen = {}
+
+        def fake_run(argv, capture_output, text):
+            seen["argv"] = argv
+            out = next(a.split("=", 1)[1] for a in argv if a.startswith("--out="))
+            Path(out).write_text("{}")
+            return type("Done", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+        # None means the flag is absent altogether: a rebuild of a publication
+        # written before this field existed must be able to ask the builder to
+        # take every note, not pin it to an empty pin it never recorded.
+        with mock.patch.object(publish.subprocess, "run", fake_run):
+            publish.build("links", [], ["helpfulness"], link_runs=["r0"],
+                          note_prompts=None)
+        self.assertFalse(any(a.startswith("--note-prompts=") for a in seen["argv"]))
+
+        # An empty list is a recorded pin of nothing, and must still reach the
+        # builder as the flag, not be silently dropped like None is.
+        with mock.patch.object(publish.subprocess, "run", fake_run):
+            publish.build("links", [], ["helpfulness"], link_runs=["r0"],
+                          note_prompts=[])
+        self.assertIn("--note-prompts=", seen["argv"])
+
 
 class LinksFormatTest(unittest.TestCase):
     """The builder's bytes must be reproducible in Python.

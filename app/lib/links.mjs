@@ -413,8 +413,10 @@ export async function readerLinks(fetchImpl = fetch, runIds = null, notePrompts 
 
   /* Document notes carry no run: they are keyed by the prompt that wrote them, and
    * that is what a publication pins. Given no list, take them all, which is what a
-   * reader outside a publication wants. */
-  const notes = Array.isArray(notePrompts) && notePrompts.length
+   * reader outside a publication wants; given an empty list, take none, because a
+   * publication that pinned no notes must not silently acquire the ones written
+   * since. */
+  const notes = Array.isArray(notePrompts)
     ? documentNotes.filter(note => notePrompts.includes(note.prompt_sha256))
     : documentNotes;
 

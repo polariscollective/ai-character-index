@@ -40,7 +40,12 @@ async function main() {
   const out = argument("out");
   if (!out) throw new Error("build-links-data: --out is required");
   const runIds = (argument("link-runs") || "").split(",").filter(Boolean);
-  const notePrompts = (argument("note-prompts") || "").split(",").filter(Boolean);
+  /* Absent and empty are different answers. No flag means take every note, which
+   * is what a reader outside a publication wants; an empty flag means this
+   * publication pinned no notes at all, and must not silently acquire the ones
+   * written since. */
+  const notes = argument("note-prompts");
+  const notePrompts = notes === null ? null : notes.split(",").filter(Boolean);
   writeFileSync(out, serialise(await buildLinks(runIds, notePrompts)));
 }
 

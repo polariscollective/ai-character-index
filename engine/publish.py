@@ -242,7 +242,7 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
 
 
 def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
-          note_prompts=()):
+          note_prompts=None):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -267,7 +267,8 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
                 extra.append(f"--panel={panel_name}")
         if name == "links":
             extra.append("--link-runs=" + ",".join(sorted(link_runs)))
-            extra.append("--note-prompts=" + ",".join(sorted(note_prompts)))
+            if note_prompts is not None:
+                extra.append("--note-prompts=" + ",".join(sorted(note_prompts)))
         result = subprocess.run(
             [*runner, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],

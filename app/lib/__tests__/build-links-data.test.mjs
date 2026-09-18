@@ -49,7 +49,11 @@ test("a note prompt not named in the list is dropped", async () => {
   assert.deepEqual(out.notes.depth, { "helpfulness\ndoc-a": { text: "kept" } });
 });
 
-test("an empty note-prompts list takes every note, which is what a reader outside a publication wants", async () => {
+/* An empty list is a publication saying it pinned no notes at all, which must
+ * stay empty rather than silently acquiring every note in the table -- the
+ * failure this pin exists to prevent. Distinct from the case above, where a
+ * list selects some: here the list is present and names nothing. */
+test("an empty note-prompts list takes no notes", async () => {
   const notes = [
     { behaviour_slug: "helpfulness", document_id: "doc-a", kind: "depth",
       body: "kept", created_at: "2026-01-01", prompt_sha256: "sha-kept" },
@@ -57,10 +61,7 @@ test("an empty note-prompts list takes every note, which is what a reader outsid
       body: "also kept", created_at: "2026-01-01", prompt_sha256: "sha-other" },
   ];
   const out = await buildLinks([RUN], [], stubWithNotes(notes));
-  assert.deepEqual(out.notes.depth, {
-    "helpfulness\ndoc-a": { text: "kept" },
-    "helpfulness\ndoc-b": { text: "also kept" },
-  });
+  assert.deepEqual(out.notes.depth, {});
 });
 
 /* The digest publish.py records describes these exact bytes, and
