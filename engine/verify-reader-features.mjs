@@ -1972,11 +1972,12 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
-/* The overview's second view, how each lab governs its rules: a board with a
- * heat map and a panel that answers whatever was pressed. Its numbers and words
- * are site/governance.json, and tests/test_governance_tab.py holds the two
- * together; what only a browser can show is that the tabs, the address, the
- * breakdowns and the panel join them. */
+/* The overview's second view, how each lab governs its rules: one table with the
+ * companies across and their scores down, each question opening into its
+ * checks, and a popover beside whatever was pressed. Its numbers and words are
+ * site/governance.json, and tests/test_governance_tab.py holds the two together;
+ * what only a browser can show is that the tabs, the address, the folds and the
+ * popover join them. */
 console.log("== Overview: the governance view ==");
 {
   const root = new URL("/", base).href;
@@ -1988,51 +1989,82 @@ console.log("== Overview: the governance view ==");
     governanceShown: !document.querySelector("#view-governance").hidden,
     coverageHidden: document.querySelector("#view-coverage").hidden,
     selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
-    ranking: [...document.querySelectorAll("#gov-heatmap tbody .lab-name")].map(n => n.textContent),
-    overall: [...document.querySelectorAll('#gov-heatmap .cell-button[data-column="total"]')]
+    companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
+    overall: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
       .map(b => b.textContent),
-    findings: document.querySelectorAll("#gov-detail details").length,
+    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-max')]
+      .map(b => b.textContent))],
+    rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
+      .map(n => n.textContent),
+    findings: document.querySelectorAll("#gov-findings details").length,
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
-  check(seen.ranking.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Meta, xAI"
-      && seen.overall.join(",") === "23,22,10,9,5,5",
-    "the heat map ranks the six labs in the note's order, Meta fifth on the tie",
-    `${seen.ranking.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.findings === 6, "with nothing pressed, the panel carries the six findings",
-    String(seen.findings));
+  check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Meta, xAI"
+      && seen.overall.join(",") === "23,22,10,9,5,5" && seen.outOf.join() === "/40",
+    "the companies run across in the note's order, Meta fifth on the tie, each total out of 40",
+    `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
+  check(seen.rows.join(", ") === "Overall, Rulebook, Change record, Filters, Notice, Supporting practices"
+      && seen.findings === 6,
+    "the scores run down from the total, the checks folded, the six findings under the table",
+    JSON.stringify(seen.rows));
 
-  // An overall cell opens the company's profile, with that question unfolded.
-  await page.locator('.cell-button[data-lab="meta"][data-column="1"]').click();
-  await page.waitForTimeout(150);
-  const profile = await page.evaluate(() => ({
-    title: document.querySelector("#gov-detail h2")?.textContent,
-    open: [...document.querySelectorAll("#gov-detail details")]
-      .filter(d => d.open).map(d => d.querySelector("summary").textContent),
-    pressed: document.querySelector('.cell-button[data-lab="meta"][data-column="1"]')
-      .getAttribute("aria-pressed"),
-  }));
-  check(profile.title === "Meta" && profile.open.join() === "1Rulebook, 1 out of 12"
-      && profile.pressed === "true",
-    "a score in the overall map opens the profile with that question unfolded",
-    JSON.stringify(profile));
-
-  // A question's name breaks it down into its checks, and a check's score opens
-  // what the check asks and what was found.
-  await page.locator('.gov-mode[data-mode="2"]').click();
-  await page.waitForTimeout(150);
-  await page.locator('.cell-button[data-lab="anthropic"][data-column="2.1"]').click();
-  await page.waitForTimeout(150);
-  const score = await page.evaluate(() => ({
-    heads: [...document.querySelectorAll("#gov-heatmap thead .head-name")].map(n => n.textContent),
-    title: document.querySelector("#gov-detail h2")?.textContent,
-    here: [...document.querySelectorAll("#gov-detail .anchors li.is-here .anchor-level")]
+  // A question opens into its checks.
+  await page.locator('.row-toggle[data-question="2"]').click();
+  await page.waitForTimeout(100);
+  const opened = await page.evaluate(() => ({
+    checks: [...document.querySelectorAll('#gov-heatmap tr.check-row[data-parent="2"]:not([hidden]) .head-name')]
       .map(n => n.textContent),
+    expanded: document.querySelector('.row-toggle[data-question="2"]').getAttribute("aria-expanded"),
   }));
-  check(score.heads.join(", ") === "Company, Change record, Versions kept, Changes explained, Scope of the record"
-      && score.title === "Anthropic: versions kept" && score.here.join() === "0,2",
-    "the change record breaks down into its checks, and a score of 1 sits between 0 and 2",
-    JSON.stringify(score));
+  check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the record"
+      && opened.expanded === "true",
+    "the change record opens into its three checks", JSON.stringify(opened));
+
+  // A check's score opens a popover beside it, with its place on the scale marked.
+  const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');
+  await cell.click();
+  await page.waitForTimeout(150);
+  const popover = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    const cellBox = document.querySelector('.cell-button[data-lab="anthropic"][data-row="2.1"]')
+      .getBoundingClientRect();
+    const box = pop.getBoundingClientRect();
+    return {
+      open: pop.matches(":popover-open"),
+      title: pop.querySelector("h2")?.textContent,
+      here: [...pop.querySelectorAll(".anchors li.is-here .anchor-level")].map(n => n.textContent),
+      covers: !(box.right <= cellBox.left || box.left >= cellBox.right
+        || box.bottom <= cellBox.top || box.top >= cellBox.bottom),
+    };
+  });
+  check(popover.open && popover.title === "Anthropic: versions kept"
+      && popover.here.join() === "0,2" && !popover.covers,
+    "a score opens a popover beside it, and a score of 1 sits between 0 and 2",
+    JSON.stringify(popover));
+
+  // Pressing the same score again closes it rather than opening it once more.
+  await cell.click();
+  await page.waitForTimeout(150);
+  const closed = await page.evaluate(() => !document.querySelector("#gov-pop").matches(":popover-open"));
+  check(closed, "pressing the same score again closes the popover");
+
+  // A question's name says what it asks and how its points are shared out.
+  await page.locator('.question-row[data-question="3"] .row-name').click();
+  await page.waitForTimeout(150);
+  const about = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    return {
+      title: pop.querySelector("h2")?.textContent,
+      shares: [...pop.querySelectorAll("h3")].map(n => n.textContent),
+      checks: pop.querySelectorAll("details").length,
+    };
+  });
+  check(about.title === "Filters" && about.shares.includes("How its 8 points are shared out")
+      && about.checks === 2,
+    "a question's name opens what it asks and how its points are shared out", JSON.stringify(about));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
 
   await page.locator("#tab-coverage").click();
   await page.waitForTimeout(150);
