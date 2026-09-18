@@ -79,7 +79,7 @@ export async function publications(fetchImpl = fetch) {
     // Never the payload columns. They are megabytes, and no page shows them.
     select("aci_publications",
            "select=id,published_at,published_by,notes,panel,rubric,"
-           + "is_public,payload_sha256,documents_sha256,build_params"
+           + "is_public,payload_sha256,documents_sha256,links_sha256,build_params"
            + "&order=published_at.desc", fetchImpl),
     select("aci_publication_cells", "select=publication_id", fetchImpl),
   ]);
@@ -87,6 +87,16 @@ export async function publications(fetchImpl = fetch) {
     ...row,
     cells: cells.filter(cell => cell.publication_id === row.id).length,
   }));
+}
+
+/** The link runs a publication can carry, newest first.
+ *
+ * Which runs the public sees is a decision a publication records. It used to be
+ * decided by testing the prefix of the script name that created a run, which
+ * worked and was nobody's decision. */
+export async function linkRuns(fetchImpl = fetch) {
+  return select("aci_link_runs",
+                "select=id,created_at,created_by,status&order=created_at.desc", fetchImpl);
 }
 
 /** Proposals from outside, newest first, each with a link to its document.

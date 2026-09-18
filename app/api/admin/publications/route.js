@@ -20,6 +20,7 @@ export const POST = formRoute("/admin/publications", requireOperator, async (fie
   if (verb === "build") {
     const behaviours = fields.many("behaviours");
     const documents = fields.many("documents");
+    const linkRuns = fields.many("link_runs");
     const rubric = fields.one("rubric") || "v5";
     const notes = fields.one("notes");
     // Who a citation credits this build to. Never the operator's address: an
@@ -27,12 +28,14 @@ export const POST = formRoute("/admin/publications", requireOperator, async (fie
     const credit = fields.one("credit");
     if (!behaviours.length) refuse("choose at least one behaviour");
     if (!documents.length) refuse("choose at least one document");
+    if (!linkRuns.length) refuse("choose at least one link run");
     const creditIssue = creditProblem(credit);
     if (creditIssue) refuse(creditIssue);
     // email still reaches startJob's own argument below, for aci_jobs.created_by
     // -- the audit trail of who pressed the button, which this fix leaves alone.
     const job = await startJob("publish",
-                               publishJobParams({ behaviours, documents, rubric, notes, credit }),
+                               publishJobParams({ behaviours, documents, rubric, notes, credit,
+                                                  linkRuns }),
                                email);
     return `Building. Every cell must have been judged by the index's panel under `
          + `rubric ${rubric}, in one run, with a depth from each judge; the job refuses `

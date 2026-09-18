@@ -1,12 +1,12 @@
 /* What the reader shows, and the decision to show it. */
-import { behaviours, displayPanel, publications, specifications } from "../../lib/admin-data.mjs";
+import { behaviours, displayPanel, linkRuns, publications, specifications } from "../../lib/admin-data.mjs";
 import { documentChoices } from "../../lib/documents.mjs";
 import { Choices, Outcome, When } from "../parts.jsx";
 
 export default async function Publications({ searchParams }) {
   const params = await searchParams;
-  const [rows, behaviourRows, specs] = await Promise.all([
-    publications(), behaviours(), specifications(),
+  const [rows, behaviourRows, specs, linkRunRows] = await Promise.all([
+    publications(), behaviours(), specifications(), linkRuns(),
   ]);
   const panel = displayPanel();
 
@@ -53,6 +53,7 @@ export default async function Publications({ searchParams }) {
                   <td className="mono">
                     {row.payload_sha256.slice(0, 10)}
                     <br />{row.documents_sha256.slice(0, 10)}
+                    <br />{row.links_sha256 ? row.links_sha256.slice(0, 10) : "no links"}
                   </td>
                   <td>
                     <a href={`/spec-reader/?publication=${row.id}`}>read</a>
@@ -96,6 +97,14 @@ export default async function Publications({ searchParams }) {
             legend="Documents"
             options={documentChoices(specs)}
             hint="Each version is its own document."
+          />
+          <Choices
+            name="link_runs"
+            legend="Link runs"
+            options={linkRunRows.filter(row => row.status === "done")
+              .map(row => ({ value: row.id,
+                             label: `${row.id.slice(0, 8)} ${row.created_at.slice(0, 10)} ${row.created_by}` }))}
+            hint="The publication carries the bubbles, comparisons and notes of the runs you choose here."
           />
           <input type="hidden" name="rubric" value="v5" />
           <label>

@@ -9,9 +9,13 @@
  * e-mail is not among this function's arguments at all. It still reaches
  * `aci_jobs.created_by`, the audit trail of who pressed the button, but only
  * as `startJob`'s own separate argument, which this function does not touch.
+ *
+ * `linkRuns` names which link runs the publication carries: the bubbles,
+ * comparisons and notes the reader shows come only from the runs chosen here.
  */
 import { resolveCredit } from "./credit.mjs";
 
-export function publishJobParams({ behaviours, documents, rubric, notes, credit }) {
-  return { behaviours, documents, rubric, notes, created_by: resolveCredit(credit) };
+export function publishJobParams({ behaviours, documents, rubric, notes, credit, linkRuns }) {
+  return { behaviours, documents, rubric, notes, link_runs: linkRuns,
+           created_by: resolveCredit(credit) };
 }
