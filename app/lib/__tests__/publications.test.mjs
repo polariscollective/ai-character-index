@@ -3,14 +3,21 @@
  * Run: node --test app/lib/__tests__/
  */
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { beforeEach, test } from "node:test";
 import { currentPublication, isPublicationId, publicationColumn, publicationRow,
-         readerResponse, resolvePublicationId, SERVES_DEVELOPMENT } from "../publications.mjs";
+         readerResponse, resetHeldColumns, resolvePublicationId,
+         SERVES_DEVELOPMENT } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
+
+// Every test in this file shares the module's HELD map (it is process state,
+// not per-test state), so a value one test caches can otherwise leak into the
+// next. Starting each test with nothing held is what makes each test's own
+// stub the only thing that can answer it.
+beforeEach(() => resetHeldColumns());
 
 function stub(rows, status = 200) {
   const calls = [];
@@ -32,10 +39,16 @@ test("an unpinned read resolves which publication it is serving, then reads it b
   assert.match(calls[0].url, /order=published_at\.desc/);
 });
 
-test("a pin is its own answer and costs no request", async () => {
-  const { calls, fetchImpl } = stub([]);
+test("a pin is checked against the table before it is trusted", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID }]);
   assert.equal(await resolvePublicationId(ID, fetchImpl), ID);
-  assert.equal(calls.length, 0);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, new RegExp(`id=eq\\.${ID}`));
+});
+
+test("a pin naming a publication the table no longer has resolves to null", async () => {
+  const { fetchImpl } = stub([]);
+  assert.equal(await resolvePublicationId(ID, fetchImpl), null);
 });
 
 test("nothing published yet resolves to null", async () => {
@@ -43,13 +56,31 @@ test("nothing published yet resolves to null", async () => {
   assert.equal(await resolvePublicationId(null, fetchImpl), null);
 });
 
-test("a column is fetched once per publication and held", async () => {
-  const { calls, fetchImpl } = stub([{ payload: { ok: 1 } }]);
+test("a column is fetched once per publication and held, though existence is asked again", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID, payload: { ok: 1 } }]);
   const first = await publicationColumn("payload", ID, fetchImpl);
   const second = await publicationColumn("payload", ID, fetchImpl);
   assert.deepEqual(first, { ok: 1 });
   assert.deepEqual(second, { ok: 1 });
-  assert.equal(calls.length, 1, "the second read came from memory");
+  // Two existence checks (one per call) plus one column read: the second
+  // call's column comes from memory, but existence is never taken on faith.
+  assert.equal(calls.length, 3, "the second column read came from memory");
+});
+
+/* This is the regression the Critical review found: before the fix, a pin
+ * was trusted once and its column held forever, so a publication withdrawn
+ * after being read once would go on being served from memory. Reverting only
+ * publications.mjs to its parent commit and running this test alone must
+ * fail with `second` equal to the held bytes rather than null. */
+test("a pinned publication the database no longer has answers null, not the bytes once held", async () => {
+  const existed = stub([{ id: ID, payload: { ok: 1 } }]);
+  const first = await publicationColumn("payload", ID, existed.fetchImpl);
+  assert.deepEqual(first, { ok: 1 }, "the publication existed on the first read");
+
+  const withdrawn = stub([]);
+  const second = await publicationColumn("payload", ID, withdrawn.fetchImpl);
+  assert.equal(second, null,
+              "the same id must not keep answering from a column held before the row was gone");
 });
 
 test("a uuid is a publication id and a payload name is not", () => {

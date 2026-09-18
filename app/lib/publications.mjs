@@ -52,26 +52,39 @@ export function currentPublication(env = process.env) {
 }
 
 /**
- * Which publication a request is about, as an id.
+ * Which publication a request is about, as an id confirmed to still exist.
  *
- * A pin is already the answer. Without one, the current publication has to be
- * asked for by name before its bytes can be, because currentPublication() is an
+ * A pin names a publication, not a promise that it is still there: a row can
+ * be deleted. `delete from aci_publications` is how an operator withdraws a
+ * build whose figures were wrong, and it has happened. So a pin is checked
+ * against the table on every call rather than trusted as given -- it is not
+ * "already the answer" the way it looks. Without a pin, the current
+ * publication is asked for by name, because currentPublication() is an
  * ordering and not an address: it says "the newest public one" and the caller
- * never learns which that was. Holding a column by publication id is impossible
- * until this runs, which is why it exists.
+ * never learns which that was. Either way this always asks the database and
+ * holds nothing, which is what lets a deleted row, or a newly published one,
+ * be noticed on the very next call.
  */
 export async function resolvePublicationId(pin, fetchImpl = fetch) {
-  if (pin) return pin;
+  if (pin) {
+    const rows = await select("aci_publications",
+                              `id=eq.${pin}&select=id`, fetchImpl);
+    return rows.length ? rows[0].id : null;
+  }
   const rows = await select("aci_publications",
                             `select=id&${currentPublication()}`, fetchImpl);
   return rows.length ? rows[0].id : null;
 }
 
-/* A publication is immutable, so a column of one is a constant that happens to
- * be fetched late. Holding it is not a cache with an invalidation problem: the
- * key is an id whose contents can never change, and a new publication is a new
- * id. Only the resolution above is left unheld, which is what lets a newly
- * published row be noticed.
+/* Immutability only settles half of this. The bytes of a publication that
+ * still exists never change, so a column keyed by its id would be a harmless
+ * constant if the row lived forever -- but it does not, a withdrawn build is
+ * deleted rather than edited, and that is a real event this hold has to
+ * survive. What makes it safe is resolvePublicationId() above: it reconfirms
+ * the id against the table on every request, before this map is ever
+ * consulted, so only an id it just vouched for can reach a key here. The
+ * price is one light `select=id` per request, paid so a column, once fetched,
+ * can be held indefinitely without ever serving a publication that is gone.
  *
  * Capped, because these columns are megabytes and a serverless instance that
  * lived through a dozen publications would hold all of them. Three is two more
@@ -79,6 +92,19 @@ export async function resolvePublicationId(pin, fetchImpl = fetch) {
  * looking at. */
 const HELD = new Map();
 const HOLD = 3;
+
+/**
+ * Forget every held column.
+ *
+ * Test-only. Production never calls this: there is no event in a running
+ * deployment that should make it forget a publication's bytes, since a
+ * deleted row is already caught on the next request by the check above. It
+ * exists so tests that share this module's state can each start from a clean
+ * slate instead of reading a value an earlier test left behind.
+ */
+export function resetHeldColumns() {
+  HELD.clear();
+}
 
 /**
  * One column of one publication: the pinned one, or the current one.
@@ -97,10 +123,17 @@ export async function publicationColumn(column, id, fetchImpl = fetch) {
   if (resolved === null) return null;
   const key = `${resolved}\n${column}`;
   if (!HELD.has(key)) {
-    const rows = await select("aci_publications",
-                              `id=eq.${resolved}&select=${column}`, fetchImpl);
+    // Held as a promise, not its resolved value, so two requests that arrive
+    // for the same uncached key before either finishes share one fetch: the
+    // second caller awaits the first's promise instead of starting its own.
+    const promise = select("aci_publications",
+                           `id=eq.${resolved}&select=${column}`, fetchImpl)
+      .then(rows => (rows.length ? rows[0][column] : null));
+    // A failed fetch is not a fact worth remembering: drop it so the next
+    // caller gets a fresh try rather than a permanently cached rejection.
+    promise.catch(() => { if (HELD.get(key) === promise) HELD.delete(key); });
     if (HELD.size >= HOLD) HELD.delete(HELD.keys().next().value);
-    HELD.set(key, rows.length ? rows[0][column] : null);
+    HELD.set(key, promise);
   }
   return HELD.get(key);
 }
