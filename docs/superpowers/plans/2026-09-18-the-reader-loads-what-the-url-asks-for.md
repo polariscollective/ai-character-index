@@ -109,11 +109,13 @@ export async function resolvePublicationId(pin, fetchImpl = fetch) {
   return rows.length ? rows[0].id : null;
 }
 
-/* A publication is immutable, so a column of one is a constant that happens to
- * be fetched late. Holding it is not a cache with an invalidation problem: the
- * key is an id whose contents can never change, and a new publication is a new
- * id. Only the resolution above is left unheld, which is what lets a newly
- * published row be noticed.
+/* The bytes of an existing publication never change, so a column of one can be
+ * held. Existence is another matter and is rechecked on every request: a
+ * publication can be deleted, and has been, by the cleanup migration that
+ * removed one withdrawn for carrying wrong figures. Holding without rechecking
+ * would let a warm instance go on serving a publication an operator believes
+ * gone, which is the one failure this index cannot afford. So the hold is of
+ * bytes only, behind a resolution that runs every time.
  *
  * Capped, because these columns are megabytes and a serverless instance that
  * lived through a dozen publications would hold all of them. Three is two more
