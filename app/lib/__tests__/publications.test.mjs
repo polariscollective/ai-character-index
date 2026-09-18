@@ -207,10 +207,13 @@ test("a refused query is loud rather than empty", async () => {
 });
 
 test("readerResponse serves the links column, and a pin is immutable for a year", async () => {
-  const { fetchImpl } = stub([{ links: { byLocator: {}, comparisons: {} } }]);
+  // sliceColumn always rebuilds notes.passage even when nothing is filtered
+  // (see slice.mjs), so the fixture carries the real shape rather than the
+  // bare byLocator/comparisons pair a links column never actually ships without.
+  const { fetchImpl } = stub([{ links: { byLocator: {}, comparisons: {}, notes: { passage: {} } } }]);
   const out = await readerResponse("links", new URLSearchParams(`publication=${ID}`), fetchImpl);
   assert.equal(out.status, 200);
-  assert.deepEqual(out.body, { byLocator: {}, comparisons: {} });
+  assert.deepEqual(out.body, { byLocator: {}, comparisons: {}, notes: { passage: {} } });
   assert.match(out.cacheControl, /immutable/);
 });
 
@@ -218,4 +221,28 @@ test("readerResponse answers 404 for a publication carrying no links", async () 
   const { fetchImpl } = stub([{ links: null }]);
   const out = await readerResponse("links", new URLSearchParams(), fetchImpl);
   assert.equal(out.status, 404);
+});
+
+test("readerResponse returns only the behaviours the address names", async () => {
+  const { fetchImpl } = stub([{ id: ID, payload: {
+    behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] } }]);
+  const out = await readerResponse("payload",
+    new URLSearchParams(`publication=${ID}&behavior=helpfulness`), fetchImpl);
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body.behaviours, [{ slug: "helpfulness" }]);
+});
+
+test("with no behavior parameter the whole column is served, as before", async () => {
+  const whole = { behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] };
+  const { fetchImpl } = stub([{ payload: whole }]);
+  const out = await readerResponse("payload", new URLSearchParams(`publication=${ID}`), fetchImpl);
+  assert.deepEqual(out.body, whole);
+});
+
+test("an empty behavior parameter names no behaviour, which is not the same as none given", async () => {
+  const { fetchImpl } = stub([{ payload: {
+    behaviours: [{ slug: "helpfulness" }] } }]);
+  const out = await readerResponse("payload",
+    new URLSearchParams(`publication=${ID}&behavior=`), fetchImpl);
+  assert.deepEqual(out.body.behaviours, []);
 });

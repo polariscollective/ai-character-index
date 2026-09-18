@@ -6,6 +6,7 @@
  * public reader needs.
  */
 import { select } from "./supabase.mjs";
+import { sliceColumn } from "./slice.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -158,9 +159,28 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
       body: { error: pin ? "no such publication" : "nothing published yet" },
     };
   }
+  /* The reader has always said what it wants in its own URL: spec, behavior and
+   * compare-with are written by syncURL on every interaction and read back on
+   * arrival. They arrive here already; until now they were ignored. A parameter
+   * that is absent means everything, and a parameter that is present and empty
+   * means nothing, which are different answers and both worth honouring. */
+  const list = name => {
+    const raw = searchParams.get(name);
+    return raw === null ? null : raw.split(",").map(s => s.trim()).filter(Boolean);
+  };
+  const specs = list("spec");
+  const pair = list("compare-with");
+  const shown = specs === null && pair === null
+    ? null
+    : new Set([...(specs || []), ...(pair || [])]);
+  const slugs = list("behavior");
+
+  const body = sliceColumn(column, payload,
+                           { documents: shown, behaviours: slugs && new Set(slugs) });
+
   return {
     status: 200,
-    body: payload,
+    body,
     cacheControl: pin
       ? "public, max-age=31536000, immutable"
       : "public, s-maxage=60, stale-while-revalidate=300",
