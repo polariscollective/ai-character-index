@@ -455,6 +455,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 .sheet-body a:hover, .sheet-body a:focus-visible,
 .lede a:hover, .lede a:focus-visible { background: var(--energy); }
+/* The asterisk after "should", a way to the note on About that says what the
+   word means for a model that nobody programs directly. */
+.lede a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; }
 .sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
 .judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .judges li { padding-left: 14px; border-left: 2px solid var(--line); }
@@ -879,7 +882,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <nav aria-label="Primary navigation">
     <a class="active" href="/" aria-current="page">Overview</a>
     <a href="/spec-reader/">Doc reader</a>
-    <a href="/how-it-works">How it works and contribute</a>
+    <a href="/how-it-works">About</a>
     <a href="/mcp">MCP</a>
   </nav>
 </header>
@@ -901,15 +904,13 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
-    AI companies publish documents setting out how their models should behave. This
+    AI companies publish documents setting out how their models should<a class="asterisk" href="/how-it-works#why" aria-label="What should means here">*</a>
+    behave. This
     grid shows, behaviour by behaviour, how far each one actually goes.
     <br>
     Missing a specification, or a behaviour the index should be asking about?
-    <a href="/how-it-works?kind=specification#propose" target="_blank"
-      rel="noopener noreferrer">Propose a model behaviour specification</a>
-    or
-    <a href="/how-it-works?kind=behaviour#propose" target="_blank"
-      rel="noopener noreferrer">propose a behaviour</a>.
+    <a href="/how-it-works?propose#propose" target="_blank"
+      rel="noopener noreferrer">Propose one</a>.
   </p>
 
   <div class="layout">
@@ -949,7 +950,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <h1>How each company governs the rules its models follow</h1>
   <p class="lede gov-lede">
     Some AI companies publish a model behaviour specification: a document setting out how their
-    models should behave. This view scores how that document is run: whether it
+    models should<a class="asterisk" href="/how-it-works#why" aria-label="What should means here">*</a> behave. This view scores how that document is run: whether it
     exists, what it covers, whether a change to it can be seen, and whether the
     public gets a say before it is weakened. Nine companies, as of September
     2026; the scores are Polaris Collective's own and open to challenge.

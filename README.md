@@ -1,9 +1,10 @@
-# AI Character Index
+# AI Constitutions Index
 
 Run by Polaris Collective, started by Andres Cotton.
 
-An index of AI character: behaviours on one axis, the labs' model specifications
-on the other, and in each cell a passage-level coverage map. Every verdict is a
+An index of the documents in which AI companies say how their models should
+behave: behaviours on one axis, the companies' model behaviour specifications on
+the other, and in each cell a passage-level coverage map. Every verdict is a
 panel of frontier models reading a whole document, and every claim anchors to a
 verbatim quote with a locator that resolves back into the text.
 
@@ -54,6 +55,7 @@ a publication shows every behaviour it selects.
 ## Origins
 
 This repository is Polaris Collective's continuation of the AI Character Index,
+renamed the AI Constitutions Index in September 2026. The AI Character Index was
 created by [Andrés Cotton](https://github.com/AndresCotton) with the help of Matt
 Stults. The vision and the initial execution are his, including the first version
 of the spec reader. The project passed to Polaris Collective in September 2026,

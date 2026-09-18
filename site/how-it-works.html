@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works and contribute, AI Constitutions Index</title>
+<title>About, AI Constitutions Index</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,6 +112,13 @@
      the first thing read looks like a standfirst rather than another paragraph. */
   #tldr p.lead { color: var(--ink2); }
   section.m p:last-child { margin-bottom: 0; }
+  /* The two steps, numbered because they come in that order. */
+  section.m ol.steps { max-width: 66ch; margin: 8px 0 0; padding-left: 1.4em; }
+  section.m ol.steps li { font-size: 16px; line-height: 1.55; margin-bottom: 10px; padding-left: 4px; }
+  /* The asterisk after "should": small and raised, and a way to the note that
+     says what the word means here. */
+  section.m a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; box-shadow: none; }
+  section.m a.asterisk:hover, section.m a.asterisk:focus-visible { background: var(--energy); }
   /* The words the index uses: each term on its own line in the heading face, its
      meaning under it, a rule between one term and the next. */
   .glossary { max-width: 66ch; margin: 4px 0 0; border-top: 1px solid var(--line); }
@@ -119,9 +126,25 @@
   .glossary dd { margin: 6px 0 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
   .glossary dd p { margin-bottom: 10px; }
   .glossary dd p:last-child { margin-bottom: 0; }
-  .glossary-behaviours { margin: 4px 0 12px; }
-  .glossary-behaviours h4 { margin: 10px 0 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
-  .glossary-behaviours ul { margin: 0; }
+  /* The count that opens the list: written like a link, because it reads as part
+     of the sentence, and a button, because it opens rather than goes. */
+  .glossary-open { padding: 0; border: 0; background: none; color: var(--ink); font: inherit;
+                   text-decoration: underline 2px var(--energy); text-underline-offset: 3px;
+                   cursor: pointer; }
+  .glossary-open:hover, .glossary-open:focus-visible { background: var(--energy); }
+  .glossary-open:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .behaviours-dialog .dialog-body h3 { margin: 22px 0 6px; font-size: 13px; font-weight: 600;
+                                       color: var(--ink2); }
+  .behaviours-dialog .dialog-body h3:first-child { margin-top: 0; }
+  .behaviour-item { padding: 12px 0; border-top: 1px solid var(--hair); }
+  .behaviour-item h4 { margin: 0 0 4px; font-family: var(--display); font-size: 16px;
+                       font-weight: 600; }
+  .behaviour-item p { margin: 0 0 6px; max-width: 62ch; font-size: 15px; line-height: 1.55; }
+  .behaviour-item a, .behaviours-missing a { color: var(--ink); font-size: 14px;
+    text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+  .behaviour-item a:hover, .behaviours-missing a:hover { background: var(--energy); }
+  .behaviours-missing { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
+                        font-size: 15px; }
   section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
   section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
   /* Bullets are 6px chartreuse circles. */
@@ -358,7 +381,7 @@
   <nav aria-label="Primary navigation">
     <a href="/">Overview</a>
     <a href="/spec-reader/">Doc reader</a>
-    <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
+    <a class="active" href="/how-it-works" aria-current="page">About</a>
     <a href="/mcp">MCP</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
          index, and the same button is hidden the same way on the reader. -->
@@ -376,7 +399,7 @@
   <div class="sheet">
 
   <div class="m-head">
-    <div class="m-title">How it works</div>
+    <div class="m-title">About the index</div>
   </div>
 
   <div id="said-page" hidden></div>
@@ -386,7 +409,8 @@
        all of it to find out whether the rest was for them. -->
   <section class="m" id="tldr">
     <h2>TL;DR</h2>
-    <p class="lead">AI companies publish long documents saying how their models should behave. This
+    <p class="lead">AI companies publish long documents saying how their models should<a class="asterisk" href="#why" aria-label="What should means here">*</a>
+    behave. This
     index reads them one behaviour at a time and shows every passage that bears on it, quoted,
     with its exact place in the document. As of September 2026 it reports what those documents
     say, not how the models behave.</p>
@@ -395,6 +419,38 @@
     only touch on it, and put them side by side with what another company&rsquo;s document says.
     <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">Open that in the
     doc reader</a>.</p>
+    <p>The <a href="/">overview</a> puts the index on one page, in two heat maps. The first,
+    <a href="/">what the specifications say</a>, shows how deeply each company&rsquo;s
+    specification covers each behaviour, on a scale from 0 to 4. The second,
+    <a href="/?view=governance">how they are governed</a>, scores how each company runs its
+    specification: whether one is published, what it covers, whether a change to it can be
+    seen, and whether the public gets a say before it is weakened.</p>
+  </section>
+  <!-- Why the index exists, for a reader who has not seen how these models are
+       made. Every "should" on the site means less than it seems until this is
+       said, and the asterisk beside the first ones points here. -->
+  <section class="m" id="why">
+    <h2>Why it matters</h2>
+    <p class="lead">When a company says how its models should behave, the word
+    &ldquo;should&rdquo; is doing a lot of work, because nobody can simply program a model to
+    behave that way.</p>
+    <p>A large language model is not written the way ordinary software is. Nobody types its
+    values into it. It is a neural network: billions of numbers, called weights, that no person
+    can read. It learns by trial and error. It is shown example after example of an input and the
+    output wanted for it, and it adjusts those numbers by itself until its answers match the
+    examples as closely as it can. What it ends up doing in a situation nobody showed it depends
+    on what it drew from the examples it was shown.</p>
+    <p>So getting a model to behave well takes two steps.</p>
+    <ol class="steps">
+      <li><b>Agree on precise rules.</b> Before a model can be trained to behave well, someone
+      has to say in words what behaving well means: what it must do, what it must never do, and
+      what to do when the two conflict. That is what a model behaviour specification is for,
+      and it is what this index reads.</li>
+      <li><b>Check that the model follows them.</b> A specification only counts if the model was
+      actually trained on it and actually behaves as it says. Measuring how closely a model
+      adheres to its specification is the second step. This index does not take it yet, and it
+      is among the <a href="#next-steps">next steps</a> we mean to work on.</li>
+    </ol>
   </section>
   <!-- The words the index uses, defined once, near the top: a reader who meets
        "behaviour" in the sense the index gives it, or wonders why a constitution
@@ -406,46 +462,35 @@
     <dl class="glossary">
       <dt>AI Constitutions Index</dt>
       <dd>
-        <p>The name of this index, and an umbrella term for what it collects: the documents in
-        which AI companies say how their models should behave, whoever wrote them and whatever
-        they are called. &ldquo;Constitution&rdquo; is the word Anthropic uses for its own
-        document, but the index is independent of Anthropic and gives it no special place. As of
-        September 2026 it holds Claude&rsquo;s Constitution, the OpenAI Model Spec in two versions
-        and the Alibaba Model Spec, and in time it means to hold every such document.</p>
-        <p>The word also names an ambition. A specification says how a model should behave. A
-        constitution, in the sense countries and institutions give the word, says more: where the
-        rules come from, who may change them and how, and what those living under them can do
-        when they disagree. Most of these documents are not that yet. The name says what they
-        could become, and the <a href="/?view=governance">governance view</a> of the overview
-        measures how far each company is from it.</p>
-        <p>The index began as the AI Character Index, Andr&eacute;s Cotton&rsquo;s tool,
-        described further down this page.</p>
+        <p>The name is the ambition. We say constitution because of what such a document
+        could be: one place that sets down the values a model should hold, how it is to be
+        trained to hold them, how it is to be evaluated afterwards, and even the internal rules by
+        which the company that made it answers for all of this. No document does all of that
+        today. The name says where we think these documents should go.</p>
+        <p>The word is not a reference to Claude. Anthropic happens to call its own document
+        Claude&rsquo;s Constitution, but the name of this index points to that document no more
+        than to any other.</p>
       </dd>
       <dt>Model behaviour specification</dt>
       <dd>
-        <p>Any document that sets out how an AI model should behave, whatever form it takes and
-        whatever its author calls it. Anthropic calls its own a constitution, OpenAI and Alibaba
-        call theirs a model spec, and other companies publish the same kind of commitments under
-        other names, or inside documents written for another purpose. We call them all model
-        behaviour specifications, or specifications for short, so that no one company&rsquo;s
-        word stands for the others.</p>
+        <p>The generic term for the documents in which AI companies set out how their models
+        should behave. OpenAI calls its own a model spec and Anthropic calls its own a
+        constitution: both are model behaviour specifications, and so is any other kind of
+        document that describes how a model should behave, whatever its author calls it.
+        Specification, for short.</p>
       </dd>
       <dt>Behaviour</dt>
       <dd>
-        <p>One thing a specification might require of a model, described precisely enough to be
-        looked for. Deferring to users&rsquo; own decisions about their own lives is a behaviour;
-        so is refusing to assert what the model believes to be false.</p>
-        <p>We use the word narrowly. A behaviour here is not something a model was seen doing: it
-        is a question put to a document. Each one is written down in two parts, what the
-        behaviour requires and where it stops, closely enough that a careful reader could go
-        through a whole specification and mark every passage that bears on it. That description
-        is what the judges are given, and the <b>i</b> beside each behaviour in the doc reader
-        shows it. A behaviour is the unit everything else is counted in: passages are marked,
-        and depths given, one behaviour at a time.</p>
-        <p id="glossary-behaviours-lead">As of September 2026 the doc reader carries thirteen
-        behaviours, in four groups.</p>
-        <div class="glossary-behaviours" id="glossary-behaviours"></div>
-        <p>If one is missing, <a href="#propose">propose it</a>.</p>
+        <p>For us, a behaviour is one precise thing a specification can ask of a model:
+        deferring to users&rsquo; own decisions about their own lives, for instance, or not
+        asserting what the model believes to be false, or not undermining people&rsquo;s ability
+        to oversee and correct it. Each is written down in two parts, what it requires and where
+        it stops, so that a careful reader could go through a whole specification and mark every
+        passage that bears on it. That description is what the judges read, and it is the unit
+        the index counts in: passages are marked, and depths given, one behaviour at a time.</p>
+        <p>So far the index asks about
+        <button type="button" class="glossary-open" id="glossary-open" aria-haspopup="dialog"
+        >thirteen behaviours</button>.</p>
       </dd>
       <dt>Passage</dt>
       <dd>
@@ -546,8 +591,8 @@
   <section class="m">
     <h2>Propose a new model behaviour specification</h2>
     <p class="lead">A model behaviour specification is a document an AI company publishes saying how its
-    models should behave, the way Anthropic&rsquo;s Constitution and the OpenAI and Alibaba Model
-    Specs do. If
+    models should behave, the way Anthropic&rsquo;s Constitution and OpenAI&rsquo;s Model Spec
+    do. If
     there is one the index should be reading, send it here.</p>
     <p><b>Send the text itself, not only a link.</b> The index quotes documents word for word and
     pins every citation to the exact version it read, so it keeps its own copy rather than
@@ -709,6 +754,21 @@ python3 -m http.server 8080 --directory site</code></pre>
 
 </div>
 
+  <!-- Every behaviour the index asks about, opened from the count in the glossary:
+       each with the description the judges read and a way into the doc reader on it.
+       Filled from the publication the page is serving. -->
+  <dialog class="propose-dialog behaviours-dialog" id="behaviours-dialog"
+          aria-labelledby="behaviours-dialog-title">
+    <div class="dialog-head">
+      <h2 id="behaviours-dialog-title">The behaviours the index asks about</h2>
+      <button type="button" class="dialog-close" id="behaviours-close"
+              aria-label="Close">Close</button>
+    </div>
+    <div class="dialog-body" id="behaviours-body">
+      <p class="behaviours-empty">The list could not be loaded. The doc reader shows every
+      behaviour in its menu.</p>
+    </div>
+  </dialog>
   <dialog class="propose-dialog" id="propose-dialog" open
           aria-labelledby="propose-dialog-title">
     <div class="dialog-head">
@@ -912,6 +972,18 @@ if (dialog) {
   dialog.close();                       // it was open for the no-script case
   show(current);
 
+  /* Arriving to propose something: a link carrying ?propose, such as the overview's
+     "Propose one", opens the form at once rather than leaving the reader to find
+     the button. Closing it takes the flag out of the address, so a reload or a
+     link copied afterwards does not open it again. */
+  if (params.has("propose")) open(current);
+  dialog.addEventListener("close", () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("propose")) return;
+    url.searchParams.delete("propose");
+    history.replaceState(null, "", url);
+  });
+
   // Each section has its own button, and it opens the form that section explains.
   for (const button of document.querySelectorAll(".open-propose")) {
     button.addEventListener("click", () => open(button.dataset.kind));
@@ -997,13 +1069,22 @@ if (citeText) {
     });
 }
 
-/* The behaviours the glossary lists, grouped as the doc reader groups them and
-   each one a way into the reader on it. Read from the publication the page is
-   serving, so the count and the names are the reader's own; if the read fails,
-   the sentence above the list still says how many there were when it was
-   written, and nothing is invented in its place. */
-const glossaryList = document.getElementById("glossary-behaviours");
-if (glossaryList) {
+/* The behaviours the glossary counts, in a dialog opened from the count: each
+   one's name, the description the judges read, and a way into the doc reader on
+   it, grouped as the reader's menu groups them. Read from the publication the
+   page is serving, so the count and the list are the reader's own. If the read
+   fails, the count keeps the number it was written with and the dialog says
+   where the list is instead. */
+const behavioursDialog = document.getElementById("behaviours-dialog");
+const behavioursOpen = document.getElementById("glossary-open");
+if (behavioursDialog && behavioursOpen) {
+  const body = document.getElementById("behaviours-body");
+  behavioursOpen.addEventListener("click", () => behavioursDialog.showModal());
+  document.getElementById("behaviours-close")
+    .addEventListener("click", () => behavioursDialog.close());
+  behavioursDialog.addEventListener("click", event => {
+    if (event.target === behavioursDialog) behavioursDialog.close();
+  });
   const pinned = new URLSearchParams(location.search).get("publication");
   fetch("/api/reader/behaviours" + (pinned ? `?publication=${encodeURIComponent(pinned)}` : ""))
     .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
@@ -1012,33 +1093,48 @@ if (glossaryList) {
       Object.entries(registry || {}).forEach(([slug, entry]) => {
         const group = entry.group || "Behaviours";
         if (!groups.has(group)) groups.set(group, []);
-        groups.get(group).push({ slug, name: entry.name || slug });
+        groups.get(group).push({ slug, name: entry.name || slug, query: entry.query || "" });
       });
       if (!groups.size) return;
       const count = [...groups.values()].reduce((sum, list) => sum + list.length, 0);
       const words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight",
         "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
         "seventeen", "eighteen", "nineteen", "twenty"];
-      const say = n => words[n] || String(n);
-      document.getElementById("glossary-behaviours-lead").textContent =
-        `The doc reader carries ${say(count)} behaviours, in ${say(groups.size)} `
-        + `${groups.size === 1 ? "group" : "groups"}.`;
+      behavioursOpen.textContent = `${words[count] || count} ${count === 1 ? "behaviour" : "behaviours"}`;
       const blocks = document.createDocumentFragment();
       groups.forEach((members, group) => {
-        const heading = document.createElement("h4");
+        const heading = document.createElement("h3");
         heading.textContent = group;
-        const list = document.createElement("ul");
-        members.forEach(({ slug, name }) => {
-          const item = document.createElement("li");
-          const link = document.createElement("a");
-          link.href = `/spec-reader/?behavior=${encodeURIComponent(slug)}`;
-          link.textContent = name;
-          item.append(link);
-          list.append(item);
+        blocks.append(heading);
+        members.forEach(({ slug, name, query }) => {
+          const item = document.createElement("div");
+          item.className = "behaviour-item";
+          const title = document.createElement("h4");
+          title.textContent = name;
+          const text = document.createElement("p");
+          text.textContent = query;
+          const open = document.createElement("a");
+          open.href = `/spec-reader/?behavior=${encodeURIComponent(slug)}`;
+          open.textContent = "Open it in the doc reader";
+          item.append(title, text, open);
+          blocks.append(item);
         });
-        blocks.append(heading, list);
       });
-      glossaryList.replaceChildren(blocks);
+      const missing = document.createElement("p");
+      missing.className = "behaviours-missing";
+      const propose = document.createElement("a");
+      propose.href = "#propose";
+      propose.textContent = "propose it";
+      // Straight into the form, not to the section above it.
+      propose.addEventListener("click", event => {
+        event.preventDefault();
+        behavioursDialog.close();
+        document.getElementById("open-propose-behaviour")?.click();
+      });
+      missing.append(document.createTextNode("Is one missing? "), propose,
+        document.createTextNode("."));
+      blocks.append(missing);
+      body.replaceChildren(blocks);
     })
     .catch(() => {});
 }
