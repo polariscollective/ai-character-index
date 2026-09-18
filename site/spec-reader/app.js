@@ -4653,8 +4653,12 @@ async function openPassageLink(locator) {
   if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
   if (!citing.some(behaviour => state.selectedSlugs.includes(behaviour.slug))) {
     const chosen = new Set([...state.selectedSlugs, citing[0].slug]);
-    state.selectedSlugs = payloadBehaviours().map(behaviour => behaviour.slug)
-      .filter(slug => chosen.has(slug));
+    /* From the registry, as setSelection orders: state.payload.behaviours is built
+     * from whatever has been fetched so far, in fetch order, not menu order, so
+     * sorting by it would place citing[0] wherever it happened to load rather than
+     * where the menu puts it, and would drop it outright the day this line is
+     * reached before that load has run. */
+    state.selectedSlugs = registrySlugs.filter(slug => chosen.has(slug));
   }
   if (!state.bands.has(band)) {
     state.bands.add(band);
