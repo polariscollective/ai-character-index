@@ -98,9 +98,9 @@ test("a set that is present and empty keeps nothing, which is not what a null se
 
 test("the payload carries an index of which behaviours cite which locator", () => {
   const payload = { behaviours: [
-    { slug: "helpfulness", numeric_id: 1,
+    { id: 1, slug: "helpfulness", name: "Helpfulness",
       coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }] } } },
-    { slug: "no-sycophancy", numeric_id: 2,
+    { id: 2, slug: "no-sycophancy", name: "No sycophancy",
       coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }, { locator: `${A} > s > ¶2` }] } } },
   ] };
   const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
@@ -109,8 +109,27 @@ test("the payload carries an index of which behaviours cite which locator", () =
 });
 
 test("an unsliced payload carries no index, having no need of one", () => {
-  const payload = { behaviours: [{ slug: "helpfulness", numeric_id: 1, coverage: {} }] };
+  const payload = { behaviours: [{ id: 1, slug: "helpfulness", name: "Helpfulness", coverage: {} }] };
   assert.equal(sliceColumn("payload", payload, all).citedBy, undefined);
+});
+
+/* The payload's behaviours carry `id`, not the `numeric_id` the registry has.
+ * A fixture with the former and none of the latter fails this the moment
+ * citationIndex reads the wrong field: the array would hold undefined, not
+ * a number, and this checks that directly rather than through a deepEqual
+ * that a coincidental match could pass. */
+test("citationIndex reads the id the payload carries, not a field only the registry has", () => {
+  const payload = { behaviours: [
+    { id: 7, slug: "helpfulness", name: "Helpfulness",
+      coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
+  const ids = out.citedBy[`${A} > s > ¶1`];
+  assert.equal(ids.length, 1);
+  assert.equal(typeof ids[0], "number");
+  assert.notEqual(ids[0], undefined);
+  assert.notEqual(ids[0], null);
+  assert.equal(ids[0], 7);
 });
 
 /* The column this is handed is held in a module level map and served to every

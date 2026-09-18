@@ -66,13 +66,13 @@ function sliceLinks(links, { documents, behaviours }) {
  * memory, which is exactly what slicing ends. 67 KB for 785 cited locators,
  * against the 914 KB payload it replaces for this one purpose.
  *
- * Numeric ids rather than slugs because the registry already carries them and
- * they are a third of the bytes.
+ * Numeric ids rather than slugs because the payload's own behaviours already
+ * carry `id`, and it is a third of the bytes a slug would cost.
  */
 export function citationIndex(payload) {
   const index = {};
   for (const behaviour of payload.behaviours || []) {
-    const id = behaviour.numeric_id;
+    const id = behaviour.id;
     for (const coverage of Object.values(behaviour.coverage || {})) {
       for (const passage of coverage.passages || []) {
         (index[passage.locator] ||= []).push(id);
