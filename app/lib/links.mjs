@@ -253,16 +253,6 @@ function newestBy(rows, key) {
   return out;
 }
 
-/* The runs whose readings the reader shows. Everything the panel judged in
- * session, and not the earlier pilot: that one seated three other models on a
- * single behaviour and one pair, and mixing it in would put two panels' readings
- * under one bubble with nothing to tell them apart. */
-export async function panelRuns(fetchImpl = fetch) {
-  const runs = await select("aci_link_runs", "select=id,created_by,status", fetchImpl);
-  return runs.filter(run => run.status === "done"
-    && String(run.created_by || "").startsWith("link_self.py"));
-}
-
 /**
  * The two documents each run compared, sorted, by run id.
  *
@@ -335,14 +325,9 @@ export function passageNoteKey(slug, locator, documents) {
  * read whole, and four round trips beat sixteen.
  */
 export async function readerLinks(fetchImpl = fetch, runIds = null) {
-  /* A publication names the runs it carries. Without that list this falls back
-   * to asking which runs look current, which is what the reader did before
-   * links were frozen into a publication. The fallback goes in Task 6, once the
-   * route no longer needs it. See the spec at
-   * docs/superpowers/specs/2026-09-18-links-belong-to-a-publication-design.md. */
-  const runs = Array.isArray(runIds) && runIds.length
-    ? runIds.map(id => ({ id }))
-    : await panelRuns(fetchImpl);
+  /* A publication names the runs it carries. Nothing guesses them: which runs
+   * the public sees is a decision a publication records. */
+  const runs = (runIds || []).map(id => ({ id }));
   const runIdSet = new Set(runs.map(run => run.id));
   if (!runIdSet.size) return { documents: [], byLocator: {}, comparisons: {}, notes: {} };
 

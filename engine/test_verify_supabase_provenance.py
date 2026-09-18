@@ -118,7 +118,7 @@ class RebuildTest(unittest.TestCase):
         row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
         seen = []
 
-        def build(name, cells, behaviours, run_date=None, panel_name=None):
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
             seen.append((name, cells, behaviours, run_date, panel_name))
             return ({"payload": PAYLOAD, "documents": DOCUMENTS}[name],
                     row[f"{name}_sha256"])
@@ -152,6 +152,21 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(len(failed), 2, printed)
         self.assertIn("no cells", printed)
 
+    def test_a_publication_carrying_no_links_is_skipped_rather_than_failed(self):
+        row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
+        seen = []
+
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
+            seen.append(name)
+            return ({"payload": PAYLOAD, "documents": DOCUMENTS}[name],
+                    row[f"{name}_sha256"])
+
+        with mock.patch.object(verify.publish, "build", side_effect=build):
+            printed, failed = run(verify.check_the_publication_rebuilds_to_its_digests,
+                                  self.store(row), row)
+        self.assertEqual(failed, [], printed)
+        self.assertNotIn("links", seen)
+
 
 class StoredDigestTest(unittest.TestCase):
     def test_a_publication_that_is_its_digests_passes_on_its_own_bytes_alone(self):
@@ -165,6 +180,23 @@ class StoredDigestTest(unittest.TestCase):
                    payload={"provenance": {}, "behaviours": ["altered"]})
         printed, failed = run(verify.check_the_published_artefacts_still_carry_their_digests, row)
         self.assertEqual(failed, ["the stored payload is the bytes its digest describes"], printed)
+
+    def test_a_publication_that_carries_links_is_the_bytes_its_digest_describes(self):
+        links = {"documents": [], "runs": [], "byLocator": {}, "comparisons": {}}
+        raw = json.dumps(links, **verify.publish.FORMATS["links"]).encode()
+        row = dict(publication(PUBLIC_ID, published_at="2026-09-12", is_public=True),
+                   links=links, links_sha256=hashlib.sha256(raw).hexdigest())
+        printed, failed = run(verify.check_the_published_artefacts_still_carry_their_digests, row)
+        self.assertEqual(failed, [], printed)
+
+    def test_altered_links_fail_their_digest(self):
+        links = {"documents": [], "runs": [], "byLocator": {}, "comparisons": {}}
+        raw = json.dumps(links, **verify.publish.FORMATS["links"]).encode()
+        row = dict(publication(PUBLIC_ID, published_at="2026-09-12", is_public=True),
+                   links=dict(links, byLocator={"altered": []}),
+                   links_sha256=hashlib.sha256(raw).hexdigest())
+        printed, failed = run(verify.check_the_published_artefacts_still_carry_their_digests, row)
+        self.assertEqual(failed, ["the stored links is the bytes its digest describes"], printed)
 
 
 class Row(dict):
