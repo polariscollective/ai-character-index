@@ -65,6 +65,28 @@ let registrySlugs = [];
  * flight is not raced by its own repeat. Keyed by slug, holding the promise. */
 const inFlight = new Map();
 
+/* The links are not guarded by inFlight, because a links answer is not per
+ * behaviour. It is cut to the behaviours AND to the documents on screen, since
+ * a comparison is returned only when both of its documents are named, so a
+ * behaviour held while one document was shown carries none of the rows that
+ * appear when a second is put beside it. Guarding both with one key kept by
+ * slug is what left comparison mode with no bubbles and no comparing
+ * paragraph: the slug was held, so nothing was ever asked for again.
+ *
+ * Each entry is one answer already asked for, naming the behaviours and the
+ * documents it covers, with null for every one of them, which is what an
+ * absent parameter asks the route for. Coverage is tested by subset rather
+ * than by equality, so leaving comparison asks for nothing: the answer held
+ * for the pair already carries what the single document's answer would. */
+const linksHeld = [];
+
+/* Whether an answer already held covers this behaviour over these documents. */
+function linksCover(slug, shown) {
+  return linksHeld.some(held =>
+    (held.slugs === null || held.slugs.has(slug)) &&
+    (held.docs === null || shown.every(id => held.docs.has(id))));
+}
+
 /* A link to one passage: ?passage=<locator>. The locator is the citation the
  * export already prints, and its head names the document it points into, so the
  * link needs nothing else to open the reader at it (see openPassageLink). */
@@ -3745,15 +3767,20 @@ function openSpecPicker(button) {
  * from the panel's position rather than stored: the reader already knows the
  * order, and a second source of truth for it would be one to keep in step.
  * Alone, it is simply the document being read. */
-function chooseSpec(panel, id) {
+async function chooseSpec(panel, id) {
   if (!panel) return;
   if (state.comparing) {
     const panels = [...elements.documentReader.querySelectorAll(".document-panel")];
-    setComparePair(panels.indexOf(panel) === 1 ? "b" : "a", id);
+    await setComparePair(panels.indexOf(panel) === 1 ? "b" : "a", id);
     return;
   }
   state.selectedSpec = id;
   syncURL();
+  /* The links held were cut to the documents on screen when each behaviour was
+   * fetched, so a document just chosen carries none of its bubbles yet.
+   * Unconditional, as setSelection's is: state.selectedSpec is written above
+   * whether or not this succeeds, so a rejection must not skip the repaint. */
+  await ensureBehaviours(state.selectedSlugs).catch(() => {});
   rebuildReader();
 }
 
@@ -3780,7 +3807,7 @@ function placeUnder(popover, anchor) {
  * so the same document at two dates is two ids and was always a valid pair. What
  * the swap overrode was the identical document on both sides, which is kept now
  * because putting it there is the reader's explicit choice (see comparePair). */
-function setComparePair(side, id) {
+async function setComparePair(side, id) {
   const [a, b] = comparePair();
   const next = side === "a" ? [id, b] : [a, id];
   state.comparePair = next;
@@ -3788,6 +3815,10 @@ function setComparePair(side, id) {
   // reader chose rather than the one the reader was given.
   state.compareRight = next[1];
   syncURL();
+  /* A comparison is returned only when both of its documents are named
+   * together, so the pair just changed has neither the counterpart's bubbles
+   * nor the paragraph comparing the two until they are asked for as a pair. */
+  await ensureBehaviours(state.selectedSlugs).catch(() => {});
   rebuildReader();
 }
 
@@ -4314,7 +4345,7 @@ elements.documentReader.addEventListener("click", event => {
  * Turning it on carries the document being read onto the left; turning it off
  * keeps the left-hand document rather than reverting to whatever was selected
  * before. Either way the reader stays with the text they were looking at. */
-elements.compareToggle.addEventListener("click", () => {
+elements.compareToggle.addEventListener("click", async () => {
   const first = panels()[0]?.dataset.documentId;
   if (state.comparing) state.compareRight = comparePair()[1] || state.compareRight;
   state.comparing = !state.comparing;
@@ -4332,6 +4363,10 @@ elements.compareToggle.addEventListener("click", () => {
   }
   elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
   syncURL();
+  /* Entering comparison puts a second document on screen, and its bubbles and
+   * the paragraph comparing the pair were never fetched: the links held name
+   * one document. */
+  await ensureBehaviours(state.selectedSlugs).catch(() => {});
   rebuildReader();
 });
 
@@ -4549,14 +4584,24 @@ async function loadJSON(url) {
   return response.json();
 }
 
-/* Bubbles arrive per behaviour and accumulate. Replacing would throw away the
- * ones already on screen, which is what a merge is for: byLocator gains rows,
- * the keyed tables gain keys, and a behaviour already held is not asked for
- * twice. */
+/* Bubbles arrive per behaviour and per pair of documents, and accumulate.
+ * Replacing would throw away the ones already on screen, which is what a merge
+ * is for: byLocator gains rows and the keyed tables gain keys.
+ *
+ * Merging the same rows twice has to change nothing, because a behaviour is
+ * asked for again when the documents change: a comparison is returned only when
+ * both of its documents are named, so widening the pair refetches rows that are
+ * already held. comparisons and notes.passage are keyed maps and are already
+ * idempotent; byLocator is a list, and appending to it would draw one bubble
+ * twice. A row carries no id of its own, only about, behaviours, comment,
+ * judge, relation and settled, so its identity is its own value. */
 function mergeLinks(into, extra) {
   if (!into) return extra;
   for (const [locator, rows] of Object.entries(extra.byLocator || {})) {
-    into.byLocator[locator] = [...(into.byLocator[locator] || []), ...rows];
+    const held = into.byLocator[locator] || [];
+    const seen = new Set(held.map(row => JSON.stringify(row)));
+    into.byLocator[locator] =
+      [...held, ...rows.filter(row => !seen.has(JSON.stringify(row)))];
   }
   Object.assign(into.comparisons, extra.comparisons || {});
   Object.assign(into.notes.passage, extra.notes?.passage || {});
@@ -4578,30 +4623,53 @@ function mergeCells(into, extra) {
 
 async function ensureBehaviours(slugs) {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  /* The documents on screen, read live rather than from the arrival URL: this
+   * runs again when a document is chosen and when comparison opens, which is
+   * the whole reason the links have to be asked for a second time. */
+  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
+    .filter(Boolean);
   const missing = slugs.filter(slug => !inFlight.has(slug));
-  if (!missing.length) return Promise.all(slugs.map(slug => inFlight.get(slug)));
-  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])];
+  const missingLinks = slugs.filter(slug => !linksCover(slug, shown));
+  if (!missing.length && !missingLinks.length) {
+    return Promise.all(slugs.map(slug => inFlight.get(slug)).filter(Boolean));
+  }
+  const entry = { slugs: new Set(missingLinks), docs: new Set(shown) };
   const fetching = (async () => {
+    // Each half is asked for only where something is missing: a behaviour whose
+    // payload is held but whose links are cut to one document needs the second
+    // request and not the first.
     const [payload, links] = await Promise.all([
-      loadJSON(`${PAYLOAD_URL}${sliceParams(pinned, { behaviours: missing })}`),
-      loadJSON(`${LINKS_URL}${sliceParams(pinned, { behaviours: missing, specs: shown })}`),
+      missing.length
+        ? loadJSON(`${PAYLOAD_URL}${sliceParams(pinned, { behaviours: missing })}`)
+        : null,
+      missingLinks.length
+        ? loadJSON(`${LINKS_URL}${sliceParams(pinned, { behaviours: missingLinks, specs: shown })}`)
+        : null,
     ]);
-    state.rawBehaviours = [...state.rawBehaviours, ...(payload.behaviours || [])];
-    state.payload.behaviours =
-      applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
-    linkRows = mergeLinks(linkRows, links);
-    depthRows = mergeCells(depthRows, links.notes?.depth);
-    overviewRows = mergeCells(overviewRows, links.notes?.standing);
+    if (payload) {
+      state.rawBehaviours = [...state.rawBehaviours, ...(payload.behaviours || [])];
+      state.payload.behaviours =
+        applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
+    }
+    if (links) {
+      linkRows = mergeLinks(linkRows, links);
+      depthRows = mergeCells(depthRows, links.notes?.depth);
+      overviewRows = mergeCells(overviewRows, links.notes?.standing);
+    }
   })();
   // A failed fetch is not a fact worth remembering: drop each slug so a retry can
   // ask again, guarded by identity so a slower rejection cannot delete a slug a
-  // fresher call has since taken over.
+  // fresher call has since taken over. The links entry goes the same way, or a
+  // pair that failed once would be treated as held for the rest of the session.
   fetching.catch(() => {
     for (const slug of missing) {
       if (inFlight.get(slug) === fetching) inFlight.delete(slug);
     }
+    const at = linksHeld.indexOf(entry);
+    if (at >= 0) linksHeld.splice(at, 1);
   });
   for (const slug of missing) inFlight.set(slug, fetching);
+  if (missingLinks.length) linksHeld.push(entry);
   return fetching;
 }
 
@@ -4770,12 +4838,21 @@ async function loadReaderLinks() {
    * the URL already names, so the first links fetch is not the whole
    * publication's bubbles when the reader is about to show one document. */
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const slugs = urlSlugs();
+  const specs = urlSpecs();
   try {
     const answered = await loadJSON(
-      `${LINKS_URL}${sliceParams(pinned, { behaviours: urlSlugs(), specs: urlSpecs() })}`);
+      `${LINKS_URL}${sliceParams(pinned, { behaviours: slugs, specs })}`);
     linkRows = answered;
     depthRows = { cells: answered.notes?.depth || {} };
     overviewRows = { cells: answered.notes?.standing || {} };
+    /* Recorded so ensureBehaviours does not ask again for what this has just
+     * fetched: unrecorded, the first tick after arrival would fetch these same
+     * bytes a second time. An absent parameter asks the route for everything,
+     * so an absent behaviour list covers every behaviour and an absent document
+     * list every document, which is what null says here. */
+    linksHeld.push({ slugs: slugs === undefined ? null : new Set(slugs),
+                     docs: specs.length ? new Set(specs) : null });
   } catch {
     linkRows = null;
     depthRows = null;
