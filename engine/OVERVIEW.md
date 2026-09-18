@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Everything that judges the index and builds what it publishes: resolves spec citations, composes and executes judge calls, builds a publication's two payloads, and verifies the reader, the portal and the published data. No component here serves the public directly. Outputs are rows in the `aci_` tables of the `evals` Supabase project; only `local_run.py` writes files, to the gitignored `artefacts/`.
+Everything that judges the index and builds what it publishes: resolves spec citations, composes and executes judge calls, builds a publication's three payloads, and verifies the reader, the portal and the published data. No component here serves the public directly. Outputs are rows in the `aci_` tables of the `evals` Supabase project; only `local_run.py` writes files, to the gitignored `artefacts/`.
 
 ## Contents
 
@@ -14,10 +14,11 @@ Everything that judges the index and builds what it publishes: resolves spec cit
 | `spec-watch/pull-latest.sh` | Pre-migration spec puller. No longer runs: it reads `cite.BUNDLED_SPECS`, which no longer exists, and writes into `specs/`, which no longer holds texts. |
 | `panel/` | The judging pipeline: `harness.py` (config, registry, passages, prompt composition, verdict parsing), `judge_call.py` and `depth_call.py` (one passage call, one depth call), `compose_run.py` (prices and writes a run's calls), `batch_job.py` (executes them), `bands.py` (the reader's tier bands, held to `app/lib/bands.mjs`), `build_site_data.py` (the behaviour payload), `panel-config.json`, `prompts/`. `whole_doc.py`, `run_rollout.py` and `select_strata.py` are the pre-migration CLIs; `whole_doc.judge_kwargs` still sets every call's parameters. `runlog-v5.md` and `runlog-v3.md` record logs that left the branch. See `panel/README.md`. |
 | `job.py` | What the judging image runs: reads its `aci_jobs` row and dispatches on `ACI_JOB_MODE` (`compose`, `judge`, `publish`). |
-| `publish.py` | Builds a publication as a draft: holds every cell to the panel with recorded substitutions applied, builds both payloads for the selection, inserts the row. |
+| `publish.py` | Builds a publication as a draft: holds every cell to the panel with recorded substitutions applied, builds the three payloads for the selection, inserts the row. |
 | `seat_substitutions.py` | Reads `aci_seat_substitutions`, and states the publication trigger's seating rule for `publish.py` and the builder. |
 | `store.py`, `index_store.py` | Stdlib PostgREST client, and the index read back in the shapes the builders expect (`install_registry` among them). |
 | `build-spec-reader-data.py` | The documents payload: the text of every version a publication carries. |
+| `build-links-data.mjs` | The links payload: the bubbles, comparisons, arbitrations and notes a publication carries. JavaScript, because it imports the assembly in `app/lib/links.mjs` rather than porting it. Takes `--link-runs`, and `--note-prompts` for the document notes. |
 | `local_run.py` | Judges one document against one behaviour with one key and no database; results in `artefacts/`. |
 | `verify_supabase_provenance.py` | Checks one publication (the newest public one, or `--publication=<uuid>`): digests, rebuild, boundaries, locators. Needs credentials. |
 | `verify-reader-test.mjs`, `verify-reader-features.mjs`, `reader-routes.mjs` | The two reader walkers (need Chrome). `reader-routes.mjs` answers the reader's routes from `tests/fixtures/reader/`, a current and a draft publication. |
@@ -28,7 +29,7 @@ Everything that judges the index and builds what it publishes: resolves spec cit
 
 - `cite.py` is the shared foundation: `harness.passages` segments a document through it, and `index_store.install_registry` feeds it the stored text of `aci_spec_versions`.
 - The judging chain: the portal writes an `aci_jobs` row and starts `job.py`; `compose_run.py` writes a run's calls; `batch_job.py` executes them through `judge_call.py`, then `depth_call.py`, writing `aci_judgements` and `aci_depths`.
-- The publication chain: `publish.py` selects cells, `build_site_data.py` and `build-spec-reader-data.py` build the two payloads for them, and one insert writes `aci_publications`, not public until an operator says so.
+- The publication chain: `publish.py` selects cells, `build_site_data.py`, `build-spec-reader-data.py` and `build-links-data.mjs` build the three payloads for them, and one insert writes `aci_publications`, not public until an operator says so. `build()` picks each builder's interpreter from its file extension, which is how the one JavaScript builder is launched.
 - `verify_supabase_provenance.py` rebuilds a publication with the same builders and holds the stored bytes to their digests.
 - `local_run.py` uses the same composer, parser and prompt as the job, against a file instead of the database.
 
@@ -51,6 +52,7 @@ graph LR
   batch -->|"judgements, depths"| sb
   pub --> bsd["panel/build_site_data.py"]
   pub --> bsr["build-spec-reader-data.py"]
+  pub --> bld["build-links-data.mjs"]
   pub -->|"aci_publications"| sb
   sb --> ver["verify_supabase_provenance.py"]
   fix["tests/fixtures/reader/"] --> rr["reader-routes.mjs"] --> walkers["verify-reader-*.mjs (Playwright)"]

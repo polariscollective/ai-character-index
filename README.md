@@ -85,7 +85,7 @@ Vercel: Next.js, serving the public pages, the reader's routes, the MCP
 ```
 
 **The database is the only source.** The behaviours, the specification text, the
-judgements and the two payloads the reader is served all live
+judgements and the three payloads the reader is served all live
 in the `aci_` tables of the shared `evals` Supabase project. Their migrations live
 in the `polaris-supabase` repository: this application reads and writes the tables
 and never migrates them. What this repository holds is code and fixtures.

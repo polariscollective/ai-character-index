@@ -1,8 +1,10 @@
 /* Building a publication, and deciding whether the public sees it.
  *
- * Building is a job: both payloads are built by the Python that the provenance
- * verifier holds to a digest, and a JavaScript copy of the band arithmetic and the
- * citation filter would be a second truth about what the index says.
+ * Building is a job: the three payloads are built by the builders the provenance
+ * verifier holds to a digest. Two are Python, because a JavaScript copy of the band
+ * arithmetic and the citation filter would be a second truth about what the index
+ * says; the links payload is JavaScript for the mirror of that reason, because the
+ * assembly it needs already lives in app/lib/links.mjs.
  *
  * Visibility is an update of one column, and the only update this table allows --
  * the grant is column-level, so a publication's bytes stay immutable while its

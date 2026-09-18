@@ -8,7 +8,7 @@
 
 An index of AI character: **behaviours** (a canonical list) × **model-spec coverage** (cited verdicts against lab specs), published as a Next.js application on Vercel (https://ai-character-index.vercel.app) whose reader routes and public MCP endpoint (`/api/mcp`) read the index out of Supabase, and operated from an admin portal in the same application. As of September 2026 the public publication, `1919ee6b-8a81-4ab5-902a-e949857db028`, carries 13 behaviours over 4 documents (Claude's Constitution 2026-01-20, the OpenAI Model Spec 2025-12-18 and 2026-08-18, and the Alibaba Model Spec 2026-04-00, read in an English machine translation), judged by the `frontier_fast` panel under rubric v5.
 
-**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements and the two payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code and fixtures.
+**The database is the only source.** git is not the gate and not a copy: the behaviours, the spec text, the judgements and the three payloads the routes serve all live in the `aci_` tables of the shared `evals` Supabase project, and a publication row decides what the reader shows. The tables' migrations live in the `polaris-supabase` repository; this application reads and writes them and never migrates them. What the repository holds is code and fixtures.
 
 Two consequences follow, both deliberate. The clone-and-fork pathway is gone: someone without credentials cannot register a spec or publish, and the upstream repository `AndresCotton/ai-character-index` keeps that property. Judging survives it: `engine/local_run.py` judges a document with one key and no database. And CI knows no secret: it verifies the code against fixtures, while `verify_supabase_provenance.py` verifies the published data when a publication is built, where the credentials already are.
 
@@ -25,8 +25,9 @@ graph TB
   sb -->|"registry + spec text"| cite["engine/spec-cite/cite.py"]
   sb -->|"judgements + registry"| bsd["engine/panel/build_site_data.py"]
   sb -->|"spec text"| bsr["engine/build-spec-reader-data.py"]
-  bsd & bsr -->|"materialised at publication time"| pub["aci_publications"]
-  pub -->|"/api/reader/payload, /api/reader/documents"| reader["site/spec-reader/ (served from public/)"]
+  sb -->|"links, comparisons, notes"| bld["engine/build-links-data.mjs"]
+  bsd & bsr & bld -->|"materialised at publication time"| pub["aci_publications"]
+  pub -->|"/api/reader/payload, /api/reader/documents, /api/reader/links"| reader["site/spec-reader/ (served from public/)"]
   pub -->|"read-only tools"| mcp["/api/mcp"]
   reader ==> vc["Next.js on Vercel"]
   sb -->|"rebuilds a publication and holds it to its digests"| ver["engine/verify_supabase_provenance.py"]
@@ -78,7 +79,7 @@ graph TB
    cell's passages are in, each judge gives it a 0 to 4 depth in a call of its
    own; a publication carries the mean.
 4. **Publication** — a publication selects, cell by cell, which run answers, and
-   materialises both payloads the routes serve. Its cells must have been judged
+   materialises the three payloads the routes serve. Its cells must have been judged
    by exactly the models it names, with the substitutions recorded in
    `aci_seat_substitutions` applied, enforced by a trigger rather than by method
    (`publish.py` also refuses a substitute the panel does not declare for that
@@ -92,7 +93,7 @@ graph TB
    when a publication is built. The committed payloads the index once shipped
    are recoverable from git history at `085fd2e`.
 6. **Serving** — Vercel builds on a push, `prebuild` copies `site/` into
-   `public/`, and the reader takes its two payloads from routes. Publishing is
+   `public/`, and the reader takes its three payloads from routes. Publishing is
    not a deploy: what the public sees changes with a database write, and the
    write is `is_public` on a publication that already exists.
 7. **Proposing** — `/how-it-works` and `/api/submit` are the one door open to

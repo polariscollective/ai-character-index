@@ -54,7 +54,7 @@ export function currentPublication(env = process.env) {
 /**
  * One column of one publication: the pinned one, or the current one.
  *
- * `column` is never user input -- the two routes pass their own literal -- so
+ * `column` is never user input -- the three routes pass their own literal -- so
  * it goes into the query unescaped and must stay that way.
  *
  * Current means the newest PUBLIC one. A build exists before anyone has looked

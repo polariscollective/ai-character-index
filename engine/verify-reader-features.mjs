@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Tier-1 feature harness for the site's spec reader (site/spec-reader/),
 // driven against TWO data states: the bundled payloads that ship in the repo,
-// against the fixture index served through the reader's two routes (the
-// two payloads it serves). Covers the reader's URL/DOM-state
+// against the fixture index served through two of the reader's routes (the
+// payload and the documents; the links route is not staged, so the reader
+// renders without bubbles). Covers the reader's URL/DOM-state
 // features and the user-data path; interactive-only features (resizer drags,
 // focus toggles, scroll behaviour) stay manual (Tier 2). The reader's passage
 // anchoring against the shipped payload is covered by verify-reader-test.mjs

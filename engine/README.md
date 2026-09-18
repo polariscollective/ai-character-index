@@ -35,11 +35,12 @@ The judging pipeline: prompt composition and verdict parsing (`harness.py`, `jud
 
 ## site builders and checks
 
-A publication's two payloads are built by `publish.py` for the cells it selects and stored on its `aci_publications` row; `/api/reader/payload` and `/api/reader/documents` serve them from there. Both builders read the database:
+A publication's three payloads are built by `publish.py` for the cells it selects and stored on its `aci_publications` row; `/api/reader/payload`, `/api/reader/documents` and `/api/reader/links` serve them from there. All three builders read the database. The third is JavaScript because the assembly it needs already lives in `app/lib/links.mjs`, and `publish.py` picks each builder's interpreter from its file extension:
 
 ```sh
 python3 engine/panel/build_site_data.py --out=PATH [--cells=PATH]    # the behaviour payload
 python3 engine/build-spec-reader-data.py [--out=PATH] [--cells=PATH]  # the documents payload
+node engine/build-links-data.mjs --link-runs=ID,ID [--note-prompts=SHA,SHA] --out=PATH  # the links payload
 node engine/verify-reader-test.mjs          # every behaviour x document view of the reader (needs Chrome)
 node engine/verify-reader-features.mjs      # the reader's URL and DOM features, a draft pin included (needs Chrome)
 node engine/verify-portal.mjs [url]         # the admin portal, read-only, against a running server with credentials

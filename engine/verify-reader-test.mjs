@@ -43,8 +43,9 @@ const READER_DATA = join(fileURLToPath(new URL("..", import.meta.url)),
                          "tests", "fixtures", "reader");
 
 const server = createServer(async (request, response) => {
-  // The reader takes its two payloads from routes now. Answered here from the
-  // committed files: this walker tests the page, not the database.
+  // The reader takes its three payloads from routes now. Two of them are
+  // answered here from the committed files: this walker tests the page, not the
+  // database. The links route is not staged, and reader-routes.mjs 404s it.
   if (await serveReaderRoute(request, response, READER_DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(request.url, "http://x").pathname));
   /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is

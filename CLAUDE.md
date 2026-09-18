@@ -162,7 +162,7 @@ links already shared point at it, and renaming it would break them silently.
 ### The database is the only source
 
 The index does not live in this repository. The behaviours, the spec text, the
-judgements and the two payloads the reader is served all live in the `aci_`
+judgements and the three payloads the reader is served all live in the `aci_`
 tables of the shared `evals` Supabase project. What is committed here is code and
 fixtures.
 
