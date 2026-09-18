@@ -553,6 +553,15 @@ The index answers it in 67 KB for 785 cited locators, using the numeric ids the 
 already carries, against the 914 KB payload it replaces for this purpose. It costs about
 what one more behaviour costs and removes the regression entirely.
 
+**Follow-up, not this task's to do: `citedBy` should carry slugs.** It carries the
+payload's positional `id`, which means something only against the unsliced behaviour list
+it was numbered in. So a reader holding a sliced payload cannot turn an id it does not
+recognise into a slug, and the only way out is to load every behaviour in the registry to
+find it. That defeats the byte reduction this whole chantier exists for, on exactly the
+shared passage links it was meant to protect. Carrying slugs would cost more bytes in the
+index and remove the need for that fallback entirely. It changes the contract between this
+producer and its consumer in task 6, so it is named here and decided separately.
+
 - [ ] **Step 1: Write the failing test**
 
 Add to `app/lib/__tests__/slice.test.mjs`:
@@ -804,6 +813,16 @@ git commit -m "feat: the reader fetches what its address names, and merges"
 - Consumes: Task 6.
 - Produces: a URL that can say "no behaviours", and an arrival rule that validates a
   requested slug against the registry rather than against what happens to be loaded.
+
+**Also fix here: an invalid `?spec=` leaves the reader with no bubbles and no error.**
+`loadReaderLinks` slices its first fetch by the documents the URL names, which happens
+before `openingDocument` has resolved a fallback for a `?spec=` the publication does not
+carry. The links are then scoped to a document nobody is looking at, and the later top-up
+dedupes by behaviour slug alone and never rechecks which documents are shown, so nothing
+corrects it. The page renders the fallback document silently stripped of its bubbles,
+depths and notes. Before slicing this could not happen, because everything was always
+fetched, so it is a regression rather than a pre-existing gap. The arrival rule is where
+the document is resolved, which makes this the task that owns it.
 
 - [ ] **Step 1: Write the empty selection instead of deleting it**
 
