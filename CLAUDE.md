@@ -962,6 +962,21 @@ from the moment this deploys the site shows no bubbles, no comparisons and no
 "in short" notes, and it will go on showing none until a publication built with
 `--link-runs` is made public. The operator was told this plainly and accepted it.
 
+**What nothing tests.** The reader forwards its pin to this route the way it
+already forwarded it to three others, and nothing exercises that. There is no
+unit test, which is defensible on its own: the three sibling call sites have
+none either, and the only `app.js` harness extracts pure synchronous functions
+from the file as text, which `loadReaderLinks` is not. What is not defensible is
+the reason recorded at the time, that the browser walkers covered it. They
+cannot. They run against `engine/reader-routes.mjs`, which answers
+`/api/reader/documents` and `/api/reader/payload` and not this route at all, so
+a walker's reader takes the swallowing path described above and renders with no
+bubbles, never once building a pinned URL. That was checkable when it was
+claimed, and it was claimed in this repository's own record before it was
+checked. The gap itself predates this work, since that route read the live
+tables before and failed in the walkers for want of credentials just the same.
+It was reported as covered, and it is not.
+
 The two columns are nullable and move together, checked in the migration: a
 digest without its bytes describes nothing, and the verifier skips a publication
 on `links is null` rather than failing it, because those rows never claimed to

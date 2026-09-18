@@ -203,6 +203,19 @@ independent implementations, `engine/spec-cite/cite.py` and the port in
 `site/spec-reader/app.js`, and freezing them in the publication is what keeps a
 pinned page honest in the meantime.
 
+The pin forwarding stays untested, and it is named here rather than left to be
+discovered. `loadReaderLinks` builds a pinned URL the way three sibling call
+sites do, and none of the four carries a unit test; the only `app.js` harness
+extracts pure synchronous functions from the file as text, which this is not.
+The part that was got wrong is the reason recorded for accepting that: the
+browser walkers do not cover it either. They run against
+`engine/reader-routes.mjs`, which answers `/api/reader/documents` and
+`/api/reader/payload` and not this route, so a walker's reader takes the
+swallowing path and renders with no bubbles, never building a pinned URL at all.
+That was checkable when it was claimed. Closing it means either a harness for
+async functions that touch module state, or teaching the fixture server this
+route, and the second is much the cheaper of the two.
+
 ## Where the pieces are
 
 What is being attached, as of 2026-09-18: 1169 passage notes, 78 document
