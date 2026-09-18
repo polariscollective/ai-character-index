@@ -136,6 +136,39 @@ class RebuildTest(unittest.TestCase):
             ("documents", cells, ["helpfulness"], "2026-09-20", "frontier_fast"),
         ])
 
+    def test_a_recorded_empty_note_pin_reaches_the_builder_as_empty(self):
+        """An empty pin says no notes existed, and must not become no pin at all.
+
+        Of the four places that carry the difference between an absent list and an
+        empty one, this is the one that had no test, and it is where the defect
+        lived: `params.get("note_prompts") or ()` turned a recorded [] into (),
+        which the builder reads as take every note in the table. A publication
+        built against an empty table would then fail its rebuild the moment any
+        note existed, with nothing changed and nothing wrong. [] and () are not
+        equal in Python, so asserting on the value is enough to catch its return.
+        """
+        links = {"documents": [], "runs": [], "byLocator": {}, "comparisons": {}}
+        raw = json.dumps(links, **verify.publish.FORMATS["links"]).encode()
+        row = dict(publication(PUBLIC_ID, published_at="2026-09-12", is_public=True,
+                               build_params={"behaviours": ["helpfulness"],
+                                             "documents": ["v1"], "panel": "frontier_fast",
+                                             "rubric": "v5", "run_date": None,
+                                             "link_runs": ["r1"], "note_prompts": []}),
+                   links=links, links_sha256=hashlib.sha256(raw).hexdigest())
+        seen = {}
+
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+                  note_prompts=None):
+            seen[name] = note_prompts
+            return ({"payload": PAYLOAD, "documents": DOCUMENTS, "links": links}[name],
+                    row[f"{name}_sha256"])
+
+        with mock.patch.object(verify.publish, "build", side_effect=build):
+            printed, failed = run(verify.check_the_publication_rebuilds_to_its_digests,
+                                  self.store(row), row)
+        self.assertEqual(failed, [], printed)
+        self.assertEqual(seen["links"], [])
+
     def test_a_rebuild_that_differs_from_the_stored_digest_fails(self):
         row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
         with mock.patch.object(verify.publish, "build",
