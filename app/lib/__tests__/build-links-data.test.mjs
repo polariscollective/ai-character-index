@@ -17,13 +17,50 @@ function stub() {
   });
 }
 
+/* A stub that answers aci_document_notes with the given rows and everything
+ * else with none, so a test can shape only what it is checking. */
+function stubWithNotes(notes) {
+  return async url => ({
+    ok: true, status: 200,
+    json: async () => (String(url).includes("aci_document_notes") ? notes : []),
+    text: async () => "",
+  });
+}
+
 test("buildLinks refuses to build with no run named", async () => {
-  await assert.rejects(() => buildLinks([], stub()), /at least one run/);
+  await assert.rejects(() => buildLinks([], null, stub()), /at least one run/);
 });
 
 test("buildLinks carries the runs it was given", async () => {
-  const out = await buildLinks([RUN], stub());
+  const out = await buildLinks([RUN], null, stub());
   assert.deepEqual(out.runs, [RUN]);
+});
+
+/* A document note carries no run: a publication pins it by the prompt that
+ * wrote it, and a digest not in that list must not reach the built links. */
+test("a note prompt not named in the list is dropped", async () => {
+  const notes = [
+    { behaviour_slug: "helpfulness", document_id: "doc-a", kind: "depth",
+      body: "kept", created_at: "2026-01-01", prompt_sha256: "sha-kept" },
+    { behaviour_slug: "helpfulness", document_id: "doc-b", kind: "depth",
+      body: "dropped", created_at: "2026-01-01", prompt_sha256: "sha-dropped" },
+  ];
+  const out = await buildLinks([RUN], ["sha-kept"], stubWithNotes(notes));
+  assert.deepEqual(out.notes.depth, { "helpfulness\ndoc-a": { text: "kept" } });
+});
+
+test("an empty note-prompts list takes every note, which is what a reader outside a publication wants", async () => {
+  const notes = [
+    { behaviour_slug: "helpfulness", document_id: "doc-a", kind: "depth",
+      body: "kept", created_at: "2026-01-01", prompt_sha256: "sha-kept" },
+    { behaviour_slug: "helpfulness", document_id: "doc-b", kind: "depth",
+      body: "also kept", created_at: "2026-01-01", prompt_sha256: "sha-other" },
+  ];
+  const out = await buildLinks([RUN], [], stubWithNotes(notes));
+  assert.deepEqual(out.notes.depth, {
+    "helpfulness\ndoc-a": { text: "kept" },
+    "helpfulness\ndoc-b": { text: "also kept" },
+  });
 });
 
 /* The digest publish.py records describes these exact bytes, and

@@ -15,11 +15,11 @@
 import { writeFileSync } from "node:fs";
 import { readerLinks } from "../app/lib/links.mjs";
 
-export async function buildLinks(runIds, fetchImpl = fetch) {
+export async function buildLinks(runIds, notePrompts, fetchImpl = fetch) {
   if (!Array.isArray(runIds) || !runIds.length) {
     throw new Error("build-links-data: name at least one run with --link-runs");
   }
-  return readerLinks(fetchImpl, runIds);
+  return readerLinks(fetchImpl, runIds, notePrompts);
 }
 
 /* Two space indentation and no trailing newline. Not a style choice: the
@@ -40,7 +40,8 @@ async function main() {
   const out = argument("out");
   if (!out) throw new Error("build-links-data: --out is required");
   const runIds = (argument("link-runs") || "").split(",").filter(Boolean);
-  writeFileSync(out, serialise(await buildLinks(runIds)));
+  const notePrompts = (argument("note-prompts") || "").split(",").filter(Boolean);
+  writeFileSync(out, serialise(await buildLinks(runIds, notePrompts)));
 }
 
 if (process.argv[1] && process.argv[1].endsWith("build-links-data.mjs")) {

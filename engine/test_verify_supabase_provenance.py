@@ -118,7 +118,8 @@ class RebuildTest(unittest.TestCase):
         row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
         seen = []
 
-        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+                  note_prompts=()):
             seen.append((name, cells, behaviours, run_date, panel_name))
             return ({"payload": PAYLOAD, "documents": DOCUMENTS}[name],
                     row[f"{name}_sha256"])
@@ -156,7 +157,8 @@ class RebuildTest(unittest.TestCase):
         row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
         seen = []
 
-        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+                  note_prompts=()):
             seen.append(name)
             return ({"payload": PAYLOAD, "documents": DOCUMENTS}[name],
                     row[f"{name}_sha256"])

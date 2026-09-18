@@ -324,7 +324,7 @@ export function passageNoteKey(slug, locator, documents) {
  * One request per table rather than one per run: the tables are small enough to
  * read whole, and four round trips beat sixteen.
  */
-export async function readerLinks(fetchImpl = fetch, runIds = null) {
+export async function readerLinks(fetchImpl = fetch, runIds = null, notePrompts = null) {
   /* A publication names the runs it carries. Nothing guesses them: which runs
    * the public sees is a decision a publication records. */
   const runs = (runIds || []).map(id => ({ id }));
@@ -345,7 +345,7 @@ export async function readerLinks(fetchImpl = fetch, runIds = null) {
       select("aci_passage_notes",
              "select=run_id,behaviour_slug,locator,body,model,created_at", fetchImpl),
       select("aci_document_notes",
-             "select=behaviour_slug,document_id,kind,body,created_at", fetchImpl),
+             "select=behaviour_slug,document_id,kind,body,created_at,prompt_sha256", fetchImpl),
     ]);
 
   const documentOf = new Map(versions.map(v => [v.id, `${v.spec_id}@${v.version}`]));
@@ -411,6 +411,13 @@ export async function readerLinks(fetchImpl = fetch, runIds = null) {
       summaryRow(note, pairOf.get(note.run_id)));
   }
 
+  /* Document notes carry no run: they are keyed by the prompt that wrote them, and
+   * that is what a publication pins. Given no list, take them all, which is what a
+   * reader outside a publication wants. */
+  const notes = Array.isArray(notePrompts) && notePrompts.length
+    ? documentNotes.filter(note => notePrompts.includes(note.prompt_sha256))
+    : documentNotes;
+
   return {
     documents: [...documentIds].sort(),
     runs: runs.map(run => run.id),
@@ -419,9 +426,9 @@ export async function readerLinks(fetchImpl = fetch, runIds = null) {
     notes: {
       passage: Object.fromEntries(
         [...passageNewest].map(([key, row]) => [key, { text: row.body }])),
-      depth: cells(newestBy(documentNotes.filter(n => n.kind === "depth"),
+      depth: cells(newestBy(notes.filter(n => n.kind === "depth"),
                             n => `${n.behaviour_slug}\n${n.document_id}`)),
-      standing: cells(newestBy(documentNotes.filter(n => n.kind === "standing"),
+      standing: cells(newestBy(notes.filter(n => n.kind === "standing"),
                                n => `${n.behaviour_slug}\n${n.document_id}`)),
     },
   };

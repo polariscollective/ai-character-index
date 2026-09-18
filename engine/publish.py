@@ -241,7 +241,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     return cells
 
 
-def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
+def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+          note_prompts=()):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -266,6 +267,7 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=())
                 extra.append(f"--panel={panel_name}")
         if name == "links":
             extra.append("--link-runs=" + ",".join(sorted(link_runs)))
+            extra.append("--note-prompts=" + ",".join(sorted(note_prompts)))
         result = subprocess.run(
             [*runner, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],
@@ -295,9 +297,17 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     require_declared_substitutes(store, cells, config, panel_name, panel)
     require_depths(store, cells, panel)
 
+    # The prompt digests present when this was built. A document note carries no run,
+    # so this is what pins it: the table's unique key ends in this digest, so a note
+    # written later for a cell this publication carries must have a different one and
+    # is excluded rather than silently swapped in.
+    note_prompts = sorted({row["prompt_sha256"] for row in
+                           store.select("aci_document_notes", {"select": "prompt_sha256"})})
+
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)
     documents, documents_sha256 = build("documents", cells, behaviours)
-    links, links_sha256 = build("links", cells, behaviours, link_runs=link_runs)
+    links, links_sha256 = build("links", cells, behaviours,
+                                link_runs=link_runs, note_prompts=note_prompts)
 
     publication = {
         "published_by": published_by,
@@ -309,7 +319,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
                          "documents": sorted(document_ids),
                          "panel": panel_name, "rubric": rubric,
                          "run_date": run_date,
-                         "link_runs": sorted(link_runs)},
+                         "link_runs": sorted(link_runs),
+                         "note_prompts": note_prompts},
         "payload": payload,
         "payload_sha256": payload_sha256,
         "documents": documents,

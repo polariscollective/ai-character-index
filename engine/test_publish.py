@@ -415,12 +415,14 @@ class BuildTest(unittest.TestCase):
             return type("Done", (), {"returncode": 0, "stderr": "", "stdout": ""})()
 
         with mock.patch.object(publish.subprocess, "run", fake_run):
-            publish.build("links", [], ["helpfulness"], link_runs=["r1", "r0"])
+            publish.build("links", [], ["helpfulness"], link_runs=["r1", "r0"],
+                          note_prompts=["p1", "p0"])
         self.assertEqual(seen["argv"][0], "node")
         self.assertTrue(seen["argv"][1].endswith("build-links-data.mjs"))
         # Sorted, because the runs reach the builder's output through the object
         # it assembles, and the digest describes bytes.
         self.assertIn("--link-runs=r0,r1", seen["argv"])
+        self.assertIn("--note-prompts=p0,p1", seen["argv"])
 
 
 class LinksFormatTest(unittest.TestCase):
