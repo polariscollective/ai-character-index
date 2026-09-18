@@ -1704,8 +1704,13 @@ async function setSelection(slugs) {
   state.selectedSlugs = registrySlugs.filter(slug => chosen.has(slug));
   await ensureBehaviours(state.selectedSlugs);
 
+  // Read live, not the `chosen` captured before the await: a second tick that
+  // ran while this one was in flight has already written state.selectedSlugs,
+  // and writing from that snapshot instead would rewrite the boxes with a
+  // stale selection, whichever of the two calls happens to resume last.
+  const live = new Set(state.selectedSlugs);
   elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
-    const on = chosen.has(input.dataset.behaviour);
+    const on = live.has(input.dataset.behaviour);
     input.checked = on;
     input.closest(".behaviour-option").classList.toggle("checked", on);
   });
@@ -4558,6 +4563,14 @@ async function ensureBehaviours(slugs) {
       applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
     linkRows = mergeLinks(linkRows, links);
   })();
+  // A failed fetch is not a fact worth remembering: drop each slug so a retry can
+  // ask again, guarded by identity so a slower rejection cannot delete a slug a
+  // fresher call has since taken over.
+  fetching.catch(() => {
+    for (const slug of missing) {
+      if (inFlight.get(slug) === fetching) inFlight.delete(slug);
+    }
+  });
   for (const slug of missing) inFlight.set(slug, fetching);
   return fetching;
 }
