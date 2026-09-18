@@ -573,7 +573,7 @@ export function compareDocuments({ publication, payload, documents, notes },
  * nothing here may name a document, a count or a panel. Everything of that kind
  * is `about`'s, derived from the publication in hand.
  */
-export const INSTRUCTIONS = `The AI Character Index reports where model specifications
+export const INSTRUCTIONS = `The AI Constitutions Index reports where model specifications
 address a behaviour, and how strongly. It holds published specifications, a set
 of behaviours, and passages of those specifications that a panel of language
 model judges marked as bearing on each behaviour. It reports what those
