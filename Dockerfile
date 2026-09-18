@@ -6,8 +6,8 @@
 # what to do, and writes what it did back onto the same row.
 #
 # Three modes, one image: compose prices a run and writes its calls, judge
-# executes them, publish builds the two payloads the reader serves. A mode is a
-# string rather than a deployment.
+# executes them, publish builds the three payloads the reader serves. A mode is
+# a string rather than a deployment.
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -18,7 +18,17 @@ WORKDIR /app
 # of the engine is standard library by design.
 RUN pip install --no-cache-dir "openai>=1.0"
 
+# Node, for the one builder that is not Python. engine/build-links-data.mjs imports
+# app/lib/links.mjs, the assembly the reader route already used: a Python port would
+# be a second copy of it, and this repository has published wrong figures off exactly
+# that kind of drift before. So the image carries a Node runtime and that one library
+# directory. Not the site, not the reader, not Next: app/lib is shared library code.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY engine/ ./engine/
+COPY app/lib/ ./app/lib/
 ENV PYTHONPATH=/app/engine
 
 # Only the OpenRouter key reaches this container, and that is a requirement
