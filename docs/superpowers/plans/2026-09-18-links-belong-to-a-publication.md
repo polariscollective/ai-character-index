@@ -682,15 +682,23 @@ In `check_the_publication_rebuilds_to_its_digests`:
 
 A publication written before Task 1 carries null in both link columns, and skipping is the honest answer: those rows never claimed to carry frozen links. Use the name the surrounding function actually gives the publication row; it may not be `publication`.
 
-The rebuild loop must also pass the runs it rebuilds from, which `publish()` recorded in `build_params`:
+The rebuild loop must also pass the runs it rebuilds from, which `publish()` recorded
+in `build_params`. The call as it stands reads:
 
 ```python
-        rebuilt, digest = publish.build(
-            name, cells, behaviours, run_date, panel_name,
-            link_runs=publication["build_params"].get("link_runs", ()))
+            _built, got = publish.build(name, cells, params.get("behaviours") or [],
+                                        run_date, panel_name)
 ```
 
-Match this to however the existing call is written; the addition is the `link_runs` argument.
+`params` is already bound at the top of that function to
+`publication.get("build_params") or {}`, so take the runs from it rather than indexing
+`publication["build_params"]`, which would raise on a row carrying none:
+
+```python
+            _built, got = publish.build(name, cells, params.get("behaviours") or [],
+                                        run_date, panel_name,
+                                        link_runs=params.get("link_runs") or ())
+```
 
 - [ ] **Step 5: Delete the filter**
 
