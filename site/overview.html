@@ -580,26 +580,25 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   padding: 10px 8px;
   text-align: center;
 }
-/* Room on the right for what the score is out of, so the figure centres in
-   what is left rather than running into it. */
-.gov-heatmap .cell-button { position: relative; padding-right: 40px; }
+/* The figure sits dead centre, across and down. What the score is out of is
+   placed on its own in the corner and takes no part in that centring. */
+.gov-heatmap .cell-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
 .gov-heatmap .cell-button .cell-figure { font-size: 16px; }
-/* What the score is out of, grey and small at the cell's right. On a tag of
-   paper rather than straight on the colour: grey laid on the red or the amber
-   falls below the contrast the framework asks of text, and on paper it passes. */
+/* What the score is out of, small and light grey in the cell's lower right
+   corner, straight on the cell's own colour. */
 .cell-max {
   position: absolute;
   right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0 4px;
-  border-radius: 2px;
-  background: var(--paper);
-  color: var(--faint);
+  bottom: 3px;
+  color: rgb(241 239 227 / .7);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.2;
 }
 .gov-heatmap .cell-button:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
 .gov-heatmap .cell-button.is-open { outline: 3px solid var(--ink); outline-offset: 2px; }

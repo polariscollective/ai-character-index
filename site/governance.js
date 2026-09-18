@@ -54,9 +54,13 @@ const board = { data: null, labs: [], paint: null, expanded: new Set(), nodes: {
 const questionOf = id => board.data.questions.find(q => q.id === id);
 
 /* A score painted the way the grid paints a depth, as a share of its maximum,
- * so 8 of 12 wears the colour 2.7 of 4 would. */
+ * so 8 of 12 wears the colour 2.7 of 4 would. The figure is always light, where
+ * the grid picks dark or light by the colour underneath: across one table of
+ * scores, figures that change colour from cell to cell read as a second code. */
+const FIGURE = "#F1EFE3";
 function paintShare(node, value, max) {
   board.paint(node, (value / max) * 4);
+  node.style.color = FIGURE;
 }
 
 function chip(value, max) {
@@ -78,8 +82,10 @@ function renderKpis() {
 
   const figures = [
     { figure: `${minimum.value}`, small: ` out of ${minimumMax}`,
-      caption: `The best score on the minimum we propose, ${minimum.lab.name}'s: a `
-        + "published model spec for every model, and one public change log." },
+      caption: "No company meets the minimum we ask for: a published model spec for "
+        + "every model it runs, and one public log of every change. Those two questions "
+        + `are worth ${minimumMax} points, and the best score, ${minimum.lab.name}'s, is `
+        + `${minimum.value}.` },
     { figure: `${meeting("4.2")}`, small: ` of ${labs.length}`,
       caption: "Companies that let the public comment before a hard constraint is weakened." },
     { figure: `${meeting("1.3")}`, small: ` of ${labs.length}`,
