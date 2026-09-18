@@ -244,7 +244,7 @@ async function readDepthDescription(slug) {
 // Navigation: the expected links must be present and every one must resolve
 // (any #fragment to a real id in its target).
 await readView(base);
-const expectedNav = ["./", "/how-it-works"];
+const expectedNav = ["./", "/about"];
 const navHrefs = await page.evaluate(
   () => [...document.querySelectorAll('nav[aria-label="Primary navigation"] a')].map(a => a.getAttribute("href")),
 );

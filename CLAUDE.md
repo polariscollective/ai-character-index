@@ -253,8 +253,8 @@ shape the documentation asks for, hit it immediately.
 
 The upstream project takes contributions as pull requests against a repository
 anyone can clone. This fork cannot: the artifacts are in Supabase, judging costs
-money, and nobody outside has credentials. `/how-it-works`
-(`site/how-it-works.html`) is what replaced it: two forms, opened in a dialog and
+money, and nobody outside has credentials. `/about` (`site/about.html`, at
+`/how-it-works` until 18 September 2026) is what replaced it: two forms, opened in a dialog and
 posted to `/api/submit`, writing to `aci_submissions`, a private bucket and a
 Slack webhook. `site/propose.html`, where the forms first lived, now only
 redirects there.
@@ -985,6 +985,38 @@ form. The design is
 `docs/superpowers/specs/2026-09-18-links-belong-to-a-publication-design.md`; the
 migration is `20260918090000_aci_links_belong_to_a_publication.sql` in
 `polaris-supabase`.
+
+### The overview carries figures no panel produced
+
+The front page gained a second view on 18 September 2026, behind a tab:
+`/?view=governance`, how each lab governs its model spec rather than what the
+model spec says. It is a board: one table with the nine labs across and their
+scores down, each of the four questions opening into its checks scored 0 to 4,
+and a popover with the evidence for any score. It was written for regulators and
+legislators rather than for engineers, so the text is the research note "Spec
+governance ranking" (Notion, second pass of 18 September 2026) rewritten in
+plain words, with every score, date, quotation and source kept, and with the
+note's own terms: model spec, system prompt, guardrails, hard constraints.
+
+One of the note's figures is not reproduced. It prints Moonshot AI's total as 3,
+and its own four question scores for Moonshot AI add to 4. The board computes
+every total from the checks, so it shows 4.
+
+What matters about it is where its numbers come from. Every other figure on the
+site is a panel's reading, recorded in the database and held to a publication.
+These are scores Polaris Collective gave by hand from public documents, and the
+note says so of itself: its anchors are its own and a different reading could
+move a lab by a few points. They live in `site/governance.json`, committed,
+rather than in Supabase, because nothing judges them and nothing edits them from
+the portal. `tests/test_governance_tab.py` holds the note's sentences to the
+scores wherever the two quote each other.
+
+The note lists points to re-check before anything is published outside, and the
+board carries them under "What we could not check" rather than resolving them.
+The one that could move a score is Alibaba: its model spec was read through this
+index's own passages, not at its address, and a scope clause in a preface the
+index does not keep would change check 1.2. The design is
+`docs/superpowers/specs/2026-09-18-governance-tab-design.md`.
 
 ## Where the fork is heading
 

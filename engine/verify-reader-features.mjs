@@ -1972,6 +1972,132 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
+/* The overview's second view, how each lab governs its rules: one table with the
+ * companies across and their scores down, each question opening into its
+ * checks, and a popover beside whatever was pressed. Its numbers and words are
+ * site/governance.json, and tests/test_governance_tab.py holds the two together;
+ * what only a browser can show is that the tabs, the address, the folds and the
+ * popover join them. */
+console.log("== Overview: the governance view ==");
+{
+  const root = new URL("/", base).href;
+  pageErrors = [];
+  await page.goto(`${root}?view=governance`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#gov-heatmap tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+  const seen = await page.evaluate(() => ({
+    governanceShown: !document.querySelector("#view-governance").hidden,
+    coverageHidden: document.querySelector("#view-coverage").hidden,
+    selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
+    companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
+    overall: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
+      .map(b => b.textContent),
+    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-max')]
+      .map(b => b.textContent))],
+    flagged: [...document.querySelectorAll("#gov-heatmap thead .company-button")]
+      .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
+    rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
+      .map(n => n.textContent),
+    findings: document.querySelectorAll("#gov-findings details").length,
+  }));
+  check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
+    "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
+  check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
+        + "Meta, xAI, Moonshot AI, DeepSeek"
+      && seen.overall.join(",") === "23,22,10,9,6,5,5,4,2" && seen.outOf.join() === "/40"
+      && seen.flagged.join(", ") === "Mistral AI, Moonshot AI, DeepSeek",
+    "the nine companies run across in the note's order, Meta sixth on the tie, "
+      + "each total out of 40, the open-weight ones marked",
+    `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
+  check(seen.rows.join(", ") === "Overall, Model behaviour specification, Change log, Guardrails, "
+        + "Hard constraints, Supporting practices"
+      && seen.findings === 8,
+    "the scores run down from the total, the checks folded, the eight findings under the table",
+    JSON.stringify(seen.rows));
+
+  // A question opens into its checks.
+  await page.locator('.row-toggle[data-question="2"]').click();
+  await page.waitForTimeout(100);
+  const opened = await page.evaluate(() => ({
+    checks: [...document.querySelectorAll('#gov-heatmap tr.check-row[data-parent="2"]:not([hidden]) .head-name')]
+      .map(n => n.textContent),
+    expanded: document.querySelector('.row-toggle[data-question="2"]').getAttribute("aria-expanded"),
+  }));
+  check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the log"
+      && opened.expanded === "true",
+    "the change log opens into its three checks", JSON.stringify(opened));
+
+  // A check's score opens a popover beside it, with its place on the scale marked.
+  const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');
+  await cell.click();
+  await page.waitForTimeout(150);
+  const popover = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    const cellBox = document.querySelector('.cell-button[data-lab="anthropic"][data-row="2.1"]')
+      .getBoundingClientRect();
+    const box = pop.getBoundingClientRect();
+    return {
+      open: pop.matches(":popover-open"),
+      title: pop.querySelector("h2")?.textContent,
+      here: [...pop.querySelectorAll(".anchors li.is-here .anchor-level")].map(n => n.textContent),
+      covers: !(box.right <= cellBox.left || box.left >= cellBox.right
+        || box.bottom <= cellBox.top || box.top >= cellBox.bottom),
+    };
+  });
+  check(popover.open && popover.title === "Anthropic: versions kept"
+      && popover.here.join() === "0,2" && !popover.covers,
+    "a score opens a popover beside it, and a score of 1 sits between 0 and 2",
+    JSON.stringify(popover));
+
+  // Pressing the same score again closes it rather than opening it once more.
+  await cell.click();
+  await page.waitForTimeout(150);
+  const closed = await page.evaluate(() => !document.querySelector("#gov-pop").matches(":popover-open"));
+  check(closed, "pressing the same score again closes the popover");
+
+  // A question's name says what it asks and how its points are shared out.
+  await page.locator('.question-row[data-question="3"] .row-name').click();
+  await page.waitForTimeout(150);
+  const about = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    return {
+      title: pop.querySelector("h2")?.textContent,
+      shares: [...pop.querySelectorAll("h3")].map(n => n.textContent),
+      checks: pop.querySelectorAll("details").length,
+    };
+  });
+  check(about.title === "Guardrails" && about.shares.includes("How its 8 points are shared out")
+      && about.checks === 2,
+    "a question's name opens what it asks and how its points are shared out", JSON.stringify(about));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+
+  await page.locator("#tab-coverage").click();
+  await page.waitForTimeout(150);
+  const back = await page.evaluate(() => ({
+    coverageShown: !document.querySelector("#view-coverage").hidden,
+    governanceHidden: document.querySelector("#view-governance").hidden,
+    view: new URL(location.href).searchParams.get("view"),
+  }));
+  check(back.coverageShown && back.governanceHidden && back.view === null,
+    "the first tab returns to the grid and drops ?view= from the address", JSON.stringify(back));
+
+  // The tabs are one stop for the keyboard, and the arrows move between them.
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(150);
+  const keyed = await page.evaluate(() => ({
+    focused: document.activeElement?.id,
+    view: new URL(location.href).searchParams.get("view"),
+    governanceShown: !document.querySelector("#view-governance").hidden,
+  }));
+  check(keyed.focused === "tab-governance" && keyed.view === "governance" && keyed.governanceShown,
+    "the right arrow on the first tab selects the second and writes its address",
+    JSON.stringify(keyed));
+
+  check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
+}
+
+// =============================================================================
 const unexpectedMissing = [...new Set(missingPaths)];
 check(unexpectedMissing.length === 0, "nothing unexpected 404s",
   unexpectedMissing.join(", ") || "nothing");

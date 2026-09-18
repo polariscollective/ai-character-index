@@ -1,9 +1,10 @@
-# AI Character Index
+# AI Constitutions Index
 
 Run by Polaris Collective, started by Andres Cotton.
 
-An index of AI character: behaviours on one axis, the labs' model specifications
-on the other, and in each cell a passage-level coverage map. Every verdict is a
+An index of the documents in which AI companies say how their models should
+behave: behaviours on one axis, the companies' model behaviour specifications on
+the other, and in each cell a passage-level coverage map. Every verdict is a
 panel of frontier models reading a whole document, and every claim anchors to a
 verbatim quote with a locator that resolves back into the text.
 
@@ -19,7 +20,7 @@ The index is served at
 open to everyone: the reader at
 [/spec-reader/](https://ai-character-index.vercel.app/spec-reader/), what the index
 is and how to propose something at
-[/how-it-works](https://ai-character-index.vercel.app/how-it-works), and a public
+[/about](https://ai-character-index.vercel.app/about), and a public
 MCP endpoint at `/api/mcp`, described at
 [/mcp](https://ai-character-index.vercel.app/mcp). Nothing below is needed to read
 it.
@@ -54,6 +55,7 @@ a publication shows every behaviour it selects.
 ## Origins
 
 This repository is Polaris Collective's continuation of the AI Character Index,
+renamed the AI Constitutions Index in September 2026. The AI Character Index was
 created by [Andrés Cotton](https://github.com/AndresCotton) with the help of Matt
 Stults. The vision and the initial execution are his, including the first version
 of the spec reader. The project passed to Polaris Collective in September 2026,
@@ -184,12 +186,12 @@ python3 engine/publish.py --behaviours=helpfulness --documents=<version id>,<ver
 
 ## Proposing something
 
-The pull-request pathway went with the clone-and-fork one, and `/how-it-works`
-(`site/how-it-works.html`) replaces it: one page explaining the index, with a
+The pull-request pathway went with the clone-and-fork one, and `/about`
+(`site/about.html`) replaces it: one page explaining the index, with a
 button into each of the two proposal forms, a new model spec and a new behaviour.
 Both forms post to `/api/submit`. A proposal is recorded in `aci_submissions`, its
 document goes to a private Supabase Storage bucket, and Slack is told.
-`propose.html` and `methodology.html` only redirect to `/how-it-works`, kept
+`propose.html` and `methodology.html` only redirect to `/about`, kept
 because links to both are already shared.
 
 Nothing more happens by itself. Running a proposal costs money, so an operator
@@ -320,7 +322,7 @@ project's editorial records; none of them are needed to run it.
   dataset of the current publication is credited to it.
 
 Each publication computes its own credit from the runs and briefs it carries, and
-the citation on [/how-it-works](https://ai-character-index.vercel.app/how-it-works)
+the citation on [/about](https://ai-character-index.vercel.app/about)
 reads it from there. The original authors' copyright notice is unchanged in
 [`NOTICE`](NOTICE); [`CITATION.cff`](CITATION.cff) lists Andrés Cotton, Matt Stults
 and Polaris Collective, and references the original work for the method.
@@ -352,5 +354,5 @@ organisations. See [NOTICE](NOTICE) for the full statement.
 To cite this project, use [CITATION.cff](CITATION.cff): GitHub renders it as a
 "Cite this repository" button with BibTeX and APA output. To cite a particular
 build, use the citation on
-[/how-it-works](https://ai-character-index.vercel.app/how-it-works), which names
+[/about](https://ai-character-index.vercel.app/about), which names
 the publication and its date.

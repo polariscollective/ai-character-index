@@ -10,7 +10,12 @@
  *
  * Nothing is built with innerHTML. The passages are a model's words and the
  * rationales are a model's words, so every one of them lands as a text node.
+ *
+ * The page carries a second view since September 2026, how each lab governs its
+ * rules, built by governance.js. This file owns the tabs between the two.
  */
+
+import { initializeGovernance } from "./governance.js";
 
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
@@ -18,8 +23,13 @@ const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated
  * every behaviour, which is what was asked for, and the caption says why: a
  * nought here is the absence of a document to read, not a document that was
  * read and found to say nothing. Those are different claims and the grid must
- * not let one pass for the other. */
-const WITHOUT_A_SPECIFICATION = ["Google", "xAI", "Meta"];
+ * not let one pass for the other.
+ *
+ * Mistral AI, Moonshot AI and DeepSeek joined in September 2026, when the
+ * governance view took them on: none publishes a model spec either, and a lab
+ * the other view ranks should not be missing from this one. */
+const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
+  "DeepSeek"];
 
 /* Red to green, against the framework's own palette, because the grid is read
  * as a comparison and a single hue at varying strength does not say which end
@@ -85,6 +95,13 @@ const DEPTH_LEVELS = [
     bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
       + "sanctioned response, usable as an answer key for borderline cases." },
 ];
+
+/* A ?publication= pin reaches the grid as it reaches the doc reader: every
+ * route the grid reads from is asked for that publication, so a link from the
+ * change log shows the depths as that publication published them. The
+ * governance view is not part of any publication and does not change with it. */
+const PIN = new URLSearchParams(location.search).get("publication");
+const PINNED = PIN ? `?publication=${encodeURIComponent(PIN)}` : "";
 
 async function loadJSON(url, fallback) {
   try {
@@ -254,17 +271,16 @@ function openAbsent(behaviour, column) {
      * specification" is a claim about Meta; "we know of none" is a claim about
      * us, and it is the only one of the two this index can stand behind. */
     body.append(paragraph(
-      `We know of no model specification from ${column.lab}. None appears to `
-      + "have been published, and that is worth saying plainly rather than "
-      + "leaving as a blank: there is no public document to hold beside the "
-      + "others."));
+      `We know of no model behaviour specification from ${column.lab}, and none `
+      + "appears to have been published, so there is no public document to set "
+      + "beside the others."));
     body.append(paragraph(
-      "So the nought is that absence. It is not a reading: nobody has examined "
-      + `a ${column.lab} specification and found it silent on this behaviour.`,
+      "The nought therefore stands for that absence. Nobody has examined a "
+      + `${column.lab} specification and found it silent on this behaviour.`,
       "missing"));
     const ask = document.createElement("p");
     const link = document.createElement("a");
-    link.href = "/how-it-works?kind=specification#propose";
+    link.href = "/about?propose&kind=specification#propose";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = "propose it";
@@ -285,7 +301,8 @@ function openCell(behaviour, document_, depth) {
    * constitution Anthropic's, and a heading calling it Claude's would leave two
    * documents on screen where there is one. */
   const reader = `/spec-reader/?behavior=${encodeURIComponent(behaviour.slug)}`
-    + `&spec=${encodeURIComponent(document_.id)}`;
+    + `&spec=${encodeURIComponent(document_.id)}`
+    + (PIN ? `&publication=${encodeURIComponent(PIN)}` : "");
   sheet(`${document_.lab}: ${behaviour.name}`, body => {
     const figure = paragraph("");
     const number = document.createElement("span");
@@ -366,8 +383,19 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.absent ? "unpublished" : shownVersion(column.version);
-    cell.append(lab, version);
+    if (column.absent) {
+      // A hyphen where a version would be: "unpublished" no longer fits nine
+      // columns. A screen reader hears the words rather than "hyphen".
+      version.textContent = "-";
+      version.setAttribute("aria-hidden", "true");
+      const said = document.createElement("span");
+      said.className = "visually-hidden";
+      said.textContent = "no published specification";
+      cell.append(lab, version, said);
+    } else {
+      version.textContent = shownVersion(column.version);
+      cell.append(lab, version);
+    }
     head.append(cell);
   });
   elements.head.replaceChildren(head);
@@ -433,17 +461,15 @@ function render() {
           button.setAttribute("aria-label",
             `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
             + DEPTH_WORDS[Math.round(mean)]);
+          // The figure alone. The rubric's word under it ("prescribed") no longer
+          // fits once nine specifications share the width, and the scale beside
+          // the grid gives every level its word and its sentence; the accessible
+          // name above still says the word. Not "out of 4" either: every figure
+          // on this grid is out of 4, and the scale says so once.
           const number = document.createElement("span");
           number.className = "cell-figure";
           number.textContent = mean.toFixed(1);
-          const word = document.createElement("span");
-          word.className = "cell-word";
-          // The rubric's own word either way: nought is "absent" on this scale,
-          // and a column with no document is nought, so the cell says the same
-          // thing every other cell says. What that nought means differently is
-          // the caption's job and the note's, not the cell's.
-          word.textContent = DEPTH_WORDS[Math.round(mean)];
-          button.append(number, word);
+          button.append(number);
           button.addEventListener("click", () => column.absent
             ? openAbsent(behaviour, column)
             : openCell(behaviour, column, depth));
@@ -481,29 +507,23 @@ function render() {
   elements.legendList.replaceChildren(scale);
   elements.legend.hidden = false;
 
-  const judged = columns.filter(column => !column.absent).length;
-  const unjudged = columns.filter(column => column.absent).map(c => c.lab);
   fitGrid();
   updateRemaining();
-  elements.caption.textContent =
-    `${behaviours.length} behaviours over ${judged} specifications. `
-    + "Each figure is the mean of the panel's judges."
-    + (unjudged.length
-      ? ` ${unjudged.join(", ")} stand at nought throughout because the index `
-        + "carries no specification from them, which is the absence of a "
-        + "document rather than a reading of one."
-      : "");
+  // The caption under the grid said how many behaviours and specifications it
+  // held and why some columns stand at nought. It was taken out on review: the
+  // noughts are explained where they are pressed, and the count is in the grid.
+  elements.caption.textContent = "";
 }
 
 async function initialize() {
   const [payload, documents, registry, links] = await Promise.all([
-    loadJSON("/api/reader/payload", null),
-    loadJSON("/api/reader/documents", null),
-    loadJSON("/api/reader/behaviours", null),
+    loadJSON(`/api/reader/payload${PINNED}`, null),
+    loadJSON(`/api/reader/documents${PINNED}`, null),
+    loadJSON(`/api/reader/behaviours${PINNED}`, null),
     /* One route for both, where two gitignored files used to sit. They were
      * never on any deployment, so this page has shown its figures with nothing
      * under them everywhere but on the machine that wrote the files. */
-    loadJSON("/api/reader/links", null),
+    loadJSON(`/api/reader/links${PINNED}`, null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";
@@ -530,4 +550,53 @@ elements.sheet.addEventListener("click", event => {
   if (event.target === elements.sheet) elements.sheet.close();
 });
 
+/* Two views of one index, behind tabs: what the specifications say, and how
+ * they are governed. The view has an address, ?view=governance, so a link can
+ * open on it; the first view is the one with no parameter, which keeps every
+ * link already shared pointing where it did.
+ *
+ * replaceState rather than pushState: a tab is a way of looking at the page,
+ * not a page, and filling the back button with tab changes would take a reader
+ * back through views rather than out to where they came from. Other parameters,
+ * a ?publication= pin among them, are kept. */
+const VIEWS = ["coverage", "governance"];
+const tabs = [...document.querySelectorAll(".view-tab")];
+
+function viewFromAddress() {
+  const asked = new URLSearchParams(location.search).get("view");
+  return VIEWS.includes(asked) ? asked : VIEWS[0];
+}
+
+function showView(view, { write = false, focus = false } = {}) {
+  tabs.forEach(tab => {
+    const on = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+    if (on && focus) tab.focus();
+  });
+  if (write) {
+    const url = new URL(location.href);
+    if (view === VIEWS[0]) url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    url.hash = "";
+    history.replaceState(null, "", url);
+  }
+  // A hidden grid measures as nothing, so it is measured again on the way back.
+  if (view === "coverage") { fitGrid(); updateRemaining(); }
+}
+
+tabs.forEach(tab => tab.addEventListener("click", () =>
+  showView(tab.dataset.view, { write: true })));
+document.querySelector(".views")?.addEventListener("keydown", event => {
+  const at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+  const next = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[event.key];
+  if (next === undefined) return;
+  event.preventDefault();
+  showView(tabs[(next + tabs.length) % tabs.length].dataset.view, { write: true, focus: true });
+});
+
+showView(viewFromAddress());
 initialize();
+initializeGovernance({ paint });

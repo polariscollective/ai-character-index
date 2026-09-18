@@ -162,7 +162,7 @@ check(verbs.length > 0 && verbs.every(method => method === "post"),
 // The public form is the one door open to the internet that writes, so it is
 // walked too: both forms present, both posting to the route, and the honeypot
 // where a person will not find it but a machine will.
-await open("/how-it-works");
+await open("/about");
 // The forms live in a dialog: open, long, and on the page they pushed everything
 // after them out of reach. Written `open` in the markup so they exist without
 // JavaScript, then closed on load and reopened modally. Each of the two sections
@@ -221,7 +221,7 @@ check(forms.every(form => form.method === "post"),
 // The citation a reader would paste into an article names the build it read.
 // A dataset that changes and cites itself without a version is a citation of
 // nothing in particular.
-await open("/how-it-works");
+await open("/about");
 await page.waitForTimeout(400);
 const citation = await page.textContent("#cite-text").catch(() => "");
 check(/Publication [0-9a-f-]{36}, published \d{4}-\d{2}-\d{2}/.test(citation),

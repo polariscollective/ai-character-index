@@ -1627,7 +1627,7 @@ function passagesMarkdown() {
   const lines = [
     "# LLM panel -- specification passages",
     "",
-    `Exported from the AI Character Index LLM panel on ${today()}.`,
+    `Exported from the AI Constitutions Index LLM panel on ${today()}.`,
     "",
     `Behaviours: ${behaviours.map(behaviour => `${paddedNumber(behaviour)} ${behaviour.name}`).join(", ")}.`,
     "",
