@@ -531,7 +531,14 @@ git commit -m "fix: the fixture server answers the links route the reader asks f
 
 **Interfaces:**
 - Consumes: `sliceColumn` from Task 2.
-- Produces: `citationIndex(payload)` returning `{locator: [numeric_id, ...]}`, served on the payload column as `citedBy` whenever the payload is sliced.
+- Produces: `citationIndex(payload)` returning `{locator: [id, ...]}`, served on the payload column as `citedBy` whenever the payload is sliced.
+
+**The field is `id`, not `numeric_id`.** An earlier draft of this task said otherwise
+and shipped an index whose every entry was `undefined`, green under a test whose
+fixture hand-set the invented field. `engine/panel/build_site_data.py` writes each
+behaviour as `{"id": len(out) + 1, "slug": ...}`, and the reader reads
+`behaviour.id`. `numeric_id` is real but belongs to `aci_behaviours`, the registry,
+not to the payload this function is handed.
 
 **Why this task exists, and why it is not optional.** `openPassageLink` decides what a
 `?passage=` link opens by reading `state.rawBehaviours` and looking inside
@@ -553,9 +560,9 @@ Add to `app/lib/__tests__/slice.test.mjs`:
 ```javascript
 test("the payload carries an index of which behaviours cite which locator", () => {
   const payload = { behaviours: [
-    { slug: "helpfulness", numeric_id: 1,
+    { slug: "helpfulness", id: 1,
       coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }] } } },
-    { slug: "no-sycophancy", numeric_id: 2,
+    { slug: "no-sycophancy", id: 2,
       coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }, { locator: `${A} > s > ¶2` }] } } },
   ] };
   const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
@@ -564,7 +571,7 @@ test("the payload carries an index of which behaviours cite which locator", () =
 });
 
 test("an unsliced payload carries no index, having no need of one", () => {
-  const payload = { behaviours: [{ slug: "helpfulness", numeric_id: 1, coverage: {} }] };
+  const payload = { behaviours: [{ slug: "helpfulness", id: 1, coverage: {} }] };
   assert.equal(sliceColumn("payload", payload, all).citedBy, undefined);
 });
 ```
@@ -594,7 +601,7 @@ In `app/lib/slice.mjs`, add above `sliceColumn`:
 export function citationIndex(payload) {
   const index = {};
   for (const behaviour of payload.behaviours || []) {
-    const id = behaviour.numeric_id;
+    const id = behaviour.id;
     for (const coverage of Object.values(behaviour.coverage || {})) {
       for (const passage of coverage.passages || []) {
         (index[passage.locator] ||= []).push(id);
@@ -642,6 +649,24 @@ git commit -m "feat: a sliced payload says which behaviours cite which paragraph
 **Interfaces:**
 - Consumes: the sliced routes from Task 3 and the `citedBy` index from Task 5.
 - Produces: a reader that fetches at four moments and merges rather than replaces.
+
+**Wire the index in, or task 5 built something nobody reads.** This task's own
+Interfaces block says it consumes `citedBy`, and none of its steps did.
+`openPassageLink` still reaches into `state.rawBehaviours` for
+`behaviour.coverage[doc.id].passages`, which under a sliced payload holds only what
+the URL already named, so a shared link to a cited paragraph would open bare. It
+must consult `state.payload.citedBy` instead, map the ids it finds back to slugs, and
+load those behaviours before deciding a link is uncited.
+
+**Map through this publication's own behaviour list, never through `aci_behaviours`.**
+`id` is positional, `len(out) + 1` recomputed on every publication build, not a
+stable identifier. It means something only against the unsliced behaviour list of
+the same publication, which is `state.rawBehaviours`. The registry table has a
+`numeric_id` column that looks like it would serve and does not: it is a different
+numbering of a different thing, and reaching for it is the exact confusion that put
+`undefined` in every entry of this index the first time round.
+That nothing read the index is also why a defect inside it survived until a
+reviewer traced the payload's producer.
 
 **A trap in the existing code, which this task must fix or it will silently drop
 behaviours.** `setSelection` orders the new selection with
