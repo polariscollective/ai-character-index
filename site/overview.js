@@ -499,18 +499,12 @@ function render() {
   elements.legendList.replaceChildren(scale);
   elements.legend.hidden = false;
 
-  const judged = columns.filter(column => !column.absent).length;
-  const unjudged = columns.filter(column => column.absent).map(c => c.lab);
   fitGrid();
   updateRemaining();
-  elements.caption.textContent =
-    `${behaviours.length} behaviours over ${judged} specifications. `
-    + "Each figure is the mean of the panel's judges."
-    + (unjudged.length
-      ? ` The index carries no specification from ${unjudged.join(", ")}, so they `
-        + "stand at nought throughout, and that nought means there is no document "
-        + "to read."
-      : "");
+  // The caption under the grid said how many behaviours and specifications it
+  // held and why some columns stand at nought. It was taken out on review: the
+  // noughts are explained where they are pressed, and the count is in the grid.
+  elements.caption.textContent = "";
 }
 
 async function initialize() {

@@ -112,6 +112,16 @@
      the first thing read looks like a standfirst rather than another paragraph. */
   #tldr p.lead { color: var(--ink2); }
   section.m p:last-child { margin-bottom: 0; }
+  /* The change log: a dated heading per publication, what changed in plain words,
+     and the note recorded with it folded underneath. */
+  .changelog h3 { margin: 22px 0 6px; font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .changelog h3:first-child { margin-top: 6px; }
+  .changelog h3 code, .changelog p code { font-family: var(--mono); font-size: .9em; }
+  .changelog details { max-width: 66ch; margin: 0 0 8px; }
+  .changelog summary { cursor: pointer; color: var(--ink2); font-size: 14px; }
+  .changelog summary:hover { color: var(--ink); }
+  .changelog summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .changelog details p { margin-top: 8px; font-size: 14px; color: var(--ink2); }
   /* The two steps, numbered because they come in that order. */
   section.m ol.steps { max-width: 66ch; margin: 8px 0 0; padding-left: 1.4em; }
   section.m ol.steps li { font-size: 16px; line-height: 1.55; margin-bottom: 10px; padding-left: 4px; }
@@ -373,8 +383,8 @@
 
 <header class="site-header">
   <span class="site-brand">
-    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
-    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
     <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
   </span>
@@ -508,8 +518,8 @@
       <li><b>Test adherence.</b> Measure how closely each company&rsquo;s models follow the
       specification that company published.</li>
       <li><b>Hold each specification to the best.</b> Set it against what the best of the other
-      companies do and against what regulation asks, such as the EU&rsquo;s General-Purpose AI
-      Code of Practice, and show where it falls short.</li>
+      companies do and against standards endorsed by public institutions or independent experts,
+      and show where it falls short.</li>
       <li><b>Find the contradictions.</b> Show where a specification&rsquo;s own rules pull
       against each other, and where two companies&rsquo; documents disagree.</li>
       <li><b>Open up how they are written.</b> Challenge the way these documents are made and
@@ -653,6 +663,36 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     target="_blank" rel="noopener">CITATION.cff</a> gives GitHub a &ldquo;Cite this
     repository&rdquo; button with BibTeX and APA formats. Use it to cite the project as a
     whole.</p>
+  </section>
+  <!-- Every publication the public has been shown, newest first. Written here by
+       hand for now: a publication does not yet carry a change-log field of its
+       own, and when it does this list should be read from it. The note under
+       each is the one recorded with the publication, word for word. -->
+  <section class="m" id="changelog">
+    <h2>Change log</h2>
+    <p>Each publication of the index is fixed once it is made. These are the publications that
+    have been made public, newest first.</p>
+    <div class="changelog">
+      <h3>16 September 2026, publication <code>1919ee6b</code>, current</h3>
+      <p>It keeps the passage judgements of the publication before it, and every depth figure is
+      judged again. The depth judges had been shown fewer passages than the doc reader shows, and
+      now they see every passage a reader sees, related passages included. One figure, DeepSeek&rsquo;s
+      depth for avoiding both over- and under-caution in the Alibaba Model Spec, was obtained at a
+      different setting from every other figure, and the publication says so.</p>
+      <details>
+        <summary>The note recorded with it</summary>
+        <p>Rebuilt after the depth-judge band fix. bands.shown_by_default now shows the depth judge every band the reader opens on, related included, and the 156 depth calls of runs aef5e906, c2f1b34a and a2bdadba were given again in place on 2026-09-16 under depth prompt bd096eba (was 20df8c4d). Same thirteen behaviours and four documents as 07958c5e; passage judgements, runs and calls are untouched. Six deepseek depths answered off the 0 to 4 scale and were asked again with a format variant appended to the user message, the system prompt and its digest unchanged: five came back on scale at the panel's temperature 0, and one, avoiding-over-and-under-caution on alibaba--model-spec@2026-04-00, only at temperature 0.5, which is not the panel's setting for that seat. Its figure was obtained differently from every other figure in this publication.</p>
+      </details>
+      <h3>15 September 2026, publication <code>07958c5e</code>, withdrawn</h3>
+      <p>The first publication judged by a single panel, <code>frontier_fast</code>, with a depth
+      from 0 to 4 given by each judge, over thirteen behaviours and four documents. It was
+      withdrawn on 16 September 2026 because its depth figures had been judged from fewer passages
+      than the doc reader shows.</p>
+      <details>
+        <summary>The note recorded with it</summary>
+        <p>Rejudged with frontier_fast (sol, fable, deepseek) at the panel's call settings, on Claude's Constitution 2026-01-20, the OpenAI Model Spec 2025-12-18 and 2026-08-18, and the Alibaba Model Spec 2026-04-00, with a 0 to 4 depth from each judge. Thirteen behaviours: the ten of the previous draft, and three added on 15 September 2026 and judged in a run of their own with the same panel and settings (not undermining human oversight of AI, honesty and non-deception, and instruction-hierarchy conformance). Substitutions: opus judged in fable's seat on harm-avoidance-to-third-parties for both OpenAI versions, where fable's output was withheld by a content filter; kimi judged in fable's seat on every Alibaba cell, where every Anthropic model was refused. Three deepseek depths were given after a one-line format reminder, and one Alibaba depth was read from a Roman numeral. The Alibaba document is an English machine translation by Claude Opus 5, revised in part by Claude Fable 5; 53 of its 643 blocks were read by no second model.</p>
+      </details>
+    </div>
   </section>
   <section class="m">
     <h2>Andr&eacute;s&rsquo;s original tool</h2>
@@ -1183,5 +1223,8 @@ if (rail) {
      publication on screen has not been published. One file for four pages:
      copied into each, its wording would drift. -->
 <script type="module" src="/dev-tag.js"></script>
+<!-- The wordmark's note: which publication is on screen, the change log and
+     the words the index uses. One file for four pages, like dev-tag.js. -->
+<script type="module" src="/brand.js"></script>
 </body>
 </html>
