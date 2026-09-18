@@ -207,13 +207,20 @@ test("a refused query is loud rather than empty", async () => {
 });
 
 test("readerResponse serves the links column, and a pin is immutable for a year", async () => {
-  // sliceColumn always rebuilds notes.passage even when nothing is filtered
-  // (see slice.mjs), so the fixture carries the real shape rather than the
-  // bare byLocator/comparisons pair a links column never actually ships without.
-  const { fetchImpl } = stub([{ links: { byLocator: {}, comparisons: {}, notes: { passage: {} } } }]);
+  // The real shape, because a links column never ships without its notes, and a
+  // route test is worth more against the shape the route will actually meet.
+  // The fixture carries a locator and a comparison rather than empty objects:
+  // with nothing to lose, the assertion could not tell a column served whole
+  // from a column emptied on the way out.
+  const links = {
+    byLocator: { "a--doc@2026-01-01 > s > ¶1": [{ behaviours: ["helpfulness"] }] },
+    comparisons: { "helpfulness\na--doc@2026-01-01\nb--doc@2026-01-01": { text: "yes" } },
+    notes: { passage: {}, depth: {}, standing: {} },
+  };
+  const { fetchImpl } = stub([{ links }]);
   const out = await readerResponse("links", new URLSearchParams(`publication=${ID}`), fetchImpl);
   assert.equal(out.status, 200);
-  assert.deepEqual(out.body, { byLocator: {}, comparisons: {}, notes: { passage: {} } });
+  assert.deepEqual(out.body, links, "no parameter names anything, so the column is served whole");
   assert.match(out.cacheControl, /immutable/);
 });
 
