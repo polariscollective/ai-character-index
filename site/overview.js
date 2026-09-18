@@ -23,8 +23,13 @@ const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated
  * every behaviour, which is what was asked for, and the caption says why: a
  * nought here is the absence of a document to read, not a document that was
  * read and found to say nothing. Those are different claims and the grid must
- * not let one pass for the other. */
-const WITHOUT_A_SPECIFICATION = ["Google", "xAI", "Meta"];
+ * not let one pass for the other.
+ *
+ * Mistral AI, Moonshot AI and DeepSeek joined in September 2026, when the
+ * governance view took them on: none publishes a model spec either, and a lab
+ * the other view ranks should not be missing from this one. */
+const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
+  "DeepSeek"];
 
 /* Red to green, against the framework's own palette, because the grid is read
  * as a comparison and a single hue at varying strength does not say which end
@@ -371,8 +376,19 @@ function render() {
     lab.textContent = column.lab;
     const version = document.createElement("span");
     version.className = "version";
-    version.textContent = column.absent ? "unpublished" : shownVersion(column.version);
-    cell.append(lab, version);
+    if (column.absent) {
+      // A hyphen where a version would be: "unpublished" no longer fits nine
+      // columns. A screen reader hears the words rather than "hyphen".
+      version.textContent = "-";
+      version.setAttribute("aria-hidden", "true");
+      const said = document.createElement("span");
+      said.className = "visually-hidden";
+      said.textContent = "no published specification";
+      cell.append(lab, version, said);
+    } else {
+      version.textContent = shownVersion(column.version);
+      cell.append(lab, version);
+    }
     head.append(cell);
   });
   elements.head.replaceChildren(head);
@@ -438,17 +454,15 @@ function render() {
           button.setAttribute("aria-label",
             `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
             + DEPTH_WORDS[Math.round(mean)]);
+          // The figure alone. The rubric's word under it ("prescribed") no longer
+          // fits once nine specifications share the width, and the scale beside
+          // the grid gives every level its word and its sentence; the accessible
+          // name above still says the word. Not "out of 4" either: every figure
+          // on this grid is out of 4, and the scale says so once.
           const number = document.createElement("span");
           number.className = "cell-figure";
           number.textContent = mean.toFixed(1);
-          const word = document.createElement("span");
-          word.className = "cell-word";
-          // The rubric's own word either way: nought is "absent" on this scale,
-          // and a column with no document is nought, so the cell says the same
-          // thing every other cell says. What that nought means differently is
-          // the caption's job and the note's, not the cell's.
-          word.textContent = DEPTH_WORDS[Math.round(mean)];
-          button.append(number, word);
+          button.append(number);
           button.addEventListener("click", () => column.absent
             ? openAbsent(behaviour, column)
             : openCell(behaviour, column, depth));

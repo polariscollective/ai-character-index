@@ -308,16 +308,18 @@ tbody th {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-/* Inherits the button's colour, which the ramp computes against the tint behind
-   it. Fixed to --muted it sat almost invisible on the saturated ends of the
-   scale, which are exactly the cells a reader looks at first. */
-.cell-word {
-  display: block;
-  color: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .01em;
+/* The grid's cells carry the figure alone, centred: nine specifications leave
+   no room for the rubric's word beside it, and the scale says the word. */
+#grid .cell-button {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 8px 4px;
 }
+#grid .cell-figure { font-size: 16px; }
+/* Nine columns: the heads give up some padding so "unpublished" and a full date
+   fit on one line. */
+#grid thead th:not(.subject) { padding: 0 4px 8px; }
 .cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
 
 /* The line between one group of behaviours and the next. The reader's menu heads
