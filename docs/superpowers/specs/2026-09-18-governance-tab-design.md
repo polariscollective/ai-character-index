@@ -26,7 +26,8 @@ transcription:
   except plain definitions of terms (what a system prompt is, what CC0 means)
   and the expansion of an acronym.
 - **Quotations stay verbatim**, including American spellings inside them.
-- **Plain words, defined once.** The document a lab publishes is "the
+- **Plain words, defined once.** A sub-criterion is "a check", since
+  "point" would be read as a point of score. The document a lab publishes is "the
   rulebook", introduced as what the labs call a model specification. The
   system prompt is "the standing instructions" a company gives its model before
   every conversation. Guardrails are "filters". Hard constraints are "firm
@@ -53,30 +54,35 @@ transcription:
 
 ## Structure of the view
 
-1. Heading and a lede that says what the view asks and how it differs from the
-   other one, then the short version in three sentences: nobody meets the
-   minimum, nobody gives notice before loosening a firm limit, nobody says what
-   governs government and defence deployments.
-2. **The ranking**: rank, lab, the four questions, total of 40, and supporting
-   practices of 10 set apart as not counted. The Meta and xAI tie is explained
-   under it.
-3. **What the ranking shows**: the six findings.
-4. **Question by question**: the ten points by six labs, scores 0 to 4 coloured
-   with the other view's ramp. Pressing a score opens the overview's note
-   dialog: the score, what 0, 2 and 4 mean for that point, and the profile
-   paragraph that justifies it. Pressing a point's name opens what its scores
-   mean. A lab's name leads to its profile.
-5. **Lab by lab**: six profiles, one paragraph per question and one for
-   supporting practices. The two asides the note addressed to the memo become
-   left-ruled asides, since the framework allows one bordered box per view.
-6. **How to read this ranking**: the note's three design points and its caveat.
-7. **How we scored**: the four questions, each point with what 0, 2 and 4
-   mean, and the five supporting practices.
-8. **What we could not check**.
-9. **Sources**, grouped as in the note.
+A dashboard, not a document. The first version laid the note out as a long page
+of prose with a ranking table and a matrix inside it; reviewed in the browser, it
+read as a document, and the ask was a board a non-technical reader can explore.
 
-A sticky contents rail on the left lists the sections, as the framework allows
-for a content page.
+1. Heading and a short lede that says what the view asks.
+2. **Three headline figures**, computed from the scores: the best score on the
+   minimum (the first two questions, 15 out of 24, OpenAI's), the number of
+   companies with a standing comment period before a firm limit is loosened (0 of
+   6, check 4.2 at 4), and the number that publish the rules for government and
+   defence deployments (0 of 6, check 1.3 at 4).
+3. **The heat map.** Rows are the six companies in rank order, which never
+   changes between breakdowns. With "All four questions" chosen, the columns are
+   Overall (of 40), the four questions, and supporting practices (of 10, set
+   apart, not counted). A pill per question breaks that question down: its total,
+   then one column per check, scored 0 to 4. A question's column head breaks it
+   down too. Colour is the share of the points available, on the grid's own ramp,
+   with a legend; every cell carries its figure, so colour is never alone. A
+   tooltip names the row and column of the cell under the pointer or the focus.
+4. **The panel beside it**, which answers whatever was pressed. Nothing pressed:
+   the six findings, folded, in the overall map, or the question and its checks in
+   a breakdown. A company's name or an overall cell: its profile, with a folded
+   section per question (its checks as chips and the note's paragraph) and one
+   for supporting practices, the pressed question unfolded, and the note's aside
+   where it has one. A check's score: the score, what 0, 2 and 4 mean with the
+   score's place marked, and the note's paragraph on that question. A check's
+   column head: what its scores mean and how the six score.
+5. **Reference text, folded under the board**: how to read this ranking, how we
+   scored (the four questions with what 0, 2 and 4 mean for each check, and the
+   five supporting practices), what we could not check, and the sources.
 
 ## Tabs
 
@@ -91,18 +97,19 @@ while its view is hidden.
 
 ## Where things live
 
-- `site/governance.json`: the structure and the numbers. Labs, the four
-  questions and their points, what 0, 2 and 4 mean for each point, the
-  supporting practices, every score, and each lab's supporting total. Totals
-  and rank are computed from it, never stored: rank orders by total and breaks
-  a tie on supporting practices, which is the note's own rule and puts Meta
-  fifth.
-- `site/overview.html`: the prose, in the governance panel. Each profile
-  paragraph carries `data-lab` and `data-question`, and the dialog clones it,
-  so a sentence has one home.
-- `site/governance.js`: renders the ranking, the matrix and the scoring tables
-  from the JSON, and wires the dialog. Imported by `overview.js`, which owns the
-  tabs and hands over its `sheet` and `paint` helpers.
+- `site/governance.json`: everything the board shows. Labs; the four questions,
+  each with its plain-language explainer; the checks, each with a short name for
+  a column head, its full label and what 0, 2 and 4 mean; the supporting
+  practices; every score and each lab's supporting total; the six findings; and
+  each lab's profile, one paragraph per question and one for supporting
+  practices, plus the note's aside for Anthropic and Google. Totals and rank are
+  computed, never stored: rank orders by total and breaks a tie on supporting
+  practices, which is the note's own rule and puts Meta fifth. A profile's
+  opening line, "Rulebook, 8 out of 12", is written from those sums.
+- `site/overview.html`: the frame of the board and the folded reference text.
+- `site/governance.js`: renders the board from the JSON. Imported by
+  `overview.js`, which owns the tabs and hands over its `paint`, so a score wears
+  the colour a depth wears in the other view.
 
 The data is committed rather than put in Supabase. The rule that the database is
 the only source is about the index's judged artefacts; this is editorial
@@ -112,16 +119,17 @@ portal. If that changes, a table and a route replace the file.
 ## Tests
 
 - `tests/test_governance_tab.py`, run by CI's fixture suite: every lab scored on
-  every point with an integer from 0 to 4, supporting totals within 0 to 10; the
-  scores written in the prose (each profile heading and each paragraph's lead)
-  equal the sums computed from the JSON; the computed ranking matches the
-  note's order; the two combined figures quoted in the first finding (15 and 12
-  of 24) hold; no long dash anywhere in the governance panel or the JSON.
-- `engine/verify-reader-features.mjs` gains a section: `/?view=governance`
-  opens on the governance view with the grid hidden, the ranking has six rows
-  with OpenAI first, pressing a score opens the dialog with the profile
-  paragraph for that lab and question, and pressing the first tab returns to
-  the grid and rewrites the address.
+  every check with an integer from 0 to 4, supporting totals within 0 to 10; the
+  computed ranking matches the note's order; every lab has a paragraph for every
+  question; each supporting paragraph's parenthesised scores add up to the lab's
+  supporting total; the first finding's two quoted sums hold; the two findings
+  about whole columns hold; no long dash in the panel or the JSON.
+- `engine/verify-reader-features.mjs` gains a section: `/?view=governance` opens
+  on the board with the grid hidden, the heat map ranks the six in the note's
+  order, the panel starts on the six findings, an overall cell opens the profile
+  with that question unfolded, a question's pill breaks it into its checks and a
+  score of 1 is marked between 0 and 2, the first tab returns to the grid and
+  rewrites the address, and the arrow keys move between the tabs.
 
 ## Not in scope
 

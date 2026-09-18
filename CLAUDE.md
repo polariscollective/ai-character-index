@@ -986,6 +986,33 @@ form. The design is
 migration is `20260918090000_aci_links_belong_to_a_publication.sql` in
 `polaris-supabase`.
 
+### The overview carries figures no panel produced
+
+The front page gained a second view on 18 September 2026, behind a tab:
+`/?view=governance`, how each lab governs its rulebook rather than what the
+rulebook says. It is a board: six labs, four questions and their ten checks
+scored 0 to 4 in a heat map, and a panel that shows the evidence for any score.
+It was written for regulators and legislators rather than for engineers, so the
+text is the research note "Spec governance ranking: six frontier labs" (Notion,
+18 September 2026) rewritten in plain words, with every score, date, quotation
+and source kept.
+
+What matters about it is where its numbers come from. Every other figure on the
+site is a panel's reading, recorded in the database and held to a publication.
+These are scores Polaris Collective gave by hand from public documents, and the
+note says so of itself: its anchors are its own and a different reading could
+move a lab by a few points. They live in `site/governance.json`, committed,
+rather than in Supabase, because nothing judges them and nothing edits them from
+the portal. `tests/test_governance_tab.py` holds the note's sentences to the
+scores wherever the two quote each other.
+
+The note lists points to re-check before anything is published outside, and the
+board carries them under "What we could not check" rather than resolving them.
+The one that could move a score is Alibaba: its rulebook was read through this
+index's own passages, not at its address, and a scope clause in a preface the
+index does not keep would change check 1.2. The design is
+`docs/superpowers/specs/2026-09-18-governance-tab-design.md`.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
