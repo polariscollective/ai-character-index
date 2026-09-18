@@ -110,7 +110,16 @@ Nothing that writes the column can run before it exists. Tasks 2 to 6 touch only
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `app/lib/__tests__/links.test.mjs`, and make sure `readerLinks` is in the import list at the head of that file:
+Add to `app/lib/__tests__/links.test.mjs`, and make sure `readerLinks` is in the import list at the head of that file.
+
+This file has never reached `select()` before, so unlike its siblings it sets no credentials. Add these two lines below the imports, worded exactly as `publications.test.mjs` has them, or the new test throws `SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set` in every shell that does not happen to carry them, and passes only on the machine that wrote it:
+
+```javascript
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
+```
+
+Then the test itself:
 
 ```javascript
 test("readerLinks reads the runs it is given and never asks which are current", async () => {

@@ -20,6 +20,13 @@ import {
   readerLinks,
 } from "../links.mjs";
 
+/* readerLinks reaches select(), which refuses to build a request with no
+ * credentials, so this file needs them where the rules above never did. Dummy
+ * values, worded as publications.test.mjs words them: fetch is injected in every
+ * test here, so nothing is ever sent anywhere. */
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
+
 const ANTHROPIC = "anthropic--constitution@2026-01-20 > Being honest > ¶5";
 const OPENAI = "openai--model-spec@2026-08-18 > #do_not_lie > ¶1";
 const IDS = new Set(["anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18"]);
