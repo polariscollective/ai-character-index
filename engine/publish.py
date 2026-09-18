@@ -52,11 +52,16 @@ from store import Store          # noqa: E402
 FORMATS = {
     "payload": dict(indent=1, ensure_ascii=False),
     "documents": dict(ensure_ascii=False, separators=(",", ":")),
+    # What engine/build-links-data.mjs writes, byte for byte. Its serialise() is
+    # JSON.stringify(value, null, 2) with no trailing newline, which is exactly
+    # this call's output. test_publish.LinksFormatTest holds the two together.
+    "links": dict(indent=2, ensure_ascii=False),
 }
 BUILDERS = {
     "payload": (HERE / "panel" / "build_site_data.py",
                 ["--threshold=4", "--solid-threshold=6"]),
     "documents": (ROOT / "engine" / "build-spec-reader-data.py", []),
+    "links": (ROOT / "engine" / "build-links-data.mjs", []),
 }
 
 
@@ -236,7 +241,7 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     return cells
 
 
-def build(name, cells, behaviours, run_date=None, panel_name=None):
+def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=()):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -246,6 +251,10 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
     about this", the one claim the index must never make by accident.
     """
     script, args = BUILDERS[name]
+    # The interpreter follows the builder's extension rather than a second
+    # table. The links builder is JavaScript because the assembly it needs lives
+    # in app/lib/links.mjs, and a Python port would be a second copy of it.
+    runner = ["node"] if script.suffix == ".mjs" else [sys.executable]
     with tempfile.TemporaryDirectory() as scratch:
         cells_file = Path(scratch) / "cells.json"
         cells_file.write_text(json.dumps(cells))
@@ -255,8 +264,10 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
             extra.append("--behaviours=" + ",".join(sorted(behaviours)))
             if panel_name:
                 extra.append(f"--panel={panel_name}")
+        if name == "links":
+            extra.append("--link-runs=" + ",".join(sorted(link_runs)))
         result = subprocess.run(
-            [sys.executable, str(script), *args, *extra,
+            [*runner, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],
             capture_output=True, text=True)
         if result.returncode != 0:
@@ -267,12 +278,15 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
 
 
 def publish(store, behaviours, document_ids, rubric, published_by, notes="",
-            run_date=None, config=None):
+            run_date=None, config=None, link_runs=()):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
     following `?publication=` can see it, and nobody else can.
     """
+    if not link_runs:
+        raise SystemExit("publish: --link-runs is required, because a publication "
+                         "names the link runs it carries")
     config = config or json.loads((HERE / "panel" / "panel-config.json").read_text())
     panel_name = config["display"]["panel"]
     panel = panel_seats(config, panel_name)
@@ -283,6 +297,7 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)
     documents, documents_sha256 = build("documents", cells, behaviours)
+    links, links_sha256 = build("links", cells, behaviours, link_runs=link_runs)
 
     publication = {
         "published_by": published_by,
@@ -292,11 +307,15 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         "is_public": False,
         "build_params": {"behaviours": sorted(behaviours),
                          "documents": sorted(document_ids),
-                         "panel": panel_name, "rubric": rubric, "run_date": run_date},
+                         "panel": panel_name, "rubric": rubric,
+                         "run_date": run_date,
+                         "link_runs": sorted(link_runs)},
         "payload": payload,
         "payload_sha256": payload_sha256,
         "documents": documents,
         "documents_sha256": documents_sha256,
+        "links": links,
+        "links_sha256": links_sha256,
     }
     [row] = store.insert("aci_publications", [publication], returning=True)
     store.insert("aci_publication_cells",
@@ -314,6 +333,8 @@ def main(argv=None):
     parser.add_argument("--by", default=os.environ.get("USER", "publish.py"))
     parser.add_argument("--run-date", default=None,
                         help="pin provenance.runDate, for a reproducible rebuild")
+    parser.add_argument("--link-runs", required=True,
+                        help="comma-separated aci_link_runs ids this publication carries")
     args = parser.parse_args(argv)
 
     store = Store.from_env()
@@ -322,10 +343,12 @@ def main(argv=None):
         store,
         [s for s in args.behaviours.split(",") if s],
         [s for s in args.documents.split(",") if s],
-        args.rubric, args.by, args.notes, args.run_date)
+        args.rubric, args.by, args.notes, args.run_date,
+        link_runs=[s for s in args.link_runs.split(",") if s])
     print(f"published {row['id']} (not public): {len(cells)} cells")
     print(f"  payload   {row['payload_sha256'][:16]}")
     print(f"  documents {row['documents_sha256'][:16]}")
+    print(f"  links     {row['links_sha256'][:16]}")
     return 0
 
 

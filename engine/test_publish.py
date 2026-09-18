@@ -9,6 +9,9 @@ taken back.
 
 Run: python3 engine/test_publish.py
 """
+import json
+import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -401,6 +404,58 @@ class BuildTest(unittest.TestCase):
         with mock.patch.object(publish.subprocess, "run", fake_run):
             publish.build("payload", [], ["helpfulness"], panel_name="frontier_fast")
         self.assertIn("--panel=frontier_fast", seen["argv"])
+
+    def test_a_javascript_builder_is_launched_with_node(self):
+        seen = {}
+
+        def fake_run(argv, capture_output, text):
+            seen["argv"] = argv
+            out = next(a.split("=", 1)[1] for a in argv if a.startswith("--out="))
+            Path(out).write_text("{}")
+            return type("Done", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+        with mock.patch.object(publish.subprocess, "run", fake_run):
+            publish.build("links", [], ["helpfulness"], link_runs=["r1", "r0"])
+        self.assertEqual(seen["argv"][0], "node")
+        self.assertTrue(seen["argv"][1].endswith("build-links-data.mjs"))
+        # Sorted, because the runs reach the builder's output through the object
+        # it assembles, and the digest describes bytes.
+        self.assertIn("--link-runs=r0,r1", seen["argv"])
+
+
+class LinksFormatTest(unittest.TestCase):
+    """The builder's bytes must be reproducible in Python.
+
+    verify_supabase_provenance.py re-serialises the stored links column with
+    json.dumps(obj, **FORMATS["links"]) and holds it to the recorded digest. If
+    the two disagree by a single byte, every publication fails that check for
+    good, so this runs the real builder's serialiser and compares.
+    """
+
+    SAMPLE = {"documents": ["a", "b"], "runs": [], "byLocator": {},
+              "comparisons": {}, "notes": {"passage": {"k": {"text": "caractère"}}}}
+
+    def test_python_reproduces_what_the_javascript_builder_writes(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not on PATH")
+        script = (
+            "import { serialise } from "
+            f"{json.dumps(str(HERE / 'build-links-data.mjs'))};"
+            f"process.stdout.write(serialise({json.dumps(self.SAMPLE)}));"
+        )
+        written = subprocess.run([node, "--input-type=module", "-e", script],
+                                 capture_output=True, text=True)
+        self.assertEqual(written.returncode, 0, written.stderr)
+        self.assertEqual(written.stdout,
+                         json.dumps(self.SAMPLE, **publish.FORMATS["links"]))
+
+
+class LinkRunsRequiredTest(unittest.TestCase):
+    def test_a_publication_names_the_link_runs_it_carries(self):
+        with self.assertRaises(SystemExit) as refused:
+            publish.publish(None, ["helpfulness"], ["v1"], "v5", "tester")
+        self.assertIn("link-runs", str(refused.exception))
 
 
 if __name__ == "__main__":
