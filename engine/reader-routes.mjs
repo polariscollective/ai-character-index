@@ -1,5 +1,5 @@
 /**
- * The reader's two routes, answered from committed files.
+ * The reader's three routes, answered from committed files.
  *
  * The browser walkers test the reader, not the database: what they must prove is
  * that the page resolves a publication, falls through a dead pin and renders
@@ -32,8 +32,8 @@ const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "dra
 
 
 /**
- * Answers /api/reader/documents and /api/reader/payload, or returns false so
- * the caller falls through to its static handler.
+ * Answers /api/reader/documents, /api/reader/links and /api/reader/payload,
+ * or returns false so the caller falls through to its static handler.
  *
  * `dataDir` is the reader's data directory in whatever tree is being served,
  * so a staged user-extended site answers from its own payloads.
@@ -67,6 +67,7 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
   }
   const name = payloadName;
   const file = which === "documents" ? "documents.json"
+    : which === "links" ? "links.json"
     : which === "payload" ? `${name}.json`
     : null;
   if (file === null) {
