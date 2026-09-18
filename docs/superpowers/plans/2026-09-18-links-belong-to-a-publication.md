@@ -315,7 +315,7 @@ git commit -m "feat: a builder writes what a publication carries about links"
 
 **Files:**
 - Modify: `engine/publish.py` (`FORMATS` and `BUILDERS` near line 52, `build()` at line 240, `publish()` at line 269, `main()` at line 306)
-- Test: `engine/test_publish.py` (extend `BuildTest`, near line 391)
+- Test: `engine/test_publish.py` (extend `BuildTest` near line 391, and add two classes after it)
 
 **Interfaces:**
 - Consumes: the command line of Task 3, and the columns of Task 1.
@@ -375,7 +375,22 @@ class LinksFormatTest(unittest.TestCase):
                          json.dumps(self.SAMPLE, **publish.FORMATS["links"]))
 ```
 
-Add `import json`, `import shutil` and `import subprocess` to the head of `engine/test_publish.py` if they are not already there.
+And a third class, for the refusal `publish()` gains in Step 5. This file tests its
+refusals everywhere else with `assertRaises(SystemExit)`, and a hard refusal that nothing
+exercises is a behaviour nobody will notice breaking. The refusal sits at the very top of
+`publish()`, before the store is touched, so `None` is a safe first argument:
+
+```python
+class LinkRunsRequiredTest(unittest.TestCase):
+    def test_a_publication_names_the_link_runs_it_carries(self):
+        with self.assertRaises(SystemExit) as refused:
+            publish.publish(None, ["helpfulness"], ["v1"], "v5", "tester")
+        self.assertIn("link-runs", str(refused.exception))
+```
+
+Add `import json`, `import shutil` and `import subprocess` to the head of
+`engine/test_publish.py`. None of the three is there today: it imports only `sys`,
+`unittest`, `Path` and `mock`.
 
 - [ ] **Step 2: Run the tests and watch them fail**
 
