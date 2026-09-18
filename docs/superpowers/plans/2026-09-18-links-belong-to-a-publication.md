@@ -464,11 +464,11 @@ In the `publication` dict, after `documents_sha256`:
 And in `build_params`, without which the verifier cannot rebuild the column:
 
 ```python
-            "build_params": {"behaviours": sorted(behaviours),
-                             "documents": sorted(document_ids),
-                             "panel": panel_name, "rubric": rubric,
-                             "run_date": run_date,
-                             "link_runs": sorted(link_runs)},
+        "build_params": {"behaviours": sorted(behaviours),
+                         "documents": sorted(document_ids),
+                         "panel": panel_name, "rubric": rubric,
+                         "run_date": run_date,
+                         "link_runs": sorted(link_runs)},
 ```
 
 - [ ] **Step 6: Add the flag**
@@ -493,9 +493,12 @@ and pass it to `publish`, adding `links` to the digests reported:
     print(f"  payload   {row['payload_sha256'][:16]}")
     print(f"  documents {row['documents_sha256'][:16]}")
     print(f"  links     {row['links_sha256'][:16]}")
+    return 0
 ```
 
-Keep the existing print lines as they are worded if they differ; the point is that `links` joins them.
+The first three print lines are already worded exactly like that; the fourth is the
+addition. Keep the `return 0`: replacing the block without it leaves `main()` falling
+off its end.
 
 - [ ] **Step 7: Run the tests**
 
