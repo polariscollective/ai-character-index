@@ -10,8 +10,8 @@
  * Everything comes from governance.json: the scores, what each score means, and
  * the text of the research note, lab by lab and question by question. Totals and
  * rank are computed here rather than stored, so the ranking cannot disagree with
- * the checks it is the sum of, and a profile's opening line, "Rulebook, 8 out of
- * 12", is written from the same sums rather than typed beside them.
+ * the checks it is the sum of, and a profile's opening line, "Model spec, 8 out
+ * of 12", is written from the same sums rather than typed beside them.
  *
  * Nothing is built with innerHTML, as in overview.js. The text here is ours
  * rather than a model's, but one rule for the whole page is easier to keep.
@@ -79,9 +79,9 @@ function renderKpis() {
   const figures = [
     { figure: `${minimum.value}`, small: ` out of ${minimumMax}`,
       caption: `The best score on the minimum we propose, ${minimum.lab.name}'s: a `
-        + "published rulebook for every model, and one record of every change." },
+        + "published model spec for every model, and one public change log." },
     { figure: `${meeting("4.2")}`, small: ` of ${labs.length}`,
-      caption: "Companies that let the public comment before a firm limit is loosened." },
+      caption: "Companies that let the public comment before a hard constraint is weakened." },
     { figure: `${meeting("1.3")}`, small: ` of ${labs.length}`,
       caption: "Companies that publish the rules their models follow in government, "
         + "defence and other special deployments." },
@@ -229,6 +229,13 @@ function checksOf(lab, question) {
   return list;
 }
 
+/* The note's text, one paragraph per blank line. */
+function paragraphs(text) {
+  const fragment = document.createDocumentFragment();
+  String(text || "").split(/\n{2,}/).forEach(block => fragment.append(element("p", "", block)));
+  return fragment;
+}
+
 function toProfile(lab, open) {
   const button = element("button", "gov-button", `The whole profile of ${lab.name}`);
   button.type = "button";
@@ -241,7 +248,11 @@ function toProfile(lab, open) {
 function profile(content, lab, open) {
   const rank = board.labs.indexOf(lab) + 1;
   const text = board.data.profiles[lab.id];
-  titled(content, lab.name, `Ranked ${rank} of ${board.labs.length}.`);
+  titled(content, lab.name, [
+    `Ranked ${rank} of ${board.labs.length}.`,
+    lab.open_weights ? "Its flagship model, or nearly, can be downloaded by anyone (open weights)." : "",
+    lab.legal || "",
+  ].filter(Boolean).join(" "));
   content.append(figure(lab.total, ` out of ${TOTAL}`));
   board.data.questions.forEach(question => {
     const fold = element("details");
@@ -249,7 +260,7 @@ function profile(content, lab, open) {
     const summary = element("summary");
     summary.append(chip(lab.byQuestion[question.id], maxOf(question)),
       element("span", "", `${question.name}, ${lab.byQuestion[question.id]} out of ${maxOf(question)}`));
-    fold.append(summary, checksOf(lab, question), element("p", "", text[question.id]));
+    fold.append(summary, checksOf(lab, question), paragraphs(text[question.id]));
     content.append(fold);
   });
   const supporting = element("details");
@@ -257,7 +268,7 @@ function profile(content, lab, open) {
   const summary = element("summary");
   summary.append(chip(lab.supporting, SUPPORTING),
     element("span", "", `Supporting practices, ${lab.supporting} out of ${SUPPORTING}, not counted`));
-  supporting.append(summary, element("p", "", text.supporting));
+  supporting.append(summary, paragraphs(text.supporting));
   content.append(supporting);
   if (text.aside) {
     const aside = element("div", "aside");
@@ -273,7 +284,7 @@ function questionScore(content, lab, question) {
   content.append(figure(lab.byQuestion[question.id], ` out of ${maxOf(question)}`),
     checksOf(lab, question));
   content.append(element("h3", "", "What we found"),
-    element("p", "", board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
+    paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function checkScore(content, lab, question, check) {
@@ -282,20 +293,20 @@ function checkScore(content, lab, question, check) {
   content.append(figure(value, " out of 4"));
   content.append(element("h3", "", "What the scores mean for this check"), anchorsList(check, value));
   content.append(element("h3", "", `What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
-    element("p", "", board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
+    paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function supportingScore(content, lab) {
   titled(content, `${lab.name}: supporting practices`, "Reported beside the total, not counted in it.");
   content.append(figure(lab.supporting, ` out of ${SUPPORTING}`),
-    element("p", "", board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
+    paragraphs(board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
 }
 
 function aboutTotal(content) {
   titled(content, "Overall, out of 40", "The sum of the four questions.");
   content.append(element("p", "", "The first two questions are worth 12 points each, "
-    + "because together they are the minimum we propose: a published rulebook for every "
-    + "model in use, and one public record of every change. The other two are worth 8."));
+    + "because together they are the minimum we propose: a published model spec for every "
+    + "model in use, and one public change log. The other two are worth 8."));
   const list = element("ul", "check-list");
   board.data.questions.forEach(question => {
     const item = element("li");
@@ -403,9 +414,11 @@ function headRow() {
     button.dataset.lab = lab.id;
     button.setAttribute("aria-haspopup", "dialog");
     button.setAttribute("aria-expanded", "false");
-    button.setAttribute("aria-label", `${lab.name}, ranked ${index + 1}: its profile`);
+    button.setAttribute("aria-label", `${lab.name}, ranked ${index + 1}`
+      + `${lab.open_weights ? ", open weights" : ""}: its profile`);
     button.append(element("span", "rank", String(index + 1)),
       element("span", "company-name", lab.name));
+    if (lab.open_weights) button.append(element("span", "company-flag", "Open weights"));
     button.addEventListener("click", () =>
       openPopover(button, content => profile(content, lab, null)));
     cell.append(button);

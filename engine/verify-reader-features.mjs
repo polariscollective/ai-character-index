@@ -1994,19 +1994,25 @@ console.log("== Overview: the governance view ==");
       .map(b => b.textContent),
     outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-max')]
       .map(b => b.textContent))],
+    flagged: [...document.querySelectorAll("#gov-heatmap thead .company-button")]
+      .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
     rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
       .map(n => n.textContent),
     findings: document.querySelectorAll("#gov-findings details").length,
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
-  check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Meta, xAI"
-      && seen.overall.join(",") === "23,22,10,9,5,5" && seen.outOf.join() === "/40",
-    "the companies run across in the note's order, Meta fifth on the tie, each total out of 40",
+  check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
+        + "Meta, xAI, Moonshot AI, DeepSeek"
+      && seen.overall.join(",") === "23,22,10,9,6,5,5,4,2" && seen.outOf.join() === "/40"
+      && seen.flagged.join(", ") === "Mistral AI, Moonshot AI, DeepSeek",
+    "the nine companies run across in the note's order, Meta sixth on the tie, "
+      + "each total out of 40, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.rows.join(", ") === "Overall, Rulebook, Change record, Filters, Notice, Supporting practices"
-      && seen.findings === 6,
-    "the scores run down from the total, the checks folded, the six findings under the table",
+  check(seen.rows.join(", ") === "Overall, Model spec, Change log, Guardrails, Hard constraints, "
+        + "Supporting practices"
+      && seen.findings === 8,
+    "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));
 
   // A question opens into its checks.
@@ -2017,9 +2023,9 @@ console.log("== Overview: the governance view ==");
       .map(n => n.textContent),
     expanded: document.querySelector('.row-toggle[data-question="2"]').getAttribute("aria-expanded"),
   }));
-  check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the record"
+  check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the log"
       && opened.expanded === "true",
-    "the change record opens into its three checks", JSON.stringify(opened));
+    "the change log opens into its three checks", JSON.stringify(opened));
 
   // A check's score opens a popover beside it, with its place on the scale marked.
   const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');
@@ -2060,7 +2066,7 @@ console.log("== Overview: the governance view ==");
       checks: pop.querySelectorAll("details").length,
     };
   });
-  check(about.title === "Filters" && about.shares.includes("How its 8 points are shared out")
+  check(about.title === "Guardrails" && about.shares.includes("How its 8 points are shared out")
       && about.checks === 2,
     "a question's name opens what it asks and how its points are shared out", JSON.stringify(about));
   await page.keyboard.press("Escape");

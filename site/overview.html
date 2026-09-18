@@ -563,10 +563,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* The table. The grid's own cells and colours, so a score reads the same in
    both views; every cell carries its figure, so colour is never alone. Its head
    holds under the site header while the checks are open and the table is long. */
+/* From the top, so the ranks sit on one line whether a name wraps or carries a
+   mark under it. */
 .gov-heatmap thead th {
   top: var(--header-height);
   padding: 8px 6px 8px 0;
-  vertical-align: bottom;
+  vertical-align: top;
 }
 .gov-heatmap thead th.row-col { width: 22%; }
 .gov-heatmap tbody th { padding: 0 10px 0 0; font-weight: 400; vertical-align: middle; }
@@ -578,7 +580,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   padding: 10px 8px;
   text-align: center;
 }
-.gov-heatmap .cell-button { position: relative; }
+/* Room on the right for what the score is out of, so the figure centres in
+   what is left rather than running into it. */
+.gov-heatmap .cell-button { position: relative; padding-right: 40px; }
 .gov-heatmap .cell-button .cell-figure { font-size: 16px; }
 /* What the score is out of, grey and small at the cell's right. On a tag of
    paper rather than straight on the colour: grey laid on the red or the amber
@@ -609,9 +613,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-heatmap .supporting-row { border-top: 1px solid var(--muted); }
 /* A question's checks, indented under it and a size smaller. */
 .gov-heatmap .check-row th { padding-left: 34px; }
-/* Each check's cell starts a little right of its question's, inside its own
-   column, so an open question reads as that column's parts. */
-.gov-heatmap .check-row .cell { padding-left: 18px; }
+/* A check's cell starts a fifth of the way into its own column, like the second
+   line of a bullet: an open question reads as the parts its score is the sum of,
+   column by column. */
+.gov-heatmap .check-row .cell-button { width: 80%; margin-left: 20%; }
 .gov-heatmap .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
 .gov-heatmap .check-row .cell-figure { font-size: 14px; }
 .gov-heatmap .check-row { background: rgb(92 107 60 / .05); }
@@ -640,6 +645,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .company-button { display: block; width: 100%; font-weight: 600; }
 .company-button .rank { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--faint); }
 .company-name { color: var(--muted); }
+.company-flag { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--faint); }
 /* Open and shut, drawn rather than typed: two borders of a small square, turned
    to point right when shut and down when open. The same chevron marks every
    fold on the board. */
@@ -826,16 +832,29 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-scoring-table .check-col { width: 28%; }
 .gov-scoring-table tbody th { font-weight: 600; }
 
+/* Nine companies need about a thousand pixels. Narrower than that the table
+   scrolls sideways in its own frame, with the names of the rows held at its left
+   edge so a score never loses its row. The head no longer holds at the top
+   there: a frame that can scroll is what a sticky head would stick to. */
+@media (max-width: 1180px) {
+  .matrix-wrap { overflow-x: auto; }
+  .gov-heatmap { min-width: 1000px; }
+  .gov-heatmap thead th { position: static; }
+  .gov-heatmap tbody th, .gov-heatmap thead th.row-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper);
+  }
+  .gov-heatmap .check-row th { background: #EAE8DB; }
+  /* Held at the left only. The top the wide layout gives the head, to clear the
+     site header, would push this one cell down inside the frame. */
+  .gov-heatmap thead th.row-col { top: auto; }
+}
 @media (max-width: 760px) {
   .gov-kpis { grid-template-columns: 1fr; gap: 16px; }
   .gov-kpi + .gov-kpi { padding-left: 0; padding-top: 16px; border-left: 0; border-top: 1px solid var(--line); }
   .gov-findings-list { grid-template-columns: 1fr; }
-  /* Six companies do not fit a phone's width, so the table scrolls sideways in
-     its own frame there, and its head no longer holds: a frame that can scroll
-     is what a sticky head would stick to. */
-  .matrix-wrap { overflow-x: auto; }
-  .gov-heatmap { min-width: 640px; }
-  .gov-heatmap thead th { position: static; }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
@@ -928,11 +947,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
   <h1>How each lab governs the rules its models follow</h1>
   <p class="lede gov-lede">
-    Some AI companies publish a rulebook for how their models should behave,
-    usually called a model specification. This view scores how that rulebook is
-    run: whether it exists, what it covers, whether a change to it can be seen,
-    and whether the public gets a say before it is weakened. Six companies, as of
-    September 2026; the scores are Polaris Collective's own and open to challenge.
+    Some AI companies publish a model spec: a document setting out how their
+    models should behave. This view scores how that document is run: whether it
+    exists, what it covers, whether a change to it can be seen, and whether the
+    public gets a say before it is weakened. Nine companies, as of September
+    2026; the scores are Polaris Collective's own and open to challenge.
   </p>
 
   <div class="gov-kpis" id="gov-kpis"></div>
@@ -955,9 +974,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   </div>
   <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
   <p class="gov-foot">
-    Meta and xAI tie on 5. Meta is placed fifth on the supporting practices and
-    on its direction of travel: it has committed in writing to publish a
-    rulebook, and it already tests its models against an internal one.
+    <strong>Open weights</strong> marks a company whose flagship model, or
+    nearly, anyone can download and run. None of these questions can reach how
+    such a model behaves once it has been downloaded, so a low score there is
+    partly the questions' limit rather than only the company's choice.
+  </p>
+  <p class="gov-foot">
+    Meta and xAI tie on 5. Meta is placed sixth on the supporting practices and
+    on its direction of travel: it has committed in writing to publish a model
+    spec, and it already tests its models against an internal one.
   </p>
   <p class="gov-date">As of September 2026</p>
 
@@ -977,26 +1002,34 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <summary>How to read this ranking</summary>
       <div class="gov-more-body">
         <p>
-          <strong>Having a rulebook and covering something are scored
-          apart.</strong> Alibaba shows why. On a single "has a rulebook" column,
-          a rulebook that names no model would score the same as one that binds a
-          company's products, and the two are not the same thing.
+          <strong>Having a model spec and covering something are scored
+          apart.</strong> Alibaba shows why. On a single "has a model spec"
+          column, a model spec that names no model would score the same as one
+          that binds a company's products, and the two are not the same thing.
         </p>
         <p>
           <strong>Read the checks, not only the total.</strong> The totals put
           OpenAI and Anthropic one point apart, but they fall short in opposite
-          ways. OpenAI keeps a record of its versions and does not list its firm
-          limits; Anthropic lists its firm limits and keeps no record of its
-          versions. A single number hides the most useful thing in the
+          ways. OpenAI keeps a record of its versions and does not list its hard
+          constraints; Anthropic lists its hard constraints and keeps no record
+          of its versions. A single number hides the most useful thing in the
           comparison.
         </p>
         <p>
+          <strong>Companies whose models anyone can download are marked, not
+          only ranked.</strong> Mistral AI, Moonshot AI and DeepSeek take three
+          of the four lowest places, and a reader who sees only the totals would
+          conclude they are the least responsible companies. What the evidence
+          shows is that these questions have no way to reach a model once it has
+          been downloaded. So the table marks them "Open weights", which is more
+          honest than a low score alone.
+        </p>
+        <p>
           <strong>The bottom of the ranking comes down to the first
-          question.</strong> Three of the six companies publish no rulebook, so
+          question.</strong> Six of the nine companies publish no model spec, so
           most of the grid cannot apply to them, and they sit at the bottom for
           that one reason. To compare the companies that do publish, look at the
-          change record. To see the case for publishing at all, look at the
-          totals.
+          change log. To see the case for publishing at all, look at the totals.
         </p>
         <p>
           <strong>A caveat.</strong> The four questions were written to argue for
@@ -1004,8 +1037,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           precision they were not designed for, and the descriptions of each
           score are ours. Anyone could move a company by a few points by reading
           a description differently. What does not move is the overall picture:
-          every company falls short on the change record, none offers a comment
-          period before loosening a firm limit, and none covers government,
+          all nine fall short on the change log, none offers a comment window
+          before weakening a hard constraint, and none covers government,
           defence and other special deployments.
         </p>
       </div>
@@ -1035,22 +1068,32 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           changes are governed.
         </p>
         <ul class="gov-bullets" id="gov-supporting"></ul>
+        <h3>Who the companies are</h3>
+        <p>
+          Some trading names mislead, so here are the companies behind three of
+          them. Moonshot AI is Beijing Moonshot AI Technology
+          (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is
+          杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the
+          High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI
+          SAS, of Paris.
+        </p>
       </div>
     </details>
     <details id="gov-limits">
       <summary>What we could not check</summary>
       <div class="gov-more-body">
         <p>
-          Researched on 18 September 2026 from primary sources, in six parallel
-          searches for evidence, one per company. Every score rests on a
-          document we found and dated. These points are not yet confirmed.
+          Researched on 18 September 2026 from primary sources, with one search
+          for evidence per company. Every score rests on a document we found and
+          dated. These points are not yet confirmed.
         </p>
         <ul class="gov-bullets">
           <li>
-            <strong>Alibaba's rulebook was not read at its own address.</strong>
-            The page at s.alibaba.com/aaig/specification is built in the browser,
-            and our tools could not retrieve it. The text we used comes from this
-            index, which holds 210 passages of the document, word for word, at
+            <strong>Alibaba's model spec was not read at its own
+            address.</strong> The page at s.alibaba.com/aaig/specification is
+            built in the browser, and our tools could not retrieve it. The text we
+            used comes from this index, which holds 210 passages of the document,
+            word for word, at
             <a href="/spec-reader/?spec=alibaba--model-spec@2026-04-00">its April
             2026 version</a>. The index keeps only passages that bear on a
             behaviour, so it skips prefaces and boilerplate. Two things reported
@@ -1064,7 +1107,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
             <strong>Archived copies could not be checked.</strong> The Internet
             Archive (web.archive.org) could not be reached throughout, so we could
             not detect silent edits to any undated page. This matters most for
-            Google, where three of the relevant documents carry no date at all.
+            Google, where three of the relevant documents carry no date at all,
+            and for DeepSeek, whose disclosure page has never been archived there.
+          </li>
+          <li>
+            <strong>Chinese regulatory filings could not be listed.</strong> The
+            Cyberspace Administration of China publishes its lists of filings as
+            attachments we could not retrieve. So when we say Moonshot AI publishes
+            no filing number, we mean we could not find one on its own sites, not
+            that none exists.
           </li>
           <li>
             <strong>Whether Anthropic has signed the EU Code of Practice is
@@ -1073,14 +1124,26 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
             depends on this.
           </li>
           <li>
+            <strong>Which chapters of the EU Code of Practice Mistral has signed
+            is unconfirmed.</strong> The European Commission's list names Mistral
+            with no exception, and sets out chapters only for xAI. No score
+            depends on this.
+          </li>
+          <li>
             <strong>Some details of Claude Mythos</strong> rest partly on
-            secondary sources, though the absence of a published rulebook for it
+            secondary sources, though the absence of a published model spec for it
             is confirmed from Anthropic's own pages.
           </li>
           <li>
             <strong>Meta's log of updates to its Community Standards</strong>
             could not be read, because it too is built in the browser, so our view
             that it does not cover AI is an inference rather than a check.
+          </li>
+          <li>
+            <strong>The release date of Kimi K3 is disputed</strong> between
+            Moonshot AI's own blog (27 July 2026, for the downloadable model) and
+            the UK AI Security Institute and Wikipedia (16 July 2026). No score
+            depends on this.
           </li>
           <li>
             <strong>All scores are ours.</strong> None comes from an established,
@@ -1092,7 +1155,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     <details id="gov-sources" class="gov-sources">
       <summary>Sources</summary>
       <div class="gov-more-body">
-        <h3>The rulebooks</h3>
+        <h3>The model specs</h3>
         <ul class="gov-bullets">
           <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
           <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
@@ -1100,12 +1163,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
           <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
         </ul>
-        <h3>How the rulebooks are run</h3>
+        <h3>How the model specs are run</h3>
         <ul class="gov-bullets">
           <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
           <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
           <li><a href="https://www.anthropic.com/rsp-updates" target="_blank" rel="noopener noreferrer">Anthropic, Responsible Scaling Policy update history</a></li>
-          <li><a href="https://platform.claude.com/docs/en/release-notes/system-prompts" target="_blank" rel="noopener noreferrer">Anthropic, release notes for its standing instructions (system prompts)</a></li>
+          <li><a href="https://platform.claude.com/docs/en/release-notes/system-prompts" target="_blank" rel="noopener noreferrer">Anthropic, release notes for its system prompts</a></li>
           <li><a href="https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2" target="_blank" rel="noopener noreferrer">Meta, Advanced AI Scaling Framework v2, 7 April 2026</a></li>
           <li><a href="https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/" target="_blank" rel="noopener noreferrer">Meta, Muse Spark Safety and Preparedness Report, 26 May 2026</a></li>
           <li><a href="https://gemini.google/policy-guidelines/" target="_blank" rel="noopener noreferrer">Google, Gemini app safety and policy guidelines</a></li>
@@ -1113,19 +1176,38 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://blog.google/technology/ai/ai-principles/" target="_blank" rel="noopener noreferrer">Google, AI Principles of 2018, replaced, with a banner</a></li>
           <li><a href="https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/strengthening-our-frontier-safety-framework/frontier-safety-framework_3-1.pdf" target="_blank" rel="noopener noreferrer">Google DeepMind, Frontier Safety Framework v3.1, 17 April 2026</a></li>
           <li><a href="https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf" target="_blank" rel="noopener noreferrer">xAI, Frontier AI Framework, 30 June 2026</a></li>
-          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, standing instructions for Grok (system prompts)</a></li>
+          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, system prompts for Grok</a></li>
+          <li><a href="https://legal.mistral.ai/terms/usage-policy" target="_blank" rel="noopener noreferrer">Mistral AI, usage policy, in effect from 11 June 2026</a></li>
+          <li><a href="https://legal.mistral.ai/ai-governance/models" target="_blank" rel="noopener noreferrer">Mistral AI, AI compliance hub and documentation for each model</a></li>
+          <li><a href="https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512/raw/main/SYSTEM_PROMPT.txt" target="_blank" rel="noopener noreferrer">Mistral AI, the published system prompt of Mistral Large 3</a></li>
+          <li><a href="https://platform.kimi.ai/docs/agreement/modeluse.md" target="_blank" rel="noopener noreferrer">Moonshot AI, terms of service of the Kimi platform</a></li>
+          <li><a href="https://platform.kimi.com/docs/agreement/userservice" target="_blank" rel="noopener noreferrer">Moonshot AI, 用户服务协议 (user agreement), updated 24 August 2026, in effect from 31 August 2026</a></li>
+          <li><a href="https://platform.kimi.ai/docs/overview.md" target="_blank" rel="noopener noreferrer">Moonshot AI, the default system prompt in its API quickstart</a></li>
+          <li><a href="https://cdn.deepseek.com/policies/zh-CN/model-algorithm-disclosure.html" target="_blank" rel="noopener noreferrer">DeepSeek, 模型原理与训练方法说明 (its disclosure on how its models work), undated</a></li>
+          <li><a href="https://cdn.deepseek.com/policies/en-US/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in English</a></li>
+          <li><a href="https://cdn.deepseek.com/policies/zh-CN/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in Chinese, with a different date</a></li>
         </ul>
-        <h3>Filters</h3>
+        <h3>Guardrails</h3>
         <ul class="gov-bullets">
           <li><a href="https://openai.com/index/introducing-gpt-oss-safeguard/" target="_blank" rel="noopener noreferrer">OpenAI, gpt-oss-safeguard, 29 October 2025</a></li>
           <li><a href="https://www.anthropic.com/research/next-generation-constitutional-classifiers" target="_blank" rel="noopener noreferrer">Anthropic, next-generation constitutional classifiers, 9 January 2026</a></li>
           <li><a href="https://ai.google.dev/gemini-api/docs/safety-settings" target="_blank" rel="noopener noreferrer">Google, Gemini API safety settings</a></li>
           <li><a href="https://huggingface.co/meta-llama/Llama-Guard-4-12B" target="_blank" rel="noopener noreferrer">Meta, Llama Guard 4</a></li>
+          <li><a href="https://docs.mistral.ai/capabilities/guardrailing" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
+          <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
         </ul>
-        <h3>Tests of whether models follow their rulebook</h3>
+        <h3>Tests of whether models follow their model spec, and outside assessments</h3>
         <ul class="gov-bullets">
           <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
           <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
+          <li><a href="https://arxiv.org/html/2507.20534v1" target="_blank" rel="noopener noreferrer">Moonshot AI, Kimi K2 technical report, safety evaluation in section 4.3</a></li>
+          <li><a href="https://arxiv.org/abs/2604.03121" target="_blank" rel="noopener noreferrer">Independent safety evaluation of Kimi K2.5, arXiv 2604.03121</a></li>
+          <li><a href="https://www.aisi.gov.uk/blog/preliminary-assessment-of-kimi-k3-s-cyber-capabilities" target="_blank" rel="noopener noreferrer">UK AI Security Institute and US CAISI, preliminary assessment of Kimi K3, 23 July 2026</a></li>
+          <li><a href="https://www.nist.gov/system/files/documents/2025/09/30/CAISI_Evaluation_of_DeepSeek_AI_Models.pdf" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek models, 30 September 2025</a></li>
+          <li><a href="https://www.nist.gov/news-events/news/2026/05/caisi-evaluation-deepseek-v4-pro" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek V4 Pro, 1 May 2026</a></li>
+          <li><a href="https://concordia-ai.com/wp-content/uploads/2026/07/State-of-AI-Safety-in-China-2026.pdf" target="_blank" rel="noopener noreferrer">Concordia AI, State of AI Safety in China 2026, July 2026</a></li>
+          <li><a href="https://crfm.stanford.edu/fmti/December-2025/company-reports/Mistral_FinalReport_FMTI2025.html" target="_blank" rel="noopener noreferrer">Stanford Foundation Model Transparency Index, report on Mistral AI, December 2025</a></li>
+          <li><a href="https://futureoflife.org/ai-safety-index-summer-2026/" target="_blank" rel="noopener noreferrer">Future of Life Institute, AI Safety Index, summer 2026</a></li>
         </ul>
         <h3>Regulation</h3>
         <ul class="gov-bullets">
@@ -1136,9 +1218,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
         <ul class="gov-bullets">
           <li><a href="https://blog.google/technology/ai/responsible-ai-2024-report-ongoing-work/" target="_blank" rel="noopener noreferrer">Google, the AI Principles rewritten, 4 February 2025</a></li>
           <li><a href="https://www.markey.senate.gov/news/press-releases/senators-markey-merkley-welch-press-google-on-changes-to-ai-commitments" target="_blank" rel="noopener noreferrer">Senators Markey, Merkley and Welch to Google, 19 February 2025</a></li>
-          <li><a href="https://www.theregister.com/2025/05/08/google_gemini_update_prevents_disabling/" target="_blank" rel="noopener noreferrer">The Register, an unannounced Gemini filter change overrides developers' settings, May 2025</a></li>
+          <li><a href="https://www.theregister.com/2025/05/08/google_gemini_update_prevents_disabling/" target="_blank" rel="noopener noreferrer">The Register, an unannounced Gemini guardrail change overrides developers' settings, May 2025</a></li>
           <li><a href="https://www.pbs.org/newshour/world/grok-blocked-from-undressing-images-with-ai-in-places-where-its-illegal-x-says" target="_blank" rel="noopener noreferrer">PBS, xAI restricts Grok's image editing by statement to the press, 15 January 2026</a></li>
           <li><a href="https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/" target="_blank" rel="noopener noreferrer">TechCrunch, Meta's GenAI Content Risk Standards leaked, 14 August 2025</a></li>
+          <li><a href="https://www.newsguardtech.com/special-reports/mistral-le-chat-ai-chatbot-repeats-falsehoods-half-the-time-when-prompted-on-state-sponsored-iran-war-disinformation/" target="_blank" rel="noopener noreferrer">NewsGuard, audit of Mistral's Le Chat, 28 April 2026</a></li>
         </ul>
       </div>
     </details>
