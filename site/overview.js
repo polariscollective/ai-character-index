@@ -280,7 +280,7 @@ function openAbsent(behaviour, column) {
       "missing"));
     const ask = document.createElement("p");
     const link = document.createElement("a");
-    link.href = "/how-it-works?propose&kind=specification#propose";
+    link.href = "/about?propose&kind=specification#propose";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = "propose it";

@@ -253,8 +253,8 @@ shape the documentation asks for, hit it immediately.
 
 The upstream project takes contributions as pull requests against a repository
 anyone can clone. This fork cannot: the artifacts are in Supabase, judging costs
-money, and nobody outside has credentials. `/how-it-works`
-(`site/how-it-works.html`) is what replaced it: two forms, opened in a dialog and
+money, and nobody outside has credentials. `/about` (`site/about.html`, at
+`/how-it-works` until 18 September 2026) is what replaced it: two forms, opened in a dialog and
 posted to `/api/submit`, writing to `aci_submissions`, a private bucket and a
 Slack webhook. `site/propose.html`, where the forms first lived, now only
 redirects there.

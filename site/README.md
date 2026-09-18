@@ -5,8 +5,8 @@ The public site's source: plain HTML and vanilla JS, with no build step of its o
 **Pages:**
 
 - `index.html`: a minimal redirect to `spec-reader/` (the reader is the landing surface). The core-page prototype it carried is retired; its design history lives in [`design/`](../design/).
-- `how-it-works.html`: what the index is, how to cite it, how to run it yourself, and the two
-  proposal forms, in a dialog, posting to `/api/submit`. Served at `/how-it-works` by a rewrite
+- `about.html`: what the index is, how to cite it, how to run it yourself, and the two
+  proposal forms, in a dialog, posting to `/api/submit`. Served at `/about` by a rewrite
   in `next.config.mjs`; `methodology.html` and `propose.html` are redirects to it, kept because
   links to both are already shared.
 - `mcp.html`: how to connect to the public MCP endpoint at `/api/mcp`. Served at `/mcp`.

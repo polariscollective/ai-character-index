@@ -11,6 +11,16 @@
  */
 const nextConfig = {
   skipTrailingSlashRedirect: true,
+  /* About was How it works and contribute, at /how-it-works, until 18 September
+     2026. Links to the old address are already shared, CITATION.cff among them,
+     so it redirects rather than disappears. A redirect keeps the query string,
+     which is how ?propose and ?publication= survive it. */
+  async redirects() {
+    return [
+      { source: "/how-it-works", destination: "/about", permanent: true },
+      { source: "/how-it-works/", destination: "/about", permanent: true },
+    ];
+  },
   async rewrites() {
     return [
       /* The grid is the front page. It was the spec reader, reached through a
@@ -37,8 +47,8 @@ const nextConfig = {
       // It is a file like its three siblings now, addressed the same way.
       { source: "/overview", destination: "/overview.html" },
       { source: "/overview/", destination: "/overview.html" },
-      { source: "/how-it-works", destination: "/how-it-works.html" },
-      { source: "/how-it-works/", destination: "/how-it-works.html" },
+      { source: "/about", destination: "/about.html" },
+      { source: "/about/", destination: "/about.html" },
       { source: "/mcp", destination: "/mcp.html" },
       { source: "/mcp/", destination: "/mcp.html" },
     ];

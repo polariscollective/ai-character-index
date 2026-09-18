@@ -9,12 +9,20 @@
  * on the other pages that page is fetched and the entry lifted from its list of
  * the words the index uses, so it is written in one place and cannot drift.
  *
+ * It also keeps a pinned publication for the whole site. While ?publication= is
+ * in the address, every link to another page of the site carries it, so the
+ * reader moves between pages without leaving the publication they chose. And
+ * when that publication is older than the one currently public, a tag beside
+ * the wordmark says so and leads to the change log, the way dev-tag.js marks a
+ * development deployment. dev-tag.js itself reads the publication unpinned,
+ * because what it reports is the deployment and not the page.
+ *
  * One file for four pages, as dev-tag.js is, and for the same reason: each page
  * keeps its own stylesheet, so this builds its own nodes and its own style.
- * Nothing is fetched until the wordmark is pressed.
+ * Without a pin, nothing is fetched until the wordmark is pressed.
  */
 
-const ABOUT = "/how-it-works";
+const ABOUT = "/about";
 
 /* No backticks inside this block: it is a template literal. */
 const STYLE = `
@@ -73,6 +81,24 @@ const STYLE = `
 }
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
+.older-tag {
+  align-self: center;
+  margin-left: 2px;
+  padding: 2px 8px;
+  border: 1px solid #C9A227;
+  border-radius: 999px;
+  background: #C9A227;
+  color: #23281B;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.older-tag:hover, .older-tag:focus-visible { background: #B7C94B; border-color: #B7C94B; color: #23281B; }
+.older-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
 `;
 
 function node(tag, className, text) {
@@ -163,15 +189,16 @@ async function fill() {
   log.append(link);
   pop.replaceChildren(close, title, node("p", "", "Loading."));
   const [line, why] = await Promise.all([publicationLine(), whyTheName()]);
-  pop.replaceChildren(close, title, line);
-  // The overview carries a view whose figures come from no publication at all.
-  if (document.getElementById("view-governance")) {
-    pop.append(node("p", "", "The governance view is not part of any publication. Its scores "
-      + "are Polaris Collective's own reading of public documents, as of 18 September 2026."));
+  pop.replaceChildren(close, title, line, log);
+  pop.append(node("h3", "", "Why this name"));
+  if (why) {
+    pop.append(why);
+    // Filled for good only once the name's explanation arrived: a read that
+    // failed, while the server restarted say, is tried again on the next press.
+    state.filled = true;
+  } else {
+    pop.append(node("p", "", "The explanation could not be loaded. It is on the About page."));
   }
-  pop.append(log);
-  if (why) pop.append(node("h3", "", "Why this name"), why);
-  state.filled = true;
   place();
 }
 
@@ -191,7 +218,56 @@ function toggle(event) {
   if (!state.filled) fill();
 }
 
+/* The site's own pages, the ones a pin travels between. The API, the admin
+ * portal and files are left alone. */
+const SITE_PAGE = /^\/(overview\/?|spec-reader\/.*|about\/?|how-it-works\/?|mcp\/?)?$/;
+
+/* Before a link is followed, it takes the pin with it: set on the link itself as
+ * it is pressed, so a link a script built after the page loaded is covered too,
+ * and a link opened in a new tab carries it as well. A link that names its own
+ * publication, as the change log's do, keeps it; a link within the page is left
+ * as it is. */
+function carryPin(event) {
+  const pin = pinned();
+  if (!pin) return;
+  const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+  if (!link) return;
+  const raw = link.getAttribute("href") || "";
+  if (!raw || raw.startsWith("#")) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin !== location.origin || !SITE_PAGE.test(url.pathname)) return;
+  if (url.searchParams.has("publication")) return;
+  url.searchParams.set("publication", pin);
+  link.href = url.toString();
+}
+
+/* Beside the wordmark when the pinned publication is older than the one that
+ * is public now. Two reads, the pinned one and the current one; if either
+ * fails, nothing is claimed. */
+async function markOlder(brand) {
+  const pin = pinned();
+  if (!pin || !brand) return;
+  try {
+    const [pinnedResponse, currentResponse] = await Promise.all([
+      fetch(`/api/reader/publication?publication=${encodeURIComponent(pin)}`),
+      fetch("/api/reader/publication"),
+    ]);
+    if (!pinnedResponse.ok || !currentResponse.ok) return;
+    const [shown, current] = await Promise.all([pinnedResponse.json(), currentResponse.json()]);
+    if (!shown?.id || !current?.id || shown.id === current.id) return;
+    if (!(new Date(shown.published_at) < new Date(current.published_at))) return;
+    const tag = node("a", "older-tag", "Older publication");
+    tag.href = `${ABOUT}#changelog`;
+    tag.title = "This page shows an older publication of the index. See the change log.";
+    brand.append(tag);
+  } catch {
+    // No answer is no claim.
+  }
+}
+
 function start() {
+  document.addEventListener("click", carryPin, true);
+  document.addEventListener("auxclick", carryPin, true);
   const wordmark = document.querySelector(".site-header .wordmark");
   if (!wordmark) return;
   const style = document.createElement("style");
@@ -221,6 +297,7 @@ function start() {
   window.addEventListener("resize", place, { passive: true });
 
   Object.assign(state, { pop, wordmark });
+  markOlder(wordmark.closest(".site-brand"));
 }
 
 start();
