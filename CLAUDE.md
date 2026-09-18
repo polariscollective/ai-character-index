@@ -908,6 +908,69 @@ rather than avoided. Nothing here is published: `site/spec-reader/links.json` an
 seat said, recorded so that it can be compared against a panel that has some
 claim to independence.
 
+### Links belong to a publication, and a table write no longer reaches the public
+
+The reader was served two frozen columns and one live query. `payload` and
+`documents` are bytes copied into the publication row and held to a digest; the
+bubbles, the comparisons, the arbitrations and the paragraph notes were fetched
+from the live tables on every page view. Two things followed, and the second is
+the one that mattered. Pinning an old publication gave you that publication's
+text under today's readings, with nothing on the page saying so. And writing a
+row changed what the public saw, with no publication and no deploy: 739
+paragraph notes went live that way over 2026-09-17 and 2026-09-18, and the only
+reason that was safe is that the text was good.
+
+Underneath both sat a rule nobody would defend if it were proposed today.
+`panelRuns()` kept an early pilot off the site by testing the prefix of the
+script name that created a run, `created_by` starting with `link_self.py`. It
+worked, and it was a filter on a string rather than a decision anyone recorded.
+A publication names its link runs now, `--link-runs`, required, the way
+`--cells` already names the cells the payload is built from, and the filter is
+gone.
+
+The third builder is JavaScript, and that is the point rather than an accident.
+`engine/build-links-data.mjs` imports the assembly in `app/lib/links.mjs` that
+the reader's route already used. A Python port would have been a second copy of
+it, and this repository has already published wrong figures off exactly that
+kind of duplication: `bands.shown_by_default` drifted from the reader's own
+`DEFAULT_BANDS`, and the depth figures published off the difference were wrong
+until somebody asked why one cell read 1.0. `publish.py` picks each builder's
+interpreter from its file extension rather than from a second table, and the
+judging image gained a Node runtime and the two library files that builder's
+import graph actually reaches.
+
+Document notes are pinned by prompt digest and not by run, and the reason is
+that they have no run to be pinned by. `aci_document_notes` carries none and
+cannot honestly gain one: its rows were imported from two JSON files in a single
+batch, and its unique key ends in `prompt_sha256`. The prompt is the identity of
+a document note, so that is what a publication records, `--note-prompts`, in
+`build_params` beside the runs. Absent and empty are different answers: no list
+means take every note, which is what a reader outside a publication wants, and a
+list that is present pins exactly what it names, including nothing.
+
+The cost is the thing being bought rather than a side effect. A corrected note
+does not reach the public until the next publication is built and made public.
+Rebuilding is cheap, because `publish.py` calls no model -- it selects,
+assembles and inserts -- and a draft is written not public, so it can be read
+before anyone sees it.
+
+**The standing condition, until a publication carries the column.** The
+publication that is public today, `1919ee6b`, predates the column and carries
+null in both halves of it. `/api/reader/links` answers 404 for such a row, and
+the reader catches that and renders as it did before any of this existed. So
+from the moment this deploys the site shows no bubbles, no comparisons and no
+"in short" notes, and it will go on showing none until a publication built with
+`--link-runs` is made public. The operator was told this plainly and accepted it.
+
+The two columns are nullable and move together, checked in the migration: a
+digest without its bytes describes nothing, and the verifier skips a publication
+on `links is null` rather than failing it, because those rows never claimed to
+carry links. The portal carries the choice as a `Link runs` group on the build
+form. The design is
+`docs/superpowers/specs/2026-09-18-links-belong-to-a-publication-design.md`; the
+migration is `20260918090000_aci_links_belong_to_a_publication.sql` in
+`polaris-supabase`.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
