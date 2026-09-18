@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import {
   documentName, inPlainWords, sayWhich, asSeenFrom, namedRelation,
   verdictsByPair, byLocator, pairsByRun, summaryRow, comparisonKey, passageNoteKey,
+  readerLinks,
 } from "../links.mjs";
 
 const ANTHROPIC = "anthropic--constitution@2026-01-20 > Being honest > ¶5";
@@ -268,4 +269,15 @@ test("a summary whose run has no pair carries an empty one, not undefined", () =
   // array must therefore behave alike, or the drop depends on which it got.
   const row = summaryRow({ body: "x", behaviour_slug: "honesty", model: null }, undefined);
   assert.deepEqual(row.about, []);
+});
+
+test("readerLinks reads the runs it is given and never asks which are current", async () => {
+  const asked = [];
+  const fetchImpl = async url => {
+    asked.push(String(url));
+    return { ok: true, status: 200, json: async () => [], text: async () => "" };
+  };
+  const out = await readerLinks(fetchImpl, ["11111111-1111-4111-8111-111111111111"]);
+  assert.equal(asked.some(url => url.includes("aci_link_runs")), false);
+  assert.deepEqual(out.runs, ["11111111-1111-4111-8111-111111111111"]);
 });

@@ -334,10 +334,17 @@ export function passageNoteKey(slug, locator, documents) {
  * One request per table rather than one per run: the tables are small enough to
  * read whole, and four round trips beat sixteen.
  */
-export async function readerLinks(fetchImpl = fetch) {
-  const runs = await panelRuns(fetchImpl);
-  const runIds = new Set(runs.map(run => run.id));
-  if (!runIds.size) return { documents: [], byLocator: {}, comparisons: {}, notes: {} };
+export async function readerLinks(fetchImpl = fetch, runIds = null) {
+  /* A publication names the runs it carries. Without that list this falls back
+   * to asking which runs look current, which is what the reader did before
+   * links were frozen into a publication. The fallback goes in Task 6, once the
+   * route no longer needs it. See the spec at
+   * docs/superpowers/specs/2026-09-18-links-belong-to-a-publication-design.md. */
+  const runs = Array.isArray(runIds) && runIds.length
+    ? runIds.map(id => ({ id }))
+    : await panelRuns(fetchImpl);
+  const runIdSet = new Set(runs.map(run => run.id));
+  if (!runIdSet.size) return { documents: [], byLocator: {}, comparisons: {}, notes: {} };
 
   const [calls, versions, arbitrations, summaries, passageNotes, documentNotes] =
     await Promise.all([
@@ -357,7 +364,7 @@ export async function readerLinks(fetchImpl = fetch) {
     ]);
 
   const documentOf = new Map(versions.map(v => [v.id, `${v.spec_id}@${v.version}`]));
-  const mine = calls.filter(call => runIds.has(call.run_id) && call.status === "done");
+  const mine = calls.filter(call => runIdSet.has(call.run_id) && call.status === "done");
   const pairOf = pairsByRun(mine, documentOf);
   const callById = new Map(mine.map(call => [call.id, call]));
   const documentIds = new Set();
@@ -376,7 +383,7 @@ export async function readerLinks(fetchImpl = fetch) {
     links.push({ ...row, behaviour_slug: call.behaviour_slug, model: call.model });
   }
 
-  const verdicts = verdictsByPair(arbitrations.filter(row => runIds.has(row.run_id)));
+  const verdicts = verdictsByPair(arbitrations.filter(row => runIdSet.has(row.run_id)));
 
   /* One text per behaviour AND per pair, because that is how they were written.
    *
@@ -386,7 +393,7 @@ export async function readerLinks(fetchImpl = fetch) {
    * the whole time, in document_ids, and this did not even ask for it. */
   const comparisons = {};
   for (const [key, row] of newestBy(
-    summaries.filter(s => runIds.has(s.run_id)),
+    summaries.filter(s => runIdSet.has(s.run_id)),
     s => comparisonKey(s.behaviour_slug, s.document_ids))) {
     comparisons[key] = { writtenBy: row.model, text: row.body };
   }
@@ -412,7 +419,7 @@ export async function readerLinks(fetchImpl = fetch) {
    * reads as a tidier shape and loses every "in short" pill on the page: the
    * reader looks for them in byLocator and nowhere else. */
   const passageNewest = newestBy(
-    passageNotes.filter(n => runIds.has(n.run_id)),
+    passageNotes.filter(n => runIdSet.has(n.run_id)),
     n => passageNoteKey(n.behaviour_slug, n.locator, pairOf.get(n.run_id)));
   for (const note of passageNewest.values()) {
     (rowsByLocator[note.locator] ||= []).unshift(
