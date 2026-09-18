@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MCP, AI Character Index</title>
+<title>MCP, AI Constitutions Index</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -249,11 +249,11 @@
     <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
   </span>
   <nav aria-label="Primary navigation">
     <a href="/">Overview</a>
-    <a href="/spec-reader/">Spec reader</a>
+    <a href="/spec-reader/">Doc reader</a>
     <a href="/how-it-works">How it works and contribute</a>
     <a class="active" href="/mcp" aria-current="page">MCP</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
@@ -289,7 +289,7 @@
     <pre><code data-origin>/api/mcp</code></pre>
     <p>There is nothing to sign in to and no key to obtain. The index only reads: it can be asked
     what the documents say, and it cannot be asked to change anything. Everything it serves is the
-    published index, the same data the spec reader is built from, so a call reads what the site
+    published index, the same data the doc reader is built from, so a call reads what the site
     shows and nothing else.</p>
   </section>
 
@@ -379,7 +379,7 @@
     <b>panel</b> is the three frontier models that read every document for every behaviour and
     marked the passages. A <b>depth</b> is the score those judges give a document for a behaviour,
     from 0, absent, to 4, rules with worked examples: it says how much the document gives an
-    evaluation to work with, not how much the lab cares.</p>
+    evaluation to work with, not how much the company behind it cares.</p>
     <p><b>about.</b> What the index is, what it does not report, and what the other three tools
     return, in one answer meant to be read before anything else is asked. No arguments. It names
     the documents, the behaviours and the sections they sit in, the panel that judged and the
@@ -391,7 +391,7 @@
     laboratory, title, version, source URL, how many behaviours were judged against it and how
     many passages it holds. No arguments. It does not return the specification text, which runs to
     hundreds of kilobytes; the source URL is in the answer. Each specification is one version, and
-    its id reads <code>&lt;lab&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
+    its id reads <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
     <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into
     it.</p>
     <p><b>list_behaviours.</b> Every behaviour the publication shows, with the section it is

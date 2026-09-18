@@ -2009,8 +2009,8 @@ console.log("== Overview: the governance view ==");
     "the nine companies run across in the note's order, Meta sixth on the tie, "
       + "each total out of 40, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.rows.join(", ") === "Overall, Model spec, Change log, Guardrails, Hard constraints, "
-        + "Supporting practices"
+  check(seen.rows.join(", ") === "Overall, Model behaviour specification, Change log, Guardrails, "
+        + "Hard constraints, Supporting practices"
       && seen.findings === 8,
     "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));

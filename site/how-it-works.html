@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works and contribute, AI Character Index</title>
+<title>How it works and contribute, AI Constitutions Index</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,6 +112,16 @@
      the first thing read looks like a standfirst rather than another paragraph. */
   #tldr p.lead { color: var(--ink2); }
   section.m p:last-child { margin-bottom: 0; }
+  /* The words the index uses: each term on its own line in the heading face, its
+     meaning under it, a rule between one term and the next. */
+  .glossary { max-width: 66ch; margin: 4px 0 0; border-top: 1px solid var(--line); }
+  .glossary dt { padding-top: 14px; font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--ink); }
+  .glossary dd { margin: 6px 0 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .glossary dd p { margin-bottom: 10px; }
+  .glossary dd p:last-child { margin-bottom: 0; }
+  .glossary-behaviours { margin: 4px 0 12px; }
+  .glossary-behaviours h4 { margin: 10px 0 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .glossary-behaviours ul { margin: 0; }
   section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
   section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
   /* Bullets are 6px chartreuse circles. */
@@ -343,11 +353,11 @@
     <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
   </span>
   <nav aria-label="Primary navigation">
     <a href="/">Overview</a>
-    <a href="/spec-reader/">Spec reader</a>
+    <a href="/spec-reader/">Doc reader</a>
     <a class="active" href="/how-it-works" aria-current="page">How it works and contribute</a>
     <a href="/mcp">MCP</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
@@ -376,15 +386,81 @@
        all of it to find out whether the rest was for them. -->
   <section class="m" id="tldr">
     <h2>TL;DR</h2>
-    <p class="lead">AI labs publish long documents saying how their models should behave. This
+    <p class="lead">AI companies publish long documents saying how their models should behave. This
     index reads them one behaviour at a time and shows every passage that bears on it, quoted,
     with its exact place in the document. As of September 2026 it reports what those documents
     say, not how the models behave.</p>
     <p>Say you want everything the OpenAI Model Spec says about avoiding a concentration of
     power. You can read those passages together, see which ones define the behaviour and which
-    only touch on it, and put them side by side with what another lab&rsquo;s document says.
+    only touch on it, and put them side by side with what another company&rsquo;s document says.
     <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">Open that in the
-    spec reader</a>.</p>
+    doc reader</a>.</p>
+  </section>
+  <!-- The words the index uses, defined once, near the top: a reader who meets
+       "behaviour" in the sense the index gives it, or wonders why a constitution
+       index holds documents called model specs, finds the answer here before the
+       rest of the page leans on it. The thirteen behaviours are read from the
+       publication, so the list is the one the doc reader shows. -->
+  <section class="m" id="words">
+    <h2>The words we use</h2>
+    <dl class="glossary">
+      <dt>AI Constitutions Index</dt>
+      <dd>
+        <p>The name of this index, and an umbrella term for what it collects: the documents in
+        which AI companies say how their models should behave, whoever wrote them and whatever
+        they are called. &ldquo;Constitution&rdquo; is the word Anthropic uses for its own
+        document, but the index is independent of Anthropic and gives it no special place. As of
+        September 2026 it holds Claude&rsquo;s Constitution, the OpenAI Model Spec in two versions
+        and the Alibaba Model Spec, and in time it means to hold every such document.</p>
+        <p>The word also names an ambition. A specification says how a model should behave. A
+        constitution, in the sense countries and institutions give the word, says more: where the
+        rules come from, who may change them and how, and what those living under them can do
+        when they disagree. Most of these documents are not that yet. The name says what they
+        could become, and the <a href="/?view=governance">governance view</a> of the overview
+        measures how far each company is from it.</p>
+        <p>The index began as the AI Character Index, Andr&eacute;s Cotton&rsquo;s tool,
+        described further down this page.</p>
+      </dd>
+      <dt>Model behaviour specification</dt>
+      <dd>
+        <p>Any document that sets out how an AI model should behave, whatever form it takes and
+        whatever its author calls it. Anthropic calls its own a constitution, OpenAI and Alibaba
+        call theirs a model spec, and other companies publish the same kind of commitments under
+        other names, or inside documents written for another purpose. We call them all model
+        behaviour specifications, or specifications for short, so that no one company&rsquo;s
+        word stands for the others.</p>
+      </dd>
+      <dt>Behaviour</dt>
+      <dd>
+        <p>One thing a specification might require of a model, described precisely enough to be
+        looked for. Deferring to users&rsquo; own decisions about their own lives is a behaviour;
+        so is refusing to assert what the model believes to be false.</p>
+        <p>We use the word narrowly. A behaviour here is not something a model was seen doing: it
+        is a question put to a document. Each one is written down in two parts, what the
+        behaviour requires and where it stops, closely enough that a careful reader could go
+        through a whole specification and mark every passage that bears on it. That description
+        is what the judges are given, and the <b>i</b> beside each behaviour in the doc reader
+        shows it. A behaviour is the unit everything else is counted in: passages are marked,
+        and depths given, one behaviour at a time.</p>
+        <p id="glossary-behaviours-lead">As of September 2026 the doc reader carries thirteen
+        behaviours, in four groups.</p>
+        <div class="glossary-behaviours" id="glossary-behaviours"></div>
+        <p>If one is missing, <a href="#propose">propose it</a>.</p>
+      </dd>
+      <dt>Passage</dt>
+      <dd>
+        <p>A paragraph or a run of sentences in a specification, cited by a locator that names
+        the document, its version, its section and the sentences. For each behaviour, every
+        passage the judges mark falls in one of three bands: defining, the document&rsquo;s
+        fullest statement of the behaviour; core, a passage that establishes it; and related, one
+        that bears on it without establishing it.</p>
+      </dd>
+      <dt>Depth</dt>
+      <dd>
+        <p>How far a specification goes on one behaviour, from 0, absent, to 4, rules with worked
+        examples. Each judge gives one, and the index shows their mean.</p>
+      </dd>
+    </dl>
   </section>
 
   <!-- What the index is for next, as intentions rather than promises: each line
@@ -393,13 +469,13 @@
     <h2>Next steps</h2>
     <p class="lead">None of this exists yet. It is where the index is meant to go.</p>
     <ul>
-      <li>Compare documents in depth: where two labs agree, where they contradict each other,
+      <li>Compare documents in depth: where two companies agree, where they contradict each other,
       and what only one of them says.</li>
       <li>Follow one document as it changes: a change log from version to version, behaviour by
       behaviour.</li>
-      <li>Test adherence: how far a lab&rsquo;s models follow the document that lab published.</li>
-      <li>Draw an ideal document from the union of what every lab has written, and measure how far
-      each lab sits from it, including labs that have published nothing.</li>
+      <li>Test adherence: how far a company&rsquo;s models follow the document that company published.</li>
+      <li>Draw an ideal document from the union of what every company has written, and measure how far
+      each company sits from it, including companies that have published nothing.</li>
     </ul>
   </section>
 
@@ -415,19 +491,20 @@
     each one sits, so you can check the answer rather than trust it. The index only reads, and
     needs no account and no key.</p>
     <p>It is for anyone who would rather have the quote than a summary of it: people writing about
-    how labs govern their models, people building evaluations, and anyone who has been told what a
+    how AI companies govern their models, people building evaluations, and anyone who has been told what a
     document says and wants to see the words. The <a href="/mcp">MCP page</a> has the whole setup,
     from a settings menu or from a command line, and says what the index can be asked.</p>
   </section>
 
   <section class="m">
     <h2>Documents, behaviours and how they are read</h2>
-    <p>A specification is a document a lab publishes saying how its models should behave. As of
+    <p>A model behaviour specification is a document an AI company publishes saying how its
+    models should behave. As of
     September 2026 the index reads four: Claude&rsquo;s Constitution (2026-01-20), the OpenAI
     Model Spec in two versions (2025-12-18 and 2026-08-18), and the Alibaba Model Spec
     (2026-04-00). They run to tens of thousands of words, and what any of them says about one
     subject is spread across it.</p>
-    <p>Each version is a document of its own, named <code>&lt;lab&gt;--&lt;document&gt;@&lt;version&gt;</code>,
+    <p>Each version is a document of its own, named <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>,
     so the two OpenAI versions are judged and cited separately. The Alibaba Model Spec is
     published in Chinese: the index reads an English machine translation of it, made by Claude
     Opus 5 and revised in part by Claude Fable 5, and the reader keeps the original beside every
@@ -453,7 +530,7 @@
     Kimi K3 second. As of September 2026, Opus holds that seat on harm avoidance to third parties
     in both OpenAI versions, and Kimi holds it on every behaviour of the Alibaba Model Spec, where
     every Anthropic model was refused. The reader says so in the behaviour&rsquo;s note.</p>
-    <p>What comes out is a coverage map. In the <a href="/spec-reader/">spec reader</a> you tick a
+    <p>What comes out is a coverage map. In the <a href="/spec-reader/">doc reader</a> you tick a
     behaviour and every passage that bears on it lights up in the document you are reading, or in
     two side by side when you compare them. Passages fall in three bands: defining, core and
     related. All three are shown by default, related drawn softer, and each band can be switched
@@ -467,9 +544,10 @@
        already shared point at. -->
   <div id="propose">
   <section class="m">
-    <h2>Propose a new model spec</h2>
-    <p class="lead">A model spec is a document a laboratory publishes saying how its models
-    should behave, the way Anthropic&rsquo;s constitution and the OpenAI and Alibaba model specs do. If
+    <h2>Propose a new model behaviour specification</h2>
+    <p class="lead">A model behaviour specification is a document an AI company publishes saying how its
+    models should behave, the way Anthropic&rsquo;s Constitution and the OpenAI and Alibaba Model
+    Specs do. If
     there is one the index should be reading, send it here.</p>
     <p><b>Send the text itself, not only a link.</b> The index quotes documents word for word and
     pins every citation to the exact version it read, so it keeps its own copy rather than
@@ -481,14 +559,14 @@
     at.</p>
 
     <p><button type="button" class="open-propose" id="open-propose-specification"
-    data-kind="specification">Propose a new model spec</button></p>
+    data-kind="specification">Propose a new model behaviour specification</button></p>
   </section>
 
   <section class="m">
     <h2>Propose a new behaviour</h2>
     <p class="lead">A behaviour is one thing a model should or should not do, described closely
     enough that a careful reader could go through a document and mark every passage that bears on
-    it. It is the question the index puts to every model spec, helpfulness or proportionate risk
+    it. It is the question the index puts to every model behaviour specification, helpfulness or proportionate risk
     mitigation for instance, and the reader shows the answer passage by passage.</p>
     <p><b>Describing the behaviour is the whole of it, and two sentences carry it.</b> The first
     says what the behaviour requires, in plain terms. The second says where it stops, usually by
@@ -516,10 +594,10 @@
     <p>It reports what a document says, not what a model does. A specification covering a
     behaviour thoroughly is not evidence that the model follows it. That is a different
     measurement, and the citations here are meant to feed it.</p>
-    <p>It is also not a scoreboard. When two labs&rsquo; documents address a behaviour
+    <p>It is also not a scoreboard. When two companies&rsquo; documents address a behaviour
     differently, that is usually two organisations having made different choices, not one of them
     failing. A depth measures how much a document gives an evaluation to work with, not how much
-    its lab cares.</p>
+    the company behind it cares.</p>
     <p>On the Alibaba Model Spec it reports what the English translation says. The judges read the
     translation, and the original is in the reader to check it against.</p>
   </section>
@@ -529,9 +607,9 @@
     <p>Every passage carries a locator, and the locator is the point of the whole exercise:</p>
     <pre><code>anthropic--constitution@2026-01-20 &gt; Being broadly ethical &gt; Being honest &gt; &para;18 s1-4
 openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
-    <p>It names the lab and the document, the version it was read at, the section, and the
+    <p>It names the company and the document, the version it was read at, the section, and the
     sentences. The head of every locator is the document&rsquo;s own name, and because the
-    version is part of that name, a locator keeps pointing at the same words after the lab
+    version is part of that name, a locator keeps pointing at the same words after the company
     reissues the document: a reissue is a new document, as the two OpenAI versions are. Anyone
     can resolve one back to the text, including us: a scheduled job re-resolves every published citation against the stored document and fails loudly if a single
     quote has moved.</p>
@@ -571,7 +649,7 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
 
   <section class="m">
     <h2>Andr&eacute;s&rsquo;s original tool</h2>
-    <p><b>The AI Character Index was created by
+    <p><b>This index began as the AI Character Index, created by
     <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
     Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
     rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
@@ -634,7 +712,7 @@ python3 -m http.server 8080 --directory site</code></pre>
   <dialog class="propose-dialog" id="propose-dialog" open
           aria-labelledby="propose-dialog-title">
     <div class="dialog-head">
-      <h2 id="propose-dialog-title">Propose a new model spec or behaviour</h2>
+      <h2 id="propose-dialog-title">Propose a model behaviour specification or a behaviour</h2>
       <button type="button" class="dialog-close" id="propose-close"
               aria-label="Close">Close</button>
     </div>
@@ -643,7 +721,7 @@ python3 -m http.server 8080 --directory site</code></pre>
       <div id="said" hidden></div>
 
       <nav class="choice" aria-label="What you are sending">
-        <button type="button" id="pick-specification" data-kind="specification">A model spec</button>
+        <button type="button" id="pick-specification" data-kind="specification">A model behaviour specification</button>
         <button type="button" id="pick-behaviour" data-kind="behaviour">A behaviour</button>
       </nav>
 
@@ -806,7 +884,7 @@ let current = params.get("kind") === "specification" ? "specification" : "behavi
    opened it, and changes with the switch. */
 const dialogTitles = {
   behaviour: "Propose a new behaviour",
-  specification: "Propose a new model spec",
+  specification: "Propose a new model behaviour specification",
 };
 const dialogTitle = document.getElementById("propose-dialog-title");
 
@@ -889,7 +967,7 @@ if (citeText) {
       /* The authors are the people whose runs produced these verdicts, read off
          the build itself. A build carrying somebody's work names them without
          anyone having remembered to add them to a list. */
-      const authors = (credit.judged_by || []).join("; ") || "AI Character Index";
+      const authors = (credit.judged_by || []).join("; ") || "AI Constitutions Index";
       const method = (credit.method?.authors || []).join(", ");
       /* A build nobody has published is not the index's data, and a citation of
          it would say it was. This page can be served a draft two ways: a
@@ -900,9 +978,9 @@ if (citeText) {
       const draft = publication.is_public === false;
       citeText.textContent = draft
         ? `Draft publication ${publication.id}, built ${published}. Not published, `
-          + "and not citable as the AI Character Index: it is a build nobody has "
+          + "and not citable as the AI Constitutions Index: it is a build nobody has "
           + `released.\n${location.origin}/spec-reader/?publication=${publication.id}`
-        : `${authors} (${published.slice(0, 4)}). AI Character Index [Data set]. `
+        : `${authors} (${published.slice(0, 4)}). AI Constitutions Index [Data set]. `
           + `Publication ${publication.id}, published ${published}. `
           + `${location.origin}/spec-reader/?publication=${publication.id}`
           + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
@@ -913,10 +991,56 @@ if (citeText) {
          method on its own line. The publication id is the part that could not
          be read, so it is left out rather than guessed. */
       citeText.textContent =
-        "Polaris Collective (2026). AI Character Index [Data set]. "
+        "Polaris Collective (2026). AI Constitutions Index [Data set]. "
         + location.origin + "/spec-reader/"
         + "\nMethod: Andrés Cotton, Matt Stults, https://github.com/AndresCotton/ai-character-index";
     });
+}
+
+/* The behaviours the glossary lists, grouped as the doc reader groups them and
+   each one a way into the reader on it. Read from the publication the page is
+   serving, so the count and the names are the reader's own; if the read fails,
+   the sentence above the list still says how many there were when it was
+   written, and nothing is invented in its place. */
+const glossaryList = document.getElementById("glossary-behaviours");
+if (glossaryList) {
+  const pinned = new URLSearchParams(location.search).get("publication");
+  fetch("/api/reader/behaviours" + (pinned ? `?publication=${encodeURIComponent(pinned)}` : ""))
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(registry => {
+      const groups = new Map();
+      Object.entries(registry || {}).forEach(([slug, entry]) => {
+        const group = entry.group || "Behaviours";
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group).push({ slug, name: entry.name || slug });
+      });
+      if (!groups.size) return;
+      const count = [...groups.values()].reduce((sum, list) => sum + list.length, 0);
+      const words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight",
+        "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+        "seventeen", "eighteen", "nineteen", "twenty"];
+      const say = n => words[n] || String(n);
+      document.getElementById("glossary-behaviours-lead").textContent =
+        `The doc reader carries ${say(count)} behaviours, in ${say(groups.size)} `
+        + `${groups.size === 1 ? "group" : "groups"}.`;
+      const blocks = document.createDocumentFragment();
+      groups.forEach((members, group) => {
+        const heading = document.createElement("h4");
+        heading.textContent = group;
+        const list = document.createElement("ul");
+        members.forEach(({ slug, name }) => {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = `/spec-reader/?behavior=${encodeURIComponent(slug)}`;
+          link.textContent = name;
+          item.append(link);
+          list.append(item);
+        });
+        blocks.append(heading, list);
+      });
+      glossaryList.replaceChildren(blocks);
+    })
+    .catch(() => {});
 }
 
 /* Copy, for every button that names what it copies. */

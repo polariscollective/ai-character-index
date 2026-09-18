@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Overview — AI Character Index</title>
+<title>Overview, AI Constitutions Index</title>
 <!-- The site's own mark, the same declaration the other four pages carry: the
      broken orbit knocked out in paper from an olive-deep rounded square. This
      page was the only one without it, so it alone fell back to the browser's
@@ -874,11 +874,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
   </span>
   <nav aria-label="Primary navigation">
     <a class="active" href="/" aria-current="page">Overview</a>
-    <a href="/spec-reader/">Spec reader</a>
+    <a href="/spec-reader/">Doc reader</a>
     <a href="/how-it-works">How it works and contribute</a>
     <a href="/mcp">MCP</a>
   </nav>
@@ -901,12 +901,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
-    AI labs publish documents setting out how their models should behave. This
+    AI companies publish documents setting out how their models should behave. This
     grid shows, behaviour by behaviour, how far each one actually goes.
     <br>
     Missing a specification, or a behaviour the index should be asking about?
     <a href="/how-it-works?kind=specification#propose" target="_blank"
-      rel="noopener noreferrer">Propose a model spec</a>
+      rel="noopener noreferrer">Propose a model behaviour specification</a>
     or
     <a href="/how-it-works?kind=behaviour#propose" target="_blank"
       rel="noopener noreferrer">propose a behaviour</a>.
@@ -946,9 +946,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
        governance.js reads; the long reference text sits folded under the board.
        tests/test_governance_tab.py holds the two to each other. -->
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
-  <h1>How each lab governs the rules its models follow</h1>
+  <h1>How each company governs the rules its models follow</h1>
   <p class="lede gov-lede">
-    Some AI companies publish a model spec: a document setting out how their
+    Some AI companies publish a model behaviour specification: a document setting out how their
     models should behave. This view scores how that document is run: whether it
     exists, what it covers, whether a change to it can be seen, and whether the
     public gets a say before it is weakened. Nine companies, as of September
@@ -983,7 +983,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <p class="gov-foot">
     Meta and xAI tie on 5. Meta is placed sixth on the supporting practices and
     on its direction of travel: it has committed in writing to publish a model
-    spec, and it already tests its models against an internal one.
+    behaviour specification, and it already tests its models against an internal one.
   </p>
   <p class="gov-date">As of September 2026</p>
 
@@ -1003,9 +1003,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <summary>How to read this ranking</summary>
       <div class="gov-more-body">
         <p>
-          <strong>Having a model spec and covering something are scored
-          apart.</strong> Alibaba shows why. On a single "has a model spec"
-          column, a model spec that names no model would score the same as one
+          <strong>Having a model behaviour specification and covering something are
+          scored apart.</strong> Alibaba shows why. On a single "has a specification"
+          column, a specification that names no model would score the same as one
           that binds a company's products, and the two are not the same thing.
         </p>
         <p>
@@ -1027,7 +1027,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
         </p>
         <p>
           <strong>The bottom of the ranking comes down to the first
-          question.</strong> Six of the nine companies publish no model spec, so
+          question.</strong> Six of the nine companies publish no model behaviour specification, so
           most of the grid cannot apply to them, and they sit at the bottom for
           that one reason. To compare the companies that do publish, look at the
           change log. To see the case for publishing at all, look at the totals.
@@ -1090,7 +1090,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
         </p>
         <ul class="gov-bullets">
           <li>
-            <strong>Alibaba's model spec was not read at its own
+            <strong>Alibaba's model behaviour specification was not read at its own
             address.</strong> The page at s.alibaba.com/aaig/specification is
             built in the browser, and our tools could not retrieve it. The text we
             used comes from this index, which holds 210 passages of the document,
@@ -1132,7 +1132,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           </li>
           <li>
             <strong>Some details of Claude Mythos</strong> rest partly on
-            secondary sources, though the absence of a published model spec for it
+            secondary sources, though the absence of a published model behaviour specification for it
             is confirmed from Anthropic's own pages.
           </li>
           <li>
@@ -1156,7 +1156,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     <details id="gov-sources" class="gov-sources">
       <summary>Sources</summary>
       <div class="gov-more-body">
-        <h3>The model specs</h3>
+        <h3>The model behaviour specifications</h3>
         <ul class="gov-bullets">
           <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
           <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
@@ -1164,7 +1164,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
           <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
         </ul>
-        <h3>How the model specs are run</h3>
+        <h3>How the specifications are run</h3>
         <ul class="gov-bullets">
           <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
           <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
@@ -1197,7 +1197,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://docs.mistral.ai/capabilities/guardrailing" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
           <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
         </ul>
-        <h3>Tests of whether models follow their model spec, and outside assessments</h3>
+        <h3>Tests of whether models follow their specification, and outside assessments</h3>
         <ul class="gov-bullets">
           <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
           <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
@@ -1239,7 +1239,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
          one that opened it. Hidden for a column with no document. -->
     <div class="sheet-topline">
       <a class="sheet-link" id="sheet-link" target="_blank" rel="noopener noreferrer"
-        hidden>Read the passages in the spec reader</a>
+        hidden>Read the passages in the doc reader</a>
       <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
     </div>
     <h2 id="sheet-title"></h2>

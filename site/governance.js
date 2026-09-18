@@ -10,8 +10,8 @@
  * Everything comes from governance.json: the scores, what each score means, and
  * the text of the research note, lab by lab and question by question. Totals and
  * rank are computed here rather than stored, so the ranking cannot disagree with
- * the checks it is the sum of, and a profile's opening line, "Model spec, 8 out
- * of 12", is written from the same sums rather than typed beside them.
+ * the checks it is the sum of, and a profile's opening line, "Model behaviour
+ * specification, 8 out of 12", is written from the same sums rather than typed beside them.
  *
  * Nothing is built with innerHTML, as in overview.js. The text here is ours
  * rather than a model's, but one rule for the whole page is easier to keep.
@@ -82,7 +82,7 @@ function renderKpis() {
 
   const figures = [
     { figure: `${minimum.value}`, small: ` out of ${minimumMax}`,
-      caption: "No company meets the minimum we ask for: a published model spec for "
+      caption: "No company meets the minimum we ask for: a published model behaviour specification for "
         + "every model it runs, and one public log of every change. Those two questions "
         + `are worth ${minimumMax} points, and the best score, ${minimum.lab.name}'s, is `
         + `${minimum.value}.` },
@@ -311,7 +311,7 @@ function supportingScore(content, lab) {
 function aboutTotal(content) {
   titled(content, "Overall, out of 40", "The sum of the four questions.");
   content.append(element("p", "", "The first two questions are worth 12 points each, "
-    + "because together they are the minimum we propose: a published model spec for every "
+    + "because together they are the minimum we propose: a published model behaviour specification for every "
     + "model in use, and one public change log. The other two are worth 8."));
   const list = element("ul", "check-list");
   board.data.questions.forEach(question => {

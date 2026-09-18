@@ -264,7 +264,7 @@ function openAbsent(behaviour, column) {
      * specification" is a claim about Meta; "we know of none" is a claim about
      * us, and it is the only one of the two this index can stand behind. */
     body.append(paragraph(
-      `We know of no model specification from ${column.lab}. None appears to `
+      `We know of no model behaviour specification from ${column.lab}. None appears to `
       + "have been published, and that is worth saying plainly rather than "
       + "leaving as a blank: there is no public document to hold beside the "
       + "others."));
