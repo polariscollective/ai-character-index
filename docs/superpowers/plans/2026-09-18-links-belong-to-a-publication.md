@@ -855,3 +855,44 @@ Expected: bubbles under compared paragraphs, a comparison behind the compare but
 - [ ] **Step 6: Stop, and hand back**
 
 Making the publication public is a separate and reversible decision, and it belongs to the operator. Report the new id, what verified, and what the page looked like.
+
+---
+
+## What the whole-branch review found
+
+The seven tasks above are what was planned, and they are left as they were
+written. A review of the finished branch found four things the plan had not
+named. Each was fixed before the branch was closed, and each is recorded here
+rather than folded back into the tasks, because a plan that quietly grows the
+work it prescribed stops being a record of what was decided in advance.
+
+**The portal could not have published anything.** `--link-runs` is required, and
+nothing on the build form supplied it, so the one route that builds publications
+would have refused every one of them. The plan stopped at the command line. The
+chain it needed is a `Link runs` group on the build form, `publishJobParams` in
+`app/lib/publish.mjs`, the admin route refusing a build that names no link run,
+and `engine/job.py`'s `run_publish` passing `link_runs` through to `publish()`.
+
+**The judging image had no interpreter for the new builder.** Publishing is one
+of the three modes of that image, so the image is where the builder runs, and it
+carried Python only. It gains a Node runtime and copies exactly two library
+files: `app/lib/links.mjs` and the `app/lib/supabase.mjs` it imports in turn,
+which are the whole of the builder's import graph. Not the site, not the reader,
+not Next, and not the rest of `app/lib`.
+
+**Document notes had nothing pinning them.** `--link-runs` reaches everything in
+the column through a run id, and document notes have no run. A publication would
+therefore have served whichever document notes existed when it was read rather
+than when it was built, which is the defect this plan exists to remove, surviving
+in one corner of the column. `aci_document_notes` cannot honestly gain a run: its
+rows were imported from two JSON files in a single batch, and its unique key ends
+in `prompt_sha256`. So the prompt is what a publication pins, `--note-prompts`,
+derived at build time and recorded in `build_params` beside the runs. Absent
+means take every note; a list that is present pins exactly what it names,
+including nothing.
+
+**The migration let the two columns disagree.** Nullable separately, a row could
+carry a digest and no bytes. That is the one shape that crashes the verifier
+rather than failing it, because the verifier skips a publication on
+`links is null` and would then read `links_sha256` on a row that has one. The
+migration carries a check that the two are null together.

@@ -1,7 +1,7 @@
 # Links belong to a publication
 
 Date: 2026-09-18
-Status: designed, not built
+Status: built and reviewed
 
 The reader serves two frozen columns and one live query. `payload` and
 `documents` are bytes copied into the publication row and held to a digest; the
@@ -66,6 +66,21 @@ reasons stay in the live tables, where they are already readable per run.
 the way `--cells` already names the cells the payload is built from. The filter
 on the script name goes.
 
+**Document notes are pinned by their prompt, because they have no run.**
+Everything else in the column is reached through a run id, and document notes
+cannot be: `aci_document_notes` carries no run and cannot honestly gain one,
+because its rows were imported from two JSON files in a single batch and its
+unique key ends in `prompt_sha256`. The prompt is the identity of a document
+note, so the prompt is what a publication pins, `--note-prompts`, recorded in
+`build_params` beside the runs. This is not a convenience standing in for a run
+id; it is the only honest key the table has.
+
+Absent and empty are different answers, and the distinction is load-bearing. No
+list at all means take every note, which is what a reader outside a publication
+wants. A list that is present pins exactly what it names, including nothing: a
+publication that pinned no notes must not silently acquire the ones written
+afterwards.
+
 ## The builder is JavaScript, and that is the point
 
 `build()` in `engine/publish.py` runs a builder as a subprocess, reads the bytes
@@ -81,6 +96,38 @@ already has. `build()` learns to launch `node` as well as `python3`, chosen per
 builder. The logic moves out of the route and into the builder; it is not
 duplicated.
 
+## The judging image gains an interpreter
+
+Publishing is one of the three modes of the judging image, so the image is where
+the builder has to run. It carried Python only. It gains a Node runtime, and
+copies exactly two library files: `app/lib/links.mjs` and the
+`app/lib/supabase.mjs` it imports in turn, which are the whole of the builder's
+import graph. Not the site, not the reader, not Next, and not the rest of
+`app/lib` either.
+
+That is the price of the previous decision, and it is worth naming rather than
+discovering at deploy time: choosing not to duplicate the assembly means the
+container that publishes must be able to execute the language the assembly is
+written in.
+
+## The portal carries the choice
+
+Publishing is a portal operation, so a flag `publish.py` requires is a control
+an operator has to be given. Without that, `--link-runs` would be a required
+argument nothing could supply, and the portal's build button would refuse every
+publication.
+
+The chain is a `Link runs` group on the build form, through `publishJobParams`
+in `app/lib/publish.mjs`, the admin route, the `aci_jobs` row, and
+`engine/job.py`'s `run_publish`, which passes `link_runs` to `publish()`. The
+route refuses a build naming no link run, in the same breath as it refuses one
+naming no behaviour and no document.
+
+The note prompts are not on the form, and that is deliberate. They are derived
+at build time from the digests present in `aci_document_notes`, because an
+operator choosing prompt digests from a list would be choosing between things
+the form cannot meaningfully describe.
+
 ## What changes, file by file
 
 The schema change is a pull request in `polaris-supabase`, which is the only
@@ -89,12 +136,22 @@ repository that migrates these databases. It must land first, because
 
 | where | change |
 |---|---|
-| `polaris-supabase` | `aci_publications` gains `links` (`json`) and `links_sha256` (`text`) |
-| `engine/build-links-data.mjs` | new: takes `--link-runs` and `--out`, imports the assembly, writes the JSON |
-| `engine/publish.py` | entries in `FORMATS` and `BUILDERS`; `build()` picks the interpreter; `--link-runs` required |
-| `app/lib/links.mjs` | the assembly becomes what the builder calls; `panelRuns()` and its filter go |
+| `polaris-supabase` | `aci_publications` gains `links` (`json`) and `links_sha256` (`text`), nullable, with a check that they are null together |
+| `engine/build-links-data.mjs` | new: takes `--link-runs`, `--note-prompts` and `--out`, imports the assembly, writes the JSON |
+| `engine/publish.py` | entries in `FORMATS` and `BUILDERS`; `build()` picks the interpreter; `--link-runs` required; the note prompts derived and recorded |
+| `app/lib/links.mjs` | the assembly becomes what the builder calls; `panelRuns()` and its filter go; `readerLinks` takes the runs and the note prompts |
 | `app/api/reader/links/route.js` | serves the resolved publication's column, as the payload route does |
-| `engine/verify_supabase_provenance.py` | its two loops move from two columns to three |
+| `site/spec-reader/app.js` | forwards its `?publication=` pin to the links route, as it already did to the other three |
+| `app/lib/publish.mjs`, the admin route | a `Link runs` group on the build form, carried through to `engine/job.py` |
+| `Dockerfile` | a Node runtime, and the two library files the builder's import graph reaches |
+| `engine/verify_supabase_provenance.py` | its two loops move from two columns to three, skipping a publication carrying null |
+
+The two columns are nullable, and they move together. Every row that exists
+predates them and `aci_publications` is insert only, so there is nothing to
+backfill; but a digest without its bytes describes nothing, and the verifier
+skips a publication on `links is null` and would then read `links_sha256` on a
+row that has one. The halfway state is the single shape that crashes the
+verifier rather than failing it, so the migration forbids it.
 
 `json` and not `jsonb`, for the reason the repository already recorded: jsonb
 reorders keys on the way in, which breaks the digest permanently and silently.
@@ -110,6 +167,26 @@ it, and the previous publication stays reachable by its own link.
 The cost is stated plainly: a corrected note does not appear until the next
 publication is built and made public. That is the thing being bought, not a
 side effect.
+
+## Deployment order, and the gap it opens
+
+The order is forced, and it has a visible consequence that must be accepted
+before any of it ships.
+
+The migration lands first, because `aci_publications` is insert only and a row
+cannot be filled in afterwards. The code follows. Only then can a publication be
+built with `--link-runs`, read as a draft, and made public.
+
+Between the code deploying and that publication being made public, the site
+shows nothing about links at all. The publication that is public today predates
+the column and carries null in both halves of it; `/api/reader/links` answers
+404 for such a row, and the reader catches that and renders as it did before any
+of this existed. No bubbles, no comparisons, no "in short" notes. That is not a
+regression to be fixed but the direct consequence of deciding that links belong
+to a publication: a publication that never carried them has none to show.
+
+The gap closes when a publication carrying the column is made public, and not
+before. The operator was told this plainly and accepted it.
 
 ## What this does not do
 
