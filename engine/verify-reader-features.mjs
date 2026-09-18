@@ -1972,6 +1972,94 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
+/* The overview's second view, how each lab governs its rules: a board with a
+ * heat map and a panel that answers whatever was pressed. Its numbers and words
+ * are site/governance.json, and tests/test_governance_tab.py holds the two
+ * together; what only a browser can show is that the tabs, the address, the
+ * breakdowns and the panel join them. */
+console.log("== Overview: the governance view ==");
+{
+  const root = new URL("/", base).href;
+  pageErrors = [];
+  await page.goto(`${root}?view=governance`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#gov-heatmap tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+  const seen = await page.evaluate(() => ({
+    governanceShown: !document.querySelector("#view-governance").hidden,
+    coverageHidden: document.querySelector("#view-coverage").hidden,
+    selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
+    ranking: [...document.querySelectorAll("#gov-heatmap tbody .lab-name")].map(n => n.textContent),
+    overall: [...document.querySelectorAll('#gov-heatmap .cell-button[data-column="total"]')]
+      .map(b => b.textContent),
+    findings: document.querySelectorAll("#gov-detail details").length,
+  }));
+  check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
+    "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
+  check(seen.ranking.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Meta, xAI"
+      && seen.overall.join(",") === "23,22,10,9,5,5",
+    "the heat map ranks the six labs in the note's order, Meta fifth on the tie",
+    `${seen.ranking.join(", ")} / ${seen.overall.join(",")}`);
+  check(seen.findings === 6, "with nothing pressed, the panel carries the six findings",
+    String(seen.findings));
+
+  // An overall cell opens the company's profile, with that question unfolded.
+  await page.locator('.cell-button[data-lab="meta"][data-column="1"]').click();
+  await page.waitForTimeout(150);
+  const profile = await page.evaluate(() => ({
+    title: document.querySelector("#gov-detail h2")?.textContent,
+    open: [...document.querySelectorAll("#gov-detail details")]
+      .filter(d => d.open).map(d => d.querySelector("summary").textContent),
+    pressed: document.querySelector('.cell-button[data-lab="meta"][data-column="1"]')
+      .getAttribute("aria-pressed"),
+  }));
+  check(profile.title === "Meta" && profile.open.join() === "1Rulebook, 1 out of 12"
+      && profile.pressed === "true",
+    "a score in the overall map opens the profile with that question unfolded",
+    JSON.stringify(profile));
+
+  // A question's name breaks it down into its checks, and a check's score opens
+  // what the check asks and what was found.
+  await page.locator('.gov-mode[data-mode="2"]').click();
+  await page.waitForTimeout(150);
+  await page.locator('.cell-button[data-lab="anthropic"][data-column="2.1"]').click();
+  await page.waitForTimeout(150);
+  const score = await page.evaluate(() => ({
+    heads: [...document.querySelectorAll("#gov-heatmap thead .head-name")].map(n => n.textContent),
+    title: document.querySelector("#gov-detail h2")?.textContent,
+    here: [...document.querySelectorAll("#gov-detail .anchors li.is-here .anchor-level")]
+      .map(n => n.textContent),
+  }));
+  check(score.heads.join(", ") === "Company, Change record, Versions kept, Changes explained, Scope of the record"
+      && score.title === "Anthropic: versions kept" && score.here.join() === "0,2",
+    "the change record breaks down into its checks, and a score of 1 sits between 0 and 2",
+    JSON.stringify(score));
+
+  await page.locator("#tab-coverage").click();
+  await page.waitForTimeout(150);
+  const back = await page.evaluate(() => ({
+    coverageShown: !document.querySelector("#view-coverage").hidden,
+    governanceHidden: document.querySelector("#view-governance").hidden,
+    view: new URL(location.href).searchParams.get("view"),
+  }));
+  check(back.coverageShown && back.governanceHidden && back.view === null,
+    "the first tab returns to the grid and drops ?view= from the address", JSON.stringify(back));
+
+  // The tabs are one stop for the keyboard, and the arrows move between them.
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(150);
+  const keyed = await page.evaluate(() => ({
+    focused: document.activeElement?.id,
+    view: new URL(location.href).searchParams.get("view"),
+    governanceShown: !document.querySelector("#view-governance").hidden,
+  }));
+  check(keyed.focused === "tab-governance" && keyed.view === "governance" && keyed.governanceShown,
+    "the right arrow on the first tab selects the second and writes its address",
+    JSON.stringify(keyed));
+
+  check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
+}
+
+// =============================================================================
 const unexpectedMissing = [...new Set(missingPaths)];
 check(unexpectedMissing.length === 0, "nothing unexpected 404s",
   unexpectedMissing.join(", ") || "nothing");

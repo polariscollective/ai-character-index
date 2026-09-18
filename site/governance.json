@@ -1,0 +1,280 @@
+{
+  "as_of": "September 2026",
+  "researched": "2026-09-18",
+  "labs": [
+    {
+      "id": "openai",
+      "name": "OpenAI"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic"
+    },
+    {
+      "id": "alibaba",
+      "name": "Alibaba"
+    },
+    {
+      "id": "google",
+      "name": "Google DeepMind"
+    },
+    {
+      "id": "meta",
+      "name": "Meta"
+    },
+    {
+      "id": "xai",
+      "name": "xAI"
+    }
+  ],
+  "questions": [
+    {
+      "id": "1",
+      "name": "Rulebook",
+      "question": "Does every model the company puts in use have a published rulebook?",
+      "checks": [
+        {
+          "id": "1.1",
+          "label": "A public rulebook says how the model should behave in ordinary use",
+          "anchors": {
+            "0": "Nothing, or only a policy on how users may behave.",
+            "2": "Partial: only prohibitions, with no description of good behaviour and no order of authority.",
+            "4": "A full rulebook: how the model should behave, how conflicts between instructions are settled, and who may instruct it at what level."
+          },
+          "short": "Rulebook published"
+        },
+        {
+          "id": "1.2",
+          "label": "It says which models it covers, and the most-used ones are included",
+          "anchors": {
+            "0": "No statement of coverage, or the flagship models are left out.",
+            "2": "Coverage is implied but not stated.",
+            "4": "Coverage is stated, and the most-used models are in it."
+          },
+          "short": "Coverage stated"
+        },
+        {
+          "id": "1.3",
+          "label": "Government, defence and other special deployments are covered, or the differences disclosed",
+          "anchors": {
+            "0": "Government, defence, specialised and large-scale internal deployments are not addressed.",
+            "2": "The gap is acknowledged, but what applies instead is not disclosed.",
+            "4": "They are covered, or the differences are published by kind of deployment."
+          },
+          "short": "Special deployments"
+        }
+      ],
+      "explainer": "A rulebook is the document, usually called a model specification, that sets out how a company's models are meant to behave."
+    },
+    {
+      "id": "2",
+      "name": "Change record",
+      "question": "Is there one public record of every change, to the rulebook, to the standing instructions and to the filters?",
+      "checks": [
+        {
+          "id": "2.1",
+          "label": "Every version is dated and kept online",
+          "anchors": {
+            "0": "No version number and no archive.",
+            "2": "Versioned, but the archive is incomplete or not linked.",
+            "4": "Every version is dated and can be retrieved at a permanent address."
+          },
+          "short": "Versions kept"
+        },
+        {
+          "id": "2.2",
+          "label": "Each change is shown, with the reason for it",
+          "anchors": {
+            "0": "Nothing.",
+            "2": "Summaries of what changed, without the changed text and without reasons.",
+            "4": "The changed text, line by line, with the reason for each change."
+          },
+          "short": "Changes explained"
+        },
+        {
+          "id": "2.3",
+          "label": "The record also covers standing instructions and filters, says which rulebook governs which model, and commits to a timeline",
+          "anchors": {
+            "0": "None of the three.",
+            "2": "One of the three.",
+            "4": "All three: the record spans standing instructions and filters, says which version of the rulebook governs which model, and commits to a period within which changes are recorded."
+          },
+          "short": "Scope of the record"
+        }
+      ],
+      "explainer": "The standing instructions are the text a company gives its model before every conversation, often called its system prompt."
+    },
+    {
+      "id": "3",
+      "name": "Filters",
+      "question": "Does the company say which filters it runs around its models?",
+      "checks": [
+        {
+          "id": "3.1",
+          "label": "The filters in use are disclosed, by kind",
+          "anchors": {
+            "0": "Nothing beyond general language about safety.",
+            "2": "Disclosed for one product only, or as marketing.",
+            "4": "A list by kind, across every product in use."
+          },
+          "short": "Filters disclosed"
+        },
+        {
+          "id": "3.2",
+          "label": "Changes to the filters are recorded or announced systematically",
+          "anchors": {
+            "0": "Changes come to light through the press or through incidents.",
+            "2": "Some are announced, but there is no register.",
+            "4": "Every change is dated in the record."
+          },
+          "short": "Filter changes recorded"
+        }
+      ],
+      "explainer": "Filters are automated checks, separate from the model itself, that block or redirect what goes in or comes out. They are often called guardrails."
+    },
+    {
+      "id": "4",
+      "name": "Notice",
+      "question": "Can the public comment before a firm limit is loosened?",
+      "checks": [
+        {
+          "id": "4.1",
+          "label": "Firm limits are listed as a named set that cannot be overridden",
+          "anchors": {
+            "0": "No such set.",
+            "2": "Referred to, but not listed.",
+            "4": "Named, listed, and marked as impossible to override."
+          },
+          "short": "Firm limits listed"
+        },
+        {
+          "id": "4.2",
+          "label": "The public can comment before a firm limit is weakened, removed or reclassified",
+          "anchors": {
+            "0": "No mechanism.",
+            "2": "A one-off consultation, with no commitment for the future.",
+            "4": "A standing commitment to a comment period, with room to act first and consult afterwards in an emergency."
+          },
+          "short": "Comment period"
+        }
+      ],
+      "explainer": "Firm limits are the things a model must never do, whoever asks. They are often called hard constraints."
+    }
+  ],
+  "supporting": [
+    {
+      "id": "S1",
+      "label": "Anyone may freely reuse the rulebook, under an open licence."
+    },
+    {
+      "id": "S2",
+      "label": "The company publishes a current test of how well its models follow the rulebook."
+    },
+    {
+      "id": "S3",
+      "label": "Outside evaluators have access to test adherence to the rulebook specifically."
+    },
+    {
+      "id": "S4",
+      "label": "A model is released only once it meets an adherence threshold announced in advance."
+    },
+    {
+      "id": "S5",
+      "label": "The company publishes who inside it approves changes to the rulebook."
+    }
+  ],
+  "scores": {
+    "openai": {"1.1": 4, "1.2": 3, "1.3": 1, "2.1": 4, "2.2": 2, "2.3": 1, "3.1": 3, "3.2": 1, "4.1": 3, "4.2": 1},
+    "anthropic": {"1.1": 4, "1.2": 4, "1.3": 1, "2.1": 1, "2.2": 0, "2.3": 2, "3.1": 4, "3.2": 1, "4.1": 4, "4.2": 1},
+    "alibaba": {"1.1": 4, "1.2": 0, "1.3": 0, "2.1": 0, "2.2": 0, "2.3": 0, "3.1": 2, "3.2": 0, "4.1": 4, "4.2": 0},
+    "google": {"1.1": 2, "1.2": 1, "1.3": 0, "2.1": 1, "2.2": 0, "2.3": 0, "3.1": 3, "3.2": 1, "4.1": 1, "4.2": 0},
+    "meta": {"1.1": 1, "1.2": 0, "1.3": 0, "2.1": 1, "2.2": 1, "2.3": 0, "3.1": 1, "3.2": 0, "4.1": 1, "4.2": 0},
+    "xai": {"1.1": 0, "1.2": 0, "1.3": 0, "2.1": 1, "2.2": 0, "2.3": 2, "3.1": 2, "3.2": 0, "4.1": 0, "4.2": 0}
+  },
+  "supporting_totals": {
+    "openai": 4,
+    "anthropic": 3,
+    "alibaba": 0,
+    "google": 1,
+    "meta": 3,
+    "xai": 1
+  },
+  "findings": [
+    {
+      "title": "No company meets the minimum",
+      "text": "The minimum we propose is the first two questions together: a published rulebook for every model in use, and one public record of every change. The best combined score is OpenAI's, 15 out of 24. Anthropic, whose rulebook is the more complete, scores 12. The change record is where every company falls short, the two leaders included."
+    },
+    {
+      "title": "No company gives notice before loosening a firm limit",
+      "text": "None has committed to warn the public, or to hear from it, before weakening one of the things its model must never do. Every weakening we found in the period went out with no advance notice. OpenAI removed a rule concerning lying and confidentiality in December 2025, with a single line in its change log. Google removed its commitments on weapons and surveillance from its AI Principles in February 2025, in a blog post that did not mention the removal. xAI restricted image editing in its Grok model in January 2026 through a statement to the press, under pressure from regulators. On the check that asks for a comment period, every company scores 0 or 1 out of 4."
+    },
+    {
+      "title": "Filters offered to developers are described; filters on the companies' own apps are not",
+      "text": "Google, OpenAI and Alibaba all publish detailed descriptions of the filters they offer to developers building on their models: which categories of content can be filtered, how strict each setting is, and filtering models that anyone can download. They say close to nothing about the filters on their own consumer products. OpenAI states that its safety policies in production can be updated faster than an automated filter can be retrained. The layer that changes fastest is the one with no record at all."
+    },
+    {
+      "title": "No company says which rules apply when its models go to governments and armed forces",
+      "text": "This is the widest gap in the grid: every company scores 0 or 1 on it. Anthropic is the only one that says in writing that some of its models fall outside its rulebook, which is why it scores 1 rather than 0, and those models are in use: Claude Gov and Claude Mythos have no published rulebook. OpenAI never names its rulebook in any announcement about government or defence; those deployments are governed by its usage policies and by limits written into contracts. Meta opened its Llama models to NATO and to EU institutions while its own acceptable use policy still prohibits military uses, and has published nothing to reconcile the two."
+    },
+    {
+      "title": "Alibaba's rulebook is well built and names nothing it governs",
+      "text": "It has forty-three rules, four levels of authority, paired examples of compliant and violating answers, and a procedure for settling conflicts that is more explicit than OpenAI's or Anthropic's. It names no model, no family of models and no kind of deployment. The only model publicly tied to it is Oyster-II, a research model of 14 billion parameters (a measure of a model's size) built on Qwen3-14B, a base model from April 2025. Alibaba's flagship line, up to Qwen3.8-Max of August 2026 with 2.4 trillion parameters, is proprietary and goes unmentioned. It is the clearest reason in our evidence to score whether a rulebook exists and whether it covers anything as two separate checks."
+    },
+    {
+      "title": "Meta is the company to watch",
+      "text": "Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal behaviour specification that nobody outside Meta can read. A company publishing results against a rulebook nobody can see shows why the first question exists more clearly than any company that publishes nothing."
+    }
+  ],
+  "profiles": {
+    "openai": {
+      "1": "OpenAI's rulebook, the Model Spec, sits at a permanent, dated web address. The current version is dated 18 August 2026, and it is released into the public domain under the CC0 licence, so anyone may reuse it. What it covers is set out in one sentence that has not changed since 2024: \"the models that power OpenAI's products, including the API platform\". It lists no kinds of deployment, so whether it covers government, defence or large-scale internal use can only be inferred. ChatGPT Gov, OpenAI for Government and the GenAI.mil deployment were all announced with reference to OpenAI's usage policies, never to the Model Spec. The nearest thing to a statement of coverage is OpenAI's post about its work with the Department of War: \"We are not providing the DoW with 'guardrails off' or non-safety trained models.\" A separate, undated document, Principles for National Security Partnerships, mentions \"model behavior specifications\" without saying whether it means the Model Spec.",
+      "2": "The best of the six, and still short. There have been seven versions, and six are kept at stable, dated addresses; the first, from May 2024, now returns a \"page not found\" error. The change log, CHANGELOG.md, summarises \"notable updates\". It does not show the changed text line by line, and it gives no reasons. Nothing says which version of the rulebook governs which model: the system card for GPT-6 Astra (the technical report published with a model), released in September 2026, still cites the December 2025 version, one behind. No timeline for recording changes is stated. The log covers the rulebook's text only. OpenAI does not publish its models' standing instructions at all, and changes to its filtering policies are recorded nowhere.",
+      "3": "The release of gpt-oss-safeguard is the most substantial disclosure about filters that any company has made. It explains how the Safety Reasoner, OpenAI's system for checking content against its policies, works; says that this checking has taken \"as high as 16%\" of the computing power used in recent launches; and names the subject areas its layered filters cover. Against that, the age-prediction system launched in January 2026, a filter that affects every user, was announced in a blog post and a help article and appears in no release note.",
+      "4": "The rulebook defines its top-level rules, which it calls root rules, as ones nobody can override while the model is running, and it refers to red-line principles without ever listing them publicly. The collective alignment round of August 2025 is the only real public consultation: about 1,000 people across 19 countries took part, six changes were adopted and two rejected, and the results were published. It has not been repeated, and it gathered views on the rulebook after the fact rather than opening a window before a specific weakening.",
+      "supporting": "The rulebook is free to reuse, under CC0 (2). OpenAI published tests of how well its models follow the rulebook on 25 March 2026, with 596 prompts and the data and testing code open to all. But the tests target the December 2025 version, and no results have been published for any model after GPT-5.4 Thinking, through GPT-5.5, GPT-5.6 and GPT-6 Astra (1). Its programme of outside testing covers biological threats, cyber attacks, models improving themselves, and scheming (a model covertly pursuing aims of its own), not whether models follow the rulebook (0). No release depends on a rulebook score (0). How changes are approved inside the company is published, but thinly: \"Anyone at OpenAI can comment on it or propose changes, and final updates are approved by a broad set of cross-functional stakeholders\" (1)."
+    },
+    "anthropic": {
+      "1": "Anthropic's rulebook, Claude's Constitution, is dated 21 January 2026, runs to about 29,000 words, is in the public domain under CC0 and names its authors. It says what it covers, and the flagship models are inside it. It also says plainly what it leaves out: \"This constitution is written for our mainline, general-access Claude models. We have some models built for specialized uses that don't fully fit this constitution.\" Those models exist. Claude Gov (June 2025) and Claude Mythos (April 2026) are in use, and neither has a published rulebook. Anthropic's usage policy also allows its rules to be tailored by contract for government customers, and the individual exceptions granted under it are not published.",
+      "2": "There is no change log and no version number: one current text. The repository's description promises \"We'll update this repository as the constitution evolves and archive prior versions here\"; that has not happened yet. The contrast inside the company is the finding. Anthropic's Responsible Scaling Policy, its framework for catastrophic risks, has nine dated versions, each with a summary of what changed and a stable archive address, under an explicit commitment that changes \"will be logged both on this page and in a changelog in the policy document itself\". The constitution has none of that. Partial credit for publishing the standing instructions of claude.ai and of its iPhone and Android apps for each model, dated, with older versions kept. The instructions used when developers reach the models directly, through the API, are not included, and changes are not shown line by line.",
+      "3": "Anthropic has disclosed its constitutional classifiers, the automated filters built on its constitution, by name, by how they work and by what they cover, with operating figures: a refusal rate of 0.05% over a month of traffic to Sonnet 4.5, and about 1% of extra computing cost. How requests to Fable 5 and Mythos 5 are routed was disclosed at launch. There is no register of filters and no versioning of them. And the constitution's layer of guidelines, which it ranks third of four in its own order of priorities, above general helpfulness, is explicitly allowed to stay unpublished: \"Other guidelines may be more niche and used primarily during training without broad publication.\" Nothing has been published under that heading as of September 2026.",
+      "4": "The highest score for naming firm limits: seven hard constraints, listed, marked non-negotiable, and impossible for any business deploying Claude, or any user, to unlock. Nothing at all on consultation before weakening them: the constitution contains no procedure for amending it. Anthropic's Collective Constitutional AI exercise dates from 2023. The 2026 consultation with outside experts is described in one sentence that names nobody, and its reference to experts in law, philosophy and theology describes what Anthropic intends to do rather than what was done.",
+      "supporting": "The rulebook is free to reuse, under CC0 (2). Anthropic's system cards claim that its models follow the constitution (\"Opus 5 scores particularly high on adherence to Claude's constitution\") without naming the test, the method or a breakdown by provision (1). The only point-by-point audit of the constitution is by outsiders: Jakkli, Rajamanoharan and Nanda broke it into 205 individual tenets (arXiv 2605.24229, May 2026). No outside access to test adherence (0), no release conditional on a score (0), and no published process for amending the constitution (0).",
+      "aside": {
+        "title": "A discrepancy worth knowing",
+        "text": "The copy Anthropic offers for reuse, a machine-readable version at anthropics/claude-constitution, leaves out the whole preface, and with it the statement of what the constitution does not cover, the licence statement and the list of authors. The document Anthropic invites the world to reuse is not the document it publishes. We confirmed this by searching the raw file for those passages."
+      }
+    },
+    "alibaba": {
+      "1": "Full marks for having a rulebook, none for saying what it covers. Published in 2026, it sets out forty-three guidelines under the six principles of China's Ethical Norms for New Generation AI; four levels of authority (Root, System, Developer, User); paired examples of compliant and violating answers; and a procedure for settling conflicts that spells out, one by one, when an attempt to push the model past its rules fails, whether the attempt is framed as an order, a moral appeal, a logical argument or a role-play. It identifies no model, no family of models and no kind of deployment anywhere in its text. The Qwen models that anyone can download and run are not addressed. That matters because the System level is defined as \"set by the model provider\", and once a model has been downloaded there is no provider.",
+      "2": "No version number, no change log, no archive, no stated schedule, and nothing saying which models it governs. The only language about revision sits inside the definition of the Root level, and it is one-sided: \"room for revision is kept as human understanding of AI ethics deepens.\"",
+      "3": "Alibaba Cloud sells AI Guardrails as a product, with a published list of categories, and Alibaba's AAIG team releases a genuine set of filters for anyone to use (Kelp, Shark, Jellyfish, Oyster and Qwen3Guard). None of it is presented as a disclosure of the filters running on Alibaba's own models, and nothing connects the filtering China requires by law to the published categories. The rulebook forbids the model from revealing its standing instructions.",
+      "4": "Its Root principles are named and \"accept no override at runtime in any form\", which earns full marks for naming firm limits. Nothing can be checked on consultation: no channel for comment, no record of any consultation, and nothing restricting how the Root level itself may be revised.",
+      "supporting": "We found no licence statement, no test of adherence, no outside access, no release conditional on a score, and no published process for approving changes. One practice falls outside this grid and has no Western equivalent: Alibaba publishes the numbers under which its algorithms are registered with the Cyberspace Administration of China, and the registered names of fourteen of its large language models. That is registration with a regulator rather than governance of a rulebook, but it is worth knowing."
+    },
+    "google": {
+      "1": "No rulebook. What exists is spread across five documents with different owners. The Gemini app's safety and policy guidelines list six categories of prohibited output, with no date, no version and no order of authority between instructions. A second page, \"Our approach to the Gemini app\", is the closest thing to a rulebook that Google publishes and the least documented. It sets out three commitments in order (follow your directions, adapt to your needs, safeguard your experience), a personality (\"genuine, curious, warm, and vibrant\") and a norm of honesty, and it carries no date at all. The Frontier Safety Framework is properly versioned (version 3.1, 17 April 2026, with a change log) and explicitly covers something else: it \"focuses on possible severe risks stemming from high-impact capabilities\". Nothing is published for Workspace, AI Mode in Search or Gemini for Government.",
+      "2": "No change log for any document that governs how the models behave. The one archiving practice worth a point: the 2018 AI Principles are still online at their original address, with a banner pointing to the new version, so the replaced text can still be read. The banner does not say what changed.",
+      "3": "The fullest disclosure to developers of the six: four adjustable categories of harm with their exact definitions, six strictness settings, a stated floor that cannot be adjusted (\"core harms, such as content that endangers child safety\" are always blocked), the ShieldGemma filters released for anyone to use, and SynthID, which marks generated content. For its own consumer products, close to nothing, and at least two significant changes went unannounced: a restriction on election questions in March 2024, still in force a year later with no announced review, and a model update in May 2025 that overrode safety settings developers had deliberately set to allow the content it then blocked.",
+      "4": "No named set of firm limits beyond the floor on child sexual abuse material, and no consultation of any kind. The rewrite of the AI Principles in February 2025 is the clearest documented weakening in all our evidence: the section \"AI applications we will not pursue\", including the commitments on weapons and surveillance, was removed, and the blog post announcing the rewrite did not mention the removal. Senators Markey, Merkley and Welch wrote to Google on 19 February 2025: \"A blog post accompanying these revisions made no reference to the removal of these long-standing commitments.\" We found no published response from Google.",
+      "supporting": "Google's double-blind evaluation pilot of 27 August 2026, with the Singapore AI Safety Institute, OpenMined, AVERI and MLCommons, is a real innovation: \"The evaluator cannot see the Gemini model weights, and Google cannot see the evaluator's test prompts.\" But it is about making benchmarks trustworthy, not about a rulebook for behaviour (1). Everything else scores 0 for want of a rulebook to attach it to.",
+      "aside": {
+        "title": "What goes to the regulator and not to the public",
+        "text": "Google has signed the EU's General-Purpose AI Code of Practice in full, so under its Measure 7.1 it must give the EU AI Office \"a specification of how Signatories intend the model to operate\", including its principles, its order of priorities, the topics it refuses and its standing instructions. All four go to a regulator, and none of them to the public."
+      }
+    },
+    "meta": {
+      "1": "No published rulebook, and a written commitment to publish one, recorded in the change log of its Advanced AI Scaling Framework v2 as \"Added commitment to publish a model spec, and evaluations for adherence to the model spec in preparedness reports\". Future tense, no deadline, no address, and five months gone. An internal rulebook already exists and is in use: the Muse Spark safety and preparedness report of 26 May 2026 states \"We evaluate Muse Spark against an internal behavior specification\" and publishes scores on eleven dimensions, without reproducing, versioning or dating the specification. The 200-page \"GenAI: Content Risk Standards\" that leaked to Reuters in August 2025 is the same kind of document seen from the outside: approved by Meta's legal, public policy and engineering teams and by its chief ethicist, and never published in any form, before or after the passages Meta said it removed.",
+      "2": "Appendix II of the scaling framework is a real change log, with real triggers for updating it (\"at least every twelve months, whichever is sooner\") and a named internal sign-off. It covers the framework for catastrophic risks and no document about behaviour. Meta publishes an acceptable use policy for each model, which partly shows which policy applies to which model, though none is dated. No standing instructions are published.",
+      "3": "Llama Guard 4, Prompt Guard 2 and CyberSecEval are tools Meta publishes for developers, which is not the same as disclosing the filters on Meta's own products. The fullest disclosure of those is one oblique sentence: \"An external human red team identified a handful of valid jailbreaks; the majority of these were subsequently patched in Meta AI prior to launch.\" A red team is a group brought in to attack a system; a jailbreak is a way of getting a model past its rules.",
+      "4": "No set of firm limits, no consultation, and no body with authority over either. A member of Meta's Oversight Board, Krishnaswamy, said in March 2026: \"We don't have a mandate on gen-AI, but it's something we're trying to understand.\" Every change to its rules on behaviour in the period was announced as public relations, under pressure from outside: the removal of romantic role-play with minors in August 2025, through a spokesperson's statement to Reuters, and the worldwide pause of teenagers' access to AI characters in January 2026, through an update added to an old blog post and an exclusive given to TechCrunch.",
+      "supporting": "Results of tests against the rulebook are published, though the rulebook is not (1). Outside evaluators are genuinely involved and named, Apollo Research, SecureBio, CAIS and Charlemagne Labs, though on terms that are not stated (1). The framework has a named internal sign-off, though no rulebook does (1)."
+    },
+    "xai": {
+      "1": "Nothing. The acceptable use policy governs users rather than the model (\"You are free to use our Service so long as you use it to be a good human\"). The Frontier AI Framework covers catastrophic risks only, and its entire statement of policy on everyday behaviour is one sentence about declining requests with clear criminal intent. Deployments for governments are marketed on \"direct, unfiltered answers\", with no statement about behaviour attached.",
+      "2": "The one practice above the baseline in the whole profile is xai-org/grok-prompts, which does publish the standing instructions in live use, and is the one thing no other company does at that level of detail. It is two model generations behind: the newest it covers is Grok 4.1, while Grok 4.5 and 4.6 are already in consumer products, and the Grok 4.5 instructions circulate only through a third party's collection of leaks. Each change is recorded with the note \"Updated grok prompts\" and no reason. One change bundles an edit to the repository's description, a deleted file, code that inserts stored memories into conversations, and three new safety instructions. The change log xAI publicly promised in May 2025, after the \"white genocide\" incident, was never published. Versions of the framework carry no version numbers, and earlier ones survive at addresses nothing links to.",
+      "3": "The framework names three kinds of safeguard (safety training, standing instructions and filters), and the model cards describe layers of refusal, with reported rates. No inventory, no thresholds, and no process for changing them. The restrictions on image editing of January 2026 were announced by a statement to the press and recorded nowhere.",
+      "4": "No named set of firm limits, no mechanism, no commitment. The framework reserves the right to change course alone: \"We may change our approach over time as we gain further experience.\"",
+      "supporting": "A testing agreement with CAISI, the United States' Center for AI Standards and Innovation, signed in May 2026, with no published evaluation of any Grok model (1)."
+    }
+  }
+}

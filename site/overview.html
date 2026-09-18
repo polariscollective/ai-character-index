@@ -470,6 +470,350 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .panel-readings summary:hover { color: var(--ink); }
 .panel-readings[open] summary { margin-bottom: 10px; }
 .missing { color: var(--faint); }
+
+/* The two views. The selected tab carries the chartreuse rule the header's menu
+   gives the page you are on, so the two levels of navigation speak one idiom.
+   One weight for both tabs: a selected tab that turned bold would widen and
+   push its neighbour along. */
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  margin: 18px 0 0;
+  border-bottom: 1px solid var(--line);
+}
+.view-tab {
+  padding: 10px 0 9px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease;
+}
+.view-tab:hover { background: var(--energy); color: var(--ink); }
+.view-tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--energy); }
+.view-tab:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The governance view is a board: three headline figures, a heat map, and a
+   panel beside it that answers whatever was pressed. Tool measures, as the grid
+   has, rather than a page's: the reading happens in the panel, one answer at a
+   time, not down a long column. */
+.gov-lede { max-width: 96ch; margin-bottom: 0; }
+#gov-status:empty { display: none; }
+
+/* Three figures, divided by rules rather than boxed. Proportional figures in the
+   interface face at display size: equal-width digits look loose this large. */
+.gov-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 20px 0 26px;
+}
+.gov-kpi { margin: 0; padding: 2px 24px 2px 0; }
+.gov-kpi + .gov-kpi { padding-left: 24px; border-left: 1px solid var(--line); }
+.gov-kpi-figure {
+  display: block;
+  font-family: var(--ui);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.gov-kpi-figure small { font-size: 17px; color: var(--muted); font-weight: 600; }
+.gov-kpi-caption { display: block; margin-top: 4px; max-width: 42ch; color: var(--muted); font-size: 14px; line-height: 1.45; }
+
+.gov-board { display: flex; gap: 32px; align-items: flex-start; }
+.gov-board-main { flex: 1.35; min-width: 0; }
+
+/* The ways to break the scores down, as pills: the framework's secondary button
+   at rest and its primary when chosen. */
+.gov-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.gov-mode {
+  padding: 6px 14px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.gov-mode:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+.gov-mode[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.gov-mode:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-mode-note { margin: 0 0 14px; max-width: 78ch; min-height: 1.5em; color: var(--muted); font-size: 14px; }
+.gov-mode-note strong { color: var(--ink); }
+
+/* The heat map. The grid's own cells and colours, so a score reads the same in
+   both views; every cell carries its figure, so colour is never alone. */
+.gov-heatmap thead th {
+  position: static;
+  padding: 0 6px 8px 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.gov-heatmap thead th.lab-col { width: 23%; padding-left: 0; }
+.gov-heatmap thead th.apart { padding-left: 12px; }
+.gov-heatmap tbody th { padding: 3px 8px 3px 0; font-weight: 600; }
+.gov-heatmap .cell { padding: 3px 6px 3px 0; }
+.gov-heatmap td.apart { padding-left: 12px; border-left: 1px solid var(--line); }
+.gov-heatmap .cell-button {
+  display: block;
+  min-height: 44px;
+  padding: 10px 8px;
+  text-align: center;
+  transition: outline-color .15s ease;
+}
+.gov-heatmap .cell-button .cell-figure { font-size: 16px; }
+.gov-heatmap .cell-button.is-selected { outline: 3px solid var(--ink); outline-offset: 2px; }
+.gov-heatmap .cell-button:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
+.gov-heatmap .cell-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.head-name { display: block; }
+.head-sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); }
+/* A column head that opens something: a question breaks down into its checks, a
+   check says what its scores mean. Written like a link, which is what it does. */
+.head-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.head-button .head-name { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+.head-button:hover .head-name, .head-button:focus-visible .head-name { background: var(--energy); }
+.head-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.lab-button {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.lab-button .rank { flex: none; width: 1.2em; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--faint); }
+.lab-button:hover .lab-name, .lab-button:focus-visible .lab-name { background: var(--energy); }
+.lab-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.lab-button.is-selected .lab-name { box-shadow: inset 0 -2px 0 var(--energy); }
+
+.gov-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.gov-legend .swatches { display: flex; gap: 2px; }
+.gov-legend .swatch { width: 26px; height: 12px; border-radius: 2px; }
+.gov-foot { margin: 10px 0 0; max-width: 78ch; color: var(--muted); font-size: 13px; }
+.gov-date { margin: 6px 0 0; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+
+/* One tooltip for the whole map, placed over whichever cell is under the pointer
+   or the focus. It names the row and the column a cell sits at, which is what a
+   heat map makes a reader work out. */
+.gov-tip {
+  position: fixed;
+  z-index: 20;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* The panel beside the map. Held in the window while the map is read, and
+   scrolls on its own when an answer is longer than the window. */
+.gov-detail {
+  flex: 1;
+  min-width: 300px;
+  max-width: 480px;
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+  max-height: calc(100vh - var(--header-height) - var(--footer-height) - 40px);
+  overflow-y: auto;
+  padding: 2px 4px 8px 28px;
+  border-left: 1px solid var(--line);
+  font-size: 15px;
+}
+.gov-detail:focus { outline: none; }
+.gov-detail h2 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.gov-detail h2::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 12px;
+  background: var(--energy);
+}
+.gov-detail h3 { margin: 18px 0 6px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--muted); }
+.gov-detail p { margin: 0 0 12px; line-height: 1.6; }
+.gov-detail .subtitle { color: var(--muted); }
+.gov-detail .figure { font-size: 15px; }
+.gov-detail .figure strong { font-family: var(--ui); font-size: 30px; font-weight: 600; }
+.gov-back {
+  margin: 0 0 14px;
+  padding: 4px 12px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.gov-back:hover { background: var(--energy); border-color: var(--energy); }
+.gov-back:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-open-profile { margin-top: 4px; }
+.gov-detail details { border-top: 1px solid rgb(92 107 60 / .2); }
+.gov-detail details:last-of-type { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-detail summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* A drawn chevron rather than the browser's marker, which a flex summary loses:
+   two borders of a small square, turned to point right when shut and down when
+   open. */
+.gov-detail summary { list-style: none; }
+.gov-detail summary::-webkit-details-marker { display: none; }
+.gov-detail summary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 0 2px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform .15s ease;
+}
+.gov-detail details[open] > summary::before { transform: rotate(45deg); }
+.gov-detail summary:hover { color: var(--muted); }
+.gov-detail summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-detail details > :not(summary) { margin-left: 0; }
+.gov-detail details[open] > summary { padding-bottom: 6px; }
+.gov-detail .aside {
+  margin: 16px 0 4px;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid var(--muted);
+}
+.chip {
+  flex: none;
+  display: inline-block;
+  min-width: 30px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.check-list { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.check-list li { display: flex; gap: 10px; align-items: baseline; font-size: 14px; line-height: 1.45; }
+.check-id { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.anchors { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.anchors li { display: flex; gap: 12px; padding: 4px 8px; border-radius: 3px; font-size: 14px; line-height: 1.45; }
+.anchors li.is-here { background: rgb(183 201 75 / .25); }
+.anchor-level { flex: none; width: 1.2em; font-family: var(--mono); font-weight: 600; }
+
+/* The reference text under the board, folded. */
+.gov-more { margin-top: 48px; border-top: 1px solid var(--muted); }
+.gov-more > details { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-more summary {
+  padding: 14px 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gov-more summary:hover { color: var(--muted); }
+.gov-more summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-more-body { padding: 0 0 24px; }
+.gov-more-body p, .gov-more-body li { max-width: 72ch; font-size: 15px; line-height: 1.6; }
+.gov-more-body p { margin: 0 0 12px; }
+.gov-more-body h3 { margin: 24px 0 8px; font-family: var(--display); font-size: 16px; font-weight: 600; }
+.gov-more a, .gov-detail a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.gov-more a:hover, .gov-more a:focus-visible, .gov-detail a:hover { background: var(--energy); }
+.gov-bullets { margin: 0 0 16px; padding: 0; list-style: none; }
+.gov-bullets li { position: relative; margin-bottom: 8px; padding-left: 20px; }
+.gov-bullets li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: .7em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--energy);
+}
+.table-scroll { overflow-x: auto; margin-bottom: 8px; }
+.gov-table { font-size: 14px; line-height: 1.5; }
+.gov-table thead th { position: static; }
+.gov-table td, .gov-table tbody th {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgb(92 107 60 / .2);
+  vertical-align: top;
+}
+.gov-table tbody tr { border-bottom: 0; }
+.gov-scoring-table { min-width: 560px; }
+.gov-scoring-table .check-col { width: 28%; }
+.gov-scoring-table tbody th { font-weight: 600; }
+
+@media (max-width: 980px) {
+  .gov-board { display: block; }
+  .gov-detail {
+    position: static;
+    max-width: none;
+    max-height: none;
+    margin-top: 28px;
+    padding: 20px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--muted);
+  }
+}
+@media (max-width: 640px) {
+  .gov-kpis { grid-template-columns: 1fr; gap: 16px; }
+  .gov-kpi + .gov-kpi { padding-left: 0; padding-top: 16px; border-left: 0; border-top: 1px solid var(--line); }
+  /* Six columns of figures do not fit a phone, so the map scrolls sideways in
+     its own frame there. */
+  .matrix-wrap { overflow-x: auto; }
+  .gov-heatmap { min-width: 560px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-tab, .gov-mode, .gov-heatmap .cell-button,
+  .gov-detail summary::before { transition: none; }
+}
 </style>
 </head>
 <body>
@@ -494,6 +838,20 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 </header>
 
 <div class="shell">
+  <!-- Two views of the index. The first reads what the documents say; the second
+       asks how they are governed. Tabs rather than a toggle, because each is a
+       whole view rather than a setting on one; overview.js owns the switching
+       and the address, ?view=governance. -->
+  <div class="views" role="tablist" aria-label="Views of the index">
+    <button type="button" class="view-tab" role="tab" id="tab-coverage"
+      aria-controls="view-coverage" aria-selected="true"
+      data-view="coverage">What the specifications say</button>
+    <button type="button" class="view-tab" role="tab" id="tab-governance"
+      aria-controls="view-governance" aria-selected="false" tabindex="-1"
+      data-view="governance">How they are governed</button>
+  </div>
+
+  <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
   <h1>How deeply each specification covers each behaviour</h1>
   <p class="lede">
     AI labs publish documents setting out how their models should behave. This
@@ -531,6 +889,222 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <p class="grid-note" id="grid-caption">Loading.</p>
     </div>
   </div>
+  </section>
+
+  <!-- The governance view, from the research note "Spec governance ranking: six
+       frontier labs" of 18 September 2026, rewritten for readers who are not
+       technical. A dashboard rather than a document: the heat map is the view,
+       and every sentence of the note is one press away in the panel beside it.
+       The numbers and the lab-by-lab text are in governance.json, which
+       governance.js reads; the long reference text sits folded under the board.
+       tests/test_governance_tab.py holds the two to each other. -->
+  <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
+  <h1>How each lab governs the rules its models follow</h1>
+  <p class="lede gov-lede">
+    Some AI companies publish a rulebook for how their models should behave,
+    usually called a model specification. This view scores how that rulebook is
+    run: whether it exists, what it covers, whether a change to it can be seen,
+    and whether the public gets a say before it is weakened. Six companies, as of
+    September 2026; the scores are Polaris Collective's own and open to challenge.
+  </p>
+
+  <div class="gov-kpis" id="gov-kpis"></div>
+  <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
+
+  <div class="gov-board">
+    <div class="gov-board-main">
+      <div class="gov-modes" id="gov-modes" role="group" aria-label="Break the scores down"></div>
+      <p class="gov-mode-note" id="gov-mode-note"></p>
+      <div class="matrix-wrap">
+        <table class="gov-heatmap" id="gov-heatmap">
+        <caption class="visually-hidden" id="gov-heatmap-caption"></caption>
+        <thead></thead>
+        <tbody></tbody>
+        </table>
+      </div>
+      <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
+      <p class="gov-foot" id="gov-foot"></p>
+      <p class="gov-date">As of September 2026</p>
+    </div>
+    <aside class="gov-detail" id="gov-detail" aria-label="Details"></aside>
+  </div>
+  <p class="visually-hidden" id="gov-announce" aria-live="polite"></p>
+  <div class="gov-tip" id="gov-tip" aria-hidden="true" hidden></div>
+
+  <!-- The reference text, folded: a reader who wants it opens it, and a reader
+       who does not is not made to scroll past it to reach the board. -->
+  <div class="gov-more">
+    <details id="gov-reading">
+      <summary>How to read this ranking</summary>
+      <div class="gov-more-body">
+        <p>
+          <strong>Having a rulebook and covering something are scored
+          apart.</strong> Alibaba shows why. On a single "has a rulebook" column,
+          a rulebook that names no model would score the same as one that binds a
+          company's products, and the two are not the same thing.
+        </p>
+        <p>
+          <strong>Read the checks, not only the total.</strong> The totals put
+          OpenAI and Anthropic one point apart, but they fall short in opposite
+          ways. OpenAI keeps a record of its versions and does not list its firm
+          limits; Anthropic lists its firm limits and keeps no record of its
+          versions. A single number hides the most useful thing in the
+          comparison.
+        </p>
+        <p>
+          <strong>The bottom of the ranking comes down to the first
+          question.</strong> Three of the six companies publish no rulebook, so
+          most of the grid cannot apply to them, and they sit at the bottom for
+          that one reason. To compare the companies that do publish, look at the
+          change record. To see the case for publishing at all, look at the
+          totals.
+        </p>
+        <p>
+          <strong>A caveat.</strong> The four questions were written to argue for
+          change, not to measure. Turning them into a scored grid gives them a
+          precision they were not designed for, and the descriptions of each
+          score are ours. Anyone could move a company by a few points by reading
+          a description differently. What does not move is the overall picture:
+          every company falls short on the change record, none offers a comment
+          period before loosening a firm limit, and none covers government,
+          defence and other special deployments.
+        </p>
+      </div>
+    </details>
+    <details id="gov-method">
+      <summary>How we scored</summary>
+      <div class="gov-more-body">
+        <p>
+          The four questions are the four asks of a transparency proposal
+          Polaris Collective has been drafting since 10 September 2026. Each is
+          split into checks scored from 0 to 4. The first two questions have
+          three checks each, because together they are the minimum the proposal
+          asks for; the other two have two. The total is out of 40.
+        </p>
+        <p>
+          The tables below say what earns 0, 2 and 4 on each check. A score of 1
+          or 3 falls between the descriptions either side of it.
+        </p>
+        <div id="gov-scoring"></div>
+        <h3>Supporting practices</h3>
+        <p>
+          Five further practices, taken from Kembery and colleagues, Emerging
+          International Best Practices for AI Model Specs, keeping only those an
+          outsider can check from public sources. Each is scored 0, 1 or 2, for a
+          total out of 10. They are reported beside the ranking and not counted in
+          it, because they measure neighbouring good practice rather than how
+          changes are governed.
+        </p>
+        <ul class="gov-bullets" id="gov-supporting"></ul>
+      </div>
+    </details>
+    <details id="gov-limits">
+      <summary>What we could not check</summary>
+      <div class="gov-more-body">
+        <p>
+          Researched on 18 September 2026 from primary sources, in six parallel
+          searches for evidence, one per company. Every score rests on a
+          document we found and dated. These points are not yet confirmed.
+        </p>
+        <ul class="gov-bullets">
+          <li>
+            <strong>Alibaba's rulebook was not read at its own address.</strong>
+            The page at s.alibaba.com/aaig/specification is built in the browser,
+            and our tools could not retrieve it. The text we used comes from this
+            index, which holds 210 passages of the document, word for word, at
+            <a href="/spec-reader/?spec=alibaba--model-spec@2026-04-00">its April
+            2026 version</a>. The index keeps only passages that bear on a
+            behaviour, so it skips prefaces and boilerplate. Two things reported
+            elsewhere as part of the preface, an invitation to public comment and
+            an acknowledgement of safeguards applied by the service around the
+            model, are neither confirmed nor ruled out. A statement of coverage in
+            the preface could change Alibaba's score on check 1.2. The page has yet
+            to be read in a browser.
+          </li>
+          <li>
+            <strong>Archived copies could not be checked.</strong> The Internet
+            Archive (web.archive.org) could not be reached throughout, so we could
+            not detect silent edits to any undated page. This matters most for
+            Google, where three of the relevant documents carry no date at all.
+          </li>
+          <li>
+            <strong>Whether Anthropic has signed the EU Code of Practice is
+            unconfirmed.</strong> Its July 2025 post says it "intends to sign";
+            its own page of voluntary commitments does not list it. No score
+            depends on this.
+          </li>
+          <li>
+            <strong>Some details of Claude Mythos</strong> rest partly on
+            secondary sources, though the absence of a published rulebook for it
+            is confirmed from Anthropic's own pages.
+          </li>
+          <li>
+            <strong>Meta's log of updates to its Community Standards</strong>
+            could not be read, because it too is built in the browser, so our view
+            that it does not cover AI is an inference rather than a check.
+          </li>
+          <li>
+            <strong>All scores are ours.</strong> None comes from an established,
+            published scoring method.
+          </li>
+        </ul>
+      </div>
+    </details>
+    <details id="gov-sources" class="gov-sources">
+      <summary>Sources</summary>
+      <div class="gov-more-body">
+        <h3>The rulebooks</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
+          <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
+          <li><a href="https://www.anthropic.com/constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, 21 January 2026</a></li>
+          <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
+          <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
+        </ul>
+        <h3>How the rulebooks are run</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
+          <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
+          <li><a href="https://www.anthropic.com/rsp-updates" target="_blank" rel="noopener noreferrer">Anthropic, Responsible Scaling Policy update history</a></li>
+          <li><a href="https://platform.claude.com/docs/en/release-notes/system-prompts" target="_blank" rel="noopener noreferrer">Anthropic, release notes for its standing instructions (system prompts)</a></li>
+          <li><a href="https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2" target="_blank" rel="noopener noreferrer">Meta, Advanced AI Scaling Framework v2, 7 April 2026</a></li>
+          <li><a href="https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/" target="_blank" rel="noopener noreferrer">Meta, Muse Spark Safety and Preparedness Report, 26 May 2026</a></li>
+          <li><a href="https://gemini.google/policy-guidelines/" target="_blank" rel="noopener noreferrer">Google, Gemini app safety and policy guidelines</a></li>
+          <li><a href="https://gemini.google/intl/en/our-approach/" target="_blank" rel="noopener noreferrer">Google, Our approach to the Gemini app</a></li>
+          <li><a href="https://blog.google/technology/ai/ai-principles/" target="_blank" rel="noopener noreferrer">Google, AI Principles of 2018, replaced, with a banner</a></li>
+          <li><a href="https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/strengthening-our-frontier-safety-framework/frontier-safety-framework_3-1.pdf" target="_blank" rel="noopener noreferrer">Google DeepMind, Frontier Safety Framework v3.1, 17 April 2026</a></li>
+          <li><a href="https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf" target="_blank" rel="noopener noreferrer">xAI, Frontier AI Framework, 30 June 2026</a></li>
+          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, standing instructions for Grok (system prompts)</a></li>
+        </ul>
+        <h3>Filters</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://openai.com/index/introducing-gpt-oss-safeguard/" target="_blank" rel="noopener noreferrer">OpenAI, gpt-oss-safeguard, 29 October 2025</a></li>
+          <li><a href="https://www.anthropic.com/research/next-generation-constitutional-classifiers" target="_blank" rel="noopener noreferrer">Anthropic, next-generation constitutional classifiers, 9 January 2026</a></li>
+          <li><a href="https://ai.google.dev/gemini-api/docs/safety-settings" target="_blank" rel="noopener noreferrer">Google, Gemini API safety settings</a></li>
+          <li><a href="https://huggingface.co/meta-llama/Llama-Guard-4-12B" target="_blank" rel="noopener noreferrer">Meta, Llama Guard 4</a></li>
+        </ul>
+        <h3>Tests of whether models follow their rulebook</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
+          <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
+        </ul>
+        <h3>Regulation</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai" target="_blank" rel="noopener noreferrer">European Commission, signatories of the General-Purpose AI Code of Practice, updated 31 July 2026</a></li>
+          <li><a href="https://code-of-practice.ai/" target="_blank" rel="noopener noreferrer">General-Purpose AI Code of Practice, Measure 7.1</a></li>
+        </ul>
+        <h3>Weakenings made without notice</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://blog.google/technology/ai/responsible-ai-2024-report-ongoing-work/" target="_blank" rel="noopener noreferrer">Google, the AI Principles rewritten, 4 February 2025</a></li>
+          <li><a href="https://www.markey.senate.gov/news/press-releases/senators-markey-merkley-welch-press-google-on-changes-to-ai-commitments" target="_blank" rel="noopener noreferrer">Senators Markey, Merkley and Welch to Google, 19 February 2025</a></li>
+          <li><a href="https://www.theregister.com/2025/05/08/google_gemini_update_prevents_disabling/" target="_blank" rel="noopener noreferrer">The Register, an unannounced Gemini filter change overrides developers' settings, May 2025</a></li>
+          <li><a href="https://www.pbs.org/newshour/world/grok-blocked-from-undressing-images-with-ai-in-places-where-its-illegal-x-says" target="_blank" rel="noopener noreferrer">PBS, xAI restricts Grok's image editing by statement to the press, 15 January 2026</a></li>
+          <li><a href="https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/" target="_blank" rel="noopener noreferrer">TechCrunch, Meta's GenAI Content Risk Standards leaked, 14 August 2025</a></li>
+        </ul>
+      </div>
+    </details>
+  </div>
+  </section>
 </div>
 
 <dialog id="sheet" aria-labelledby="sheet-title">

@@ -10,7 +10,12 @@
  *
  * Nothing is built with innerHTML. The passages are a model's words and the
  * rationales are a model's words, so every one of them lands as a text node.
+ *
+ * The page carries a second view since September 2026, how each lab governs its
+ * rules, built by governance.js. This file owns the tabs between the two.
  */
+
+import { initializeGovernance } from "./governance.js";
 
 const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
 
@@ -530,4 +535,53 @@ elements.sheet.addEventListener("click", event => {
   if (event.target === elements.sheet) elements.sheet.close();
 });
 
+/* Two views of one index, behind tabs: what the specifications say, and how
+ * they are governed. The view has an address, ?view=governance, so a link can
+ * open on it; the first view is the one with no parameter, which keeps every
+ * link already shared pointing where it did.
+ *
+ * replaceState rather than pushState: a tab is a way of looking at the page,
+ * not a page, and filling the back button with tab changes would take a reader
+ * back through views rather than out to where they came from. Other parameters,
+ * a ?publication= pin among them, are kept. */
+const VIEWS = ["coverage", "governance"];
+const tabs = [...document.querySelectorAll(".view-tab")];
+
+function viewFromAddress() {
+  const asked = new URLSearchParams(location.search).get("view");
+  return VIEWS.includes(asked) ? asked : VIEWS[0];
+}
+
+function showView(view, { write = false, focus = false } = {}) {
+  tabs.forEach(tab => {
+    const on = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+    if (on && focus) tab.focus();
+  });
+  if (write) {
+    const url = new URL(location.href);
+    if (view === VIEWS[0]) url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    url.hash = "";
+    history.replaceState(null, "", url);
+  }
+  // A hidden grid measures as nothing, so it is measured again on the way back.
+  if (view === "coverage") { fitGrid(); updateRemaining(); }
+}
+
+tabs.forEach(tab => tab.addEventListener("click", () =>
+  showView(tab.dataset.view, { write: true })));
+document.querySelector(".views")?.addEventListener("keydown", event => {
+  const at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+  const next = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[event.key];
+  if (next === undefined) return;
+  event.preventDefault();
+  showView(tabs[(next + tabs.length) % tabs.length].dataset.view, { write: true, focus: true });
+});
+
+showView(viewFromAddress());
 initialize();
+initializeGovernance({ paint });
