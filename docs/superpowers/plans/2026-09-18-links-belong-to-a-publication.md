@@ -518,6 +518,7 @@ git commit -m "feat: a publication is built with the link runs it names"
 
 **Files:**
 - Modify: `app/api/reader/links/route.js`
+- Modify: `site/spec-reader/app.js` (`LINKS_URL`, `loadReaderLinks`, and the comment above the call)
 - Test: `app/lib/__tests__/publications.test.mjs`
 
 **Interfaces:**
@@ -577,15 +578,57 @@ export async function GET(request) {
 }
 ```
 
-- [ ] **Step 4: Run the whole suite**
+- [ ] **Step 4: The reader forwards its pin**
+
+Without this step the whole plan misses its point. `site/spec-reader/app.js` forwards the
+`?publication=` pin to three of the four reader routes and not to this one, which was
+harmless only while the route ignored publications. From Step 3 onwards, a pinned page
+would serve frozen documents under the current publication's links, which is the exact
+defect the spec exists to remove.
+
+Add the constant beside its three siblings, after `BEHAVIOUR_NOTES_URL` at line 36:
+
+```javascript
+const LINKS_URL = "/api/reader/links";
+```
+
+Then in `loadReaderLinks` at line 4605, keep the existing comment block and add the pin
+above the `try`, copying `loadDocuments` at line 147, which is the pattern and the
+reason both:
+
+```javascript
+  /* Pinned like the payload and the documents, and for the same reason: a
+   * publication carries its own links now, so a pinned page fetching them
+   * unpinned would lay today's readings over yesterday's text. Read from
+   * state.payloadSource rather than from the URL, so a pin that fell back reads
+   * the current publication's links with its payload. */
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  try {
+    const answered = await loadJSON(
+      pinned ? `${LINKS_URL}?publication=${encodeURIComponent(pinned)}` : LINKS_URL);
+```
+
+The ordering this depends on already holds: `loadBehaviours()` is awaited before the
+`Promise.all` that calls `loadReaderLinks`, and it is what sets `state.payloadSource`.
+
+Last, the comment above that `Promise.all` near line 4845 says the payload's resolution
+decides where the documents and the behaviour notes are read from, "so all three describe
+the same publication". They are four now. Change `three` to `four`, or the sentence is
+false by omission about the one route that used to be the exception.
+
+`site/overview.js:506` also calls the route bare. Leave it: that page has no pin, so the
+current publication is the right answer there.
+
+- [ ] **Step 5: Run the whole suite**
 
 Run: `npm run test:routes`
 Expected: PASS. If a test asserted the old route's shape, read it before changing it: it may be pinning behaviour that still matters.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app/api/reader/links/route.js app/lib/__tests__/publications.test.mjs
+git add app/api/reader/links/route.js site/spec-reader/app.js \
+        app/lib/__tests__/publications.test.mjs
 git commit -m "feat: the links route serves the publication's own column"
 ```
 
