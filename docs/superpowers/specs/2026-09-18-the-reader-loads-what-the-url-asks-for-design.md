@@ -124,6 +124,13 @@ this one is no.
 
 ## What changes, file by file
 
+`app/lib/feedback.mjs` is the seam's other consumer, and was missed when this was
+written: `resolvePublication` calls `publicationColumn("id", ...)` to decide which
+publication a note is about. It asks for a column the slicing does not know and goes
+through `publicationColumn` rather than `readerResponse`, so it is never sliced. It is
+named here because a change to this seam reaches it, which is how its tests came to
+need adjusting.
+
 There is one seam, not four. Each of the three reader routes is the same three
 lines: it hands its whole `searchParams` to `readerResponse` and returns what
 comes back. `spec`, `behavior` and `compare-with` are therefore already arriving

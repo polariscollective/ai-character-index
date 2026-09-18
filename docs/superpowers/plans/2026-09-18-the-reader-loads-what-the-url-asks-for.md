@@ -29,6 +29,7 @@
 |---|---|
 | `app/lib/slice.mjs` | new. Given a column's payload and the URL's parameters, return the slice. Knows the shape of each of the three columns and nothing about HTTP or the database. |
 | `app/lib/publications.mjs` | resolves a pin or the current publication to an id, holds each column by id, and calls the slicer. |
+| `app/lib/feedback.mjs` | untouched, but named because it is the seam's second consumer: `resolvePublication` calls `publicationColumn("id", ...)` twice, lines 140 and 143. Only `readerResponse` is sliced, so feedback keeps whole columns, but a change to that seam reaches here and its tests. |
 | `engine/reader-routes.mjs` | answers `/api/reader/links` from a fixture, so the browser walkers stop exercising the failure path. |
 | `site/spec-reader/app.js` | fetches at four moments and merges; writes an empty `behavior` rather than deleting it; validates a requested slug against the registry. |
 
