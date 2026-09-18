@@ -1702,7 +1702,13 @@ async function setSelection(slugs) {
    * is loaded is not in payloadBehaviours() yet, and sorting by that list would
    * drop it. */
   state.selectedSlugs = registrySlugs.filter(slug => chosen.has(slug));
-  await ensureBehaviours(state.selectedSlugs);
+  // Unconditional: state.selectedSlugs is written above whether or not this
+  // succeeds, so a rejection here must not skip the repaint below, or the page
+  // keeps showing the previous selection while the state already says otherwise.
+  // ensureBehaviours already treats a failed fetch as nothing worth remembering
+  // (it drops the slug from inFlight so a retry can ask again); this follows the
+  // same spirit loadReaderLinks does, rendering what it can rather than freezing.
+  await ensureBehaviours(state.selectedSlugs).catch(() => {});
 
   // Read live, not the `chosen` captured before the await: a second tick that
   // ran while this one was in flight has already written state.selectedSlugs,
@@ -4548,6 +4554,19 @@ function mergeLinks(into, extra) {
   return into;
 }
 
+/* depthRows and overviewRows hold notes.depth and notes.standing from the same
+ * response mergeLinks reads, but kept as their own { cells } tables because
+ * depthCellNote reads them directly rather than through linkRows. A behaviour
+ * loaded after the first fetch must merge into these two the same way, or its
+ * depth and standing notes would silently read as empty for the rest of the
+ * session: on screen that reads as "this behaviour has nothing to say here",
+ * which the panel never said. */
+function mergeCells(into, extra) {
+  if (!into) return { cells: { ...(extra || {}) } };
+  Object.assign(into.cells, extra || {});
+  return into;
+}
+
 async function ensureBehaviours(slugs) {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   const missing = slugs.filter(slug => !inFlight.has(slug));
@@ -4562,6 +4581,8 @@ async function ensureBehaviours(slugs) {
     state.payload.behaviours =
       applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
     linkRows = mergeLinks(linkRows, links);
+    depthRows = mergeCells(depthRows, links.notes?.depth);
+    overviewRows = mergeCells(overviewRows, links.notes?.standing);
   })();
   // A failed fetch is not a fact worth remembering: drop each slug so a retry can
   // ask again, guarded by identity so a slower rejection cannot delete a slug a
