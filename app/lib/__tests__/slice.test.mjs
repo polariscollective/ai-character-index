@@ -15,6 +15,12 @@ test("a null set means everything, which is what no parameter asks for", () => {
   assert.deepEqual(sliceColumn("payload", payload, all), payload);
 });
 
+test("a null set means everything for links too, and links carrying no notes stays that way", () => {
+  const links = { byLocator: { [`${A} > s > ¶1`]: [{ behaviours: ["helpfulness"] }] },
+                  comparisons: { [`helpfulness\n${A}\n${B}`]: { text: "yes" } } };
+  assert.deepEqual(sliceColumn("links", links, all), links);
+});
+
 test("the payload keeps only the behaviours named, and its other keys", () => {
   const payload = { provenance: { runDate: "2026-09-18" },
                     behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] };

@@ -22,6 +22,13 @@ const documentOf = locator => String(locator).split(" > ")[0];
 const partsOf = key => String(key).split("\n");
 
 function sliceLinks(links, { documents, behaviours }) {
+  /* Without this, the code below would still compute the right values, but it
+   * would rebuild the object to hold them, and a rebuild is not a projection:
+   * it can add a key (notes, when links carries none) that the input never
+   * had. The payload and documents branches get this for free from their one
+   * relevant field; links has two, so it needs the check spelt out. */
+  if (!documents && !behaviours) return links;
+
   const shown = id => !documents || documents.has(id);
   const asked = slugs => !behaviours || (slugs || []).some(slug => behaviours.has(slug));
 
