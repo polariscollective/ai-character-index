@@ -44,9 +44,26 @@ function payloadName(id) {
   return typeof id === "string" && PUBLICATION_ID.test(id);
 }
 
-function payloadUrl(id) {
-  return id ? `${PAYLOAD_URL}?publication=${encodeURIComponent(id)}` : PAYLOAD_URL;
+/* The address the routes slice by. A parameter left out means everything, which
+ * is what an unpinned first load wants; a parameter present and empty means the
+ * reader has asked for none. The routes read the difference. */
+function sliceParams(pinned, { behaviours, specs } = {}) {
+  const params = new URLSearchParams();
+  if (pinned) params.set("publication", pinned);
+  if (behaviours) params.set("behavior", behaviours.join(","));
+  if (specs && specs.length) params.set("spec", specs.join(","));
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }
+
+/* Every behaviour slug the registry knows, in its order, which is not the same
+ * as the order of the ones currently loaded. setSelection sorts by this: sorting
+ * by the loaded payload would filter out the very behaviour just ticked. */
+let registrySlugs = [];
+
+/* What has already been asked for, so a second tick costs nothing and a fetch in
+ * flight is not raced by its own repeat. Keyed by slug, holding the promise. */
+const inFlight = new Map();
 
 /* A link to one passage: ?passage=<locator>. The locator is the citation the
  * export already prints, and its head names the document it points into, so the
@@ -96,11 +113,16 @@ function dropPassageParam() {
 
 /* Resolves the payload AND records which source won, in state.payloadSource:
  * {origin: "pin"|"current", name, requested}. `requested` is set only when a pin was
- * asked for and not served, which is exactly the case worth flagging. */
+ * asked for and not served, which is exactly the case worth flagging.
+ *
+ * Sliced by urlSlugs() from the first fetch: the URL may already name the
+ * behaviours it wants, and asking for exactly those rather than everything is
+ * what keeps a shared link from downloading the whole publication. */
 async function loadBehaviours() {
   const pinned = new URLSearchParams(location.search).get("publication");
+  const wanted = { behaviours: urlSlugs() };
   if (payloadName(pinned)) {
-    const url = payloadUrl(pinned);
+    const url = `${PAYLOAD_URL}${sliceParams(pinned, wanted)}`;
     try {
       const payload = await loadJSON(url);
       state.payloadSource = { origin: "pin", name: pinned };
@@ -113,7 +135,7 @@ async function loadBehaviours() {
   // that could not be fetched (a publication that is gone) versus one payloadName()
   // refuses outright. Both fall through by design.
   const requested = pinned ? { name: pinned, refused: !payloadName(pinned) } : null;
-  const payload = await loadJSON(payloadUrl(null));
+  const payload = await loadJSON(`${PAYLOAD_URL}${sliceParams(null, wanted)}`);
   state.payloadSource = { origin: "current", name: "current publication", requested };
   return payload;
 }
@@ -508,6 +530,26 @@ function tierBand(score, judges, maxCell, related) {
 const initialParams = new URLSearchParams(location.search);
 state.embedded = initialParams.get("embedded") === "1";
 document.body.classList.toggle("embedded", state.embedded);
+
+/* The behaviours the URL names before anything has checked them against the
+ * registry: good enough to slice the very first fetch by, since a slug the
+ * publication does not carry simply comes back unmatched, exactly as it would
+ * had the whole payload been fetched and searched. Undefined (no parameter)
+ * asks the routes for everything, which is the bare-URL default. */
+function urlSlugs() {
+  return initialParams.has("behavior")
+    ? initialParams.get("behavior").split(",").map(slug => slug.trim()).filter(Boolean)
+    : undefined;
+}
+
+/* The documents the URL already names, ?spec= and ?compare-with= together, so
+ * the first links fetch is cut to the documents about to be shown rather than
+ * arriving for every document the publication carries. */
+function urlSpecs() {
+  return [...(initialParams.get("spec") || "").split(","),
+          ...(initialParams.get("compare-with") || "").split(",")]
+    .map(id => id.trim()).filter(Boolean);
+}
 
 function payloadBehaviours() {
   return state.payload?.behaviours || [];
@@ -1654,10 +1696,13 @@ elements.downloadPassages.addEventListener("click", downloadPassages);
 
 /* Ticking or unticking never re-renders the specification, only its highlight layer, so
  * the reader keeps its place in the text while a behaviour is added or taken away. */
-function setSelection(slugs) {
-  const order = payloadBehaviours().map(behaviour => behaviour.slug);
+async function setSelection(slugs) {
   const chosen = new Set(slugs);
-  state.selectedSlugs = order.filter(slug => chosen.has(slug));
+  /* From the registry, not from the loaded payload: a behaviour ticked before it
+   * is loaded is not in payloadBehaviours() yet, and sorting by that list would
+   * drop it. */
+  state.selectedSlugs = registrySlugs.filter(slug => chosen.has(slug));
+  await ensureBehaviours(state.selectedSlugs);
 
   elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
     const on = chosen.has(input.dataset.behaviour);
@@ -1673,6 +1718,9 @@ function toggleBehaviour(slug, checked) {
   const next = new Set(state.selectedSlugs);
   if (checked) next.add(slug);
   else next.delete(slug);
+  // Not awaited: a tick marks the box at once and lets the bubbles for the
+  // ticked behaviour arrive as they load, rather than freezing the menu on a
+  // network round trip.
   setSelection([...next]);
 }
 
@@ -4089,8 +4137,12 @@ function focusPassage(panel, index, shouldScroll = true) {
 }
 
 elements.selectAllBehaviours.addEventListener("click", () => {
+  // Not awaited: see the comment in toggleBehaviour. The menu ticks every box
+  // immediately and the bubbles for each behaviour arrive as they load.
   setSelection(payloadBehaviours().map(behaviour => behaviour.slug));
 });
+// Not awaited: clearing needs nothing from the network, but setSelection is a
+// promise regardless and this click handler was never going to wait on it.
 elements.clearBehaviours.addEventListener("click", () => setSelection([]));
 
 /* The title opens the list of documents. Re-cloned by every rebuildReader, so
@@ -4477,6 +4529,39 @@ async function loadJSON(url) {
   return response.json();
 }
 
+/* Bubbles arrive per behaviour and accumulate. Replacing would throw away the
+ * ones already on screen, which is what a merge is for: byLocator gains rows,
+ * the keyed tables gain keys, and a behaviour already held is not asked for
+ * twice. */
+function mergeLinks(into, extra) {
+  if (!into) return extra;
+  for (const [locator, rows] of Object.entries(extra.byLocator || {})) {
+    into.byLocator[locator] = [...(into.byLocator[locator] || []), ...rows];
+  }
+  Object.assign(into.comparisons, extra.comparisons || {});
+  Object.assign(into.notes.passage, extra.notes?.passage || {});
+  return into;
+}
+
+async function ensureBehaviours(slugs) {
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const missing = slugs.filter(slug => !inFlight.has(slug));
+  if (!missing.length) return Promise.all(slugs.map(slug => inFlight.get(slug)));
+  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])];
+  const fetching = (async () => {
+    const [payload, links] = await Promise.all([
+      loadJSON(`${PAYLOAD_URL}${sliceParams(pinned, { behaviours: missing })}`),
+      loadJSON(`${LINKS_URL}${sliceParams(pinned, { behaviours: missing, specs: shown })}`),
+    ]);
+    state.rawBehaviours = [...state.rawBehaviours, ...(payload.behaviours || [])];
+    state.payload.behaviours =
+      applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
+    linkRows = mergeLinks(linkRows, links);
+  })();
+  for (const slug of missing) inFlight.set(slug, fetching);
+  return fetching;
+}
+
 
 /* What a ?passage= link needs before the panels are drawn: the document its
  * locator names (over ?spec= and the default), a behaviour citing the passage
@@ -4484,13 +4569,28 @@ async function loadJSON(url) {
  * scored as the reader scores it, with every band on, because the link may name
  * one the rest of the URL left off. A locator the publication carries no passage
  * for changes nothing, and revealPassageLink says so. */
-function openPassageLink(locator) {
+async function openPassageLink(locator) {
   if (!locator) return null;
   const doc = documentForLocator(state.payload.documents, locator);
-  const cites = behaviour => (behaviour.coverage?.[doc?.id]?.passages || [])
-    .some(passage => passage.locator === locator);
-  const citing = doc ? (state.rawBehaviours || []).filter(cites) : [];
   if (!doc) return { locator, resolved: false };
+
+  /* Under a sliced payload state.rawBehaviours holds only what has been loaded,
+   * so searching it directly would miss a citing behaviour the URL never named
+   * and open a shared link to a cited paragraph as though it carried no
+   * citation at all. citedBy answers that without loading anything: it names
+   * the citing behaviours by the id this publication's own build gave them
+   * (the same numbering state.rawBehaviours carries), never by
+   * aci_behaviours.numeric_id, which numbers a different list entirely. A
+   * locator absent from citedBy is genuinely uncited, and costs no fetch. */
+  const cited = state.payload.citedBy?.[locator];
+  if (cited?.length) {
+    const loadedIds = new Set((state.rawBehaviours || []).map(behaviour => behaviour.id));
+    if (cited.some(id => !loadedIds.has(id))) await ensureBehaviours(registrySlugs);
+  }
+
+  const cites = behaviour => (behaviour.coverage?.[doc.id]?.passages || [])
+    .some(passage => passage.locator === locator);
+  const citing = (state.rawBehaviours || []).filter(cites);
 
   let band = null;
   if (citing.length) {
@@ -4617,11 +4717,15 @@ async function loadReaderLinks() {
    * publication carries its own links now, so a pinned page fetching them
    * unpinned would lay today's readings over yesterday's text. Read from
    * state.payloadSource rather than from the URL, so a pin that fell back reads
-   * the current publication's links with its payload. */
+   * the current publication's links with its payload.
+   *
+   * Sliced the same way the payload is: the same behaviours, and the documents
+   * the URL already names, so the first links fetch is not the whole
+   * publication's bubbles when the reader is about to show one document. */
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   try {
     const answered = await loadJSON(
-      pinned ? `${LINKS_URL}?publication=${encodeURIComponent(pinned)}` : LINKS_URL);
+      `${LINKS_URL}${sliceParams(pinned, { behaviours: urlSlugs(), specs: urlSpecs() })}`);
     linkRows = answered;
     depthRows = { cells: answered.notes?.depth || {} };
     overviewRows = { cells: answered.notes?.standing || {} };
@@ -4855,7 +4959,14 @@ async function initialize() {
     // must not stop the reader rendering, so its failure is swallowed.
     const [documents] = await Promise.all([
       loadDocuments(), loadBehaviourNotes(), loadReaderLinks()]);
+    // The registry's own order, for setSelection to sort by: sorting by the
+    // loaded payload would filter out a behaviour ticked before it arrives.
+    registrySlugs = Object.keys(behaviourNotes || {});
     state.rawBehaviours = behaviours.behaviours || [];
+    // Already answered by the fetch loadBehaviours() just made: ensureBehaviours
+    // must not ask for these again, or a later tick would merge their bubbles a
+    // second time.
+    for (const behaviour of state.rawBehaviours) inFlight.set(behaviour.slug, Promise.resolve());
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();
     state.payload = {
@@ -4885,9 +4996,13 @@ async function initialize() {
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
     // A link to a passage chooses the document, a behaviour and a band before
     // anything is drawn, and is followed to the passage once the panels are.
-    const linked = openPassageLink(params.get(PASSAGE_PARAM));
+    const linked = await openPassageLink(params.get(PASSAGE_PARAM));
     elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     renderBehaviourList();
+    // The URL has been read and the selection settled, but the panels have not
+    // been drawn: the last chance to load a behaviour the address named, or one
+    // a passage link added, before the first paint shows it.
+    await ensureBehaviours(state.selectedSlugs);
     state.keepPassageParam = Boolean(linked?.resolved);
     syncURL();
     state.keepPassageParam = false;
