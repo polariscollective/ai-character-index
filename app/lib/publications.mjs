@@ -52,6 +52,35 @@ export function currentPublication(env = process.env) {
 }
 
 /**
+ * Which publication a request is about, as an id.
+ *
+ * A pin is already the answer. Without one, the current publication has to be
+ * asked for by name before its bytes can be, because currentPublication() is an
+ * ordering and not an address: it says "the newest public one" and the caller
+ * never learns which that was. Holding a column by publication id is impossible
+ * until this runs, which is why it exists.
+ */
+export async function resolvePublicationId(pin, fetchImpl = fetch) {
+  if (pin) return pin;
+  const rows = await select("aci_publications",
+                            `select=id&${currentPublication()}`, fetchImpl);
+  return rows.length ? rows[0].id : null;
+}
+
+/* A publication is immutable, so a column of one is a constant that happens to
+ * be fetched late. Holding it is not a cache with an invalidation problem: the
+ * key is an id whose contents can never change, and a new publication is a new
+ * id. Only the resolution above is left unheld, which is what lets a newly
+ * published row be noticed.
+ *
+ * Capped, because these columns are megabytes and a serverless instance that
+ * lived through a dozen publications would hold all of them. Three is two more
+ * than the reader needs: the current publication, and whatever pin someone is
+ * looking at. */
+const HELD = new Map();
+const HOLD = 3;
+
+/**
  * One column of one publication: the pinned one, or the current one.
  *
  * `column` is never user input -- the three routes pass their own literal -- so
@@ -64,11 +93,16 @@ export function currentPublication(env = process.env) {
  * is how the draft gets previewed and how an old one gets checked.
  */
 export async function publicationColumn(column, id, fetchImpl = fetch) {
-  const query = id
-    ? `id=eq.${id}&select=${column}`
-    : `select=${column}&${currentPublication()}`;
-  const rows = await select("aci_publications", query, fetchImpl);
-  return rows.length ? rows[0][column] : null;
+  const resolved = await resolvePublicationId(id, fetchImpl);
+  if (resolved === null) return null;
+  const key = `${resolved}\n${column}`;
+  if (!HELD.has(key)) {
+    const rows = await select("aci_publications",
+                              `id=eq.${resolved}&select=${column}`, fetchImpl);
+    if (HELD.size >= HOLD) HELD.delete(HELD.keys().next().value);
+    HELD.set(key, rows.length ? rows[0][column] : null);
+  }
+  return HELD.get(key);
 }
 
 /**

@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { currentPublication, isPublicationId, publicationColumn, publicationRow,
-         readerResponse, SERVES_DEVELOPMENT } from "../publications.mjs";
+         readerResponse, resolvePublicationId, SERVES_DEVELOPMENT } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
@@ -23,6 +23,34 @@ function stub(rows, status = 200) {
 }
 
 const params = (query) => new URLSearchParams(query);
+
+test("an unpinned read resolves which publication it is serving, then reads it by id", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID }]);
+  const got = await resolvePublicationId(null, fetchImpl);
+  assert.equal(got, ID);
+  assert.match(calls[0].url, /select=id/);
+  assert.match(calls[0].url, /order=published_at\.desc/);
+});
+
+test("a pin is its own answer and costs no request", async () => {
+  const { calls, fetchImpl } = stub([]);
+  assert.equal(await resolvePublicationId(ID, fetchImpl), ID);
+  assert.equal(calls.length, 0);
+});
+
+test("nothing published yet resolves to null", async () => {
+  const { fetchImpl } = stub([]);
+  assert.equal(await resolvePublicationId(null, fetchImpl), null);
+});
+
+test("a column is fetched once per publication and held", async () => {
+  const { calls, fetchImpl } = stub([{ payload: { ok: 1 } }]);
+  const first = await publicationColumn("payload", ID, fetchImpl);
+  const second = await publicationColumn("payload", ID, fetchImpl);
+  assert.deepEqual(first, { ok: 1 });
+  assert.deepEqual(second, { ok: 1 });
+  assert.equal(calls.length, 1, "the second read came from memory");
+});
 
 test("a uuid is a publication id and a payload name is not", () => {
   assert.equal(isPublicationId(ID), true);
