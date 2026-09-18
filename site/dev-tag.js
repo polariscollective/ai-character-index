@@ -35,7 +35,7 @@
  * deployment showing unpublished work cannot know the address of the one that
  * does, and a reader who has just been told this build is provisional is owed
  * somewhere to go. */
-const PUBLISHED = "https://ai-character-index.polariscollective.org";
+const PUBLISHED = "https://ai-constitutions-index.polariscollective.org";
 
 const STYLE = `
 .dev-tag {
