@@ -54,9 +54,12 @@ transcription:
 
 ## Structure of the view
 
-A dashboard, not a document. The first version laid the note out as a long page
-of prose with a ranking table and a matrix inside it; reviewed in the browser, it
-read as a document, and the ask was a board a non-technical reader can explore.
+A dashboard, not a document. It took two rounds of review in the browser to get
+there, and both are worth keeping. The first version laid the note out as a long
+page of prose with a ranking and a matrix inside it, and read as a document. The
+second put a heat map beside a panel that answered whatever was pressed, with
+pills to break a question down; the panel took a third of the width, and the
+ask was for the table to have it.
 
 1. Heading and a short lede that says what the view asks.
 2. **Three headline figures**, computed from the scores: the best score on the
@@ -64,25 +67,29 @@ read as a document, and the ask was a board a non-technical reader can explore.
    companies with a standing comment period before a firm limit is loosened (0 of
    6, check 4.2 at 4), and the number that publish the rules for government and
    defence deployments (0 of 6, check 1.3 at 4).
-3. **The heat map.** Rows are the six companies in rank order, which never
-   changes between breakdowns. With "All four questions" chosen, the columns are
-   Overall (of 40), the four questions, and supporting practices (of 10, set
-   apart, not counted). A pill per question breaks that question down: its total,
-   then one column per check, scored 0 to 4. A question's column head breaks it
-   down too. Colour is the share of the points available, on the grid's own ramp,
-   with a legend; every cell carries its figure, so colour is never alone. A
-   tooltip names the row and column of the cell under the pointer or the focus.
-4. **The panel beside it**, which answers whatever was pressed. Nothing pressed:
-   the six findings, folded, in the overall map, or the question and its checks in
-   a breakdown. A company's name or an overall cell: its profile, with a folded
-   section per question (its checks as chips and the note's paragraph) and one
-   for supporting practices, the pressed question unfolded, and the note's aside
-   where it has one. A check's score: the score, what 0, 2 and 4 mean with the
-   score's place marked, and the note's paragraph on that question. A check's
-   column head: what its scores mean and how the six score.
-5. **Reference text, folded under the board**: how to read this ranking, how we
-   scored (the four questions with what 0, 2 and 4 mean for each check, and the
-   five supporting practices), what we could not check, and the sources.
+3. **One table across the whole width.** The six companies are the columns, in
+   rank order. The rows are Overall (of 40), then Rulebook, Change record,
+   Filters and Notice, then supporting practices (of 10, set apart, not
+   counted). Each question opens into its checks as rows beneath it, scored 0
+   to 4, with a button above the table to open or shut them all. Colour is the
+   share of the points available, on the grid's own ramp, with a legend; every
+   cell carries its figure, so colour is never alone.
+4. **A popover beside whatever was pressed**, never over it: below, above, or
+   to one side, whichever has room.
+   - A score of a question: the score, its checks as chips, the note's paragraph
+     on that question, and a way on to the company's whole profile.
+   - A score of a check: the score, what 0, 2 and 4 mean with the score's place
+     marked, and the note's paragraph.
+   - An overall score or a company's name: the profile, one fold per question and
+     one for supporting practices, and the note's aside where it has one.
+   - A row's name: what it asks and how its points are shared out. For a question,
+     its checks with what earns each score, and a button to show them in the
+     table.
+   Pressing the same thing again closes it, as do Escape and a press elsewhere.
+5. **The six findings** under the table, as headlines that open.
+6. **Reference text, folded**: how to read this ranking, how we scored (the four
+   questions with what 0, 2 and 4 mean for each check, and the five supporting
+   practices), what we could not check, and the sources.
 
 ## Tabs
 
@@ -106,7 +113,8 @@ while its view is hidden.
   computed, never stored: rank orders by total and breaks a tie on supporting
   practices, which is the note's own rule and puts Meta fifth. A profile's
   opening line, "Rulebook, 8 out of 12", is written from those sums.
-- `site/overview.html`: the frame of the board and the folded reference text.
+- `site/overview.html`: the frame of the board, the popover, and the folded
+  reference text.
 - `site/governance.js`: renders the board from the JSON. Imported by
   `overview.js`, which owns the tabs and hands over its `paint`, so a score wears
   the colour a depth wears in the other view.
@@ -125,11 +133,13 @@ portal. If that changes, a table and a route replace the file.
   supporting total; the first finding's two quoted sums hold; the two findings
   about whole columns hold; no long dash in the panel or the JSON.
 - `engine/verify-reader-features.mjs` gains a section: `/?view=governance` opens
-  on the board with the grid hidden, the heat map ranks the six in the note's
-  order, the panel starts on the six findings, an overall cell opens the profile
-  with that question unfolded, a question's pill breaks it into its checks and a
-  score of 1 is marked between 0 and 2, the first tab returns to the grid and
-  rewrites the address, and the arrow keys move between the tabs.
+  on the board with the grid hidden; the companies run across in the note's
+  order and the scores down from the total, with the six findings under the
+  table; the change record opens into its three checks; a check's score opens a
+  popover beside the cell, not over it, with a score of 1 marked between 0 and 2;
+  pressing it again closes it; a question's name opens how its points are shared
+  out; the first tab returns to the grid and rewrites the address; and the arrow
+  keys move between the tabs.
 
 ## Not in scope
 

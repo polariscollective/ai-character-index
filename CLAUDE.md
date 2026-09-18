@@ -990,12 +990,12 @@ migration is `20260918090000_aci_links_belong_to_a_publication.sql` in
 
 The front page gained a second view on 18 September 2026, behind a tab:
 `/?view=governance`, how each lab governs its rulebook rather than what the
-rulebook says. It is a board: six labs, four questions and their ten checks
-scored 0 to 4 in a heat map, and a panel that shows the evidence for any score.
-It was written for regulators and legislators rather than for engineers, so the
-text is the research note "Spec governance ranking: six frontier labs" (Notion,
-18 September 2026) rewritten in plain words, with every score, date, quotation
-and source kept.
+rulebook says. It is a board: one table with the six labs across and their
+scores down, each of the four questions opening into its checks scored 0 to 4,
+and a popover with the evidence for any score. It was written for regulators and
+legislators rather than for engineers, so the text is the research note "Spec
+governance ranking: six frontier labs" (Notion, 18 September 2026) rewritten in
+plain words, with every score, date, quotation and source kept.
 
 What matters about it is where its numbers come from. Every other figure on the
 site is a panel's reading, recorded in the database and held to a publication.
