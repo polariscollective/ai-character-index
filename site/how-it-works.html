@@ -117,6 +117,9 @@
   .changelog h3 { margin: 22px 0 6px; font-family: var(--display); font-size: 17px; font-weight: 600; }
   .changelog h3:first-child { margin-top: 6px; }
   .changelog h3 code, .changelog p code { font-family: var(--mono); font-size: .9em; }
+  .changelog h3 a { color: var(--ink); text-decoration: underline 2px var(--energy);
+                    text-underline-offset: 4px; box-shadow: none; }
+  .changelog h3 a:hover, .changelog h3 a:focus-visible { background: var(--energy); }
   .changelog details { max-width: 66ch; margin: 0 0 8px; }
   .changelog summary { cursor: pointer; color: var(--ink2); font-size: 14px; }
   .changelog summary:hover { color: var(--ink); }
@@ -671,9 +674,12 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
   <section class="m" id="changelog">
     <h2>Change log</h2>
     <p>Each publication of the index is fixed once it is made. These are the publications that
-    have been made public, newest first.</p>
+    have been made public, newest first, and each opens in the doc reader as it was. The depth
+    figures come from a publication. The scores of the governance view do not, since they are our
+    own reading of public documents as of 18 September 2026.</p>
     <div class="changelog">
-      <h3>16 September 2026, publication <code>1919ee6b</code>, current</h3>
+      <h3><a href="/spec-reader/?publication=1919ee6b-8a81-4ab5-902a-e949857db028">16 September 2026, publication
+      <code>1919ee6b</code></a>, current</h3>
       <p>It keeps the passage judgements of the publication before it, and every depth figure is
       judged again. The depth judges had been shown fewer passages than the doc reader shows, and
       now they see every passage a reader sees, related passages included. One figure, DeepSeek&rsquo;s
@@ -683,7 +689,8 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
         <summary>The note recorded with it</summary>
         <p>Rebuilt after the depth-judge band fix. bands.shown_by_default now shows the depth judge every band the reader opens on, related included, and the 156 depth calls of runs aef5e906, c2f1b34a and a2bdadba were given again in place on 2026-09-16 under depth prompt bd096eba (was 20df8c4d). Same thirteen behaviours and four documents as 07958c5e; passage judgements, runs and calls are untouched. Six deepseek depths answered off the 0 to 4 scale and were asked again with a format variant appended to the user message, the system prompt and its digest unchanged: five came back on scale at the panel's temperature 0, and one, avoiding-over-and-under-caution on alibaba--model-spec@2026-04-00, only at temperature 0.5, which is not the panel's setting for that seat. Its figure was obtained differently from every other figure in this publication.</p>
       </details>
-      <h3>15 September 2026, publication <code>07958c5e</code>, withdrawn</h3>
+      <h3><a href="/spec-reader/?publication=07958c5e-eb91-4e31-81f2-32f79c01b84c">15 September 2026, publication
+      <code>07958c5e</code></a>, withdrawn</h3>
       <p>The first publication judged by a single panel, <code>frontier_fast</code>, with a depth
       from 0 to 4 given by each judge, over thirteen behaviours and four documents. It was
       withdrawn on 16 September 2026 because its depth figures had been judged from fewer passages

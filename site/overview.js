@@ -96,6 +96,13 @@ const DEPTH_LEVELS = [
       + "sanctioned response, usable as an answer key for borderline cases." },
 ];
 
+/* A ?publication= pin reaches the grid as it reaches the doc reader: every
+ * route the grid reads from is asked for that publication, so a link from the
+ * change log shows the depths as that publication published them. The
+ * governance view is not part of any publication and does not change with it. */
+const PIN = new URLSearchParams(location.search).get("publication");
+const PINNED = PIN ? `?publication=${encodeURIComponent(PIN)}` : "";
+
 async function loadJSON(url, fallback) {
   try {
     const response = await fetch(url);
@@ -294,7 +301,8 @@ function openCell(behaviour, document_, depth) {
    * constitution Anthropic's, and a heading calling it Claude's would leave two
    * documents on screen where there is one. */
   const reader = `/spec-reader/?behavior=${encodeURIComponent(behaviour.slug)}`
-    + `&spec=${encodeURIComponent(document_.id)}`;
+    + `&spec=${encodeURIComponent(document_.id)}`
+    + (PIN ? `&publication=${encodeURIComponent(PIN)}` : "");
   sheet(`${document_.lab}: ${behaviour.name}`, body => {
     const figure = paragraph("");
     const number = document.createElement("span");
@@ -509,13 +517,13 @@ function render() {
 
 async function initialize() {
   const [payload, documents, registry, links] = await Promise.all([
-    loadJSON("/api/reader/payload", null),
-    loadJSON("/api/reader/documents", null),
-    loadJSON("/api/reader/behaviours", null),
+    loadJSON(`/api/reader/payload${PINNED}`, null),
+    loadJSON(`/api/reader/documents${PINNED}`, null),
+    loadJSON(`/api/reader/behaviours${PINNED}`, null),
     /* One route for both, where two gitignored files used to sit. They were
      * never on any deployment, so this page has shown its figures with nothing
      * under them everywhere but on the machine that wrote the files. */
-    loadJSON("/api/reader/links", null),
+    loadJSON(`/api/reader/links${PINNED}`, null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";

@@ -99,9 +99,11 @@ async function publicationLine() {
     const date = new Date(publication.published_at).toLocaleDateString("en-GB",
       { day: "numeric", month: "long", year: "numeric" });
     const id = node("code", "", String(publication.id).slice(0, 8));
+    // Not public covers a draft nobody has published and a publication since
+    // withdrawn: the row cannot tell the two apart, so the sentence claims neither.
     if (publication.is_public === false) {
-      line.append(document.createTextNode("You are reading draft publication "), id,
-        document.createTextNode(`, built on ${date}. It has not been made public.`));
+      line.append(document.createTextNode("You are reading publication "), id,
+        document.createTextNode(`, dated ${date}, which is not the publication currently public.`));
     } else {
       line.append(document.createTextNode("You are reading publication "), id,
         document.createTextNode(`, published on ${date}.`));
@@ -161,7 +163,13 @@ async function fill() {
   log.append(link);
   pop.replaceChildren(close, title, node("p", "", "Loading."));
   const [line, why] = await Promise.all([publicationLine(), whyTheName()]);
-  pop.replaceChildren(close, title, line, log);
+  pop.replaceChildren(close, title, line);
+  // The overview carries a view whose figures come from no publication at all.
+  if (document.getElementById("view-governance")) {
+    pop.append(node("p", "", "The governance view is not part of any publication. Its scores "
+      + "are Polaris Collective's own reading of public documents, as of 18 September 2026."));
+  }
+  pop.append(log);
   if (why) pop.append(node("h3", "", "Why this name"), why);
   state.filled = true;
   place();
