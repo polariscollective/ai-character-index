@@ -8,9 +8,10 @@ The overview shows one thing: how deeply each specification covers each
 behaviour. That is a reading of what the documents say. A research note written
 on 18 September 2026 ("Spec governance ranking: six frontier labs", in the
 team's Notion) adds a second axis: how the documents are governed. Whether a
-published rulebook exists, whether it covers what the lab deploys, whether a
+published model spec exists, whether it covers what the lab deploys, whether a
 change to it is visible, and whether anyone outside can see or contest a
-weakening. Six labs: OpenAI, Anthropic, Alibaba, Google DeepMind, Meta, xAI.
+weakening. Nine labs since the note's second pass the same day: OpenAI, Anthropic,
+Alibaba, Google DeepMind, Mistral AI, Meta, xAI, Moonshot AI and DeepSeek.
 
 The overview becomes two views behind tabs. The existing grid is the first and
 is unchanged. The second carries the whole of the research note.
@@ -26,15 +27,24 @@ transcription:
   except plain definitions of terms (what a system prompt is, what CC0 means)
   and the expansion of an acronym.
 - **Quotations stay verbatim**, including American spellings inside them.
-- **Plain words, defined once.** A sub-criterion is "a check", since
-  "point" would be read as a point of score. The document a lab publishes is "the
-  rulebook", introduced as what the labs call a model specification. The
-  system prompt is "the standing instructions" a company gives its model before
-  every conversation. Guardrails are "filters". Hard constraints are "firm
-  limits". Each term is defined in the sentence where it first appears and then
-  used the same way throughout. No glossary.
+- **The note's own terms, each defined once.** A sub-criterion is "a check",
+  since "point" would be read as a point of score. Otherwise the terms are the
+  ones readers will meet in the memo and elsewhere: model spec, system prompt,
+  guardrails, hard constraints, each explained in plain words where it first
+  appears. The first version invented plainer words for them (rulebook, standing
+  instructions, filters, firm limits); review rejected that, and rightly, since
+  the note uses "rulebook" for one particular form a model spec can take.
+  `tests/test_governance_tab.py` fails if those words come back.
 - **The four asks become four questions**, with short names for table headers:
-  Rulebook, Change record, Filters, Notice.
+  Model spec, Change log, Guardrails, Hard constraints.
+- **Totals are computed, and one of the note's is wrong.** The second pass
+  prints Moonshot AI's total as 3; its own question scores for it, 1, 2, 1 and 0,
+  add to 4, as its matrix does. The board shows 4, and the finding that quotes
+  the totals says 4.
+- **Labs whose flagship anyone can download are marked "Open weights"** under
+  their name (Mistral AI, Moonshot AI, DeepSeek), as the note's second pass
+  recommends: the questions cannot reach a model once it is downloaded, and a
+  mark is more honest than a low score alone.
 - **Order for a decision maker**: the conclusion first, the method last.
 - **Internal address removed.** Sentences written to "the memo" or about "the
   dashboard" are rewritten for a public reader. "What this means for the
@@ -64,14 +74,20 @@ ask was for the table to have it.
 1. Heading and a short lede that says what the view asks.
 2. **Three headline figures**, computed from the scores: the best score on the
    minimum (the first two questions, 15 out of 24, OpenAI's), the number of
-   companies with a standing comment period before a firm limit is loosened (0 of
-   6, check 4.2 at 4), and the number that publish the rules for government and
-   defence deployments (0 of 6, check 1.3 at 4).
-3. **One table across the whole width.** The six companies are the columns, in
-   rank order. The rows are Overall (of 40), then Rulebook, Change record,
-   Filters and Notice, then supporting practices (of 10, set apart, not
+   companies with a standing comment window before a hard constraint is weakened
+   (0 of 9, check 4.2 at 4), and the number that publish the rules for government
+   and defence deployments (0 of 9, check 1.3 at 4).
+3. **One table across the whole width.** The nine companies are the columns, in
+   rank order; narrower than about 1180 pixels it scrolls sideways in its own
+   frame, with the row names held at its left edge. The rows are Overall (of 40),
+   then Model spec, Change log, Guardrails and Hard constraints, then supporting
+   practices (of 10, set apart, not
    counted). Each question opens into its checks as rows beneath it, scored 0
-   to 4, with a button above the table to open or shut them all. Colour is the
+   to 4, which add up to the question's score; each check's cell starts a fifth
+   of the way into its column, like the second line of a bullet. A button above
+   the table opens or shuts them all. Every cell says what it is out of, small
+   and grey at its right, on a paper tag, because grey laid straight on the red
+   or the amber falls below the contrast the framework asks of text. Colour is the
    share of the points available, on the grid's own ramp, with a legend; every
    cell carries its figure, so colour is never alone.
 4. **A popover beside whatever was pressed**, never over it: below, above, or
@@ -86,7 +102,7 @@ ask was for the table to have it.
      its checks with what earns each score, and a button to show them in the
      table.
    Pressing the same thing again closes it, as do Escape and a press elsewhere.
-5. **The six findings** under the table, as headlines that open.
+5. **The eight findings** under the table, as headlines that open.
 6. **Reference text, folded**: how to read this ranking, how we scored (the four
    questions with what 0, 2 and 4 mean for each check, and the five supporting
    practices), what we could not check, and the sources.
@@ -112,7 +128,7 @@ while its view is hidden.
   practices, plus the note's aside for Anthropic and Google. Totals and rank are
   computed, never stored: rank orders by total and breaks a tie on supporting
   practices, which is the note's own rule and puts Meta fifth. A profile's
-  opening line, "Rulebook, 8 out of 12", is written from those sums.
+  opening line, "Model spec, 8 out of 12", is written from those sums.
 - `site/overview.html`: the frame of the board, the popover, and the folded
   reference text.
 - `site/governance.js`: renders the board from the JSON. Imported by
@@ -144,6 +160,6 @@ portal. If that changes, a table and a route replace the file.
 ## Not in scope
 
 Publishing to production. The note lists points to re-check before anything is
-published externally, the main one being that Alibaba's rulebook was not read
+published externally, the main one being that Alibaba's model spec was not read
 at its own address. The branch deploys to a Vercel preview; merging to `main` is
 a separate decision.
