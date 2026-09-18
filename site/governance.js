@@ -303,7 +303,7 @@ function checkScore(content, lab, question, check) {
 }
 
 function supportingScore(content, lab) {
-  titled(content, `${lab.name}: supporting practices`, "Reported beside the total, not counted in it.");
+  titled(content, `${lab.name}: supporting practices`, "Reported beside the total and left out of it.");
   content.append(figure(lab.supporting, ` out of ${SUPPORTING}`),
     paragraphs(board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
 }
@@ -357,11 +357,11 @@ function aboutCheck(content, question, check) {
 }
 
 function aboutSupporting(content) {
-  titled(content, "Supporting practices, out of 10", "Reported beside the total, not counted in it.");
+  titled(content, "Supporting practices, out of 10", "Reported beside the total and left out of it.");
   content.append(element("p", "", "Five practices that an outsider can check from public "
     + "sources, taken from Kembery and colleagues, Emerging International Best Practices for "
-    + "AI Model Specs. Each is scored 0, 1 or 2. They measure neighbouring good practice "
-    + "rather than how changes are governed, which is why they are kept out of the total."));
+    + "AI Model Specs. Each is scored 0, 1 or 2. They measure related good practice, so "
+    + "they are kept out of the total."));
   const list = element("ul", "check-list");
   board.data.supporting.forEach(practice => {
     const item = element("li");

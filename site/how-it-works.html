@@ -255,7 +255,7 @@
                        box-shadow: none; }
   .site-header nav a:hover { background: var(--energy); color: var(--ink); }
   .site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
-  .site-header .wordmark { font-family: var(--display); font-size: 16px; font-weight: 600;
+  .site-header .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600;
                            color: var(--ink); text-decoration: none; box-shadow: none; }
   .site-header .wordmark:hover { background: none; color: var(--ink); }
   .site-header .mode { align-self: center; }
@@ -404,90 +404,80 @@
 
   <div id="said-page" hidden></div>
 
-  <!-- The page opens on what it is, in five sentences. The long standfirst this
-       replaced sat in the header, where a reader who wanted the gist had to read
-       all of it to find out whether the rest was for them. -->
+  <!-- The page opens on what the index is. Every section below is written to the
+       user's rules for English prose: plain declarative sentences, one antithesis
+       for the whole page (the TL;DR's, because that contrast is the point), no
+       triads where two items would do, no closing punchlines. -->
   <section class="m" id="tldr">
     <h2>TL;DR</h2>
     <p class="lead">AI companies publish long documents saying how their models should<a class="asterisk" href="#why" aria-label="What should means here">*</a>
-    behave. This
-    index reads them one behaviour at a time and shows every passage that bears on it, quoted,
-    with its exact place in the document. As of September 2026 it reports what those documents
-    say, not how the models behave.</p>
-    <p>Say you want everything the OpenAI Model Spec says about avoiding a concentration of
-    power. You can read those passages together, see which ones define the behaviour and which
-    only touch on it, and put them side by side with what another company&rsquo;s document says.
-    <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">Open that in the
-    doc reader</a>.</p>
-    <p>The <a href="/">overview</a> puts the index on one page, in two heat maps. The first,
+    behave. This index reads them one behaviour at a time and shows every passage that bears on
+    each behaviour, quoted, with its exact place in the document. As of September 2026 it reports
+    what those documents say, not how the models behave.</p>
+    <p>Say you want everything the OpenAI Model Spec says about avoiding a concentration of power.
+    The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">doc
+    reader</a> shows those passages together and can set them beside what another company&rsquo;s
+    document says.</p>
+    <p>The <a href="/">overview</a> shows the index in two heat maps. The first,
     <a href="/">what the specifications say</a>, shows how deeply each company&rsquo;s
     specification covers each behaviour, on a scale from 0 to 4. The second,
-    <a href="/?view=governance">how they are governed</a>, scores how each company runs its
-    specification: whether one is published, what it covers, whether a change to it can be
-    seen, and whether the public gets a say before it is weakened.</p>
+    <a href="/?view=governance">how they are governed</a>, scores whether each company publishes
+    a specification, what it covers, whether changes to it can be seen, and whether the public
+    gets a say before it is weakened.</p>
   </section>
   <!-- Why the index exists, for a reader who has not seen how these models are
-       made. Every "should" on the site means less than it seems until this is
-       said, and the asterisk beside the first ones points here. -->
+       made. The asterisk beside the first "should" on the site points here. -->
   <section class="m" id="why">
     <h2>Why it matters</h2>
     <p class="lead">When a company says how its models should behave, the word
-    &ldquo;should&rdquo; is doing a lot of work, because nobody can simply program a model to
-    behave that way.</p>
-    <p>A large language model is not written the way ordinary software is. Nobody types its
-    values into it. It is a neural network: billions of numbers, called weights, that no person
-    can read. It learns by trial and error. It is shown example after example of an input and the
-    output wanted for it, and it adjusts those numbers by itself until its answers match the
-    examples as closely as it can. What it ends up doing in a situation nobody showed it depends
-    on what it drew from the examples it was shown.</p>
-    <p>So getting a model to behave well takes two steps.</p>
+    &ldquo;should&rdquo; carries a lot, because nobody can program a model to behave that
+    way.</p>
+    <p>A large language model is a neural network: billions of numbers, called weights, that no
+    person can read. Nobody writes its values into it as code. It is trained on examples, each an
+    input and the output wanted for it, and it adjusts its weights by itself until its answers
+    match the examples as closely as it can. In a situation that no example covered, what it does
+    depends on what it drew from the examples it saw.</p>
+    <p>Getting a model to behave well therefore takes two steps.</p>
     <ol class="steps">
       <li><b>Agree on precise rules.</b> Before a model can be trained to behave well, someone
-      has to say in words what behaving well means: what it must do, what it must never do, and
-      what to do when the two conflict. That is what a model behaviour specification is for,
-      and it is what this index reads.</li>
-      <li><b>Check that the model follows them.</b> A specification only counts if the model was
-      actually trained on it and actually behaves as it says. Measuring how closely a model
-      adheres to its specification is the second step. This index does not take it yet, and it
-      is part of <a href="#ambition">our ambition</a>.</li>
+      has to write down what it must do and what it must never do. That is what a model
+      behaviour specification is for, and it is what this index reads.</li>
+      <li><b>Check that the model follows them.</b> A specification matters only if the model
+      was trained on it and behaves as it says. This index does not measure that yet, and it is
+      part of <a href="#ambition">our ambition</a>.</li>
     </ol>
   </section>
-  <!-- The words the index uses, defined once, near the top: a reader who meets
-       "behaviour" in the sense the index gives it, or wonders why a constitution
-       index holds documents called model specs, finds the answer here before the
-       rest of the page leans on it. The thirteen behaviours are read from the
+  <!-- The words the index uses, defined near the top so the rest of the page can
+       lean on them. The thirteen behaviours open in a dialog read from the
        publication, so the list is the one the doc reader shows. -->
   <section class="m" id="words">
     <h2>The words we use</h2>
     <dl class="glossary">
       <dt>AI Constitutions Index</dt>
       <dd>
-        <p>The name is the ambition. We say constitution because of what such a document
-        could be: one place that sets down the values a model should hold, how it is to be
-        trained to hold them, how it is to be evaluated afterwards, and even the internal rules by
-        which the company that made it answers for all of this. No document does all of that
-        today. The name says where we think these documents should go.</p>
-        <p>The word is not a reference to Claude. Anthropic happens to call its own document
-        Claude&rsquo;s Constitution, but the name of this index points to that document no more
-        than to any other.</p>
+        <p>We call it a constitutions index because of what these documents could become: one
+        place that sets down the values a model should hold, how it is trained and later
+        evaluated against them, and the internal rules by which the company that made it answers
+        for them. No document does all of that today, and the name is the direction we think
+        they should take.</p>
+        <p>Anthropic calls its own document Claude&rsquo;s Constitution. The name of this index
+        refers to that document no more than to any other.</p>
       </dd>
       <dt>Model behaviour specification</dt>
       <dd>
         <p>The generic term for the documents in which AI companies set out how their models
         should behave. OpenAI calls its own a model spec and Anthropic calls its own a
-        constitution: both are model behaviour specifications, and so is any other kind of
-        document that describes how a model should behave, whatever its author calls it.
-        Specification, for short.</p>
+        constitution. Both are model behaviour specifications, as is any other document that
+        describes how a model should behave. We shorten it to specification.</p>
       </dd>
       <dt>Behaviour</dt>
       <dd>
-        <p>For us, a behaviour is one precise thing a specification can ask of a model:
-        deferring to users&rsquo; own decisions about their own lives, for instance, or not
-        asserting what the model believes to be false, or not undermining people&rsquo;s ability
-        to oversee and correct it. Each is written down in two parts, what it requires and where
-        it stops, so that a careful reader could go through a whole specification and mark every
-        passage that bears on it. That description is what the judges read, and it is the unit
-        the index counts in: passages are marked, and depths given, one behaviour at a time.</p>
+        <p>For us, a behaviour is one precise thing a specification can ask of a model, such as
+        deferring to users&rsquo; decisions about their own lives, or not asserting what the model
+        believes to be false. Each is written in two parts, what it requires and where it stops,
+        so that a careful reader could mark every passage of a specification that bears on it.
+        The judges work from that description and assess a specification one behaviour at a
+        time.</p>
         <p>So far the index asks about
         <button type="button" class="glossary-open" id="glossary-open" aria-haspopup="dialog"
         >thirteen behaviours</button>.</p>
@@ -496,9 +486,9 @@
       <dd>
         <p>A paragraph or a run of sentences in a specification, cited by a locator that names
         the document, its version, its section and the sentences. For each behaviour, every
-        passage the judges mark falls in one of three bands: defining, the document&rsquo;s
-        fullest statement of the behaviour; core, a passage that establishes it; and related, one
-        that bears on it without establishing it.</p>
+        passage the judges mark falls in one of three bands. A defining passage is the
+        document&rsquo;s fullest statement of the behaviour, a core passage establishes it, and a
+        related passage bears on it without establishing it.</p>
       </dd>
       <dt>Depth</dt>
       <dd>
@@ -507,18 +497,14 @@
       </dd>
     </dl>
   </section>
-
-  <!-- What the index is for, beyond what it does today. Written as an ambition
-       rather than a roadmap: each line is something the index means to become,
-       and none carries a date. -->
+  <!-- What the index means to become. An ambition, so no line carries a date. -->
   <section class="m" id="ambition">
     <h2>Our ambition</h2>
-    <p class="lead">Tracking what these documents say is where the index starts, not where it
-    stops.</p>
+    <p class="lead">Beyond tracking what these documents say, we mean the index to do five
+    things.</p>
     <ul>
-      <li><b>Stay current.</b> Read every model behaviour specification as soon as it is
-      published, and every new version of it, so that the index is never behind the documents it
-      reports on.</li>
+      <li><b>Stay current.</b> Read every model behaviour specification, and every new version of
+      one, as soon as it is published.</li>
       <li><b>Test adherence.</b> Measure how closely each company&rsquo;s models follow the
       specification that company published.</li>
       <li><b>Hold each specification to the best.</b> Set it against what the best of the other
@@ -527,236 +513,194 @@
       <li><b>Find the contradictions.</b> Show where a specification&rsquo;s own rules pull
       against each other, and where two companies&rsquo; documents disagree.</li>
       <li><b>Open up how they are written.</b> Challenge the way these documents are made and
-      changed, and argue for democratic processes around them: public consultation, a say before
-      a rule is weakened, and a public record of every change.</li>
+      changed, and argue for democratic processes around them, such as public consultation before
+      a rule is weakened.</li>
     </ul>
   </section>
-
-  <!-- The setup lives on the MCP page, all of it. What belongs here is why a
-       reader might want it at all, in plain words and no steps. -->
+  <!-- The setup lives on the MCP page. What belongs here is why a reader might
+       want it at all. -->
   <section class="m" id="your-assistant">
     <h2>Use the index from your AI assistant</h2>
-    <p class="lead">You can plug the index into an assistant such as Claude or ChatGPT, so that
-    when you ask about these documents it answers from the index rather than from memory.</p>
-    <p>The connection is made with MCP, the Model Context Protocol: a standard way to let an
-    assistant look something up in another service while it answers you. Connected, your assistant
-    quotes the passages a document actually gives on a behaviour and says where in the document
-    each one sits, so you can check the answer rather than trust it. The index only reads, and
-    needs no account and no key.</p>
-    <p>It is for anyone who would rather have the quote than a summary of it: people writing about
-    how AI companies govern their models, people building evaluations, and anyone who has been told what a
-    document says and wants to see the words. The <a href="/mcp">MCP page</a> has the whole setup,
-    from a settings menu or from a command line, and says what the index can be asked.</p>
+    <p class="lead">You can connect the index to an assistant such as Claude or ChatGPT, so that
+    its answers about these documents come from the index.</p>
+    <p>The connection uses MCP, the Model Context Protocol, a standard way for an assistant to
+    look something up in another service while it answers. Once connected, your assistant quotes
+    the passages a document gives on a behaviour and says where each one sits, so you can check
+    the answer. The index only reads, and needs no account or key.</p>
+    <p>It is useful to people who write about how AI companies govern their models, and to people
+    who build evaluations. The <a href="/mcp">MCP page</a> explains the setup and what the index
+    can be asked.</p>
   </section>
-
   <section class="m">
     <h2>Documents, behaviours and how they are read</h2>
-    <p>A model behaviour specification is a document an AI company publishes saying how its
-    models should behave. As of
-    September 2026 the index reads four: Claude&rsquo;s Constitution (2026-01-20), the OpenAI
-    Model Spec in two versions (2025-12-18 and 2026-08-18), and the Alibaba Model Spec
-    (2026-04-00). They run to tens of thousands of words, and what any of them says about one
-    subject is spread across it.</p>
-    <p>Each version is a document of its own, named <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>,
-    so the two OpenAI versions are judged and cited separately. The Alibaba Model Spec is
-    published in Chinese: the index reads an English machine translation of it, made by Claude
-    Opus 5 and revised in part by Claude Fable 5, and the reader keeps the original beside every
+    <p>As of September 2026 the index reads four model behaviour specifications: Claude&rsquo;s
+    Constitution (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18)
+    and the Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it
+    says about any one subject is spread across it.</p>
+    <p>Each version is a document of its own, named
+    <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, so the two OpenAI versions are
+    judged and cited separately. The Alibaba Model Spec is published in Chinese. The index reads an
+    English machine translation made by Claude Opus 5 and partly revised by Claude Fable 5, and
+    the reader shows the original beside every passage.</p>
+    <p>As of September 2026 the index asks about thirteen behaviours, in four groups: Autonomy,
+    oversight and authority; Harm and safety; Helpfulness and judgement; Honesty and
+    epistemics.</p>
+    <p>Three frontier models, GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2, read each document
+    against the description of each behaviour. They form the panel called
+    <code>frontier_fast</code> and judge under rubric v5. Each judge places every passage of the
+    document in a band, from the document&rsquo;s fullest statement of the behaviour down to
+    unrelated. Several models agreeing on the same description and document is closer to a
+    finding than one model&rsquo;s view, and the reader shows how each judge voted on each
     passage.</p>
-    <p>A behaviour is one thing such a document might commit a model to, written down so that it
-    can be looked for. Deferring to a user&rsquo;s own decisions about their own life is a
-    behaviour. So is refusing to assert what the model believes to be false. As of September 2026
-    the index carries thirteen, grouped in four sections: Autonomy, oversight and authority; Harm
-    and safety; Helpfulness and judgement; Honesty and epistemics.</p>
-    <p>The index puts the two together. Three frontier models read a whole document against one
-    written description of a behaviour: GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2, the panel
-    called <code>frontier_fast</code>, judging under rubric v5. Each marks every passage in it:
-    this is the document&rsquo;s fullest statement of the behaviour, this establishes it, this
-    bears on it without establishing it, this is unrelated. One model&rsquo;s opinion about a
-    paragraph is an opinion. Several models agreeing, given the same description and the same
-    document, is closer to a finding, and the reader shows you how each judge voted on each
-    passage rather than averaging them away.</p>
     <p>Each judge then gives the document one depth for the behaviour, on a scale from 0, absent,
     to 4, rules with worked examples. The index publishes the mean of the three.</p>
-    <p>Sometimes a judge cannot answer at all, because a content filter withholds its output.
-    Then a model declared in advance for that seat judges in its place, and the substitution is
-    recorded with its reason. Claude Fable 5&rsquo;s seat declares Claude Opus 4.8 first and
-    Kimi K3 second. As of September 2026, Opus holds that seat on harm avoidance to third parties
-    in both OpenAI versions, and Kimi holds it on every behaviour of the Alibaba Model Spec, where
-    every Anthropic model was refused. The reader says so in the behaviour&rsquo;s note.</p>
-    <p>What comes out is a coverage map. In the <a href="/spec-reader/">doc reader</a> you tick a
-    behaviour and every passage that bears on it lights up in the document you are reading, or in
-    two side by side when you compare them. Passages fall in three bands: defining, core and
-    related. All three are shown by default, related drawn softer, and each band can be switched
-    off. Click a passage to see each judge&rsquo;s verdict on it and the quote itself. Beside every
-    behaviour there is an <b>i</b> giving the description it was judged against, because a verdict means little without the question that produced it. The
-    export takes the passages you ticked away as a file.</p>
+    <p>Sometimes a judge cannot answer at all, because a content filter withholds its output. A
+    model declared in advance for that seat then judges in its place, and the substitution is
+    recorded with its reason. For Claude Fable 5&rsquo;s seat, the declared substitutes are Claude
+    Opus 4.8 and then Kimi K3. As of September 2026, Opus holds that seat on harm avoidance to
+    third parties in both OpenAI versions, and Kimi holds it on every behaviour of the Alibaba
+    Model Spec, where every Anthropic model was refused. The behaviour&rsquo;s note in the reader
+    records this.</p>
+    <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that
+    bears on it is highlighted in the document you are reading, or in two documents side by side.
+    All three bands are shown by default, with related passages drawn softer, and each band can be
+    switched off. Clicking a passage shows each judge&rsquo;s verdict on it. The <b>i</b> beside
+    each behaviour shows the description it was judged against. The export saves the passages you
+    ticked as a file.</p>
   </section>
-
   <!-- Two sections, so each kind of proposal has its own place in the rail and its
        own button into the form it needs. The wrapper keeps #propose, which links
        already shared point at. -->
   <div id="propose">
   <section class="m">
     <h2>Propose a new model behaviour specification</h2>
-    <p class="lead">A model behaviour specification is a document an AI company publishes saying how its
-    models should behave, the way Anthropic&rsquo;s Constitution and OpenAI&rsquo;s Model Spec
-    do. If
-    there is one the index should be reading, send it here.</p>
-    <p><b>Send the text itself, not only a link.</b> The index quotes documents word for word and
-    pins every citation to the exact version it read, so it keeps its own copy rather than
-    fetching the page again later. Markdown or plain text, up to 2 MB.</p>
-    <p>The form asks for four things beside it: who published it, what it is called, which version
-    this is, and where it is published. The version is whatever the publisher calls this release
-    (a date, a number, a name), because documents get reissued and a citation has to say which
-    one it read. Keep the headings in the text: they are how a citation names the place it points
-    at.</p>
-
+    <p class="lead">If there is a model behaviour specification the index should be reading,
+    send it here.</p>
+    <p><b>Send the text itself, along with its address.</b> The index quotes documents word for
+    word and ties every citation to the exact version it read, so it keeps its own copy. Markdown
+    or plain text, up to 2 MB.</p>
+    <p>The form also asks who published it, what it is called, which version it is and where it
+    is published. The version is whatever the publisher calls this release, such as a date or a
+    number, because a citation has to say which release it read. Keep the headings in the text,
+    since citations use them to name the place they point to.</p>
     <p><button type="button" class="open-propose" id="open-propose-specification"
     data-kind="specification">Propose a new model behaviour specification</button></p>
   </section>
-
   <section class="m">
     <h2>Propose a new behaviour</h2>
-    <p class="lead">A behaviour is one thing a model should or should not do, described closely
-    enough that a careful reader could go through a document and mark every passage that bears on
-    it. It is the question the index puts to every model behaviour specification, helpfulness or proportionate risk
-    mitigation for instance, and the reader shows the answer passage by passage.</p>
-    <p><b>Describing the behaviour is the whole of it, and two sentences carry it.</b> The first
-    says what the behaviour requires, in plain terms. The second says where it stops, usually by
-    naming the neighbouring thing it would otherwise swallow.</p>
-    <p>That second sentence is the one people skip, and it is the one that decides whether the
-    answer is worth anything. &ldquo;Honesty&rdquo; with no boundary collects every passage about
-    trust, tone, transparency and error correction. &ldquo;Honesty, meaning the model does not
-    assert what it believes to be false, not whether it volunteers everything it knows&rdquo;
-    collects the passages you meant.</p>
-    <p>Whichever you send, a person reads it. Sending a proposal records it and does nothing else:
-    the form registers nothing, judges nothing and publishes nothing. We read every proposal
-    ourselves and decide whether it belongs. If it does, one of us retypes it into the
-    index&rsquo;s portal and pays for the run out of our own credits, we write and tell you, and it
-    appears in the reader for everyone once a publication carrying it is made public. We cannot
-    promise to run everything; if we decide against it, we will say so rather than leave you
-    waiting.</p>
-
+    <p class="lead">If the index should be asking about a behaviour it does not yet cover, send it
+    here.</p>
+    <p><b>A proposal is a description in two sentences.</b> The first says in plain terms what the
+    behaviour requires. The second says where it stops, usually by naming a neighbouring behaviour
+    it could be confused with.</p>
+    <p>The second sentence is often left out, and it decides how useful the result is.
+    &ldquo;Honesty&rdquo; with no boundary collects every passage about trust, tone, transparency
+    and correcting errors. &ldquo;Honesty, meaning the model does not assert what it believes to be
+    false, not whether it volunteers everything it knows&rdquo; collects the passages you
+    meant.</p>
+    <p>Sending a proposal only records it. We read every proposal and decide whether it belongs in
+    the index. If it does, one of us enters it in the index&rsquo;s portal and pays for the run,
+    we write to tell you, and it appears in the reader once a publication that includes it is made
+    public. We cannot promise to run everything, and if we decide against a proposal we will tell
+    you.</p>
     <p><button type="button" class="open-propose" id="open-propose-behaviour"
     data-kind="behaviour">Propose a new behaviour</button></p>
   </section>
   </div>
-
   <section class="m">
     <h2>What it does not tell you</h2>
-    <p>It reports what a document says, not what a model does. A specification covering a
-    behaviour thoroughly is not evidence that the model follows it. That is a different
-    measurement, and the citations here are meant to feed it.</p>
-    <p>It is also not a scoreboard. When two companies&rsquo; documents address a behaviour
-    differently, that is usually two organisations having made different choices, not one of them
-    failing. A depth measures how much a document gives an evaluation to work with, not how much
-    the company behind it cares.</p>
-    <p>On the Alibaba Model Spec it reports what the English translation says. The judges read the
-    translation, and the original is in the reader to check it against.</p>
+    <p>The index reports what a document says. A specification that covers a behaviour thoroughly
+    is no evidence that the model follows it, which is a separate measurement that the citations
+    here can feed.</p>
+    <p>When two companies&rsquo; documents address a behaviour differently, it is usually because
+    they made different choices. A depth measures how much a document gives an evaluation to work
+    with.</p>
+    <p>For the Alibaba Model Spec the index reports what the English translation says. The judges
+    read the translation, and the reader shows the original for comparison.</p>
   </section>
-
   <section class="m">
     <h2>Citing what you find</h2>
-    <p>Every passage carries a locator, and the locator is the point of the whole exercise:</p>
+    <p>Every passage carries a locator, such as these two.</p>
     <pre><code>anthropic--constitution@2026-01-20 &gt; Being broadly ethical &gt; Being honest &gt; &para;18 s1-4
 openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
-    <p>It names the company and the document, the version it was read at, the section, and the
-    sentences. The head of every locator is the document&rsquo;s own name, and because the
-    version is part of that name, a locator keeps pointing at the same words after the company
-    reissues the document: a reissue is a new document, as the two OpenAI versions are. Anyone
-    can resolve one back to the text, including us: a scheduled job re-resolves every published citation against the stored document and fails loudly if a single
-    quote has moved.</p>
-    <p>The reader&rsquo;s export writes the quote and its locator together, so what you paste into
-    an article is the sentence and where it came from.</p>
-
+    <p>A locator names the company, the document and its version, the section and the sentences.
+    Because the version is part of the document&rsquo;s name, a locator keeps pointing at the same
+    words after the company reissues the document, since a reissue is a new document, as with the
+    two OpenAI versions. Anyone can resolve a locator back to its text. A scheduled job resolves
+    every published citation against the stored document and fails if a single quote has
+    moved.</p>
+    <p>The reader&rsquo;s export writes each quote with its locator.</p>
     <h3>Citing the index itself</h3>
-    <p>The index is a dataset that changes, so a citation of it has to say which build it read.
-    This one names the publication on this site now, with the date it was published:</p>
+    <p>The index changes over time, so a citation of it has to name the build it read. This
+    citation names the publication currently on the site and the date it was published.</p>
     <figure class="cite-block">
       <pre id="cite-text">Loading the current publication...</pre>
       <button type="button" id="cite-copy" data-copy="cite-text">Copy</button>
     </figure>
-    <p>Change the style to whatever your venue asks for. The parts that matter are the authors,
-    the publication identifier and the date, because those are what let somebody else fetch the
-    same numbers you read.</p>
-    <p><b>The authors are read off the build, not kept in a list.</b> Every run records who
-    produced its verdicts and every behaviour records who wrote it, so a publication computes its
-    own credit from what it actually carries. The dataset is credited to whoever ran the judging:
-    as of September 2026, Polaris Collective. A build made of somebody&rsquo;s runs names them
-    whether or not anyone remembered to. The method is credited on its own line and does not
-    change: the rubric, the scale, the prompt and the citation grammar are Andr&eacute;s
-    Cotton&rsquo;s and Matt Stults&rsquo;s work, whoever runs it, and so are most of the behaviour
-    briefs.</p>
-    <p><b>Cite the specification to its publisher, not to us.</b> Claude&rsquo;s Constitution is
-    Anthropic&rsquo;s, the Model Spec is OpenAI&rsquo;s, and the Alibaba Model Spec is
-    Alibaba&rsquo;s; Anthropic and OpenAI release theirs under CC0. A quote from the Alibaba Model
-    Spec comes from the index&rsquo;s English translation, so say so when you use one. What is
-    ours to be cited for is the coverage: which passages address which behaviour, and how
-    squarely.</p>
-    <p>The repository carries a
+    <p>Adapt the style to your venue, and keep the authors, the publication identifier and the
+    date, which let someone else retrieve the same figures.</p>
+    <p><b>The authors are read from the build.</b> Every run records who produced its verdicts and
+    every behaviour records who wrote it, so a publication computes its own credit. The dataset is
+    credited to whoever ran the judging, which as of September 2026 is Polaris Collective. The
+    method has its own line. The rubric, the scale, the prompt and the citation grammar are the
+    work of Andr&eacute;s Cotton and Matt Stults, as are most of the behaviour briefs.</p>
+    <p><b>Cite each specification to its publisher.</b> Anthropic and OpenAI release theirs under
+    CC0. A quote from the Alibaba Model Spec comes from the index&rsquo;s English translation, so
+    say so when you use one. Cite the index for the coverage, meaning which passages address which
+    behaviour and how closely.</p>
+    <p>The repository&rsquo;s
     <a href="https://github.com/polariscollective/ai-character-index/blob/main/CITATION.cff"
-    target="_blank" rel="noopener">CITATION.cff</a>, which GitHub turns into a &ldquo;Cite this
-    repository&rdquo; button with BibTeX and APA. Use it where you would cite the project rather
-    than a particular build.</p>
+    target="_blank" rel="noopener">CITATION.cff</a> gives GitHub a &ldquo;Cite this
+    repository&rdquo; button with BibTeX and APA formats. Use it to cite the project as a
+    whole.</p>
   </section>
-
   <section class="m">
     <h2>Andr&eacute;s&rsquo;s original tool</h2>
     <p><b>This index began as the AI Character Index, created by
     <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
-    Cotton</a>, with the help of <a href="https://github.com/MattStults" target="_blank"
-    rel="noopener">Matt Stults</a>, and almost everything described here is theirs.</b> The
-    judging pipeline, the citation resolver and the first version of this reader all come from
-    that work, which was supported by Generator Residency (Kairos &amp; Constellation) and BlueDot
-    Impact. It is published at <a href="https://ai-character-index.pages.dev" target="_blank"
+    Cotton</a> with the help of <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>, and most of what is described here is their work.</b> The
+    judging pipeline, the citation resolver and the first version of this reader come from it.
+    That work was supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact,
+    and it is published at <a href="https://ai-character-index.pages.dev" target="_blank"
     rel="noopener">ai-character-index.pages.dev</a>.</p>
-    <p><b>It is built around git, and that is its best idea.</b> The index is a set of files in
-    the repository: the behaviours, the specifications, the verdicts. Running a panel writes
-    files. Adding a behaviour edits a file. So a change to the index is a commit, reviewing one is
-    reading a diff, and contributing is a pull request. Two runs of the same behaviour against two
-    drafts of a document differ by exactly the lines that changed, which is the question you
-    usually want answered.</p>
-    <p>It needs nothing but Python, a browser and an API key, and nothing in it depends on us. If
-    running the panel is what you came for, it is the one to clone.</p>
+    <p>The original is built around git. The behaviours, the specifications and the verdicts are
+    files in the repository, so a change to the index is a commit and a contribution is a pull
+    request. Two runs of the same behaviour against two drafts of a document differ by exactly the
+    lines that changed.</p>
+    <p>It needs only Python, a browser and an API key, and it does not depend on us. If you want to
+    run the panel yourself, it is the repository to clone.</p>
   </section>
-
   <section class="m">
     <h2>Run it yourself</h2>
-    <p class="lead">Everything this does, you can do on your own machine. Add a document, describe
-    a behaviour, judge one against the other, read every verdict. No account, no database, nothing
-    of ours.</p>
-
+    <p class="lead">You can run the same judging on your own machine, with your own documents and
+    behaviours, without an account or a database.</p>
     <h3>The original</h3>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
-    <p>Point it at a document of your own: your organisation&rsquo;s policy, a draft nobody has
-    published, a competitor&rsquo;s. Nothing is sent to us: the document goes only to the model
-    providers you call.</p>
-
+    <p>You can point it at any document, including an unpublished draft. Nothing is sent to us, and
+    the document goes only to the model providers you call.</p>
     <h3>Or ours</h3>
     <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
-    rel="noopener">polariscollective/ai-character-index</a> is public too, and it is what serves
-    this site. The code has moved on since the fork, but the difference that matters is what it
-    was built for. This one carries infrastructure: a hosted database holding the index, judging
-    that runs on our machines, and a portal that publishes. It is the heavier clone of the two,
-    and it is heavier on purpose.</p>
-    <p>It still runs locally, with one API key and no account:</p>
+    rel="noopener">polariscollective/ai-character-index</a>, which serves this site, is public too.
+    It adds infrastructure to the original, a hosted database for the index and a portal that
+    launches the judging and publishes the results, which makes it the heavier of the two to
+    clone.</p>
+    <p>It also runs locally with one API key:</p>
     <pre><code>python3 engine/local_run.py \
     --document=my-spec@2026-09-12:path/to/spec.md \
     --behaviour=path/to/behaviour.json \
     --panel=frontier_fast</code></pre>
-    <p><b>A new document and a new behaviour are both local.</b> A document is any markdown file.
-    A behaviour is a small JSON file holding its name, what it requires and where it stops.
-    Neither is registered anywhere and neither needs to be. You point at them, and they are judged
-    by the same panel, the same prompt and the same parser this site runs on.</p>
-    <p>The results land in <code>artefacts/</code> as files: every reply exactly as it came back,
-    every verdict with its locator and the text it judged, the document as the panel saw it, and
-    what each call cost. They diff like the original&rsquo;s do. The README says what each file
-    holds.</p>
-    <p>A local run gives you the passages and every judge&rsquo;s verdict on them. It does not ask
-    for the 0 to 4 depth, and it does not give you this site. A published index, with its
-    citations frozen and its coverage map in the reader, is what the hosted half exists for.</p>
+    <p>A document is any markdown file, and a behaviour is a small JSON file with its name, what it
+    requires and where it stops. Neither needs registering. They are judged with the same panel,
+    prompt and parser as this site.</p>
+    <p>The results are written to <code>artefacts/</code>. They hold every reply as it came back,
+    every verdict with its locator and the text it judged, and the cost of each call. The README
+    describes each file.</p>
+    <p>A local run gives the passages and each judge&rsquo;s verdict on them, but it does not ask
+    for the 0 to 4 depth or build a site. Publishing an index with fixed citations and a coverage
+    map in the reader is what the hosted version is for.</p>
   </section>
   </div>
 
@@ -809,16 +753,16 @@ python3 -m http.server 8080 --directory site</code></pre>
       <label>
         <span>What does the behaviour require</span>
         <textarea name="query" required placeholder="The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them."></textarea>
-        <span class="hint">One or two sentences, describing the thing itself rather than the
-        words for it. Write it the way you would brief a careful colleague who has to apply it to
-        a page of text without asking you anything.</span>
+        <span class="hint">One or two sentences on what the behaviour is. Write it as you would
+        brief a careful colleague who must apply it to a page of text without asking you
+        anything.</span>
       </label>
       <label>
         <span>Where does it stop</span>
         <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
-        <span class="hint">The most useful field on this form. Name the neighbouring thing your
-        behaviour is not, so that a passage about that neighbour does not get counted.
-        Without it the result is broader than you meant and harder to trust.</span>
+        <span class="hint">Name the neighbouring behaviour yours could be confused with, so that
+        passages about it are not counted. Without this the result is broader than you
+        meant.</span>
       </label>
       <label>
         <span>Why does it matter</span>
@@ -828,8 +772,8 @@ python3 -m http.server 8080 --directory site</code></pre>
       <label>
         <span>Your email</span>
         <input type="email" name="email" required placeholder="you@example.com">
-        <span class="hint">So we can tell you what we decided and write again when it is
-        published. We use it for this and nothing else.</span>
+        <span class="hint">We use it only to tell you what we decided, and to write again when
+        it is published.</span>
       </label>
       <button type="submit">Send it</button>
     </form>
@@ -837,9 +781,8 @@ python3 -m http.server 8080 --directory site</code></pre>
 
       <div class="form-panel" id="form-specification">
     
-    <p>A published statement of how an organisation&rsquo;s models should behave. Send the text,
-    not a link alone: the index quotes documents word for word and pins every citation to the
-    exact version it read, so it keeps the text rather than fetching it again later.</p>
+    <p>Send the text of the specification as well as its address. The index quotes documents word
+    for word and ties every citation to the exact version it read, so it keeps its own copy.</p>
     <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
       <input type="hidden" name="kind" value="specification">
       <label class="trap" aria-hidden="true">
@@ -853,14 +796,14 @@ python3 -m http.server 8080 --directory site</code></pre>
       <label>
         <span>What is it called</span>
         <input type="text" name="name" required placeholder="Model Spec">
-        <span class="hint">No @ and no &gt; in the name: every citation into this document is
-        built from it.</span>
+        <span class="hint">Do not use @ or &gt; in the name, because citations into the document
+        are built from it.</span>
       </label>
       <label>
         <span>Which version</span>
         <input type="text" name="version" required placeholder="2026-01-20">
-        <span class="hint">Whatever the publisher calls this release: a date, a number, a name.
-        Documents get reissued, and a citation has to say which one it read.</span>
+        <span class="hint">Whatever the publisher calls this release, such as a date or a
+        number. A citation has to say which release it read.</span>
       </label>
       <label>
         <span>Where is it published</span>
@@ -869,8 +812,8 @@ python3 -m http.server 8080 --directory site</code></pre>
       <label>
         <span>The document itself</span>
         <input type="file" name="document" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
-        <span class="hint">Markdown or plain text, up to 2 MB. Headings matter: they are how a
-        citation names the place it points at.</span>
+        <span class="hint">Markdown or plain text, up to 2 MB. Keep the headings, since citations
+        use them to name places in the document.</span>
       </label>
       <label>
         <span>Why does it belong here</span>
@@ -879,8 +822,8 @@ python3 -m http.server 8080 --directory site</code></pre>
       <label>
         <span>Your email</span>
         <input type="email" name="email" required placeholder="you@example.com">
-        <span class="hint">So we can tell you what we decided and write again when it is
-        published.</span>
+        <span class="hint">We use it only to tell you what we decided, and to write again when
+        it is published.</span>
       </label>
       <button type="submit">Send it</button>
     </form>

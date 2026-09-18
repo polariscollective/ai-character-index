@@ -949,11 +949,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
   <h1>How each company governs the rules its models follow</h1>
   <p class="lede gov-lede">
-    Some AI companies publish a model behaviour specification: a document setting out how their
-    models should<a class="asterisk" href="/how-it-works#why" aria-label="What should means here">*</a> behave. This view scores how that document is run: whether it
-    exists, what it covers, whether a change to it can be seen, and whether the
-    public gets a say before it is weakened. Nine companies, as of September
-    2026; the scores are Polaris Collective's own and open to challenge.
+    Some AI companies publish a model behaviour specification, a document setting out how their
+    models should<a class="asterisk" href="/how-it-works#why" aria-label="What should means here">*</a> behave. This view scores whether each company publishes
+    one, what it covers, whether changes to it can be seen, and whether the public gets a say
+    before it is weakened. It covers nine companies as of September 2026, and the scores are
+    Polaris Collective's own and open to challenge.
   </p>
 
   <div class="gov-kpis" id="gov-kpis"></div>
@@ -961,9 +961,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 
   <div class="gov-toolbar">
     <p class="gov-hint">
-      Press a score for the evidence behind it, a company for its profile, or a
-      question for what it asks and how its points are shared out. Open a
-      question to see its checks.
+      Press a score to see the evidence behind it, or a company or a question to
+      read about it. Open a question to see its checks.
     </p>
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every check</button>
   </div>
@@ -978,8 +977,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <p class="gov-foot">
     <strong>Open weights</strong> marks a company whose flagship model, or
     nearly, anyone can download and run. None of these questions can reach how
-    such a model behaves once it has been downloaded, so a low score there is
-    partly the questions' limit rather than only the company's choice.
+    such a model behaves once it has been downloaded, so part of a low score
+    there reflects a limit of the questions.
   </p>
   <p class="gov-foot">
     Meta and xAI tie on 5. Meta is placed sixth on the supporting practices and
@@ -1004,44 +1003,42 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <summary>How to read this ranking</summary>
       <div class="gov-more-body">
         <p>
-          <strong>Having a model behaviour specification and covering something are
-          scored apart.</strong> Alibaba shows why. On a single "has a specification"
-          column, a specification that names no model would score the same as one
-          that binds a company's products, and the two are not the same thing.
+          <strong>Having a specification and covering models with it are scored
+          separately.</strong> Alibaba's specification names no model, and on a single
+          "has a specification" column it would score the same as one that binds a
+          company's products.
         </p>
         <p>
-          <strong>Read the checks, not only the total.</strong> The totals put
-          OpenAI and Anthropic one point apart, but they fall short in opposite
+          <strong>The checks say more than the total.</strong> The totals put
+          OpenAI and Anthropic one point apart, and they fall short in opposite
           ways. OpenAI keeps a record of its versions and does not list its hard
-          constraints; Anthropic lists its hard constraints and keeps no record
-          of its versions. A single number hides the most useful thing in the
-          comparison.
+          constraints, while Anthropic lists its hard constraints and keeps no
+          record of its versions.
         </p>
         <p>
-          <strong>Companies whose models anyone can download are marked, not
-          only ranked.</strong> Mistral AI, Moonshot AI and DeepSeek take three
-          of the four lowest places, and a reader who sees only the totals would
-          conclude they are the least responsible companies. What the evidence
-          shows is that these questions have no way to reach a model once it has
-          been downloaded. So the table marks them "Open weights", which is more
-          honest than a low score alone.
+          <strong>Companies whose models anyone can download are marked.</strong>
+          Mistral AI, Moonshot AI and DeepSeek take three of the four lowest
+          places, and a reader who sees only the totals might take them for the
+          least responsible companies. These questions have no way to reach a model
+          once it has been downloaded, so the table marks these companies "Open
+          weights".
         </p>
         <p>
           <strong>The bottom of the ranking comes down to the first
-          question.</strong> Six of the nine companies publish no model behaviour specification, so
-          most of the grid cannot apply to them, and they sit at the bottom for
-          that one reason. To compare the companies that do publish, look at the
-          change log. To see the case for publishing at all, look at the totals.
+          question.</strong> Six of the nine companies publish no model behaviour
+          specification, so most of the grid cannot apply to them and they sit at
+          the bottom for that reason. Among the companies that do publish, the
+          change log is what separates them, while the totals show the case for
+          publishing at all.
         </p>
         <p>
           <strong>A caveat.</strong> The four questions were written to argue for
-          change, not to measure. Turning them into a scored grid gives them a
-          precision they were not designed for, and the descriptions of each
-          score are ours. Anyone could move a company by a few points by reading
-          a description differently. What does not move is the overall picture:
-          all nine fall short on the change log, none offers a comment window
-          before weakening a hard constraint, and none covers government,
-          defence and other special deployments.
+          change, and turning them into a scored grid gives them more precision
+          than they were designed for. The descriptions of each score are ours,
+          and a different reading could move a company by a few points. The
+          overall picture would stay the same: all nine fall short on the change
+          log, none offers a comment window before a hard constraint is weakened,
+          and none covers government, defence and other special deployments.
         </p>
       </div>
     </details>
@@ -1065,9 +1062,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           Five further practices, taken from Kembery and colleagues, Emerging
           International Best Practices for AI Model Specs, keeping only those an
           outsider can check from public sources. Each is scored 0, 1 or 2, for a
-          total out of 10. They are reported beside the ranking and not counted in
-          it, because they measure neighbouring good practice rather than how
-          changes are governed.
+          total out of 10. They are reported beside the ranking and left out of its
+          total, because they measure related good practice.
         </p>
         <ul class="gov-bullets" id="gov-supporting"></ul>
         <h3>Who the companies are</h3>
@@ -1116,8 +1112,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
             <strong>Chinese regulatory filings could not be listed.</strong> The
             Cyberspace Administration of China publishes its lists of filings as
             attachments we could not retrieve. So when we say Moonshot AI publishes
-            no filing number, we mean we could not find one on its own sites, not
-            that none exists.
+            no filing number, we mean only that we could not find one on its own
+            sites.
           </li>
           <li>
             <strong>Whether Anthropic has signed the EU Code of Practice is
@@ -1139,7 +1135,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li>
             <strong>Meta's log of updates to its Community Standards</strong>
             could not be read, because it too is built in the browser, so our view
-            that it does not cover AI is an inference rather than a check.
+            that it does not cover AI is an inference we have not checked.
           </li>
           <li>
             <strong>The release date of Kimi K3 is disputed</strong> between

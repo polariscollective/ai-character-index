@@ -264,13 +264,12 @@ function openAbsent(behaviour, column) {
      * specification" is a claim about Meta; "we know of none" is a claim about
      * us, and it is the only one of the two this index can stand behind. */
     body.append(paragraph(
-      `We know of no model behaviour specification from ${column.lab}. None appears to `
-      + "have been published, and that is worth saying plainly rather than "
-      + "leaving as a blank: there is no public document to hold beside the "
-      + "others."));
+      `We know of no model behaviour specification from ${column.lab}, and none `
+      + "appears to have been published, so there is no public document to set "
+      + "beside the others."));
     body.append(paragraph(
-      "So the nought is that absence. It is not a reading: nobody has examined "
-      + `a ${column.lab} specification and found it silent on this behaviour.`,
+      "The nought therefore stands for that absence. Nobody has examined a "
+      + `${column.lab} specification and found it silent on this behaviour.`,
       "missing"));
     const ask = document.createElement("p");
     const link = document.createElement("a");
@@ -508,9 +507,9 @@ function render() {
     `${behaviours.length} behaviours over ${judged} specifications. `
     + "Each figure is the mean of the panel's judges."
     + (unjudged.length
-      ? ` ${unjudged.join(", ")} stand at nought throughout because the index `
-        + "carries no specification from them, which is the absence of a "
-        + "document rather than a reading of one."
+      ? ` The index carries no specification from ${unjudged.join(", ")}, so they `
+        + "stand at nought throughout, and that nought means there is no document "
+        + "to read."
       : "");
 }
 
