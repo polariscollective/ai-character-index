@@ -1547,9 +1547,13 @@ function updateBehaviourDepths() {
 }
 
 function updateBehaviourCount() {
-  const total = payloadBehaviours().length;
+  const loaded = payloadBehaviours().length;
   updateExportControl();
-  if (!total) return;
+  if (!loaded) return;
+  // From the registry, not from the loaded payload: under a sliced payload
+  // payloadBehaviours() undercounts, which would print "3 of 3 selected" for a
+  // publication of thirteen and disable "select all" long before everything is.
+  const total = registrySlugs.length;
   const chosen = state.selectedSlugs.length;
   elements.behaviourCount.textContent = `${chosen} of ${total} selected`;
   elements.selectAllBehaviours.disabled = chosen === total;
@@ -4150,7 +4154,12 @@ function focusPassage(panel, index, shouldScroll = true) {
 elements.selectAllBehaviours.addEventListener("click", () => {
   // Not awaited: see the comment in toggleBehaviour. The menu ticks every box
   // immediately and the bubbles for each behaviour arrive as they load.
-  setSelection(payloadBehaviours().map(behaviour => behaviour.slug));
+  //
+  // From the registry, not from the loaded payload: under a sliced payload,
+  // payloadBehaviours() holds only what has already arrived, and a filter (see
+  // setSelection) can only narrow that. Selecting all from it would tick
+  // everything loaded and silently leave the rest unselected.
+  setSelection(registrySlugs);
 });
 // Not awaited: clearing needs nothing from the network, but setSelection is a
 // promise regardless and this click handler was never going to wait on it.
