@@ -96,6 +96,23 @@ test("a set that is present and empty keeps nothing, which is not what a null se
   assert.deepEqual(out.comparisons, {});
 });
 
+test("the payload carries an index of which behaviours cite which locator", () => {
+  const payload = { behaviours: [
+    { slug: "helpfulness", numeric_id: 1,
+      coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }] } } },
+    { slug: "no-sycophancy", numeric_id: 2,
+      coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }, { locator: `${A} > s > ¶2` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
+  assert.deepEqual(out.behaviours.map(b => b.slug), ["helpfulness"]);
+  assert.deepEqual(out.citedBy, { [`${A} > s > ¶1`]: [1, 2], [`${A} > s > ¶2`]: [2] });
+});
+
+test("an unsliced payload carries no index, having no need of one", () => {
+  const payload = { behaviours: [{ slug: "helpfulness", numeric_id: 1, coverage: {} }] };
+  assert.equal(sliceColumn("payload", payload, all).citedBy, undefined);
+});
+
 /* The column this is handed is held in a module level map and served to every
  * later request, so a slice that wrote into its input would corrupt what the
  * next caller reads. Nothing in the signature says so, which is exactly why it

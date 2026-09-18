@@ -57,13 +57,40 @@ function sliceLinks(links, { documents, behaviours }) {
   };
 }
 
+/**
+ * Which behaviours cite which paragraph, by numeric id.
+ *
+ * A ?passage= link has to know this before it knows what to load: it opens the
+ * document, ticks a behaviour that cites the paragraph, and reveals it. Reading
+ * that out of the behaviours themselves works only while all of them are in
+ * memory, which is exactly what slicing ends. 67 KB for 785 cited locators,
+ * against the 914 KB payload it replaces for this one purpose.
+ *
+ * Numeric ids rather than slugs because the registry already carries them and
+ * they are a third of the bytes.
+ */
+export function citationIndex(payload) {
+  const index = {};
+  for (const behaviour of payload.behaviours || []) {
+    const id = behaviour.numeric_id;
+    for (const coverage of Object.values(behaviour.coverage || {})) {
+      for (const passage of coverage.passages || []) {
+        (index[passage.locator] ||= []).push(id);
+      }
+    }
+  }
+  for (const ids of Object.values(index)) ids.sort((a, b) => a - b);
+  return index;
+}
+
 export function sliceColumn(column, payload, wanted) {
   if (payload === null || payload === undefined) return payload;
   const { documents, behaviours } = wanted;
   if (column === "payload") {
     if (!behaviours) return payload;
     return { ...payload,
-             behaviours: (payload.behaviours || []).filter(b => behaviours.has(b.slug)) };
+             behaviours: (payload.behaviours || []).filter(b => behaviours.has(b.slug)),
+             citedBy: citationIndex(payload) };
   }
   if (column === "documents") {
     if (!documents) return payload;

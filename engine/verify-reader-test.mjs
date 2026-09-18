@@ -43,9 +43,9 @@ const READER_DATA = join(fileURLToPath(new URL("..", import.meta.url)),
                          "tests", "fixtures", "reader");
 
 const server = createServer(async (request, response) => {
-  // The reader takes its three payloads from routes now. Two of them are
-  // answered here from the committed files: this walker tests the page, not the
-  // database. The links route is not staged, and reader-routes.mjs 404s it.
+  // The reader takes its three payloads from routes now, all three answered
+  // here from the committed files: this walker tests the page, not the
+  // database.
   if (await serveReaderRoute(request, response, READER_DATA, "behaviours")) return;
   let path = normalize(decodeURIComponent(new URL(request.url, "http://x").pathname));
   /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is
@@ -929,11 +929,11 @@ if (behaviours.length === 0) {
  * kinds of paragraph beside them -- which no checkout carried, so their absence
  * had to be declared here or every machine but the one that generated them
  * failed. They are rows in the database now, asked for at /api/reader/links, and
- * reader-routes.mjs answers that address itself with a 404 for a route it does
- * not stage. It never reaches the file branch below, so the audit never sees it
- * and has nothing to forgive. The reader renders without bubbles, exactly as it
- * did when the files were missing; what the bubbles contain is held to the
- * Python in app/lib/__tests__/links.test.mjs.
+ * reader-routes.mjs stages that route for real, answering it from the fixture
+ * file rather than 404ing. The audit never sees a missing path for it and has
+ * nothing to forgive. The reader renders with bubbles now, from that fixture,
+ * the same way it does against the database; what the bubbles contain is held
+ * to the Python in app/lib/__tests__/links.test.mjs.
  *
  * If that ever changes -- if the fixture router stops answering it -- the audit
  * should fail, which is why there is no allowance left here to hide it. */
