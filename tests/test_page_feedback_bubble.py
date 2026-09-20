@@ -105,6 +105,9 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
 
     def test_the_dialog_offers_a_person_as_well_as_a_form(self):
         """Somebody who would rather write a sentence to a human than fill in
-        a form should not have to fill in the form."""
-        self.assertIn("mailto:sam@polariscollective.org",
-                      MODULE.read_text(encoding="utf-8"))
+        a form should not have to fill in the form. The address has to be a
+        link and it has to say itself: a bare string anywhere in the file
+        would satisfy a test that only looked for the address."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn('href: "mailto:sam@polariscollective.org"', source)
+        self.assertIn('textContent: "sam@polariscollective.org"', source)

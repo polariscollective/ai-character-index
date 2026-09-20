@@ -2108,6 +2108,26 @@ function pngSize(buffer) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
+/* Rust pixels in a decoded PNG: #A0522D, and no page of this site paints that
+ * colour anywhere, so finding it in the PNG is finding an annotation. Takes
+ * the PNG's own bytes, base64-encoded, and decodes them inside the page
+ * rather than in Node, since a PNG's pixels are compressed. */
+const rustIn = async png => page.evaluate(async encoded => {
+  const binary = atob(encoded);
+  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ink = canvas.getContext("2d");
+  ink.drawImage(bitmap, 0, 0);
+  const { data } = ink.getImageData(0, 0, bitmap.width, bitmap.height);
+  let rust = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (Math.abs(data[i] - 0xA0) < 12 && Math.abs(data[i + 1] - 0x52) < 12
+     && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
+  }
+  return rust;
+}, png.toString("base64"));
+
 /* The bubble at the bottom right of every public page. What a walker can show
  * that no unit test can is that the pill is there on a page that is not the
  * reader, that the dialog refuses to send without both fields, and that what
@@ -2297,6 +2317,45 @@ console.log("== Every page: the feedback bubble ==");
     "the text tool takes words and paints them onto the overlay",
     JSON.stringify(typed));
 
+  /* The check above only proves something was painted, not that it was the
+   * words typed: a fixed placeholder in place of shape.text would paint just
+   * as many pixels for a long sentence. Typing a single character in the
+   * same place with the same tool and colour, and comparing the two rust
+   * counts, tells them apart. The text tool is already selected from the
+   * check above; the block reselects it anyway, so it does not depend on
+   * that. */
+  const byLength = await page.evaluate(() => {
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const ink = canvas.getContext("2d");
+    const rustOn = () => {
+      const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+      let rust = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0 && Math.abs(data[i] - 0xA0) < 12
+         && Math.abs(data[i + 1] - 0x52) < 12 && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
+      }
+      return rust;
+    };
+    const type = words => {
+      document.querySelector("#pf-clear").click();
+      canvas.dispatchEvent(new PointerEvent("pointerdown", {
+        pointerId: 7, bubbles: true, clientX: box.left + 80, clientY: box.top + 260,
+      }));
+      const field = document.querySelector(".pf-typing");
+      field.value = words;
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      return rustOn();
+    };
+    document.querySelector("#pf-tool-text").click();
+    const long = type("This heading says the wrong date");
+    const short = type("X");
+    return { long, short };
+  });
+  check(byLength.long > byLength.short * 3,
+    "the words painted are the words typed, not a fixed string",
+    JSON.stringify(byLength));
+
   const ringed = await page.evaluate(() => {
     document.querySelector("#pf-clear").click();
     document.querySelector("#pf-tool-circle").click();
@@ -2396,22 +2455,7 @@ console.log("== Every page: the feedback bubble ==");
    * page of this site paints that colour anywhere, so finding it in the PNG is
    * finding the annotation. Read out of the decoded image rather than the file,
    * since a PNG's pixels are compressed. */
-  const marked = await page.evaluate(async encoded => {
-    const binary = atob(encoded);
-    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    const blob = new Blob([bytes], { type: "image/png" });
-    const bitmap = await createImageBitmap(blob);
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ink = canvas.getContext("2d");
-    ink.drawImage(bitmap, 0, 0);
-    const { data } = ink.getImageData(0, 0, bitmap.width, bitmap.height);
-    let rust = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (Math.abs(data[i] - 0xA0) < 12 && Math.abs(data[i + 1] - 0x52) < 12
-       && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
-    }
-    return rust;
-  }, sent.screenshot.png.toString("base64"));
+  const marked = await rustIn(sent.screenshot.png);
   check(marked > 100, "the box drawn on the overlay is in the PNG that was sent",
     `rust pixels: ${marked}`);
 
@@ -2433,6 +2477,53 @@ console.log("== Every page: the feedback bubble ==");
   await page.waitForTimeout(1200);
   const closed = await page.evaluate(() => !document.querySelector("#pf-note").open);
   check(closed, "the dialog closes on its own after a successful send");
+
+  /* The box above proved a mark reaches the posted PNG. A box paints its
+   * corner and its middle stays empty either way, so it cannot stand for the
+   * other tools: the same proof is owed to text and to a circle, each sent on
+   * its own so the PNG being inspected carries exactly one kind of mark. */
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-text").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent("pointerdown", {
+      pointerId: 8, bubbles: true, clientX: box.left + 80, clientY: box.top + 220,
+    }));
+    const field = document.querySelector(".pf-typing");
+    field.value = "This heading says the wrong date";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+  await page.locator("#pf-comment").fill("A text mark, sent on its own.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(800);
+  const sentText = lastPageFeedbackReceived();
+  const textRust = sentText?.screenshot ? await rustIn(sentText.screenshot.png) : 0;
+  check(textRust > 100, "a text mark reaches the PNG that is sent, not only the overlay",
+    `rust pixels: ${textRust}`);
+
+  await page.waitForTimeout(1200);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-circle").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 9, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 120, 300);
+    send("pointermove", 280, 400);
+    send("pointerup", 280, 400);
+  });
+  await page.locator("#pf-comment").fill("A circle mark, sent on its own.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(800);
+  const sentCircle = lastPageFeedbackReceived();
+  const circleRust = sentCircle?.screenshot ? await rustIn(sentCircle.screenshot.png) : 0;
+  check(circleRust > 100, "a circle mark reaches the PNG that is sent, not only the overlay",
+    `rust pixels: ${circleRust}`);
 
   await page.waitForTimeout(1200);
   await page.locator("#pf-pill").click();
