@@ -30,6 +30,9 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
 
     def test_the_form_carries_its_honeypot(self):
         """The route answers a filled honeypot as a success and records nothing.
-        A form that stopped sending the field would send every spam post
-        straight into the table instead."""
-        self.assertIn('id: "pf-website"', MODULE.read_text(encoding="utf-8"))
+        Two halves, and both have to hold: the field is built, and its value
+        goes on the wire. A form that built the field and stopped sending it
+        would put every spam post straight into the table."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn('id: "pf-website"', source)
+        self.assertIn('form.set("website", trap.value)', source)

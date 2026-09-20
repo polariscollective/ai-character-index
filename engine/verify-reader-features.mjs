@@ -2161,6 +2161,15 @@ console.log("== Every page: the feedback bubble ==");
     "the dialog opens focused on the comment, with send refused while it is empty",
     JSON.stringify(seen));
 
+  const named = await page.evaluate(() => {
+    const note = document.querySelector("#pf-note");
+    const by = note?.getAttribute("aria-labelledby");
+    return { by, names: by ? document.getElementById(by)?.textContent : null };
+  });
+  check(named.by === "pf-title" && named.names === "Tell us what you see",
+    "the dialog carries an accessible name, as every other dialog here does",
+    JSON.stringify(named));
+
   await page.locator("#pf-comment").fill("The governance table runs off the right.");
   await page.waitForTimeout(80);
   seen = await page.evaluate(() => ({

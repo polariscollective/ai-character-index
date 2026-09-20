@@ -209,7 +209,7 @@ function build() {
   });
 
   const note = el("dialog", { className: "pf-note", id: "pf-note" },
-    el("h2", { textContent: "Tell us what you see" }),
+    el("h2", { id: "pf-title", textContent: "Tell us what you see" }),
     el("div", { className: "pf-field" },
       el("label", { htmlFor: "pf-comment", textContent: "What you want to tell us" }),
       comment),
@@ -225,6 +225,10 @@ function build() {
       + "your browser's identification string." }),
     said,
     el("div", { className: "pf-row" }, cancel, sendButton));
+
+  // Named for a screen reader, the way every other dialog in this repository
+  // is. Without it the dialog is announced with no name at all.
+  note.setAttribute("aria-labelledby", "pf-title");
 
   const ready = () => {
     sendButton.disabled = !(comment.value.trim() && email.value.trim());
