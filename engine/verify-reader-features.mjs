@@ -2433,19 +2433,19 @@ console.log("== Every page: the feedback bubble ==");
    * with a popover open and one with nothing open: if the popover were not
    * drawn, the two would agree everywhere, including inside its own box.
    *
-   * The pill is pressed by keyboard here (focus, then Enter), not clicked.
-   * A real pointer click on the pill dismisses any open auto popover on its
-   * own, natively, on pointerdown, before the "click" event is even
-   * dispatched to the pill's own listener: proved directly with a
-   * capture-phase click listener on the pill, which already saw the popover
-   * closed. That happens whatever this fix does, because both tagFloating
-   * and showModal run inside the click handler, which only starts after the
-   * popover is already gone. A keyboard activation fires "click" with no
-   * pointerdown before it, so it is the one path that reaches the code this
-   * fix changed, and it is a real path: what a keyboard or screen-reader user
-   * does. A mouse user who opens a note and then clicks the pill still loses
-   * the note, for a reason this task did not create and cannot fix inside a
-   * single click handler. */
+   * Two ways of pressing the pill are checked, because they reach the fix
+   * differently. A real pointer click dismisses any open auto popover on its
+   * own, natively, on pointerdown's default action, before the "click" event
+   * is even dispatched: measured directly with a document.querySelectorAll(
+   * ":popover-open").length count taken at three capture-phase listeners on
+   * the pill (pointerdown, pointerup, click), the popover was still open at
+   * pointerdown and already gone by pointerup and click. That is why the
+   * pill's own pointerdown listener, not its click handler, is what tags the
+   * floating elements now: a listener runs before the default action of its
+   * own event, so pointerdown sees the popover the click handler cannot. A
+   * keyboard activation fires "click" with no pointerdown before it, so it
+   * is checked too, on the fallback path that re-tags inside the click
+   * handler itself. */
   await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForTimeout(250);
 
@@ -2458,6 +2458,46 @@ console.log("== Every page: the feedback bubble ==");
     await page.waitForTimeout(100);
     return dataUrl;
   };
+
+  const pressPillByMouse = async () => {
+    const box = await page.locator("#pf-pill").boundingBox();
+    // A real mouse click, not locator.click(): the point of this path is the
+    // browser's own native light dismiss, which only fires for trusted
+    // pointer input.
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const diffWithinBox = (a, b, box) => page.evaluate(async ({ a, b, box }) => {
+    const clientWide = document.documentElement.clientWidth;
+    const clientTall = document.documentElement.clientHeight;
+    const decode = async url => {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+      return canvas;
+    };
+    const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
+    const scaleX = canvasA.width / clientWide;
+    const scaleY = canvasA.height / clientTall;
+    const x = Math.max(0, Math.floor(box.left * scaleX));
+    const y = Math.max(0, Math.floor(box.top * scaleY));
+    const w = Math.max(1, Math.min(canvasA.width - x, Math.ceil(box.width * scaleX)));
+    const h = Math.max(1, Math.min(canvasA.height - y, Math.ceil(box.height * scaleY)));
+    const dataA = canvasA.getContext("2d").getImageData(x, y, w, h).data;
+    const dataB = canvasB.getContext("2d").getImageData(x, y, w, h).data;
+    let differing = 0;
+    for (let i = 0; i < dataA.length; i += 4) {
+      if (Math.abs(dataA[i] - dataB[i]) > 10
+       || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
+       || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
+    }
+    return { differing, total: w * h, width: w, height: h };
+  }, { a, b, box });
 
   const noteTrigger = `[data-behaviour-note="${DEFINED}"]`;
   const triggerThere = await page.evaluate(
@@ -2482,37 +2522,39 @@ console.log("== Every page: the feedback bubble ==");
 
     const withNote = await pressPillByKeyboard();
 
-    const popoverDiff = noteBox && await page.evaluate(async ({ a, b, box }) => {
-      const clientWide = document.documentElement.clientWidth;
-      const clientTall = document.documentElement.clientHeight;
-      const decode = async url => {
-        const bitmap = await createImageBitmap(await (await fetch(url)).blob());
-        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-        canvas.getContext("2d").drawImage(bitmap, 0, 0);
-        return canvas;
-      };
-      const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
-      const scaleX = canvasA.width / clientWide;
-      const scaleY = canvasA.height / clientTall;
-      const x = Math.max(0, Math.floor(box.left * scaleX));
-      const y = Math.max(0, Math.floor(box.top * scaleY));
-      const w = Math.max(1, Math.min(canvasA.width - x, Math.ceil(box.width * scaleX)));
-      const h = Math.max(1, Math.min(canvasA.height - y, Math.ceil(box.height * scaleY)));
-      const dataA = canvasA.getContext("2d").getImageData(x, y, w, h).data;
-      const dataB = canvasB.getContext("2d").getImageData(x, y, w, h).data;
-      let differing = 0;
-      for (let i = 0; i < dataA.length; i += 4) {
-        if (Math.abs(dataA[i] - dataB[i]) > 10
-         || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
-         || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
-      }
-      return { differing, total: w * h, width: w, height: h };
-    }, { a: withoutNote, b: withNote, box: noteBox });
+    const popoverDiff = noteBox && await diffWithinBox(withoutNote, withNote, noteBox);
 
     check(Boolean(popoverDiff) && popoverDiff.total > 0
         && popoverDiff.differing / popoverDiff.total > 0.3,
       "a popover open when the pill is pressed is drawn into the capture, not closed by the dialog",
       JSON.stringify(popoverDiff));
+
+    // Same proof again, this time with a real mouse click on the pill: the
+    // path the pointerdown fix exists for.
+    const withoutNoteMouse = await pressPillByMouse();
+
+    await page.click(noteTrigger);
+    await page.waitForTimeout(150);
+    const noteBoxMouse = await page.evaluate(() => {
+      const note = document.querySelector("#key-note");
+      if (!note?.matches(":popover-open")) return null;
+      const rect = note.getBoundingClientRect();
+      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    });
+    check(Boolean(noteBoxMouse) && noteBoxMouse.width > 0 && noteBoxMouse.height > 0,
+      "the behaviour note is open as a popover before the pill is pressed by mouse",
+      JSON.stringify(noteBoxMouse));
+
+    const withNoteMouse = await pressPillByMouse();
+
+    const popoverDiffMouse = noteBoxMouse
+      && await diffWithinBox(withoutNoteMouse, withNoteMouse, noteBoxMouse);
+
+    check(Boolean(popoverDiffMouse) && popoverDiffMouse.total > 0
+        && popoverDiffMouse.differing / popoverDiffMouse.total > 0.3,
+      "a popover open when the pill is pressed by mouse is drawn into the capture, "
+      + "not closed by light dismiss",
+      JSON.stringify(popoverDiffMouse));
   }
 
   check(pageErrors.length === 0, "the feedback bubble: no console errors",

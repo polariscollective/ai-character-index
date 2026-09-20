@@ -776,14 +776,25 @@ function build() {
   // after the await is how a late picture knows it is no longer wanted.
   let opening = 0;
 
+  /* Measured on pointerdown, not on click, and that is the whole of it: a
+   * listener runs before the default action of its own event, and the
+   * browser's light dismiss of an open popover is a default action of the
+   * press. By the time a click handler runs, the reader's note has already
+   * gone. */
+  let floating = [];
+  let pressedAt = 0;
+  pill.addEventListener("pointerdown", () => {
+    floating = tagFloating([pill, note]);
+    pressedAt = Date.now();
+  }, true);
+
   pill.addEventListener("click", async () => {
     const mine = ++opening;
-    /* Measured before the dialog opens, and that is the whole of the reason:
-     * showing a modal dialog closes every open popover, natively and without
-     * asking, so by the time the camera runs there is nothing left to pin.
-     * These attributes outlive the closing, and placeFloating shows the note
-     * again in the clone. */
-    const floating = tagFloating([pill, note]);
+    // A pointerdown already tagged the floating elements before light dismiss
+    // could close them (the listener above). Keyboard activation fires
+    // "click" with no pointerdown before it, so re-tag here when the last
+    // press is missing or too old to be the one that led to this click.
+    if (!pressedAt || Date.now() - pressedAt > 1000) floating = tagFloating([pill, note]);
     say(said, "", false);
     state.base = null;
     state.shapes = [];
