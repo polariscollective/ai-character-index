@@ -2772,3 +2772,709 @@ honest URL into one that goes somewhere else.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ```
+
+---
+
+### Task 10: Words on the picture, a circle, and a way round the form
+
+> Added on 20 September 2026, after the editor was working and the operator
+> had used it. Four additions asked for in one breath: a text mark, a circle,
+> a glyph on each tool so the toolbar reads at a glance, and a line offering
+> the address of a person for anyone who would rather not use a form. Runs
+> after Task 11, which is a defect, and before Task 9, so the record Task 9
+> writes describes the editor as it ships.
+
+**Files:**
+- Modify: `site/page-feedback.js`
+- Modify: `tests/test_page_feedback_bubble.py`
+- Modify: `engine/verify-reader-features.mjs`
+
+**Interfaces:**
+- Consumes: `state.shapes`, `draw(ink, shape)`, `at(event, canvas)`,
+  `repaint(canvas, drawing)`, `overlay(base, tools)`, `el`, `STROKE`,
+  `COLOURS`, and the `toolButton`/`.pf-pick` toolbar from Task 8.
+- Produces: two more shapes, `{ tool: "circle", colour, width, from, to }` and
+  `{ tool: "text", colour, size, at: {x, y}, text }`, where `size` is in image
+  pixels. New DOM ids: `#pf-tool-circle`, `#pf-tool-text`. New class:
+  `.pf-typing`.
+
+**On emoji.** The operator asked for "des petites emojis" on the tool buttons.
+The Polaris framework forbids them in as many words ("Do not: icon libraries
+and emoji"), and the repository already draws its own icons: the reader's copy
+and locator icons are inline SVG on a 16 unit grid at 1.4 stroke in
+`currentColor`. These glyphs are in that hand, which serves what was asked for
+(a toolbar that reads at a glance) without breaking the rule the same person
+wrote. The word stays beside the glyph: a glyph alone is a guess.
+
+- [ ] **Step 1: Add the styles**
+
+In `STYLE`, after the `.pf-swatch` rules and before the reduced-motion block:
+
+```css
+.pf-tool { display: inline-flex; align-items: center; gap: 6px; }
+.pf-tool svg { flex: none; }
+.pf-note .pf-why a {
+  color: #23281B;
+  text-decoration: underline 2px #B7C94B;
+  text-underline-offset: 3px;
+}
+.pf-note .pf-why a:hover { background: #B7C94B; }
+.pf-typing {
+  position: absolute;
+  z-index: 1;
+  min-width: 140px;
+  padding: 0 2px;
+  border: 1px dashed #5C6B3C;
+  border-radius: 2px;
+  background: rgb(241 239 227 / .85);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+}
+.pf-typing:focus-visible { outline: 2px solid #B7C94B; outline-offset: 0; }
+```
+
+Dashed, because a box being typed into and a box that has been drawn should
+not look alike.
+
+- [ ] **Step 2: Add the constants**
+
+Beside `STROKE` and `COLOURS`:
+
+```js
+/* Sixteen CSS pixels, scaled into the image the same way a stroke is, so what
+ * the reader typed is the size they saw themselves type. */
+const TEXT_SIZE = 16;
+
+/* The tool glyphs, drawn here rather than fetched. The framework carries no
+ * icon library and no emoji, and the reader's copy icons are already inline
+ * SVG on a 16 unit grid at 1.4 stroke in currentColor; these are the same
+ * hand. The word stays beside the glyph, because a glyph alone is a guess. */
+const GLYPH = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.4"'
+  + ' stroke-linecap="round" stroke-linejoin="round">';
+
+const GLYPHS = {
+  box: '<rect x="2.7" y="4.2" width="10.6" height="7.6" rx="1"/>',
+  circle: '<circle cx="8" cy="8" r="5"/>',
+  arrow: '<path d="M3.2 12.8 12.8 3.2M12.8 3.2H8.3M12.8 3.2v4.5"/>',
+  pen: '<path d="M3 13l1-3.4 6.1-6.1 2.4 2.4-6.1 6.1z"/>',
+  text: '<path d="M3.6 4.2h8.8M8 4.2v7.6"/>',
+};
+```
+
+- [ ] **Step 3: Teach draw the circle and the words**
+
+In `draw(ink, shape)`, immediately after the four `ink.` lines that set the
+stroke and before the `if (shape.tool === "box")` branch:
+
+```js
+  if (shape.tool === "text") {
+    ink.fillStyle = shape.colour;
+    ink.textBaseline = "top";
+    ink.font = `${shape.size}px "Instrument Sans", system-ui, sans-serif`;
+    ink.fillText(shape.text, shape.at.x, shape.at.y);
+    return;
+  }
+
+  // The ellipse inscribed in the drag, so a circle is drawn the way a box is
+  // and needs nothing of its own in the pointer handling.
+  if (shape.tool === "circle") {
+    ink.beginPath();
+    ink.ellipse((shape.from.x + shape.to.x) / 2, (shape.from.y + shape.to.y) / 2,
+                Math.abs(shape.to.x - shape.from.x) / 2,
+                Math.abs(shape.to.y - shape.from.y) / 2, 0, 0, Math.PI * 2);
+    ink.stroke();
+    return;
+  }
+```
+
+- [ ] **Step 4: Write the field**
+
+Above `overlay()`:
+
+```js
+/**
+ * A field where the pointer landed, for a mark made of words.
+ *
+ * A real input rather than keystrokes collected by hand, so the caret, the
+ * selection, backspace, paste and a phone's own keyboard all work without
+ * being reimplemented. It commits on Enter or on losing focus, and an empty
+ * one commits nothing, which is the rule a tap that never moved already obeys.
+ *
+ * The field is placed in display pixels and the shape is stored in image
+ * pixels, because those are two different spaces and the picture is usually
+ * shown smaller than it is. The field's font size is the one it will be drawn
+ * at, so what the reader types is the size they get.
+ */
+function typeHere(canvas, tools, where, event) {
+  const shot = canvas.parentElement;
+  const box = canvas.getBoundingClientRect();
+  const shown = box.width / canvas.width;
+
+  const field = el("input", { type: "text", className: "pf-typing" });
+  field.setAttribute("aria-label", "Text to place on the screenshot");
+  field.style.left = `${event.clientX - box.left}px`;
+  field.style.top = `${event.clientY - box.top}px`;
+  field.style.color = tools.colour;
+
+  // Enter removes the field, and removing a focused element fires blur, so
+  // without this the words would be stored twice.
+  let done = false;
+  const finish = keep => {
+    if (done) return;
+    done = true;
+    const words = field.value.trim();
+    field.remove();
+    if (!keep || !words) return;
+    state.shapes.push({
+      tool: "text",
+      colour: tools.colour,
+      size: TEXT_SIZE / shown,
+      at: where,
+      text: words,
+    });
+    repaint(canvas, null);
+  };
+
+  field.addEventListener("keydown", key => {
+    if (key.key === "Enter") {
+      key.preventDefault();
+      finish(true);
+    }
+    if (key.key === "Escape") {
+      key.preventDefault();
+      finish(false);
+    }
+  });
+  field.addEventListener("blur", () => finish(true));
+
+  shot.append(field);
+  field.focus();
+}
+```
+
+- [ ] **Step 5: Send a text press to the field rather than to a drag**
+
+In `overlay()`, at the head of the `pointerdown` handler, after
+`event.preventDefault()` and before the pointer capture:
+
+```js
+    if (tools.tool === "text") {
+      typeHere(canvas, tools, at(event, canvas), event);
+      return;
+    }
+```
+
+Nothing else in `overlay` changes. A circle takes the same `{ from, to }`
+branch a box and an arrow already take, including the threshold that discards
+a press that never moved.
+
+- [ ] **Step 6: Give each tool its glyph**
+
+In `toolButton`, after the button is created and before its `aria-pressed` is
+set:
+
+```js
+    button.insertAdjacentHTML("afterbegin", `${GLYPH}${GLYPHS[name]}</svg>`);
+```
+
+A controlled literal from a constant in this file, never anything a reader
+typed.
+
+- [ ] **Step 7: Put the circle in the toolbar**
+
+In `build()`, the toolbar's tool buttons become:
+
+```js
+    toolButton("box", "Box"), toolButton("circle", "Circle"),
+    toolButton("arrow", "Arrow"), toolButton("pen", "Pen"),
+    toolButton("text", "Text"),
+```
+
+- [ ] **Step 8: Offer a person instead of a form**
+
+In `build()`, immediately after the "Sent with this" paragraph and before
+`said`:
+
+```js
+    el("p", { className: "pf-why" },
+      document.createTextNode("Or contact us at "),
+      el("a", { href: "mailto:sam@polariscollective.org",
+                textContent: "sam@polariscollective.org" }),
+      document.createTextNode(".")),
+```
+
+Asked for by the operator, whose address it is. Worth knowing and not worth
+arguing: an address on a public page is harvested, which is the reasoning this
+repository already records for never publishing a reader's.
+
+- [ ] **Step 9: Check it parses**
+
+Run: `node --check site/page-feedback.js`
+Expected: no output, exit 0.
+
+- [ ] **Step 10: Add the Python tests**
+
+In `tests/test_page_feedback_bubble.py`:
+
+```python
+    def test_words_can_be_placed_on_the_picture(self):
+        """A box says where, a circle says which, an arrow says that one, a
+        pen says roughly. None of them says what. A text mark is a shape like
+        the others, so undo and clear need no special case and compose draws
+        it into the PNG that is sent rather than only onto the overlay."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn('toolButton("text", "Text")', source)
+        self.assertIn('if (shape.tool === "text")', source)
+        self.assertIn("ink.fillText(shape.text, shape.at.x, shape.at.y)", source)
+
+    def test_the_toolbar_carries_five_tools_each_with_a_drawn_glyph(self):
+        """The framework forbids icon libraries and emoji, and the repository
+        draws its own icons: inline SVG on a 16 unit grid at 1.4 stroke in
+        currentColor, the same hand as the reader's copy icons. The word stays
+        beside the glyph, because a glyph alone is a guess."""
+        source = MODULE.read_text(encoding="utf-8")
+        for tool, label in [("box", "Box"), ("circle", "Circle"), ("arrow", "Arrow"),
+                            ("pen", "Pen"), ("text", "Text")]:
+            with self.subTest(tool=tool):
+                self.assertIn(f'toolButton("{tool}", "{label}")', source)
+                self.assertIn(f"{tool}: '<", source)
+        self.assertIn('stroke-width="1.4"', source)
+
+    def test_the_dialog_offers_a_person_as_well_as_a_form(self):
+        """Somebody who would rather write a sentence to a human than fill in
+        a form should not have to fill in the form."""
+        self.assertIn("mailto:sam@polariscollective.org",
+                      MODULE.read_text(encoding="utf-8"))
+```
+
+Run: `python3 -m unittest discover -s tests 2>&1 | tail -5`
+Expected: every test passes.
+
+- [ ] **Step 11: Add the walker checks**
+
+In `engine/verify-reader-features.mjs`, in the feedback bubble section,
+immediately after the `check(afterClear === 0, "clear removes what undo left", ...)`
+call:
+
+```js
+  const typed = await page.evaluate(() => {
+    document.querySelector("#pf-tool-text").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent("pointerdown", {
+      pointerId: 5, bubbles: true, clientX: box.left + 80, clientY: box.top + 220,
+    }));
+    const field = document.querySelector(".pf-typing");
+    if (!field) return { field: false };
+    field.value = "This heading says the wrong date";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return { field: true, gone: !document.querySelector(".pf-typing"), painted };
+  });
+  check(typed.field && typed.gone && typed.painted > 100,
+    "the text tool takes words and paints them onto the overlay",
+    JSON.stringify(typed));
+
+  const ringed = await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-circle").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 6, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 120, 300);
+    send("pointermove", 280, 400);
+    send("pointerup", 280, 400);
+    const ink = canvas.getContext("2d");
+    const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    // The middle of a circle is empty and the middle of a box's drag is too,
+    // so what tells them apart is the corner: a box paints its corner, a
+    // circle does not.
+    const corner = ink.getImageData(
+      Math.round((120 + 4) * (canvas.width / box.width)),
+      Math.round((300 + 4) * (canvas.height / box.height)), 3, 3).data;
+    let inked = 0;
+    for (let i = 3; i < corner.length; i += 4) if (corner[i] > 0) inked += 1;
+    return { painted, inked };
+  });
+  check(ringed.painted > 100 && ringed.inked === 0,
+    "the circle tool paints a ring, and leaves the corner of its drag empty",
+    JSON.stringify(ringed));
+
+  const glyphs = await page.evaluate(() => {
+    const tools = ["box", "circle", "arrow", "pen", "text"];
+    return tools.map(name => {
+      const button = document.querySelector(`#pf-tool-${name}`);
+      return { name, there: Boolean(button),
+               glyph: Boolean(button?.querySelector("svg")),
+               word: button?.textContent.trim() };
+    });
+  });
+  check(glyphs.every(tool => tool.there && tool.glyph && tool.word),
+    "every tool carries a drawn glyph and keeps its word",
+    JSON.stringify(glyphs));
+
+  const reachable = await page.evaluate(() => {
+    const link = document.querySelector("#pf-note a[href^='mailto:']");
+    return { there: Boolean(link), href: link?.getAttribute("href") };
+  });
+  check(reachable.href === "mailto:sam@polariscollective.org",
+    "the dialog offers a person as well as a form", JSON.stringify(reachable));
+
+  await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-box").click();
+  });
+```
+
+The last block puts the box tool back and empties the overlay, because the
+block below it draws the box whose rust pixels prove an annotation reaches the
+sent PNG.
+
+- [ ] **Step 12: Produce the image the controller will judge**
+
+Regenerate the phone-width evidence beside the earlier ones in the scratchpad
+at
+`/private/tmp/claude-501/-Users-sverbo-Desktop-Codes-Polaris-ai-character-index/3abc866b-7c91-4c99-b3c1-0f1c66b51a1b/scratchpad/`,
+never in the repository, as `editor-phone.png`: `/overview.html` at 400 by 800
+with the dialog open, one circle drawn and one text mark placed, so the
+controller can see whether a five-button toolbar still fits at phone width and
+whether the field is usable there. Save a desktop one too, `editor-tools.png`,
+at 1200 by 800, showing all five glyphs and one of each mark.
+
+- [ ] **Step 13: Run everything**
+
+```bash
+node --check site/page-feedback.js
+python3 -m unittest discover -s tests 2>&1 | tail -5
+node engine/verify-reader-features.mjs
+pnpm test:routes
+```
+
+The walker must end at `2 FAILURES`, being only `focus lands back on the
+publisher just chosen` and `comparing, focus lands back on the right side's
+publisher`.
+
+- [ ] **Step 14: Commit**
+
+```bash
+git add site/page-feedback.js tests/test_page_feedback_bubble.py engine/verify-reader-features.mjs
+git commit -m "feat: a circle, words on the picture, a glyph per tool, and a person to write to
+
+A box says where and an arrow says which; neither says what, and writing
+it in the comment box below costs the reader the job of saying where on
+the picture they mean. The text mark is a real input rather than
+keystrokes collected by hand, so the caret, paste and a phone keyboard
+work without being reimplemented, and it is a shape like every other
+tool so undo and clear need no special case. The circle is the ellipse
+inscribed in the drag, which is the box's own pointer handling. The
+glyphs are inline SVG in the hand the reader's copy icons already use,
+because the framework carries no icon library and no emoji, and the word
+stays beside the glyph."
+```
+
+### Task 11: What the capture misses
+
+> Added on 20 September 2026, reported by the operator against the running
+> build. Two faults, both in the same place, both invisible on the four prose
+> pages and both obvious in the reader. Runs before Task 10 and Task 9,
+> because it is a defect and they are additions.
+
+**The two faults.**
+
+The doc reader does not scroll the window. It scrolls its own document column,
+so `window.scrollY` stays at zero however far down the reader has read, the
+capture is cropped at the top of the page, and the scrollable element inside is
+drawn from its own top. The reader sends a picture of a passage they were not
+looking at.
+
+And a pop-up open at the moment of capture does not appear in it. A showing
+`<dialog>` and an open `[popover]` live in the top layer, which the cloned
+document html2canvas renders has no notion of: in the clone they are ordinary
+elements again, and a popover is back to `display: none`. The reader who wants
+to report something about a note cannot photograph the note.
+
+**Files:**
+- Modify: `site/page-feedback.js`
+- Modify: `tests/test_page_feedback_bubble.py`
+- Modify: `engine/verify-reader-features.mjs`
+
+**Interfaces:**
+- Consumes: `capture(mine)`, `tagSticky`, `pinSticky` from Task 7.
+- Produces: `tagScrolled()`, `rescroll(clone)`, `tagFloating(mine)`,
+  `placeFloating(clone)`, and a `capture` whose `onclone` calls all four
+  pinning functions. New attributes: `data-pf-scrolled`, `data-pf-floating`.
+
+- [ ] **Step 1: Carry the inner scroll into the clone**
+
+Beside `tagSticky` and `pinSticky` in `site/page-feedback.js`:
+
+```js
+/* How far a scrollable element inside the page has been scrolled.
+ *
+ * The prose pages scroll the window and the reader does not: it scrolls its
+ * own document column, so window.scrollY stays at zero however far down
+ * somebody has read. html2canvas crops the capture at the window's scroll and
+ * draws each element from its own top, so without this the reader sends a
+ * picture of a passage they were not looking at. */
+function tagScrolled() {
+  const scrolled = [];
+  for (const node of document.querySelectorAll("body *")) {
+    if (!node.scrollTop && !node.scrollLeft) continue;
+    node.dataset.pfScrolled = JSON.stringify({
+      top: node.scrollTop, left: node.scrollLeft,
+    });
+    scrolled.push(node);
+  }
+  return scrolled;
+}
+
+/* Put the clone's copies where their originals were scrolled to. The clone is
+ * a live document in an iframe, so its elements really do scroll. */
+function rescroll(clone) {
+  for (const node of clone.querySelectorAll("[data-pf-scrolled]")) {
+    let to;
+    try {
+      to = JSON.parse(node.dataset.pfScrolled);
+    } catch {
+      continue;
+    }
+    node.scrollTop = to.top;
+    node.scrollLeft = to.left;
+  }
+}
+```
+
+**If setting `scrollTop` on the clone turns out not to move what html2canvas
+draws,** the fallback is to shift the scroll container's contents instead: in
+`rescroll`, wrap the element's children in the offset by setting
+`node.style.transform = translate(-left px, -top px)` on its single element
+child when it has exactly one, and report that you used the fallback. Do not
+reach for the fallback until you have an image showing the first way failing.
+
+- [ ] **Step 2: Carry an open pop-up into the clone**
+
+Beside them:
+
+```js
+/* A dialog or a popover that is open right now.
+ *
+ * Both live in the top layer, which the cloned document has no notion of: in
+ * the clone a dialog is an ordinary element again and a popover is back to
+ * display: none. Measured here and forced back into place there, because a
+ * reader who wants to report something about a note has to be able to
+ * photograph the note.
+ *
+ * Fixed rather than relative, unlike a sticky element: a pop-up genuinely is
+ * out of flow on the real page, so putting it out of flow in the clone is
+ * what matches rather than what breaks. */
+function tagFloating(mine) {
+  const floating = [];
+  for (const node of document.querySelectorAll("dialog[open], [popover]")) {
+    if (mine.includes(node) || mine.some(ours => ours.contains(node))) continue;
+    const box = node.getBoundingClientRect();
+    if (!box.width || !box.height) continue;   // a popover nobody has opened
+    node.dataset.pfFloating = JSON.stringify({
+      top: box.top, left: box.left, width: box.width, height: box.height,
+    });
+    floating.push(node);
+  }
+  return floating;
+}
+
+function placeFloating(clone) {
+  for (const node of clone.querySelectorAll("[data-pf-floating]")) {
+    let box;
+    try {
+      box = JSON.parse(node.dataset.pfFloating);
+    } catch {
+      continue;
+    }
+    node.style.display = "block";
+    node.style.position = "fixed";
+    node.style.margin = "0";
+    node.style.top = `${box.top}px`;
+    node.style.left = `${box.left}px`;
+    node.style.width = `${box.width}px`;
+    node.style.maxHeight = `${box.height}px`;
+    // Above the page, below nothing: it was the top layer a moment ago.
+    node.style.zIndex = "2147483646";
+  }
+}
+```
+
+- [ ] **Step 3: Call all four, and clean up all three attributes**
+
+In `capture(mine)`, replace the tagging, the `onclone` and the `finally` with:
+
+```js
+async function capture(mine) {
+  const html2canvas = await loadLibrary();
+  const sticky = tagSticky();
+  const scrolled = tagScrolled();
+  const floating = tagFloating(mine);
+  try {
+    return await html2canvas(document.body, {
+      x: window.scrollX,
+      y: window.scrollY,
+      width: document.documentElement.clientWidth,
+      height: document.documentElement.clientHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      scale: Math.min(2, window.devicePixelRatio || 1),
+      logging: false,
+      useCORS: true,
+      ignoreElements: node => mine.includes(node),
+      onclone: clone => {
+        pinSticky(clone);
+        rescroll(clone);
+        placeFloating(clone);
+      },
+    });
+  } finally {
+    for (const node of sticky) delete node.dataset.pfSticky;
+    for (const node of scrolled) delete node.dataset.pfScrolled;
+    for (const node of floating) delete node.dataset.pfFloating;
+  }
+}
+```
+
+Keep the rest of the function, and the rest of the module, as it is.
+
+- [ ] **Step 4: Check it parses**
+
+Run: `node --check site/page-feedback.js`
+Expected: no output, exit 0.
+
+- [ ] **Step 5: Add the Python tests**
+
+In `tests/test_page_feedback_bubble.py`:
+
+```python
+    def test_an_inner_scroll_is_carried_into_the_clone(self):
+        """The prose pages scroll the window and the reader does not: it
+        scrolls its own document column, so window.scrollY stays at zero
+        however far down somebody has read. Without this the reader sends a
+        picture of a passage they were not looking at."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function tagScrolled()", source)
+        self.assertIn("rescroll(clone)", source)
+
+    def test_an_open_pop_up_is_carried_into_the_clone(self):
+        """A showing dialog and an open popover live in the top layer, which
+        the cloned document has no notion of. A reader who wants to report
+        something about a note has to be able to photograph the note."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function tagFloating(mine)", source)
+        self.assertIn("placeFloating(clone)", source)
+```
+
+Run: `python3 -m unittest discover -s tests 2>&1 | tail -5`
+Expected: every test passes.
+
+- [ ] **Step 6: Prove the scroll fault is gone, in the walker**
+
+In `engine/verify-reader-features.mjs`, after the feedback bubble section's
+existing checks and before the section's final console-error check, add a block
+that loads the reader, scrolls its document column well down, presses the pill,
+and reads the capture back:
+
+```js
+  /* The reader scrolls its own column, not the window, so a capture cropped at
+   * window.scrollY would show the top of the document however far down the
+   * reader has read. What proves it is not the picture's size but its
+   * content: the same region rendered twice should agree, so this compares a
+   * band of the capture against the same band of Playwright's own screenshot
+   * and asks whether they are mostly the same colour. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  const scrolledBy = await page.evaluate(() => {
+    const column = [...document.querySelectorAll("*")]
+      .find(node => node.scrollHeight > node.clientHeight + 400
+                 && getComputedStyle(node).overflowY !== "visible");
+    if (!column) return 0;
+    column.scrollTop = 800;
+    return column.scrollTop;
+  });
+  check(scrolledBy > 0, "the reader has a column that scrolls inside the page",
+    String(scrolledBy));
+
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  const agrees = await page.evaluate(async () => {
+    const img = document.querySelector("#pf-shot img");
+    const drawn = document.createElement("canvas");
+    drawn.width = img.naturalWidth;
+    drawn.height = img.naturalHeight;
+    drawn.getContext("2d").drawImage(img, 0, 0);
+    // The first non-blank row of the captured document area, as a fingerprint
+    // of which part of the document was photographed.
+    const { data } = drawn.getContext("2d")
+      .getImageData(0, Math.round(drawn.height / 2), drawn.width, 1);
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) ink += 1;
+    }
+    return { width: drawn.width, height: drawn.height, ink };
+  });
+  check(agrees.ink > 20,
+    "the capture of a scrolled reader carries text across its middle rather than blank paper",
+    JSON.stringify(agrees));
+```
+
+This is a weak check by design: it proves the middle of the capture is not
+blank, which is what a capture cropped at the wrong offset looks like on the
+reader. The real verdict is the image in step 7.
+
+- [ ] **Step 7: Produce the images the controller will judge**
+
+Write or adapt a throwaway script in
+`/private/tmp/claude-501/-Users-sverbo-Desktop-Codes-Polaris-ai-character-index/3abc866b-7c91-4c99-b3c1-0f1c66b51a1b/scratchpad/`,
+never in the repository, saving four images at a 1200 by 800 viewport:
+
+- `reader-scrolled-real.png` and `reader-scrolled-capture.png`: the doc reader
+  with its document column scrolled well down, Playwright's own screenshot
+  beside the bubble's capture.
+- `popup-real.png` and `popup-capture.png`: the doc reader with one of its
+  notes open (the behaviour note behind the `i` beside a behaviour, or the
+  depth note behind a figure), the same pair.
+
+List the paths in your report and say what you saw, but do not treat your own
+answer as the verdict.
+
+- [ ] **Step 8: Run everything**
+
+```bash
+node --check site/page-feedback.js
+python3 -m unittest discover -s tests 2>&1 | tail -5
+node engine/verify-reader-features.mjs
+pnpm test:routes
+```
+
+The walker must end at `2 FAILURES`, being only `focus lands back on the
+publisher just chosen` and `comparing, focus lands back on the right side's
+publisher`.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add site/page-feedback.js tests/test_page_feedback_bubble.py engine/verify-reader-features.mjs
+git commit -m "fix: the capture follows the reader down its own column, and keeps the pop-up
+
+The prose pages scroll the window and the reader does not: it scrolls
+its own document column, so window.scrollY stayed at zero however far
+down somebody had read and the capture came back showing the top of the
+document. And a dialog or popover open at the moment of capture lives in
+the top layer, which the cloned document has no notion of, so the reader
+who wanted to report something about a note could not photograph the
+note. Both are carried across in the same onclone hook the sticky fix
+already uses, and a pop-up is pinned fixed rather than relative because
+unlike a sticky element it genuinely is out of flow."
+```
