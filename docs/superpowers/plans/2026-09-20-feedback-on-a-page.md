@@ -2620,70 +2620,90 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ### Task 9: The record, and one real send
 
+> Rewritten on 20 September 2026, after Tasks 10 and 11. The entry below is
+> the one to write: the version this replaced was drafted before the two
+> defects the operator found, before the four additions, and before half of
+> what the reviews turned up. Runs last, when everything it describes exists.
+
 **Files:**
 - Modify: `CLAUDE.md`
 - Modify: `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`
+- Modify: `app/lib/admin-data.mjs` (one sentence of a docstring)
 
 **Interfaces:**
 - Consumes: everything above.
 - Produces: nothing code depends on.
 
-- [ ] **Step 1: Correct the one figure the implementation moved**
+- [ ] **Step 1: Correct the two things the implementation moved**
 
-The design fixed `page_url` at 500 characters. The reader's addresses carry a
-document, a publication and a list of behaviours at once and reach past that,
-and a truncated URL hands an operator a link that goes somewhere else. Task 2
-set it to 2000. In
-`docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`, find the line
+In `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`, find
 
 ```
 Field caps: comment 5000, address 200, `page_url` 500, `user_agent` 500,
 ```
 
-and replace 500 with 2000, adding the reason:
+and replace that sentence with
 
 ```
 Field caps: comment 5000, address 200, `page_url` 2000, `user_agent` 500,
-`viewport` 50, `capture_method` 40. `page_url` is the large one on purpose: the
-reader's address carries a document, a publication and a list of behaviours at
-once, and a truncated URL hands an operator a link that goes somewhere else.
+`viewport` 50, `capture_method` 40. `page_url` is the large one on purpose:
+the reader's address carries a document, a publication and a list of
+behaviours at once, and a truncated URL hands an operator a link that goes
+somewhere else.
 ```
 
-- [ ] **Step 2: One real send, end to end**
+Then, in the same file, in the section headed `### What it still gets wrong,
+stated`, replace its one paragraph about dialogs with what is now known:
 
-With the migration applied and `.env` carrying the real credentials, run
-`pnpm dev`, open `http://127.0.0.1:3000/overview`, press the pill, draw a box,
-write a sentence, send.
+```markdown
+Three things, all found by using it and none of them guessed.
 
-Then check all three destinations:
+A `position: sticky` element is drawn at its static position, which on these
+four pages is the header on each, the contents rail on two, and a table header
+and a tab bar on the overview. Fixed: every sticky element is measured and
+shifted in the clone with `position: relative`, which keeps its space.
 
-```bash
-node --env-file=.env --input-type=module -e '
-const u = process.env.SUPABASE_URL, k = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const h = { apikey: k, Authorization: `Bearer ${k}` };
-const rows = await (await fetch(`${u}/rest/v1/aci_page_feedback?select=*&order=created_at.desc&limit=1`, { headers: h })).json();
-console.log(JSON.stringify(rows[0], null, 1));
-'
+An element that scrolls inside the page is drawn from its own top. The doc
+reader scrolls its column rather than the window, so the capture came back
+showing the top of the document however far down somebody had read. Fixed:
+every inner scroll offset is carried into the clone.
+
+A pop-up open at the moment of capture is not in the clone's top layer, and a
+popover is back to `display: none` there. Fixed for a popover, which is what
+the reader opens five of its notes with, and not for the two things it opens
+with `showModal`: a modal dialog's backdrop makes the pill unclickable, which
+is inherent to a pill as the trigger.
+
+One thing is not fixed and is not a layout fault. On `/about`, a link the page
+draws as a 2px chartreuse underline comes out of html2canvas as a filled
+chartreuse block behind the text, so links in that capture look hovered. The
+reader's own navigation link renders correctly as an underline, so it is
+per-page CSS rather than universal.
 ```
-Expected: one row carrying the comment, the address, `capture_method`
-`html2canvas`, a `screenshot` path of the form `YYYY-MM-DD/<uuid>.png`, and the
-page URL.
 
-Then open `http://127.0.0.1:3000/admin/page-feedback` and confirm the thumbnail
-renders and opens full size.
+If the section's heading or its surrounding text no longer matches this
+description, adapt rather than duplicate, and say in your report what you
+found there.
 
-Then look at the Slack channel. Expected: one message headed `Feedback on a
-page`, carrying the sentence, the page address, the picture with the box drawn
-on it, and a link to the portal.
+- [ ] **Step 2: Correct the docstring the portal reader carries**
 
-If the picture is missing from Slack but the message arrived, the retry fired:
-the platform log will carry `page-feedback: slack refused the image block`.
-Record what Slack said in the CLAUDE.md entry rather than working round it.
+`app/lib/admin-data.mjs`'s `pageFeedback` says the portal is "the only surface
+that can open one". It is not: `announce` in `app/lib/page-feedback.mjs` also
+mints a signed link, for the Slack message. Change that sentence to:
+
+```js
+ * permanent link to a private object is a public object with extra steps. The
+ * Slack message mints one too, for seven days; this is the surface an operator
+ * can come back to, and a private bucket with nothing that reads it is a
+ * bucket nobody can open. */
+```
+
+Keep the two lines above it as they are.
 
 - [ ] **Step 3: Write the divergence record**
 
-Add to `CLAUDE.md`, under `## Changes of substance we made`, after `A reader
-can leave a note on a paragraph, or on a document`:
+Add to `CLAUDE.md`, under `## Changes of substance we made`, after the section
+`A reader can leave a note on a paragraph, or on a document`:
 
 ```markdown
 ### A reader can photograph the page and draw on it
@@ -2695,85 +2715,165 @@ sentence describing a layout fault is a sentence somebody has to reconstruct
 into a screen, and half the time they reconstruct a different one.
 
 A pill at the bottom right of the four public pages photographs the viewport,
-takes a box, an arrow or a freehand line over it, a sentence and an address, and
-files all of it in `aci_page_feedback` and a private bucket, with a Slack
-message carrying the picture. `site/page-feedback.js` is one file for four
-pages, like `dev-tag.js` and `brand.js`, for the reason that file already
-records: copied four times it drifts the first time one copy is edited.
+takes a box, a circle, an arrow, a freehand line or a line of text over it in
+one of two colours, a sentence and an address, and files all of it in
+`aci_page_feedback` and a private bucket, with a Slack message carrying the
+picture. `site/page-feedback.js` is one file for four pages, like `dev-tag.js`
+and `brand.js`, for the reason that file already records: copied four times it
+drifts the first time one copy is edited. The dialog also gives an address to
+write to instead, which is somebody's, on a public page, and will be harvested.
 
-Private throughout, and that is the difference from `aci_feedback` rather than a
-detail. A note about a paragraph records what a reader permits, because it might
-one day be shown beside that paragraph. A capture of somebody's browser never
-will be, so there is nothing to ask and nothing to record: the form says it
-stays private and the table has no visibility column.
+Private throughout, and that is the difference from `aci_feedback` rather than
+a detail. A note about a paragraph records what a reader permits, because it
+might one day be shown beside that paragraph. A capture of somebody's browser
+never will be, so there is nothing to ask and nothing to record: the form says
+it stays private and the table has no visibility column.
 
-**The capture is html2canvas, and it is a redrawing rather than a photograph.**
-The library walks the DOM and paints it, so what it produces is the page as the
-styles describe it and not the pixels the screen had. It was chosen over
-`getDisplayMedia`, which is exact, because that API does not exist on mobile at
-all and asks permission on every send. It was chosen over the `foreignObject`
-libraries because it draws text with `fillText` using the fonts already loaded,
-where they need every font file inlined or the capture comes back in a fallback
-face. `capture_method` is stored on every row so a later method is
-distinguishable in the record rather than silently replacing this one, which
-matters because html2canvas has had no release since 2022.
+**The capture is a redrawing, not a photograph.** html2canvas walks the DOM and
+paints it, so what it produces is the page as the styles describe it and not
+the pixels the screen had. It was chosen over `getDisplayMedia`, which is
+exact, because that API does not exist on mobile at all and asks permission on
+every send. It was chosen over the `foreignObject` libraries because it draws
+text with `fillText` using the fonts already loaded, where they need every font
+file inlined or the capture comes back in a fallback face. `capture_method` is
+stored on every row so a later method is distinguishable in the record rather
+than silently replacing this one, which matters because html2canvas has had no
+release since 2022.
 
-**The sticky fix, and what it says about the rest.** html2canvas draws a
-`position: sticky` element at its static position, and all four pages use
-sticky: the header on each, the contents rail on two, a table header on the
-overview. A reader who had scrolled would have sent a capture with the header
-they were looking at missing from the top. Every sticky element is measured on
-the live page into a `data-pf-sticky` attribute and pinned absolutely in the
-clone `onclone` hands over, matched by attribute rather than by walking the two
-trees in parallel, because nothing guarantees the clone is node for node
-identical. What is not fixed, and is expected rather than verified: a dialog or
-popover open at the moment of capture. The reader's notes are `position: fixed`
-with their corner set inline, which the library does support, and their
-`::backdrop` is not drawn at all.
+**Three things the clone does not know, and how each was found.** All three are
+fixed in the `onclone` hook, which hands the module the cloned document before
+it is painted, and all three were found by looking at the pictures rather than
+by reading the library.
+
+A `position: sticky` element is drawn at its static position, and all four
+pages use sticky. The first attempt pinned them absolutely, which took them out
+of flow and took their space with them: the overview's table header collapsed
+onto its own rows and the about page's contents rail was drawn on top of the
+prose while its flex sibling swallowed the column. What sticky actually does is
+occupy its static place and paint elsewhere, which is `position: relative`, so
+what is recorded is the shift, measured by turning every sticky element static
+at once and back inside one synchronous block.
+
+An element that scrolls inside the page is drawn from its own top. The doc
+reader scrolls its column rather than the window, so `window.scrollY` stayed at
+zero however far down somebody had read and the capture came back showing the
+top of the document. Every inner scroll offset is carried into the clone.
+
+A pop-up open at the moment of capture is not in the clone's top layer, where a
+popover is back to `display: none`. Measuring it and forcing it back was the
+easy half. The hard half was when to measure, and it took two mistakes. Doing
+it inside the capture was too late, because showing the bubble's own modal
+dialog closes every open popover natively. Doing it in the pill's click handler
+was still too late for a mouse, because the browser's light dismiss is a
+default action of the press: measured in real Chrome with a trusted click,
+there is one popover open at `pointerdown`, none at `pointerup`, none at
+`click`. It is measured in a capture-phase `pointerdown` listener, read once
+and emptied, and an abandoned press is cleared by the next one.
+
+**What is still wrong with the capture, and is not hidden.** A note opened with
+`showModal` rather than `showPopover` puts a backdrop over the page, so the
+pill cannot be clicked at all while one is open. The reader opens five of its
+notes with `showPopover` and two things with `showModal`, and those two are out
+of reach while a pill is the trigger. And on `/about`, a link the page draws as
+a 2px chartreuse underline comes out as a filled chartreuse block behind the
+text, so links in that capture look hovered; the reader's own navigation link
+renders correctly, so it is per-page CSS rather than universal.
 
 **Slack is told twice when it has to be.** Slack fetches `image_url` itself and
-refuses the whole message when one block displeases it, so a signed link it will
-not accept would cost the notification entirely. The message goes out with the
-image block and again without it if the first is refused. The link lives seven
-days: after that the picture leaves the channel's history and the portal link,
-which does not expire, is what is left. A permanent link would mean a public
-bucket, and a capture of somebody's browser can hold anything they had on
-screen.
+refuses the whole message when one block displeases it, so a signed link it
+will not accept would cost the notification entirely. The message goes out with
+the image block and again without it if the first is refused. The link lives
+seven days: after that the picture leaves the channel's history and the portal
+link, which does not expire, is what is left. A permanent link would mean a
+public bucket, and a capture of somebody's browser can hold anything they had
+on screen.
 
-Console logs are deliberately not collected, though the same author's other
-feedback widget collects them. Doing it means patching `console` on every page
-load for every reader, which is a change to what the four public pages do to
-everybody in order to serve the few who report a bug.
+**Marks are shapes, never pixels.** A box, a circle, an arrow, a freehand line
+and a line of text are stored in the image's own coordinate space, which is
+what makes undo one line and what keeps a mark under the pointer at any display
+size, including a phone's. The glyph on each tool is inline SVG in the hand the
+reader's copy icons already use: the framework carries no icon library and no
+emoji, and the word stays beside the glyph because a glyph alone is a guess.
+
+Console logs are deliberately not collected, though the feedback widget this
+one is modelled on collects them. Doing it means patching `console` on every
+page load for every reader, which is a change to what the four public pages do
+to everybody in order to serve the few who report a bug.
 
 The design is `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`;
 the table and the bucket are `20260920120000_aci_page_feedback.sql` in
 `polaris-supabase`.
 ```
 
-- [ ] **Step 4: Run everything**
+- [ ] **Step 4: One real send, end to end**
+
+This one writes a real row to the `evals` project and posts a real message to
+the organisation's Slack channel. Say so in the comment you send, so whoever
+reads the channel knows what it is: something like "Test of the new page
+feedback bubble, please ignore."
+
+With the migration applied and `.env` carrying the real credentials, and the
+development server already running on port 3210, open
+`http://127.0.0.1:3210/overview`, press the pill, draw a box and place a line
+of text, write that sentence, give an address, and send.
+
+Then check all three destinations.
+
+```bash
+node --env-file=.env --input-type=module -e '
+const u = process.env.SUPABASE_URL, k = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const h = { apikey: k, Authorization: `Bearer ${k}` };
+const rows = await (await fetch(`${u}/rest/v1/aci_page_feedback?select=*&order=created_at.desc&limit=1`, { headers: h })).json();
+console.log(JSON.stringify(rows[0], null, 1));
+'
+```
+
+Expected: one row carrying the comment, the address, `capture_method`
+`html2canvas`, a `screenshot` path of the form `YYYY-MM-DD/<uuid>.png`, and the
+page URL with its query string.
+
+Then open `http://127.0.0.1:3210/admin/page-feedback` and confirm the thumbnail
+renders and opens full size.
+
+Then look at the Slack channel. Expected: one message headed `Feedback on a
+page`, carrying the sentence, the page address, the picture with the marks on
+it, and a link to the portal.
+
+If the picture is missing from Slack but the message arrived, the retry fired
+and the platform log carries `page-feedback: slack refused the image block`.
+Record what Slack said in the record above rather than working round it.
+
+- [ ] **Step 5: Run everything**
 
 ```bash
 pnpm test:routes
 python3 -m unittest discover -s tests
-pnpm predev && node engine/verify-reader-features.mjs 2>&1 | tail -5
+node engine/verify-reader-features.mjs
 pnpm build
 ```
-Expected: all four green.
 
-- [ ] **Step 5: Commit**
+The walker must end at `2 FAILURES`, being only `focus lands back on the
+publisher just chosen` and `comparing, focus lands back on the right side's
+publisher`, both of which predate this work. The other three must be clean.
+
+Note that `pnpm build` disturbs the running development server's `.next`
+directory. That is expected and the controller will restart it.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add CLAUDE.md docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md
-git commit -m "docs: the bubble is recorded, and page_url is 2000 not 500
+git add CLAUDE.md docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md app/lib/admin-data.mjs
+git commit -m "docs: the bubble is recorded, with what it still gets wrong
 
-The reader's addresses carry a document, a publication and a list of
-behaviours at once, so the cap the design fixed would have truncated an
-honest URL into one that goes somewhere else.
-
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+Three things the cloned document does not know, and all three were found
+by looking at the pictures rather than by reading the library: a sticky
+element drawn at its static position, an element that scrolls inside the
+page drawn from its own top, and a pop-up that is not in the clone's top
+layer. The last took two mistakes to place, because showing a modal
+dialog closes a popover and the browser light-dismisses one on the press
+rather than on the click. What is still wrong is written down beside
+what was fixed."
 ```
-
----
 
 ### Task 10: Words on the picture, a circle, and a way round the form
 
