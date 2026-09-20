@@ -438,10 +438,11 @@ size, including a phone's. The glyph on each tool is inline SVG in the hand the
 reader's copy icons already use: the framework carries no icon library and no
 emoji, and the word stays beside the glyph because a glyph alone is a guess.
 
-Console logs are deliberately not collected, though the feedback widget this
-one is modelled on collects them. Doing it means patching `console` on every
-page load for every reader, which is a change to what the four public pages do
-to everybody in order to serve the few who report a bug.
+Console logs are deliberately not collected, and they were asked about.
+Collecting them means patching `console` on every page load for every reader,
+which is a change to what the four public pages do to everybody in order to
+serve the few who report a bug. It is separable, and if it is ever wanted it
+should be argued for on its own.
 
 The design is `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`;
 the table and the bucket are `20260920120000_aci_page_feedback.sql` in
