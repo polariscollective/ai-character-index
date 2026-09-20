@@ -164,6 +164,27 @@ const STYLE = `
 }
 .pf-swatch { width: 28px; padding: 4px 0; }
 .pf-swatch[aria-pressed="true"] { border-width: 3px; }
+.pf-tool { display: inline-flex; align-items: center; gap: 6px; }
+.pf-tool svg { flex: none; }
+.pf-note .pf-why a {
+  color: #23281B;
+  text-decoration: underline 2px #B7C94B;
+  text-underline-offset: 3px;
+}
+.pf-note .pf-why a:hover { background: #B7C94B; }
+.pf-typing {
+  position: absolute;
+  z-index: 1;
+  min-width: 140px;
+  padding: 0 2px;
+  border: 1px dashed #5C6B3C;
+  border-radius: 2px;
+  background: rgb(241 239 227 / .85);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+}
+.pf-typing:focus-visible { outline: 2px solid #B7C94B; outline-offset: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .pf-pill, .pf-send, .pf-cancel { transition: none; }
@@ -448,11 +469,50 @@ const STROKE = 3;
  * for marks that land on an olive-deep band where rust cannot be read. */
 const COLOURS = [["fail", "#A0522D"], ["energy", "#B7C94B"]];
 
+/* Sixteen CSS pixels, scaled into the image the same way a stroke is, so what
+ * the reader typed is the size they saw themselves type. */
+const TEXT_SIZE = 16;
+
+/* The tool glyphs, drawn here rather than fetched. The framework carries no
+ * icon library and no emoji, and the reader's copy icons are already inline
+ * SVG on a 16 unit grid at 1.4 stroke in currentColor; these are the same
+ * hand. The word stays beside the glyph, because a glyph alone is a guess. */
+const GLYPH = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"'
+  + ' fill="none" stroke="currentColor" stroke-width="1.4"'
+  + ' stroke-linecap="round" stroke-linejoin="round">';
+
+const GLYPHS = {
+  box: '<rect x="2.7" y="4.2" width="10.6" height="7.6" rx="1"/>',
+  circle: '<circle cx="8" cy="8" r="5"/>',
+  arrow: '<path d="M3.2 12.8 12.8 3.2M12.8 3.2H8.3M12.8 3.2v4.5"/>',
+  pen: '<path d="M3 13l1-3.4 6.1-6.1 2.4 2.4-6.1 6.1z"/>',
+  text: '<path d="M3.6 4.2h8.8M8 4.2v7.6"/>',
+};
+
 function draw(ink, shape) {
   ink.strokeStyle = shape.colour;
   ink.lineWidth = shape.width;
   ink.lineCap = "round";
   ink.lineJoin = "round";
+
+  if (shape.tool === "text") {
+    ink.fillStyle = shape.colour;
+    ink.textBaseline = "top";
+    ink.font = `${shape.size}px "Instrument Sans", system-ui, sans-serif`;
+    ink.fillText(shape.text, shape.at.x, shape.at.y);
+    return;
+  }
+
+  // The ellipse inscribed in the drag, so a circle is drawn the way a box is
+  // and needs nothing of its own in the pointer handling.
+  if (shape.tool === "circle") {
+    ink.beginPath();
+    ink.ellipse((shape.from.x + shape.to.x) / 2, (shape.from.y + shape.to.y) / 2,
+                Math.abs(shape.to.x - shape.from.x) / 2,
+                Math.abs(shape.to.y - shape.from.y) / 2, 0, 0, Math.PI * 2);
+    ink.stroke();
+    return;
+  }
 
   if (shape.tool === "box") {
     ink.strokeRect(shape.from.x, shape.from.y,
@@ -571,6 +631,65 @@ function repaint(canvas, drawing) {
 }
 
 /**
+ * A field where the pointer landed, for a mark made of words.
+ *
+ * A real input rather than keystrokes collected by hand, so the caret, the
+ * selection, backspace, paste and a phone's own keyboard all work without
+ * being reimplemented. It commits on Enter or on losing focus, and an empty
+ * one commits nothing, which is the rule a tap that never moved already obeys.
+ *
+ * The field is placed in display pixels and the shape is stored in image
+ * pixels, because those are two different spaces and the picture is usually
+ * shown smaller than it is. The field's font size is the one it will be drawn
+ * at, so what the reader types is the size they get.
+ */
+function typeHere(canvas, tools, where, event) {
+  const shot = canvas.parentElement;
+  const box = canvas.getBoundingClientRect();
+  const shown = box.width / canvas.width;
+
+  const field = el("input", { type: "text", className: "pf-typing" });
+  field.setAttribute("aria-label", "Text to place on the screenshot");
+  field.style.left = `${event.clientX - box.left}px`;
+  field.style.top = `${event.clientY - box.top}px`;
+  field.style.color = tools.colour;
+
+  // Enter removes the field, and removing a focused element fires blur, so
+  // without this the words would be stored twice.
+  let done = false;
+  const finish = keep => {
+    if (done) return;
+    done = true;
+    const words = field.value.trim();
+    field.remove();
+    if (!keep || !words) return;
+    state.shapes.push({
+      tool: "text",
+      colour: tools.colour,
+      size: TEXT_SIZE / shown,
+      at: where,
+      text: words,
+    });
+    repaint(canvas, null);
+  };
+
+  field.addEventListener("keydown", key => {
+    if (key.key === "Enter") {
+      key.preventDefault();
+      finish(true);
+    }
+    if (key.key === "Escape") {
+      key.preventDefault();
+      finish(false);
+    }
+  });
+  field.addEventListener("blur", () => finish(true));
+
+  shot.append(field);
+  field.focus();
+}
+
+/**
  * The overlay, sized to the photograph and stretched over it.
  *
  * Marks are held as shapes rather than as pixels, which is what makes undo one
@@ -586,6 +705,10 @@ function overlay(base, tools) {
 
   canvas.addEventListener("pointerdown", event => {
     event.preventDefault();
+    if (tools.tool === "text") {
+      typeHere(canvas, tools, at(event, canvas), event);
+      return;
+    }
     try {
       canvas.setPointerCapture(event.pointerId);
     } catch {
@@ -669,6 +792,7 @@ function build() {
     const button = el("button", {
       type: "button", className: "pf-tool pf-pick", id: `pf-tool-${name}`, textContent: label,
     });
+    button.insertAdjacentHTML("afterbegin", `${GLYPH}${GLYPHS[name]}</svg>`);
     button.setAttribute("aria-pressed", String(tools.tool === name));
     button.addEventListener("click", () => {
       tools.tool = name;
@@ -705,7 +829,9 @@ function build() {
     type: "button", className: "pf-tool", id: "pf-clear", textContent: "Clear",
   });
   const toolbar = el("div", { className: "pf-row", id: "pf-tools" },
-    toolButton("box", "Box"), toolButton("arrow", "Arrow"), toolButton("pen", "Pen"),
+    toolButton("box", "Box"), toolButton("circle", "Circle"),
+    toolButton("arrow", "Arrow"), toolButton("pen", "Pen"),
+    toolButton("text", "Text"),
     swatch(COLOURS[0]), swatch(COLOURS[1]), undo, clear);
   toolbar.hidden = true;
 
@@ -738,6 +864,11 @@ function build() {
     el("p", { className: "pf-why", textContent:
       "Sent with this: the address of this page, the size of your window, and "
       + "your browser's identification string." }),
+    el("p", { className: "pf-why" },
+      document.createTextNode("Or contact us at "),
+      el("a", { href: "mailto:sam@polariscollective.org",
+                textContent: "sam@polariscollective.org" }),
+      document.createTextNode(".")),
     said,
     el("div", { className: "pf-row" }, cancel, sendButton));
 

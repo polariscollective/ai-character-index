@@ -2277,6 +2277,80 @@ console.log("== Every page: the feedback bubble ==");
   });
   check(afterClear === 0, "clear removes what undo left", String(afterClear));
 
+  const typed = await page.evaluate(() => {
+    document.querySelector("#pf-tool-text").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent("pointerdown", {
+      pointerId: 5, bubbles: true, clientX: box.left + 80, clientY: box.top + 220,
+    }));
+    const field = document.querySelector(".pf-typing");
+    if (!field) return { field: false };
+    field.value = "This heading says the wrong date";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return { field: true, gone: !document.querySelector(".pf-typing"), painted };
+  });
+  check(typed.field && typed.gone && typed.painted > 100,
+    "the text tool takes words and paints them onto the overlay",
+    JSON.stringify(typed));
+
+  const ringed = await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-circle").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 6, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 120, 300);
+    send("pointermove", 280, 400);
+    send("pointerup", 280, 400);
+    const ink = canvas.getContext("2d");
+    const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    // The middle of a circle is empty and the middle of a box's drag is too,
+    // so what tells them apart is the corner: a box paints its corner, a
+    // circle does not.
+    const corner = ink.getImageData(
+      Math.round((120 + 4) * (canvas.width / box.width)),
+      Math.round((300 + 4) * (canvas.height / box.height)), 3, 3).data;
+    let inked = 0;
+    for (let i = 3; i < corner.length; i += 4) if (corner[i] > 0) inked += 1;
+    return { painted, inked };
+  });
+  check(ringed.painted > 100 && ringed.inked === 0,
+    "the circle tool paints a ring, and leaves the corner of its drag empty",
+    JSON.stringify(ringed));
+
+  const glyphs = await page.evaluate(() => {
+    const tools = ["box", "circle", "arrow", "pen", "text"];
+    return tools.map(name => {
+      const button = document.querySelector(`#pf-tool-${name}`);
+      return { name, there: Boolean(button),
+               glyph: Boolean(button?.querySelector("svg")),
+               word: button?.textContent.trim() };
+    });
+  });
+  check(glyphs.every(tool => tool.there && tool.glyph && tool.word),
+    "every tool carries a drawn glyph and keeps its word",
+    JSON.stringify(glyphs));
+
+  const reachable = await page.evaluate(() => {
+    const link = document.querySelector("#pf-note a[href^='mailto:']");
+    return { there: Boolean(link), href: link?.getAttribute("href") };
+  });
+  check(reachable.href === "mailto:sam@polariscollective.org",
+    "the dialog offers a person as well as a form", JSON.stringify(reachable));
+
+  await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-box").click();
+  });
+
   const tooling = await page.evaluate(() => {
     document.querySelector("#pf-tool-arrow").click();
     return {

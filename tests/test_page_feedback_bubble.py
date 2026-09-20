@@ -79,3 +79,32 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
         source = MODULE.read_text(encoding="utf-8")
         self.assertIn("function tagFloating(mine)", source)
         self.assertIn("placeFloating(clone)", source)
+
+    def test_words_can_be_placed_on_the_picture(self):
+        """A box says where, a circle says which, an arrow says that one, a
+        pen says roughly. None of them says what. A text mark is a shape like
+        the others, so undo and clear need no special case and compose draws
+        it into the PNG that is sent rather than only onto the overlay."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn('toolButton("text", "Text")', source)
+        self.assertIn('if (shape.tool === "text")', source)
+        self.assertIn("ink.fillText(shape.text, shape.at.x, shape.at.y)", source)
+
+    def test_the_toolbar_carries_five_tools_each_with_a_drawn_glyph(self):
+        """The framework forbids icon libraries and emoji, and the repository
+        draws its own icons: inline SVG on a 16 unit grid at 1.4 stroke in
+        currentColor, the same hand as the reader's copy icons. The word stays
+        beside the glyph, because a glyph alone is a guess."""
+        source = MODULE.read_text(encoding="utf-8")
+        for tool, label in [("box", "Box"), ("circle", "Circle"), ("arrow", "Arrow"),
+                            ("pen", "Pen"), ("text", "Text")]:
+            with self.subTest(tool=tool):
+                self.assertIn(f'toolButton("{tool}", "{label}")', source)
+                self.assertIn(f"{tool}: '<", source)
+        self.assertIn('stroke-width="1.4"', source)
+
+    def test_the_dialog_offers_a_person_as_well_as_a_form(self):
+        """Somebody who would rather write a sentence to a human than fill in
+        a form should not have to fill in the form."""
+        self.assertIn("mailto:sam@polariscollective.org",
+                      MODULE.read_text(encoding="utf-8"))
