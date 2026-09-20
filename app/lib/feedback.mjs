@@ -41,8 +41,12 @@ export const MAX_BEHAVIOURS = 20;
 
 /* Enough to refuse what is plainly not an address. Nothing here verifies that
  * an address exists: the proposal form made the same call, and a submission is
- * judged on what it says. */
-const ADDRESS = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+ * judged on what it says.
+ *
+ * Exported because the page-feedback route asks the same question of the same
+ * kind of field, and two copies of a regular expression are two regular
+ * expressions the day one of them is loosened. */
+export const ADDRESS = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const text = value => (typeof value === "string" ? value.trim() : "");
 
