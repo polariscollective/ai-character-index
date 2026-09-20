@@ -349,6 +349,104 @@ surface, when it exists, will be built from what readers actually permitted.
 The design is `docs/superpowers/specs/2026-09-16-feedback-on-a-paragraph-design.md`;
 the table is `20260916140000_aci_feedback.sql` in `polaris-supabase`.
 
+### A reader can photograph the page and draw on it
+
+The index took two kinds of words from outside and not the third. A proposal
+asks us to run something; a note disagrees with a panel's reading of one
+paragraph. Neither takes "this page is broken", which is mostly a picture: a
+sentence describing a layout fault is a sentence somebody has to reconstruct
+into a screen, and half the time they reconstruct a different one.
+
+A pill at the bottom right of the four public pages photographs the viewport,
+takes a box, a circle, an arrow, a freehand line or a line of text over it in
+one of two colours, a sentence and an address, and files all of it in
+`aci_page_feedback` and a private bucket, with a Slack message carrying the
+picture. `site/page-feedback.js` is one file for four pages, like `dev-tag.js`
+and `brand.js`, for the reason that file already records: copied four times it
+drifts the first time one copy is edited. The dialog also gives an address to
+write to instead, which is somebody's, on a public page, and will be harvested.
+
+Private throughout, and that is the difference from `aci_feedback` rather than
+a detail. A note about a paragraph records what a reader permits, because it
+might one day be shown beside that paragraph. A capture of somebody's browser
+never will be, so there is nothing to ask and nothing to record: the form says
+it stays private and the table has no visibility column.
+
+**The capture is a redrawing, not a photograph.** html2canvas walks the DOM and
+paints it, so what it produces is the page as the styles describe it and not
+the pixels the screen had. It was chosen over `getDisplayMedia`, which is
+exact, because that API does not exist on mobile at all and asks permission on
+every send. It was chosen over the `foreignObject` libraries because it draws
+text with `fillText` using the fonts already loaded, where they need every font
+file inlined or the capture comes back in a fallback face. `capture_method` is
+stored on every row so a later method is distinguishable in the record rather
+than silently replacing this one, which matters because html2canvas has had no
+release since 2022.
+
+**Three things the clone does not know, and how each was found.** All three are
+fixed in the `onclone` hook, which hands the module the cloned document before
+it is painted, and all three were found by looking at the pictures rather than
+by reading the library.
+
+A `position: sticky` element is drawn at its static position, and all four
+pages use sticky. The first attempt pinned them absolutely, which took them out
+of flow and took their space with them: the overview's table header collapsed
+onto its own rows and the about page's contents rail was drawn on top of the
+prose while its flex sibling swallowed the column. What sticky actually does is
+occupy its static place and paint elsewhere, which is `position: relative`, so
+what is recorded is the shift, measured by turning every sticky element static
+at once and back inside one synchronous block.
+
+An element that scrolls inside the page is drawn from its own top. The doc
+reader scrolls its column rather than the window, so `window.scrollY` stayed at
+zero however far down somebody had read and the capture came back showing the
+top of the document. Every inner scroll offset is carried into the clone.
+
+A pop-up open at the moment of capture is not in the clone's top layer, where a
+popover is back to `display: none`. Measuring it and forcing it back was the
+easy half. The hard half was when to measure, and it took two mistakes. Doing
+it inside the capture was too late, because showing the bubble's own modal
+dialog closes every open popover natively. Doing it in the pill's click handler
+was still too late for a mouse, because the browser's light dismiss is a
+default action of the press: measured in real Chrome with a trusted click,
+there is one popover open at `pointerdown`, none at `pointerup`, none at
+`click`. It is measured in a capture-phase `pointerdown` listener, read once
+and emptied, and an abandoned press is cleared by the next one.
+
+**What is still wrong with the capture, and is not hidden.** A note opened with
+`showModal` rather than `showPopover` puts a backdrop over the page, so the
+pill cannot be clicked at all while one is open. The reader opens five of its
+notes with `showPopover` and two things with `showModal`, and those two are out
+of reach while a pill is the trigger. And on `/about`, a link the page draws as
+a 2px chartreuse underline comes out as a filled chartreuse block behind the
+text, so links in that capture look hovered; the reader's own navigation link
+renders correctly, so it is per-page CSS rather than universal.
+
+**Slack is told twice when it has to be.** Slack fetches `image_url` itself and
+refuses the whole message when one block displeases it, so a signed link it
+will not accept would cost the notification entirely. The message goes out with
+the image block and again without it if the first is refused. The link lives
+seven days: after that the picture leaves the channel's history and the portal
+link, which does not expire, is what is left. A permanent link would mean a
+public bucket, and a capture of somebody's browser can hold anything they had
+on screen.
+
+**Marks are shapes, never pixels.** A box, a circle, an arrow, a freehand line
+and a line of text are stored in the image's own coordinate space, which is
+what makes undo one line and what keeps a mark under the pointer at any display
+size, including a phone's. The glyph on each tool is inline SVG in the hand the
+reader's copy icons already use: the framework carries no icon library and no
+emoji, and the word stays beside the glyph because a glyph alone is a guess.
+
+Console logs are deliberately not collected, though the feedback widget this
+one is modelled on collects them. Doing it means patching `console` on every
+page load for every reader, which is a change to what the four public pages do
+to everybody in order to serve the few who report a bug.
+
+The design is `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`;
+the table and the bucket are `20260920120000_aci_page_feedback.sql` in
+`polaris-supabase`.
+
 ### A copy now says `Copied`, not only a colour change
 
 Unrelated to notes, landed in the same branch: pressing "Copy locator" or

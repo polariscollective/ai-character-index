@@ -116,9 +116,10 @@ export async function submissions(limit = 50, fetchImpl = fetch) {
 /** What readers said about whole pages, newest first, each with its capture.
  *
  * The link is minted here and expires, because the bucket is private and a
- * permanent link to a private object is a public object with extra steps. This
- * is the only surface that can open one: a private bucket with nothing that
- * reads it is a bucket nobody can open. */
+ * permanent link to a private object is a public object with extra steps. The
+ * Slack message mints one too, for seven days; this is the surface an operator
+ * can come back to, and a private bucket with nothing that reads it is a
+ * bucket nobody can open. */
 export async function pageFeedback(limit = 50, fetchImpl = fetch) {
   const rows = await select("aci_page_feedback",
                             `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);

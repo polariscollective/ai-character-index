@@ -176,11 +176,29 @@ sharp text, which is the case PNG compresses well and JPEG smears.
 
 ### What it still gets wrong, stated
 
-A dialog or a popover open at the moment of capture. The reader's notes are
-`position: fixed` with their corner set inline, which html2canvas does support,
-so they are expected to land in roughly the right place; their `::backdrop` is
-not rendered at all. Expected, not verified, and worth a look during
-implementation rather than a claim here.
+Three things, all found by using it and none of them guessed.
+
+A `position: sticky` element is drawn at its static position, which on these
+four pages is the header on each, the contents rail on two, and a table header
+and a tab bar on the overview. Fixed: every sticky element is measured and
+shifted in the clone with `position: relative`, which keeps its space.
+
+An element that scrolls inside the page is drawn from its own top. The doc
+reader scrolls its column rather than the window, so the capture came back
+showing the top of the document however far down somebody had read. Fixed:
+every inner scroll offset is carried into the clone.
+
+A pop-up open at the moment of capture is not in the clone's top layer, and a
+popover is back to `display: none` there. Fixed for a popover, which is what
+the reader opens five of its notes with, and not for the two things it opens
+with `showModal`: a modal dialog's backdrop makes the pill unclickable, which
+is inherent to a pill as the trigger.
+
+One thing is not fixed and is not a layout fault. On `/about`, a link the page
+draws as a 2px chartreuse underline comes out of html2canvas as a filled
+chartreuse block behind the text, so links in that capture look hovered. The
+reader's own navigation link renders correctly as an underline, so it is
+per-page CSS rather than universal.
 
 ## The editor
 
@@ -354,8 +372,11 @@ rather than copied:
 - `Content-Length` read and refused before a byte of the body is buffered,
   `MAX_REQUEST_BYTES = 4 MB`, under Vercel's own request ceiling.
 
-Field caps: comment 5000, address 200, `page_url` 500, `user_agent` 500,
-`viewport` 50, `capture_method` 40. The image is capped twice, at 3 MB by the
+Field caps: comment 5000, address 200, `page_url` 2000, `user_agent` 500,
+`viewport` 50, `capture_method` 40. `page_url` is the large one on purpose:
+the reader's address carries a document, a publication and a list of
+behaviours at once, and a truncated URL hands an operator a link that goes
+somewhere else. The image is capped twice, at 3 MB by the
 sender and at 4 MB by the bucket.
 
 The address regex is the one `feedback.mjs` already holds; it is exported from
