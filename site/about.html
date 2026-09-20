@@ -423,8 +423,14 @@
     behave. This index reads them one behaviour at a time and shows every passage that bears on
     each behaviour, quoted, with its exact place in the document. As of September 2026 it reports
     what those documents say, not how the models behave.</p>
-    <p>Say you want everything the OpenAI Model Spec says about avoiding a concentration of power.
-    The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power">doc
+    <!-- The document is named in the link as well as in the sentence. Without a
+         ?spec= the reader opens on its preferred lab, which is Anthropic, so this
+         example promised the OpenAI Model Spec and landed on the constitution.
+         Naming it in both places is what keeps the two from drifting apart again;
+         openingDocument falls back to the newest Anthropic document if this
+         version ages out, so the sentence stays true either way. -->
+    <p>Say you want everything Claude&rsquo;s Constitution says about avoiding a concentration of power.
+    The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power&amp;spec=anthropic--constitution@2026-01-20">doc
     reader</a> shows those passages together and can set them beside what another company&rsquo;s
     document says.</p>
     <p>The <a href="/">overview</a> shows the index in two heat maps. The first,
