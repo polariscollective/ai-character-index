@@ -522,8 +522,19 @@ async function initialize() {
     loadJSON(`/api/reader/behaviours${PINNED}`, null),
     /* One route for both, where two gitignored files used to sit. They were
      * never on any deployment, so this page has shown its figures with nothing
-     * under them everywhere but on the machine that wrote the files. */
-    loadJSON(`/api/reader/links${PINNED}`, null),
+     * under them everywhere but on the machine that wrote the files.
+     *
+     * Asked for with both sets present and empty, which is not the same as
+     * leaving them out: absent means every behaviour and every document,
+     * present and empty means none of either. This page reads notes.standing
+     * and notes.depth and nothing else, and those two travel whole whatever is
+     * asked for, so the empty sets drop byLocator and comparisons and keep
+     * everything used. Measured on 9b7ce377: 88 KB in place of 5324.
+     *
+     * The separator is built rather than appended because PINNED is the empty
+     * string on an unpinned page, where a bare & would make a query no route
+     * can read. */
+    loadJSON(`/api/reader/links${PINNED ? `${PINNED}&` : "?"}behavior=&spec=`, null),
   ]);
   if (!payload?.behaviours?.length || !documents?.documents?.length) {
     elements.caption.textContent = "The grid could not be loaded.";
