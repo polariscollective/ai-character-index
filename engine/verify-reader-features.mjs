@@ -2101,6 +2101,13 @@ console.log("== Overview: the governance view ==");
   check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
 }
 
+/* A PNG's dimensions, read out of its IHDR chunk: width and height are two
+ * big-endian 32-bit integers at bytes 16 and 20. No dependency for four bytes
+ * each. */
+function pngSize(buffer) {
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
 /* The bubble at the bottom right of every public page. What a walker can show
  * that no unit test can is that the pill is there on a page that is not the
  * reader, that the dialog refuses to send without both fields, and that what
@@ -2185,18 +2192,52 @@ console.log("== Every page: the feedback bubble ==");
   }));
   check(!seen.sendDisabled, "an address enables the send button", JSON.stringify(seen));
 
+  // The checks above left the dialog open, and a native modal dialog's
+  // backdrop makes everything behind it unclickable. Close it before asking
+  // for a second opening.
+  await page.evaluate(() => document.querySelector("#pf-note").close());
+  await page.waitForTimeout(100);
+
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  const framed = await page.evaluate(() => ({
+    shown: Boolean(document.querySelector("#pf-shot img")),
+    wide: document.querySelector("#pf-shot img")?.naturalWidth,
+    tall: document.querySelector("#pf-shot img")?.naturalHeight,
+    // What the capture is cropped to, so the assertion below compares the PNG
+    // with what the page says its own client area is rather than with a number
+    // a scrollbar can move.
+    clientWide: document.documentElement.clientWidth,
+    clientTall: document.documentElement.clientHeight,
+    dropOffered: !document.querySelector("#pf-drop").hidden,
+  }));
+  check(framed.shown && framed.dropOffered,
+    "the capture appears in the dialog and the drop button is offered",
+    JSON.stringify(framed));
+
+  await page.locator("#pf-comment").fill("The governance table runs off the right.");
+  await page.locator("#pf-email").fill("reader@example.org");
   await page.locator("#pf-send").click();
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(800);
   const sent = lastPageFeedbackReceived();
-  check(Boolean(sent)
-      && sent.comment === "The governance table runs off the right."
-      && sent.email === "reader@example.org"
-      && sent.page_url.endsWith("/overview.html")
+  const size = sent?.screenshot ? pngSize(sent.screenshot.png) : null;
+  check(Boolean(sent?.screenshot)
+      && sent.screenshot.type === "image/png"
+      && sent.capture_method === "html2canvas"
+      && size.width === framed.clientWide && size.height === framed.clientTall,
+    "a PNG of exactly the viewport arrives, filed as html2canvas",
+    JSON.stringify({ ...size, want: [framed.clientWide, framed.clientTall],
+                     bytes: sent?.screenshot?.bytes, method: sent?.capture_method }));
+
+  check(sent?.comment === "The governance table runs off the right."
+      && sent?.email === "reader@example.org"
+      && sent?.page_url.endsWith("/overview.html")
       && /^\d+x\d+ @\d/.test(sent.viewport)
       && sent.user_agent.length > 0
       && sent.website === "",
     "the send posts the words, the address, the page, the window and the browser string",
-    JSON.stringify({ ...sent, screenshot: Boolean(sent?.screenshot) }));
+    JSON.stringify({ ...sent, screenshot: true }));
 
   const kept = await page.evaluate(() => {
     try { return localStorage.getItem("aci-feedback-email"); } catch { return null; }
@@ -2207,6 +2248,19 @@ console.log("== Every page: the feedback bubble ==");
   await page.waitForTimeout(1200);
   const closed = await page.evaluate(() => !document.querySelector("#pf-note").open);
   check(closed, "the dialog closes on its own after a successful send");
+
+  await page.waitForTimeout(1200);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.locator("#pf-drop").click();
+  await page.locator("#pf-comment").fill("No picture for this one.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(400);
+  const wordsOnly = lastPageFeedbackReceived();
+  check(wordsOnly?.comment === "No picture for this one."
+      && wordsOnly.screenshot === null,
+    "dropping the screenshot sends the words alone",
+    JSON.stringify({ ...wordsOnly, screenshot: Boolean(wordsOnly?.screenshot) }));
 
   // The reader is the fourth page and the only one that is an application
   // rather than a document, so the pill is checked there too.

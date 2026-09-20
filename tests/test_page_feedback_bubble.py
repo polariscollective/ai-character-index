@@ -36,3 +36,20 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
         source = MODULE.read_text(encoding="utf-8")
         self.assertIn('id: "pf-website"', source)
         self.assertIn('form.set("website", trap.value)', source)
+
+    def test_the_capture_library_is_vendored(self):
+        """The module fetches it by path at runtime. A missing file is a pill
+        that opens a dialog saying the screenshot could not be taken."""
+        library = ROOT / "site" / "vendor" / "html2canvas.min.js"
+        self.assertTrue(library.exists(), "site/vendor/html2canvas.min.js is missing")
+        self.assertGreater(library.stat().st_size, 100_000)
+        self.assertIn('const LIBRARY = "/vendor/html2canvas.min.js";',
+                      MODULE.read_text(encoding="utf-8"))
+
+    def test_sticky_elements_are_pinned_before_the_clone_is_painted(self):
+        """html2canvas draws a sticky element at its static position, so a
+        reader who has scrolled would send a capture missing the header they
+        were looking at. All four pages use sticky."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function tagSticky()", source)
+        self.assertIn("onclone: clone => pinSticky(clone)", source)
