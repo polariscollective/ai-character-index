@@ -138,6 +138,33 @@ const STYLE = `
 .pf-drop:hover { background: #B7C94B; }
 .pf-drop:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
 
+.pf-shot canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.pf-tool, .pf-swatch {
+  padding: 4px 12px;
+  border: 1px solid #5C6B3C;
+  border-radius: 999px;
+  background: transparent;
+  color: #23281B;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pf-tool[aria-pressed="true"] { background: #333D22; color: #F1EFE3; border-color: #333D22; }
+.pf-tool:hover, .pf-swatch:hover { background: #B7C94B; color: #23281B; }
+.pf-tool:focus-visible, .pf-swatch:focus-visible {
+  outline: 2px solid #B7C94B;
+  outline-offset: 2px;
+}
+.pf-swatch { width: 28px; padding: 4px 0; }
+.pf-swatch[aria-pressed="true"] { border-width: 3px; }
+
 @media (prefers-reduced-motion: reduce) {
   .pf-pill, .pf-send, .pf-cancel { transition: none; }
 }
@@ -322,8 +349,54 @@ async function compose(base, shapes) {
   return blob;
 }
 
-/* Filled in by the editor. Until it exists, a capture carries no marks. */
-function draw() {}
+/* Three CSS pixels, scaled by the ratio between the image's natural width and
+ * the width it is shown at, so a mark looks the same whatever the capture scale
+ * and whatever the screen. */
+const STROKE = 3;
+
+/* Rust by default, the framework's only warm colour and the one it reserves for
+ * failure, which is what an annotation on a bug report is. Chartreuse second,
+ * for marks that land on an olive-deep band where rust cannot be read. */
+const COLOURS = [["fail", "#A0522D"], ["energy", "#B7C94B"]];
+
+function draw(ink, shape) {
+  ink.strokeStyle = shape.colour;
+  ink.lineWidth = shape.width;
+  ink.lineCap = "round";
+  ink.lineJoin = "round";
+
+  if (shape.tool === "box") {
+    ink.strokeRect(shape.from.x, shape.from.y,
+                   shape.to.x - shape.from.x, shape.to.y - shape.from.y);
+    return;
+  }
+
+  if (shape.tool === "pen") {
+    ink.beginPath();
+    shape.points.forEach((point, i) => (i ? ink.lineTo(point.x, point.y)
+                                          : ink.moveTo(point.x, point.y)));
+    ink.stroke();
+    return;
+  }
+
+  // An arrow rather than a bare line, because what somebody wants to do with a
+  // line is point at something.
+  const { from, to } = shape;
+  ink.beginPath();
+  ink.moveTo(from.x, from.y);
+  ink.lineTo(to.x, to.y);
+  ink.stroke();
+  const along = Math.atan2(to.y - from.y, to.x - from.x);
+  const head = Math.min(6 * shape.width,
+                        Math.hypot(to.x - from.x, to.y - from.y) / 3);
+  for (const turn of [Math.PI / 6, -Math.PI / 6]) {
+    ink.beginPath();
+    ink.moveTo(to.x, to.y);
+    ink.lineTo(to.x - head * Math.cos(along - turn),
+               to.y - head * Math.sin(along - turn));
+    ink.stroke();
+  }
+}
 
 /**
  * Send what the dialog holds.
@@ -389,6 +462,81 @@ async function send(parts) {
   }
 }
 
+/* Where a pointer is, in the image's own coordinates. The overlay is stretched
+ * by CSS to the width the picture is shown at, so every event has to be scaled
+ * back or a mark would land somewhere else on the PNG than it did on screen. */
+function at(event, canvas) {
+  const box = canvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - box.left) * (canvas.width / box.width),
+    y: (event.clientY - box.top) * (canvas.height / box.height),
+  };
+}
+
+/** Repaint every committed mark, and the one being drawn. */
+function repaint(canvas, drawing) {
+  const ink = canvas.getContext("2d");
+  ink.clearRect(0, 0, canvas.width, canvas.height);
+  for (const shape of state.shapes) draw(ink, shape);
+  if (drawing) draw(ink, drawing);
+}
+
+/**
+ * The overlay, sized to the photograph and stretched over it.
+ *
+ * Marks are held as shapes rather than as pixels, which is what makes undo one
+ * line: drop the last entry and repaint. Pointer Events throughout, so mouse,
+ * stylus and finger take one path.
+ */
+function overlay(base, tools) {
+  const canvas = el("canvas", { id: "pf-marks" });
+  canvas.width = base.width;
+  canvas.height = base.height;
+
+  let drawing = null;
+
+  canvas.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // Throws for a pointer id that is not an active pointer, which is every
+      // synthetic event. Capture is a convenience, not the mechanism.
+    }
+    const start = at(event, canvas);
+    const box = canvas.getBoundingClientRect();
+    const width = STROKE * (canvas.width / box.width);
+    drawing = tools.tool === "pen"
+      ? { tool: "pen", colour: tools.colour, width, points: [start] }
+      : { tool: tools.tool, colour: tools.colour, width, from: start, to: start };
+    repaint(canvas, drawing);
+  });
+
+  canvas.addEventListener("pointermove", event => {
+    if (!drawing) return;
+    const now = at(event, canvas);
+    if (drawing.tool === "pen") drawing.points.push(now);
+    else drawing.to = now;
+    repaint(canvas, drawing);
+  });
+
+  const finish = () => {
+    if (!drawing) return;
+    // A tap that never moved is not a mark: it would store a zero-length arrow
+    // or an empty box that nobody can see and nobody can undo on purpose.
+    const moved = drawing.tool === "pen"
+      ? drawing.points.length > 1
+      : Math.hypot(drawing.to.x - drawing.from.x, drawing.to.y - drawing.from.y) > 2;
+    if (moved) state.shapes.push(drawing);
+    drawing = null;
+    repaint(canvas, null);
+  };
+  canvas.addEventListener("pointerup", finish);
+  canvas.addEventListener("pointercancel", finish);
+
+  return canvas;
+}
+
 function build() {
   document.head.append(el("style", { textContent: STYLE }));
 
@@ -426,8 +574,63 @@ function build() {
     type: "button", className: "pf-cancel", id: "pf-cancel", textContent: "Cancel",
   });
 
+  const tools = { tool: "box", colour: COLOURS[0][1] };
+
+  const toolButton = (name, label) => {
+    const button = el("button", {
+      type: "button", className: "pf-tool", id: `pf-tool-${name}`, textContent: label,
+    });
+    button.setAttribute("aria-pressed", String(tools.tool === name));
+    button.addEventListener("click", () => {
+      tools.tool = name;
+      for (const other of toolbar.querySelectorAll(".pf-tool")) {
+        other.setAttribute("aria-pressed", String(other === button));
+      }
+    });
+    return button;
+  };
+
+  const swatch = ([name, value]) => {
+    const button = el("button", {
+      type: "button", className: "pf-swatch", id: `pf-colour-${name}`, textContent: " ",
+    });
+    button.style.background = value;
+    button.setAttribute("aria-label", name === "fail" ? "Rust" : "Chartreuse");
+    button.setAttribute("aria-pressed", String(tools.colour === value));
+    button.addEventListener("click", () => {
+      tools.colour = value;
+      for (const other of toolbar.querySelectorAll(".pf-swatch")) {
+        other.setAttribute("aria-pressed", String(other === button));
+      }
+    });
+    return button;
+  };
+
+  const undo = el("button", {
+    type: "button", className: "pf-tool", id: "pf-undo", textContent: "Undo",
+  });
+  const clear = el("button", {
+    type: "button", className: "pf-tool", id: "pf-clear", textContent: "Clear",
+  });
+  const toolbar = el("div", { className: "pf-row", id: "pf-tools" },
+    toolButton("box", "Box"), toolButton("arrow", "Arrow"), toolButton("pen", "Pen"),
+    swatch(COLOURS[0]), swatch(COLOURS[1]), undo, clear);
+  toolbar.hidden = true;
+
+  undo.addEventListener("click", () => {
+    state.shapes.pop();
+    const canvas = shot.querySelector("canvas");
+    if (canvas) repaint(canvas, null);
+  });
+  clear.addEventListener("click", () => {
+    state.shapes = [];
+    const canvas = shot.querySelector("canvas");
+    if (canvas) repaint(canvas, null);
+  });
+
   const note = el("dialog", { className: "pf-note", id: "pf-note" },
     el("h2", { id: "pf-title", textContent: "Tell us what you see" }),
+    toolbar,
     shot,
     shotRow,
     el("div", { className: "pf-field" },
@@ -467,6 +670,7 @@ function build() {
     state.dropped = true;
     shot.replaceChildren(el("p", { className: "pf-waiting",
                                    textContent: "No screenshot will be sent." }));
+    toolbar.hidden = true;
     drop.hidden = true;
   });
 
@@ -486,6 +690,7 @@ function build() {
     state.base = null;
     state.shapes = [];
     state.dropped = false;
+    toolbar.hidden = true;
     drop.hidden = true;
     shot.replaceChildren(el("p", { className: "pf-waiting",
                                    textContent: "Photographing the page." }));
@@ -499,7 +704,8 @@ function build() {
       state.base = canvas;
       const picture = el("img", { alt: "This page, as it was when you pressed the button" });
       picture.src = canvas.toDataURL("image/png");
-      shot.replaceChildren(picture);
+      shot.replaceChildren(picture, overlay(canvas, tools));
+      toolbar.hidden = false;
       drop.hidden = false;
     } catch {
       if (mine !== opening) return;

@@ -2216,6 +2216,58 @@ console.log("== Every page: the feedback bubble ==");
     "the capture appears in the dialog and the drop button is offered",
     JSON.stringify(framed));
 
+  const drawn = await page.evaluate(async () => {
+    const canvas = document.querySelector("#pf-marks");
+    if (!canvas) return { there: false };
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 40, 40);
+    send("pointermove", 200, 160);
+    send("pointerup", 200, 160);
+    const ink = canvas.getContext("2d");
+    const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return { there: true, painted };
+  });
+  check(drawn.there && drawn.painted > 100,
+    "a drag on the overlay paints a box onto it", JSON.stringify(drawn));
+
+  const afterUndo = await page.evaluate(() => {
+    document.querySelector("#pf-undo").click();
+    const canvas = document.querySelector("#pf-marks");
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(afterUndo === 0, "undo takes the last mark off the overlay", String(afterUndo));
+
+  const tooling = await page.evaluate(() => {
+    document.querySelector("#pf-tool-arrow").click();
+    return {
+      arrow: document.querySelector("#pf-tool-arrow").getAttribute("aria-pressed"),
+      box: document.querySelector("#pf-tool-box").getAttribute("aria-pressed"),
+    };
+  });
+  check(tooling.arrow === "true" && tooling.box === "false",
+    "choosing a tool unpresses the one before it", JSON.stringify(tooling));
+
+  // Back to the box, and draw one that survives into the PNG the send carries.
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-box").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 2, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 60, 60);
+    send("pointermove", 260, 200);
+    send("pointerup", 260, 200);
+  });
+
   await page.locator("#pf-comment").fill("The governance table runs off the right.");
   await page.locator("#pf-email").fill("reader@example.org");
   await page.locator("#pf-send").click();
@@ -2229,6 +2281,29 @@ console.log("== Every page: the feedback bubble ==");
     "a PNG of exactly the viewport arrives, filed as html2canvas",
     JSON.stringify({ ...size, want: [framed.clientWide, framed.clientTall],
                      bytes: sent?.screenshot?.bytes, method: sent?.capture_method }));
+
+  /* The mark is in the bytes, not only on the overlay. Rust is #A0522D, and no
+   * page of this site paints that colour anywhere, so finding it in the PNG is
+   * finding the annotation. Read out of the decoded image rather than the file,
+   * since a PNG's pixels are compressed. */
+  const marked = await page.evaluate(async encoded => {
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "image/png" });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ink = canvas.getContext("2d");
+    ink.drawImage(bitmap, 0, 0);
+    const { data } = ink.getImageData(0, 0, bitmap.width, bitmap.height);
+    let rust = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (Math.abs(data[i] - 0xA0) < 12 && Math.abs(data[i + 1] - 0x52) < 12
+       && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
+    }
+    return rust;
+  }, sent.screenshot.png.toString("base64"));
+  check(marked > 100, "the box drawn on the overlay is in the PNG that was sent",
+    `rust pixels: ${marked}`);
 
   check(sent?.comment === "The governance table runs off the right."
       && sent?.email === "reader@example.org"
