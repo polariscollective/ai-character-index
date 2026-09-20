@@ -19,6 +19,7 @@ const PAGES = [
   ["/admin/publications", "Publications"],
   ["/admin/submissions", "Proposals"],
   ["/admin/feedback", "Notes"],
+  ["/admin/page-feedback", "Page reports"],
 ];
 
 export default async function AdminLayout({ children }) {

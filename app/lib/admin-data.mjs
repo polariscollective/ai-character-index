@@ -113,6 +113,23 @@ export async function submissions(limit = 50, fetchImpl = fetch) {
   })));
 }
 
+/** What readers said about whole pages, newest first, each with its capture.
+ *
+ * The link is minted here and expires, because the bucket is private and a
+ * permanent link to a private object is a public object with extra steps. This
+ * is the only surface that can open one: a private bucket with nothing that
+ * reads it is a bucket nobody can open. */
+export async function pageFeedback(limit = 50, fetchImpl = fetch) {
+  const rows = await select("aci_page_feedback",
+                            `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
+  return Promise.all(rows.map(async row => ({
+    ...row,
+    link: row.screenshot
+      ? await signedLink("aci-page-feedback", row.screenshot, 3600, fetchImpl)
+      : null,
+  })));
+}
+
 /** What readers said about paragraphs, newest first. */
 export async function feedback(limit = 50, fetchImpl = fetch) {
   return select("aci_feedback", `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
