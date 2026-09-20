@@ -16,7 +16,10 @@
  * else's browser never will be, so there is nothing to ask and nothing to
  * record.
  */
+import { randomUUID } from "node:crypto";
 import { ADDRESS } from "./feedback.mjs";
+import { insert, signedLink, upload } from "./supabase.mjs";
+import { forSlack, postToSlack } from "./slack.mjs";
 
 export const TABLE = "aci_page_feedback";
 export const BUCKET = "aci-page-feedback";
@@ -109,4 +112,89 @@ export function pageProblems(fields) {
     if (fields.image.type !== "image/png") found.push("a screenshot must be a PNG");
   }
   return found;
+}
+
+/**
+ * Record a report: the image first, then the row that describes it.
+ *
+ * That order is the other two routes' order and it is the point: a row never
+ * points at an object that is not there. The Slack message is a courtesy the
+ * caller pays afterwards, so a webhook that is missing or refuses leaves the
+ * report intact.
+ */
+export async function record({ fields, hash }, { fetchImpl = fetch } = {}) {
+  let path = null;
+  if (fields.image) {
+    // The date in the path so a year of reports is browsable, the uuid so two
+    // captures of the same page never meet.
+    path = `${new Date().toISOString().slice(0, 10)}/${randomUUID()}.png`;
+    await upload(BUCKET, path, await fields.image.arrayBuffer(), "image/png", fetchImpl);
+  }
+  const [row] = await insert(TABLE, [{
+    page_url: fields.page_url,
+    comment: fields.comment,
+    submitter: fields.email,
+    screenshot: path,
+    capture_method: path ? fields.capture_method || null : null,
+    viewport: fields.viewport,
+    user_agent: fields.user_agent,
+    source_hash: hash,
+  }], fetchImpl);
+  return row;
+}
+
+/* Long enough to judge a report from the message, short enough to read. */
+const IN_SLACK = 700;
+
+const TITLE = "Feedback on a page";
+
+/**
+ * Tell Slack. Returns what went wrong, or null; never throws.
+ *
+ * Two attempts rather than one, and the reason is Slack's own behaviour: it
+ * fetches image_url itself and refuses the WHOLE message when a block displeases
+ * it. A signed link it will not accept would otherwise cost us the notification
+ * entirely, and a report that arrives without its picture is worth more than a
+ * report that does not arrive.
+ *
+ * The address is in the message because the message goes to us. It is the one
+ * place it appears outside the database, and it appears nowhere public.
+ */
+export async function announce(row = {}, fetchImpl = fetch, site = "") {
+  const comment = String(row?.comment || "");
+  const shown = comment.length > IN_SLACK ? `${comment.slice(0, IN_SLACK)}...` : comment;
+  const said = [
+    `*Said:* ${forSlack(shown)}`,
+    `*On:* ${forSlack(row.page_url || "no page given")}`,
+  ].join("\n");
+
+  const base = [
+    { type: "header", text: { type: "plain_text", text: TITLE } },
+    { type: "section", text: { type: "mrkdwn", text: said } },
+    { type: "context", elements: [{ type: "mrkdwn",
+      text: `From ${forSlack(row.submitter || "no address given")}`
+          + (row.viewport ? ` | ${forSlack(row.viewport)}` : "")
+          + (row.screenshot ? "" : " | no screenshot")
+          + ` | <${site}/admin/page-feedback|read it in the portal>` }] },
+  ];
+
+  let link = null;
+  if (row.screenshot) {
+    try {
+      link = await signedLink(BUCKET, row.screenshot, SIGNED_FOR, fetchImpl);
+    } catch {
+      // A link that could not be minted is a message without a picture, which
+      // is what the retry below sends anyway.
+    }
+  }
+
+  if (link) {
+    const withImage = [base[0], base[1],
+      { type: "image", image_url: link, alt_text: "the page as the sender saw it" },
+      base[2]];
+    const refused = await postToSlack(TITLE, withImage, fetchImpl);
+    if (!refused) return null;
+    console.error(`page-feedback: slack refused the image block: ${refused}`);
+  }
+  return postToSlack(TITLE, base, fetchImpl);
 }

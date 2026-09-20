@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   LIMITS, MAX_IMAGE_BYTES, MAX_REQUEST_BYTES, PER_HOUR,
-  normalise, pageProblems,
+  normalise, pageProblems, announce, record, BUCKET,
 } from "../page-feedback.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -107,4 +107,98 @@ test("the caps are the numbers the design fixed", () => {
   assert.equal(PER_HOUR, 10);
   assert.equal(MAX_REQUEST_BYTES, 4 * 1024 * 1024);
   assert.equal(MAX_IMAGE_BYTES, 3 * 1024 * 1024);
+});
+
+/** A fetch that records what it was asked and answers what it is told to. */
+function fakeFetch(answers = {}) {
+  const seen = [];
+  const impl = async (url, options = {}) => {
+    seen.push({ url: String(url), options });
+    for (const [fragment, answer] of Object.entries(answers)) {
+      if (String(url).includes(fragment)) return answer();
+    }
+    return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+  };
+  impl.seen = seen;
+  return impl;
+}
+
+const ROW = () => new Response(JSON.stringify([{ id: "row-1" }]), {
+  status: 201, headers: { "content-type": "application/json" },
+});
+
+test("the image lands in the bucket before the row that describes it", async () => {
+  const order = [];
+  const impl = fakeFetch({
+    "/storage/v1/object/aci-page-feedback/": () => {
+      order.push("upload");
+      return new Response("{}", { status: 200 });
+    },
+    "/rest/v1/aci_page_feedback": () => {
+      order.push("insert");
+      return ROW();
+    },
+  });
+  const data = form();
+  data.set("screenshot", png(64));
+  const row = await record({ fields: normalise(data), hash: "H" }, { fetchImpl: impl });
+  assert.deepEqual(order, ["upload", "insert"]);
+  assert.equal(row.id, "row-1");
+  const wrote = JSON.parse(impl.seen.find(c => c.url.includes("/rest/v1/")).options.body)[0];
+  assert.match(wrote.screenshot, /^\d{4}-\d{2}-\d{2}\/[0-9a-f-]{36}\.png$/);
+  assert.equal(wrote.capture_method, "html2canvas");
+  assert.equal(wrote.source_hash, "H");
+  assert.equal(wrote.submitter, "reader@example.org");
+});
+
+test("a report with no image writes a null path and uploads nothing", async () => {
+  const impl = fakeFetch({ "/rest/v1/aci_page_feedback": ROW });
+  await record({ fields: normalise(form()), hash: "H" }, { fetchImpl: impl });
+  assert.equal(impl.seen.filter(c => c.url.includes("/storage/")).length, 0);
+  const wrote = JSON.parse(impl.seen[0].options.body)[0];
+  assert.equal(wrote.screenshot, null);
+  assert.equal(wrote.capture_method, null);
+});
+
+test("Slack carries the picture, and a refused message is sent again without it", async () => {
+  let posts = 0;
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.slack.test/x";
+  const impl = fakeFetch({
+    "/storage/v1/object/sign/": () => new Response(
+      JSON.stringify({ signedURL: "/object/sign/aci-page-feedback/a.png?token=t" }),
+      { status: 200, headers: { "content-type": "application/json" } }),
+    "hooks.slack.test": () => {
+      posts += 1;
+      return new Response("invalid_blocks", { status: posts === 1 ? 400 : 200 });
+    },
+  });
+  const silent = await announce(
+    { id: "row-1", page_url: "https://example.org/overview", comment: "Broken.",
+      submitter: "reader@example.org", screenshot: "2026-09-20/a.png",
+      viewport: "390x844 @3" },
+    impl, "https://example.org");
+  assert.equal(silent, null);
+  assert.equal(posts, 2);
+  const [first, second] = impl.seen.filter(c => c.url.includes("hooks.slack.test"))
+    .map(c => JSON.parse(c.options.body));
+  assert.ok(first.blocks.some(b => b.type === "image"), "the first try carries the image");
+  assert.ok(!second.blocks.some(b => b.type === "image"), "the second does not");
+  assert.ok(second.blocks.some(b => JSON.stringify(b).includes("/admin/page-feedback")));
+});
+
+test("a stranger's words cannot ping the channel", async () => {
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.slack.test/x";
+  const impl = fakeFetch({ "hooks.slack.test": () => new Response("ok", { status: 200 }) });
+  await announce({ id: "r", page_url: "https://example.org/", comment: "<!channel> look",
+                   submitter: "spam@example.org" }, impl, "https://example.org");
+  const body = impl.seen.find(c => c.url.includes("hooks.slack.test")).options.body;
+  assert.ok(!body.includes("<!channel>"), body);
+  assert.ok(body.includes("&lt;!channel&gt;"), body);
+});
+
+test("no webhook is a message nobody got, not an error thrown at the caller", async () => {
+  delete process.env.SLACK_WEBHOOK_URL;
+  const silent = await announce({ id: "r", page_url: "https://example.org/", comment: "x" },
+                                fakeFetch(), "https://example.org");
+  assert.equal(silent, "SLACK_WEBHOOK_URL is not set");
 });
