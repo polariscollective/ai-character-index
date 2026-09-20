@@ -221,7 +221,7 @@ function say(node, words, bad) {
 /* What the dialog is holding: the photograph, the marks drawn on it, and
  * whether the sender said they did not want the photograph after all. Reset
  * every time the pill is pressed. */
-const state = { base: null, shapes: [], dropped: false };
+const state = { base: null, shapes: [], dropped: false, where: "" };
 
 let library = null;
 
@@ -565,7 +565,7 @@ async function send(parts) {
   const form = new FormData();
   form.set("comment", words);
   form.set("email", address);
-  form.set("page_url", location.href);
+  form.set("page_url", state.where || location.href);
   form.set("viewport",
            `${window.innerWidth}x${window.innerHeight} @${window.devicePixelRatio || 1}`);
   form.set("user_agent", navigator.userAgent);
@@ -579,7 +579,7 @@ async function send(parts) {
   if (state.base) {
     try {
       const picture = await compose(state.base, state.shapes);
-      if (picture) {
+      if (picture && picture.size <= MAX_IMAGE_BYTES) {
         form.set("capture_method", METHOD);
         form.set("screenshot", picture, "page.png");
       } else {
@@ -591,7 +591,9 @@ async function send(parts) {
   }
 
   try {
-    const response = await fetch(ROUTE, { method: "POST", body: form });
+    const response = await fetch(ROUTE, {
+      method: "POST", body: form, signal: AbortSignal.timeout(30000),
+    });
     const outcome = await response.json().catch(() => ({}));
     if (!response.ok) {
       say(said, outcome.problem || "That did not go through. It is worth trying again.", true);
@@ -876,6 +878,14 @@ function build() {
   // is. Without it the dialog is announced with no name at all.
   note.setAttribute("aria-labelledby", "pf-title");
 
+  /* The pages this runs on are not ours, and one of them is an application
+   * with document-level keys: with a tool button focused, its j and k scroll
+   * the document behind this dialog and rewrite the address, and its Escape
+   * tells an embedding frame to close the whole reader. A key pressed inside
+   * a modal belongs to the modal. Escape still closes this dialog, because
+   * that is the browser's own default action and not a listener. */
+  note.addEventListener("keydown", event => event.stopPropagation());
+
   const ready = () => {
     sendButton.disabled = !(comment.value.trim() && email.value.trim());
   };
@@ -942,6 +952,7 @@ function build() {
     state.base = null;
     state.shapes = [];
     state.dropped = false;
+    state.where = location.href;
     toolbar.hidden = true;
     drop.hidden = true;
     shot.replaceChildren(el("p", { className: "pf-waiting",

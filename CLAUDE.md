@@ -444,6 +444,16 @@ which is a change to what the four public pages do to everybody in order to
 serve the few who report a bug. It is separable, and if it is ever wanted it
 should be argued for on its own.
 
+**Three more things left as they are.** A report whose image lands in the
+bucket and whose row then fails to insert leaves the object there with nothing
+pointing at it: the order is deliberate, because a row must never point at an
+object that is not there, and the cost of that choice is orphans with no
+sweeper to collect them. The Slack message carries the page address and a link
+to the portal but not the row's id, so matching a message to a row is done by
+eye. And the hourly cap counts rows rather than requests, as both sibling
+routes do, so it bounds what is stored and not what is sent: a request refused
+for any reason is never counted.
+
 The design is `docs/superpowers/specs/2026-09-20-feedback-on-a-page-design.md`;
 the table and the bucket are `20260920120000_aci_page_feedback.sql` in
 `polaris-supabase`.

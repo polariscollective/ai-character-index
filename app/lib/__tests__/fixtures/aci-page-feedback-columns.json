@@ -1,0 +1,6 @@
+{
+  "_source": "20260920120000_aci_page_feedback.sql in polaris-supabase, applied 20 September 2026",
+  "columns": ["id", "created_at", "page_url", "comment", "submitter", "screenshot",
+              "capture_method", "viewport", "user_agent", "source_hash", "status", "notes"],
+  "required_without_default": ["page_url", "comment", "submitter", "source_hash"]
+}

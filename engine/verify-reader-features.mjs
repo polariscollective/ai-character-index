@@ -2742,6 +2742,39 @@ console.log("== Every page: the feedback bubble ==");
       JSON.stringify(popoverDiffMouse));
   }
 
+  /* Finding 3: the reader's own document-level keydown handler bails on a
+   * focused textarea, select or checkbox-less input, but not on a focused
+   * button, and this dialog is mostly buttons. With a tool button focused
+   * and the dialog open, j must stay inside the dialog rather than reach the
+   * reader behind it, where it would step to the next passage, scroll the
+   * document column and rewrite the address (dropPassageParam calls
+   * history.replaceState). Read before and after rather than asserting
+   * nothing moved by construction, so a regression here would fail loudly. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.focus("#pf-tool-box");
+
+  const readerState = () => page.evaluate(() => {
+    const column = [...document.querySelectorAll("*")]
+      .find(node => node.scrollHeight > node.clientHeight + 400
+                 && getComputedStyle(node).overflowY !== "visible");
+    return { href: location.href, scrollTop: column ? column.scrollTop : null };
+  });
+
+  const beforeJ = await readerState();
+  await page.keyboard.press("j");
+  await page.waitForTimeout(150);
+  const afterJ = await readerState();
+
+  check(afterJ.href === beforeJ.href && afterJ.scrollTop === beforeJ.scrollTop,
+    "with the bubble's dialog open and a tool button focused, j does not change "
+  + "location.href and does not scroll the reader's column",
+    JSON.stringify({ beforeJ, afterJ }));
+
+  await page.evaluate(() => document.querySelector("#pf-note")?.close());
+
   /* Every capture above tags data-pf-sticky, data-pf-scrolled and
    * data-pf-floating onto live page elements, and the last of the three is
    * only ever removed by a click that runs its course: a press abandoned

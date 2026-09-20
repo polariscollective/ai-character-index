@@ -34,8 +34,8 @@ export const PER_HOUR = 10;
  * the image cap for multipart framing and the text fields. */
 export const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
 
-/* What the image may weigh. The sender already halves and re-encodes anything
- * over this, so a request that carries more is not a browser of ours. */
+/* What the image may weigh. The sender halves and re-encodes once, and sends
+ * the words alone if it is still too large after that. */
 export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 /* How long the link in the Slack message lives. After that the picture goes
@@ -95,6 +95,24 @@ export function pageProblems(fields) {
   else if (!ADDRESS.test(fields.email)) {
     found.push("your address does not look like an address");
   }
+
+  /* A scheme, not just a length. This value is rendered as a live href in
+   * the portal, on an authenticated page, and the whole point of the column
+   * is that an operator clicks it to go and look at the page being reported.
+   * A javascript: URL there would run with their session. */
+  if (!fields.page_url) found.push("the page address is missing");
+  else {
+    let parsed = null;
+    try {
+      parsed = new URL(fields.page_url);
+    } catch {
+      // Not a URL at all.
+    }
+    if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) {
+      found.push("the page address must be an http or https address");
+    }
+  }
+
   for (const [value, limit, what] of [
     [fields.comment, LIMITS.comment, "comment"],
     [fields.email, LIMITS.email, "address"],
@@ -113,6 +131,17 @@ export function pageProblems(fields) {
     if (fields.image.type !== "image/png") found.push("a screenshot must be a PNG");
   }
   return found;
+}
+
+/* A PNG's own first eight bytes. The part's declared type is the sender's
+ * word for it, and the bucket's allowed_mime_types checks that same word, so
+ * without this both gates read one claim. */
+const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+/** Whether what arrived is not a PNG, whatever it says it is. */
+export async function notAPng(image) {
+  const head = new Uint8Array(await image.slice(0, 8).arrayBuffer());
+  return PNG_SIGNATURE.some((byte, index) => head[index] !== byte);
 }
 
 /**
@@ -256,6 +285,10 @@ export async function handle(request, { fetchImpl = fetch } = {}) {
 
   const found = pageProblems(fields);
   if (found.length) return said(400, { problem: found.join("\n") });
+
+  if (fields.image && await notAPng(fields.image)) {
+    return said(400, { problem: "That screenshot is not a PNG." });
+  }
 
   let row;
   try {

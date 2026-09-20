@@ -5,6 +5,7 @@
  * Run: node --test app/lib/__tests__/page-feedback.test.mjs
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   LIMITS, MAX_IMAGE_BYTES, MAX_REQUEST_BYTES, PER_HOUR,
@@ -32,9 +33,15 @@ function form(changed = {}) {
   return data;
 }
 
-/** A PNG part of a given size, which is all these rules look at. */
+/* A PNG's own first eight bytes, so a part built by png() below passes the
+ * signature check the route now runs and not only its declared type. */
+const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+/** A PNG part of a given size, real signature included. */
 function png(bytes) {
-  return new File([new Uint8Array(bytes)], "page.png", { type: "image/png" });
+  const data = new Uint8Array(bytes);
+  data.set(PNG_SIGNATURE.slice(0, Math.min(PNG_SIGNATURE.length, bytes)));
+  return new File([data], "page.png", { type: "image/png" });
 }
 
 test("a report with words, an address and a picture is accepted", () => {
@@ -63,6 +70,36 @@ test("an address that is not an address is refused before it is stored", () => {
   for (const wrong of ["reader", "reader@", "@example.org", "a b@example.org"]) {
     assert.deepEqual(pageProblems(normalise(form({ email: wrong }))),
                      ["your address does not look like an address"], wrong);
+  }
+});
+
+test("a missing page address is refused", () => {
+  assert.deepEqual(pageProblems(normalise(form({ page_url: "" }))),
+                   ["the page address is missing"]);
+});
+
+test("a javascript: page address is refused: the portal renders this as a live href", () => {
+  assert.deepEqual(pageProblems(normalise(form({ page_url: "javascript:alert(1)" }))),
+                   ["the page address must be an http or https address"]);
+});
+
+test("a data: page address is refused the same way", () => {
+  assert.deepEqual(pageProblems(normalise(form({ page_url: "data:text/html,x" }))),
+                   ["the page address must be an http or https address"]);
+});
+
+test("a page address that is not a URL at all is refused", () => {
+  assert.deepEqual(pageProblems(normalise(form({ page_url: "not a url" }))),
+                   ["the page address must be an http or https address"]);
+});
+
+test("ordinary http and https page addresses, query strings included, still pass", () => {
+  for (const ok of [
+    "http://example.org/",
+    "https://example.org/overview?view=governance",
+    "https://example.org/reader?spec=anthropic&behaviour=helpfulness",
+  ]) {
+    assert.deepEqual(pageProblems(normalise(form({ page_url: ok }))), [], ok);
   }
 });
 
@@ -226,6 +263,18 @@ test("a good report is recorded and answered with one sentence", async () => {
   assert.deepEqual(await answer.json(), { done: THANKS });
 });
 
+test("bytes that are not a PNG are refused even when the part declares image/png", async () => {
+  const impl = fakeFetch();
+  const data = form();
+  data.set("screenshot", new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])], "page.png",
+                                   { type: "image/png" }));
+  const answer = await handle(request(data), { fetchImpl: impl });
+  assert.equal(answer.status, 400);
+  assert.match((await answer.json()).problem, /not a PNG/);
+  assert.equal(impl.seen.filter(c => c.options.method === "POST").length, 0,
+    "nothing was written");
+});
+
 test("a body declared larger than the cap is refused before it is read", async () => {
   // A string body rather than a FormData, because what is under test is the
   // header and not the parse: the route must refuse before it buffers. This is
@@ -295,4 +344,34 @@ test("a database that will not take it says so, and says nothing was kept", asyn
   const answer = await handle(request(form()), { fetchImpl: impl });
   assert.equal(answer.status, 500);
   assert.match((await answer.json()).problem, /Nothing was recorded/);
+});
+
+/**
+ * The migration that creates aci_page_feedback lives in polaris-supabase, a
+ * different repository, so nothing here can import the real schema and no test
+ * above can catch a column that migration renamed or dropped. This fixture is
+ * a hand-checked copy of that table's columns, read against the migration when
+ * it was last written here. It is the only thing standing between the two
+ * repositories, and it is meant to fail loudly the day either side moves: a
+ * column record() writes that the fixture does not know, or a required column
+ * the fixture knows that record() no longer writes.
+ */
+const COLUMNS = JSON.parse(readFileSync(
+  new URL("./fixtures/aci-page-feedback-columns.json", import.meta.url), "utf8"));
+
+test("the row record() inserts stays inside the table's own columns", async () => {
+  const impl = fakeFetch({ "/rest/v1/aci_page_feedback": ROW });
+  const data = form();
+  data.set("screenshot", png(64));
+  await record({ fields: normalise(data), hash: "H" }, { fetchImpl: impl });
+  const written = JSON.parse(
+    impl.seen.find(call => call.url.includes("/rest/v1/aci_page_feedback")).options.body,
+  )[0];
+  const keys = Object.keys(written);
+  for (const key of keys) {
+    assert.ok(COLUMNS.columns.includes(key), `${key} is not a column of aci_page_feedback`);
+  }
+  for (const required of COLUMNS.required_without_default) {
+    assert.ok(keys.includes(required), `${required} has no default and was not written`);
+  }
 });
