@@ -375,11 +375,13 @@ function placeFloating(clone) {
  * have to happen before anything appeared on screen, and a second of nothing
  * after a click reads as a broken button.
  */
-async function capture(mine) {
+async function capture(mine, floating = null) {
   const html2canvas = await loadLibrary();
   const sticky = tagSticky();
   const scrolled = tagScrolled();
-  const floating = tagFloating(mine);
+  /* Tagged by the caller when it had to be done before a dialog opened, and
+   * tagged here when the caller had no such trouble. */
+  const pinned = floating || tagFloating(mine);
   try {
     return await html2canvas(document.body, {
       x: window.scrollX,
@@ -401,7 +403,7 @@ async function capture(mine) {
   } finally {
     for (const node of sticky) delete node.dataset.pfSticky;
     for (const node of scrolled) delete node.dataset.pfScrolled;
-    for (const node of floating) delete node.dataset.pfFloating;
+    for (const node of pinned) delete node.dataset.pfFloating;
   }
 }
 
@@ -776,6 +778,12 @@ function build() {
 
   pill.addEventListener("click", async () => {
     const mine = ++opening;
+    /* Measured before the dialog opens, and that is the whole of the reason:
+     * showing a modal dialog closes every open popover, natively and without
+     * asking, so by the time the camera runs there is nothing left to pin.
+     * These attributes outlive the closing, and placeFloating shows the note
+     * again in the clone. */
+    const floating = tagFloating([pill, note]);
     say(said, "", false);
     state.base = null;
     state.shapes = [];
@@ -788,7 +796,7 @@ function build() {
     note.showModal();
     comment.focus();
     try {
-      const canvas = await capture([pill, note]);
+      const canvas = await capture([pill, note], floating);
       // Dropped, closed, or opened again while the camera was working.
       if (mine !== opening || !note.open || state.dropped) return;
       state.base = canvas;

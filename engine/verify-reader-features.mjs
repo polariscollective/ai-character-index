@@ -2426,6 +2426,95 @@ console.log("== Every page: the feedback bubble ==");
     "the capture of a scrolled reader carries text across its middle rather than blank paper",
     JSON.stringify(agrees));
 
+  /* A popover open when the pill is pressed must survive into the picture:
+   * showModal on the bubble's own dialog closes every open auto popover
+   * natively, so the fix measures a popover's box before that happens rather
+   * than after. Proved by comparing two captures of the same page, one taken
+   * with a popover open and one with nothing open: if the popover were not
+   * drawn, the two would agree everywhere, including inside its own box.
+   *
+   * The pill is pressed by keyboard here (focus, then Enter), not clicked.
+   * A real pointer click on the pill dismisses any open auto popover on its
+   * own, natively, on pointerdown, before the "click" event is even
+   * dispatched to the pill's own listener: proved directly with a
+   * capture-phase click listener on the pill, which already saw the popover
+   * closed. That happens whatever this fix does, because both tagFloating
+   * and showModal run inside the click handler, which only starts after the
+   * popover is already gone. A keyboard activation fires "click" with no
+   * pointerdown before it, so it is the one path that reaches the code this
+   * fix changed, and it is a real path: what a keyboard or screen-reader user
+   * does. A mouse user who opens a note and then clicks the pill still loses
+   * the note, for a reason this task did not create and cannot fix inside a
+   * single click handler. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
+  const pressPillByKeyboard = async () => {
+    await page.focus("#pf-pill");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const noteTrigger = `[data-behaviour-note="${DEFINED}"]`;
+  const triggerThere = await page.evaluate(
+    sel => Boolean(document.querySelector(sel)), noteTrigger);
+  if (!triggerThere) {
+    check(false, "a popover is reachable in the fixture, to prove it reaches the capture",
+      "no [data-behaviour-note] trigger found on the reader");
+  } else {
+    const withoutNote = await pressPillByKeyboard();
+
+    await page.click(noteTrigger);
+    await page.waitForTimeout(150);
+    const noteBox = await page.evaluate(() => {
+      const note = document.querySelector("#key-note");
+      if (!note?.matches(":popover-open")) return null;
+      const rect = note.getBoundingClientRect();
+      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    });
+    check(Boolean(noteBox) && noteBox.width > 0 && noteBox.height > 0,
+      "the behaviour note is open as a popover before the pill is pressed",
+      JSON.stringify(noteBox));
+
+    const withNote = await pressPillByKeyboard();
+
+    const popoverDiff = noteBox && await page.evaluate(async ({ a, b, box }) => {
+      const clientWide = document.documentElement.clientWidth;
+      const clientTall = document.documentElement.clientHeight;
+      const decode = async url => {
+        const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        canvas.getContext("2d").drawImage(bitmap, 0, 0);
+        return canvas;
+      };
+      const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
+      const scaleX = canvasA.width / clientWide;
+      const scaleY = canvasA.height / clientTall;
+      const x = Math.max(0, Math.floor(box.left * scaleX));
+      const y = Math.max(0, Math.floor(box.top * scaleY));
+      const w = Math.max(1, Math.min(canvasA.width - x, Math.ceil(box.width * scaleX)));
+      const h = Math.max(1, Math.min(canvasA.height - y, Math.ceil(box.height * scaleY)));
+      const dataA = canvasA.getContext("2d").getImageData(x, y, w, h).data;
+      const dataB = canvasB.getContext("2d").getImageData(x, y, w, h).data;
+      let differing = 0;
+      for (let i = 0; i < dataA.length; i += 4) {
+        if (Math.abs(dataA[i] - dataB[i]) > 10
+         || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
+         || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
+      }
+      return { differing, total: w * h, width: w, height: h };
+    }, { a: withoutNote, b: withNote, box: noteBox });
+
+    check(Boolean(popoverDiff) && popoverDiff.total > 0
+        && popoverDiff.differing / popoverDiff.total > 0.3,
+      "a popover open when the pill is pressed is drawn into the capture, not closed by the dialog",
+      JSON.stringify(popoverDiff));
+  }
+
   check(pageErrors.length === 0, "the feedback bubble: no console errors",
     pageErrors.join("; "));
 }
