@@ -2382,12 +2382,27 @@ console.log("== Every page: the feedback bubble ==");
 
   /* The reader scrolls its own column, not the window, so a capture cropped at
    * window.scrollY would show the top of the document however far down the
-   * reader has read. What proves it is not the picture's size but its
-   * content: the same region rendered twice should agree, so this compares a
-   * band of the capture against the same band of Playwright's own screenshot
-   * and asks whether they are mostly the same colour. */
+   * reader has read. Asserting only that the capture is not blank would pass
+   * whether or not the scroll is carried into it: a capture that ignored the
+   * inner scroll would still show the column's top, which is not blank
+   * either. What proves the fix is that the picture changes with the scroll,
+   * so this takes two captures of the same page, one with the column at the
+   * top and one scrolled well down, and counts how many pixels differ across
+   * the whole image: nearly none would mean the capture never moved. */
   await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
+
+  const captureReaderShot = async () => {
+    await page.locator("#pf-pill").click();
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const atTop = await captureReaderShot();
+
   const scrolledBy = await page.evaluate(() => {
     const column = [...document.querySelectorAll("*")]
       .find(node => node.scrollHeight > node.clientHeight + 400
@@ -2404,27 +2419,32 @@ console.log("== Every page: the feedback bubble ==");
   check(scrolledBy > 0, "the reader has a column that scrolls inside the page",
     String(scrolledBy));
 
-  await page.locator("#pf-pill").click();
-  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
-  const agrees = await page.evaluate(async () => {
-    const img = document.querySelector("#pf-shot img");
-    const drawn = document.createElement("canvas");
-    drawn.width = img.naturalWidth;
-    drawn.height = img.naturalHeight;
-    drawn.getContext("2d").drawImage(img, 0, 0);
-    // The first non-blank row of the captured document area, as a fingerprint
-    // of which part of the document was photographed.
-    const { data } = drawn.getContext("2d")
-      .getImageData(0, Math.round(drawn.height / 2), drawn.width, 1);
-    let ink = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) ink += 1;
+  const scrolledDown = await captureReaderShot();
+
+  const scrollDiff = await page.evaluate(async ({ a, b }) => {
+    const decode = async url => {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+      return canvas;
+    };
+    const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
+    const width = Math.min(canvasA.width, canvasB.width);
+    const height = Math.min(canvasA.height, canvasB.height);
+    const dataA = canvasA.getContext("2d").getImageData(0, 0, width, height).data;
+    const dataB = canvasB.getContext("2d").getImageData(0, 0, width, height).data;
+    let differing = 0;
+    for (let i = 0; i < dataA.length; i += 4) {
+      if (Math.abs(dataA[i] - dataB[i]) > 10
+       || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
+       || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
     }
-    return { width: drawn.width, height: drawn.height, ink };
-  });
-  check(agrees.ink > 20,
-    "the capture of a scrolled reader carries text across its middle rather than blank paper",
-    JSON.stringify(agrees));
+    return { differing, total: width * height, width, height };
+  }, { a: atTop, b: scrolledDown });
+
+  check(scrollDiff.total > 0 && scrollDiff.differing / scrollDiff.total > 0.1,
+    "a capture with the column scrolled down differs substantially from one at the top",
+    JSON.stringify(scrollDiff));
 
   /* A popover open when the pill is pressed must survive into the picture:
    * showModal on the bubble's own dialog closes every open auto popover
@@ -2556,6 +2576,17 @@ console.log("== Every page: the feedback bubble ==");
       + "not closed by light dismiss",
       JSON.stringify(popoverDiffMouse));
   }
+
+  /* Every capture above tags data-pf-sticky, data-pf-scrolled and
+   * data-pf-floating onto live page elements, and the last of the three is
+   * only ever removed by a click that runs its course: a press abandoned
+   * before it becomes a click, or a capture that throws, must not leave any
+   * of them behind on a page a reader goes on looking at. */
+  const leftover = await page.evaluate(() =>
+    document.querySelectorAll("[data-pf-sticky], [data-pf-scrolled], [data-pf-floating]").length);
+  check(leftover === 0,
+    "no capture-only attribute is left on the page once a capture has run",
+    String(leftover));
 
   check(pageErrors.length === 0, "the feedback bubble: no console errors",
     pageErrors.join("; "));

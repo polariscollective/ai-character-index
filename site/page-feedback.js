@@ -776,25 +776,37 @@ function build() {
   // after the await is how a late picture knows it is no longer wanted.
   let opening = 0;
 
-  /* Measured on pointerdown, not on click, and that is the whole of it: a
-   * listener runs before the default action of its own event, and the
-   * browser's light dismiss of an open popover is a default action of the
-   * press. By the time a click handler runs, the reader's note has already
-   * gone. */
-  let floating = [];
-  let pressedAt = 0;
+  /* What the press measured, waiting for the click that follows it.
+   *
+   * Measured on pointerdown and not on click, and that is the whole of the
+   * reason: a listener runs before the default action of its own event, and
+   * the browser's light dismiss of an open popover is a default action of the
+   * press. By the time a click handler runs, the reader's note has gone. */
+  let held = null;
+
   pill.addEventListener("pointerdown", () => {
-    floating = tagFloating([pill, note]);
-    pressedAt = Date.now();
+    /* A press that never became a click left its attributes on the page, and
+     * nothing else would ever remove them. Clearing here rather than on
+     * pointerup, which fires before the click that needs them, bounds the
+     * litter to one abandoned press. */
+    if (held) for (const node of held) delete node.dataset.pfFloating;
+    held = tagFloating([pill, note]);
   }, true);
 
-  pill.addEventListener("click", async () => {
+  pill.addEventListener("click", async event => {
     const mine = ++opening;
-    // A pointerdown already tagged the floating elements before light dismiss
-    // could close them (the listener above). Keyboard activation fires
-    // "click" with no pointerdown before it, so re-tag here when the last
-    // press is missing or too old to be the one that led to this click.
-    if (!pressedAt || Date.now() - pressedAt > 1000) floating = tagFloating([pill, note]);
+    /* detail is 0 for a click with no pointer behind it, which is what a
+     * keyboard activation gives, and a keyboard activation fires no press, so
+     * nothing was measured for it and it measures for itself. A pointer click
+     * takes what its own press measured, once: held is emptied so a later
+     * click can never read a moment that has passed. */
+    let floating;
+    if (event.detail > 0 && held) {
+      floating = held;
+      held = null;
+    } else {
+      floating = tagFloating([pill, note]);
+    }
     say(said, "", false);
     state.base = null;
     state.shapes = [];
