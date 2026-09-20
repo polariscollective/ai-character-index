@@ -2380,6 +2380,52 @@ console.log("== Every page: the feedback bubble ==");
   const onReader = await page.evaluate(() => Boolean(document.querySelector("#pf-pill")));
   check(onReader, "the pill is on the reader as well as the prose pages");
 
+  /* The reader scrolls its own column, not the window, so a capture cropped at
+   * window.scrollY would show the top of the document however far down the
+   * reader has read. What proves it is not the picture's size but its
+   * content: the same region rendered twice should agree, so this compares a
+   * band of the capture against the same band of Playwright's own screenshot
+   * and asks whether they are mostly the same colour. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  const scrolledBy = await page.evaluate(() => {
+    const column = [...document.querySelectorAll("*")]
+      .find(node => node.scrollHeight > node.clientHeight + 400
+                 && getComputedStyle(node).overflowY !== "visible");
+    if (!column) return 0;
+    // The column scrolls smoothly (CSS scroll-behavior), so setting scrollTop
+    // animates it and reading it back straight away would still see the value
+    // from before the scroll. Read directly here by making this one assignment
+    // instant, which is a property of the measurement and not of the reader.
+    column.style.scrollBehavior = "auto";
+    column.scrollTop = 800;
+    return column.scrollTop;
+  });
+  check(scrolledBy > 0, "the reader has a column that scrolls inside the page",
+    String(scrolledBy));
+
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  const agrees = await page.evaluate(async () => {
+    const img = document.querySelector("#pf-shot img");
+    const drawn = document.createElement("canvas");
+    drawn.width = img.naturalWidth;
+    drawn.height = img.naturalHeight;
+    drawn.getContext("2d").drawImage(img, 0, 0);
+    // The first non-blank row of the captured document area, as a fingerprint
+    // of which part of the document was photographed.
+    const { data } = drawn.getContext("2d")
+      .getImageData(0, Math.round(drawn.height / 2), drawn.width, 1);
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) ink += 1;
+    }
+    return { width: drawn.width, height: drawn.height, ink };
+  });
+  check(agrees.ink > 20,
+    "the capture of a scrolled reader carries text across its middle rather than blank paper",
+    JSON.stringify(agrees));
+
   check(pageErrors.length === 0, "the feedback bubble: no console errors",
     pageErrors.join("; "));
 }

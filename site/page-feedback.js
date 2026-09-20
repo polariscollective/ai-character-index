@@ -284,6 +284,85 @@ function pinSticky(clone) {
   }
 }
 
+/* How far a scrollable element inside the page has been scrolled.
+ *
+ * The prose pages scroll the window and the reader does not: it scrolls its
+ * own document column, so window.scrollY stays at zero however far down
+ * somebody has read. html2canvas crops the capture at the window's scroll and
+ * draws each element from its own top, so without this the reader sends a
+ * picture of a passage they were not looking at. */
+function tagScrolled() {
+  const scrolled = [];
+  for (const node of document.querySelectorAll("body *")) {
+    if (!node.scrollTop && !node.scrollLeft) continue;
+    node.dataset.pfScrolled = JSON.stringify({
+      top: node.scrollTop, left: node.scrollLeft,
+    });
+    scrolled.push(node);
+  }
+  return scrolled;
+}
+
+/* Put the clone's copies where their originals were scrolled to. The clone is
+ * a live document in an iframe, so its elements really do scroll. */
+function rescroll(clone) {
+  for (const node of clone.querySelectorAll("[data-pf-scrolled]")) {
+    let to;
+    try {
+      to = JSON.parse(node.dataset.pfScrolled);
+    } catch {
+      continue;
+    }
+    node.scrollTop = to.top;
+    node.scrollLeft = to.left;
+  }
+}
+
+/* A dialog or a popover that is open right now.
+ *
+ * Both live in the top layer, which the cloned document has no notion of: in
+ * the clone a dialog is an ordinary element again and a popover is back to
+ * display: none. Measured here and forced back into place there, because a
+ * reader who wants to report something about a note has to be able to
+ * photograph the note.
+ *
+ * Fixed rather than relative, unlike a sticky element: a pop-up genuinely is
+ * out of flow on the real page, so putting it out of flow in the clone is
+ * what matches rather than what breaks. */
+function tagFloating(mine) {
+  const floating = [];
+  for (const node of document.querySelectorAll("dialog[open], [popover]")) {
+    if (mine.includes(node) || mine.some(ours => ours.contains(node))) continue;
+    const box = node.getBoundingClientRect();
+    if (!box.width || !box.height) continue;   // a popover nobody has opened
+    node.dataset.pfFloating = JSON.stringify({
+      top: box.top, left: box.left, width: box.width, height: box.height,
+    });
+    floating.push(node);
+  }
+  return floating;
+}
+
+function placeFloating(clone) {
+  for (const node of clone.querySelectorAll("[data-pf-floating]")) {
+    let box;
+    try {
+      box = JSON.parse(node.dataset.pfFloating);
+    } catch {
+      continue;
+    }
+    node.style.display = "block";
+    node.style.position = "fixed";
+    node.style.margin = "0";
+    node.style.top = `${box.top}px`;
+    node.style.left = `${box.left}px`;
+    node.style.width = `${box.width}px`;
+    node.style.maxHeight = `${box.height}px`;
+    // Above the page, below nothing: it was the top layer a moment ago.
+    node.style.zIndex = "2147483646";
+  }
+}
+
 /**
  * Photograph the visible viewport.
  *
@@ -298,7 +377,9 @@ function pinSticky(clone) {
  */
 async function capture(mine) {
   const html2canvas = await loadLibrary();
-  const tagged = tagSticky();
+  const sticky = tagSticky();
+  const scrolled = tagScrolled();
+  const floating = tagFloating(mine);
   try {
     return await html2canvas(document.body, {
       x: window.scrollX,
@@ -311,10 +392,16 @@ async function capture(mine) {
       logging: false,
       useCORS: true,
       ignoreElements: node => mine.includes(node),
-      onclone: clone => pinSticky(clone),
+      onclone: clone => {
+        pinSticky(clone);
+        rescroll(clone);
+        placeFloating(clone);
+      },
     });
   } finally {
-    for (const node of tagged) delete node.dataset.pfSticky;
+    for (const node of sticky) delete node.dataset.pfSticky;
+    for (const node of scrolled) delete node.dataset.pfScrolled;
+    for (const node of floating) delete node.dataset.pfFloating;
   }
 }
 

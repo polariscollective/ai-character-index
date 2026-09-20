@@ -58,6 +58,24 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
         nothing."""
         source = MODULE.read_text(encoding="utf-8")
         self.assertIn("function tagSticky()", source)
-        self.assertIn("onclone: clone => pinSticky(clone)", source)
+        self.assertIn("onclone: clone => {", source)
+        self.assertIn("pinSticky(clone);", source)
         self.assertIn('node.style.position = "relative"', source)
         self.assertNotIn('node.style.position = "absolute"', source)
+
+    def test_an_inner_scroll_is_carried_into_the_clone(self):
+        """The prose pages scroll the window and the reader does not: it
+        scrolls its own document column, so window.scrollY stays at zero
+        however far down somebody has read. Without this the reader sends a
+        picture of a passage they were not looking at."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function tagScrolled()", source)
+        self.assertIn("rescroll(clone)", source)
+
+    def test_an_open_pop_up_is_carried_into_the_clone(self):
+        """A showing dialog and an open popover live in the top layer, which
+        the cloned document has no notion of. A reader who wants to report
+        something about a note has to be able to photograph the note."""
+        source = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function tagFloating(mine)", source)
+        self.assertIn("placeFloating(clone)", source)
