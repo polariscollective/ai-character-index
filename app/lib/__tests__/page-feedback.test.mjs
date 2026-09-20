@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   LIMITS, MAX_IMAGE_BYTES, MAX_REQUEST_BYTES, PER_HOUR,
-  normalise, pageProblems, announce, record, BUCKET,
+  normalise, pageProblems, announce, record, BUCKET, handle,
 } from "../page-feedback.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -201,4 +201,98 @@ test("no webhook is a message nobody got, not an error thrown at the caller", as
   const silent = await announce({ id: "r", page_url: "https://example.org/", comment: "x" },
                                 fakeFetch(), "https://example.org");
   assert.equal(silent, "SLACK_WEBHOOK_URL is not set");
+});
+
+/** A request in the shape the browser sends, without a server. */
+function request(data, headers = {}) {
+  return new Request("https://example.org/api/page-feedback", {
+    method: "POST", body: data, headers,
+  });
+}
+
+const THANKS = "Thank you. We read every one.";
+
+test("a good report is recorded and answered with one sentence", async () => {
+  process.env.SLACK_WEBHOOK_URL = "https://hooks.slack.test/x";
+  const impl = fakeFetch({
+    "/rest/v1/aci_page_feedback?select=id": () => new Response("[]", { status: 200 }),
+    "/rest/v1/aci_page_feedback": ROW,
+    "hooks.slack.test": () => new Response("ok", { status: 200 }),
+  });
+  const data = form();
+  data.set("screenshot", png(64));
+  const answer = await handle(request(data), { fetchImpl: impl });
+  assert.equal(answer.status, 200);
+  assert.deepEqual(await answer.json(), { done: THANKS });
+});
+
+test("a body declared larger than the cap is refused before it is read", async () => {
+  // A string body rather than a FormData, because what is under test is the
+  // header and not the parse: the route must refuse before it buffers. This is
+  // the idiom feedback.test.mjs already uses for its own cap.
+  const impl = fakeFetch();
+  const answer = await handle(new Request("https://example.org/api/page-feedback", {
+    method: "POST",
+    headers: { "content-type": "multipart/form-data; boundary=x",
+               "content-length": String(MAX_REQUEST_BYTES + 1) },
+    body: "--x--\r\n",
+  }), { fetchImpl: impl });
+  assert.equal(answer.status, 413);
+  assert.match((await answer.json()).problem, /larger than this form takes/);
+  assert.equal(impl.seen.length, 0, "nothing was asked of the database");
+});
+
+test("the eleventh report in an hour from one place is refused", async () => {
+  const impl = fakeFetch({
+    "/rest/v1/aci_page_feedback?select=id": () => new Response(
+      JSON.stringify(Array.from({ length: PER_HOUR }, (_, i) => ({ id: i }))),
+      { status: 200, headers: { "content-type": "application/json" } }),
+  });
+  const answer = await handle(request(form()), { fetchImpl: impl });
+  assert.equal(answer.status, 429);
+  assert.match((await answer.json()).problem, /already sent are safe/);
+});
+
+test("the rate-limit read failing does not refuse an honest report", async () => {
+  const impl = fakeFetch({
+    "/rest/v1/aci_page_feedback?select=id": () => new Response("no", { status: 500 }),
+    "/rest/v1/aci_page_feedback": ROW,
+  });
+  const answer = await handle(request(form()), { fetchImpl: impl });
+  assert.equal(answer.status, 200);
+});
+
+test("the honeypot is answered as a success and recorded nowhere", async () => {
+  const impl = fakeFetch({ "/rest/v1/aci_page_feedback": ROW });
+  const answer = await handle(request(form({ website: "http://spam" })), { fetchImpl: impl });
+  assert.equal(answer.status, 200);
+  assert.deepEqual(await answer.json(), { done: THANKS });
+  assert.equal(impl.seen.filter(c => c.options.method === "POST").length, 0);
+});
+
+test("a report with problems is refused with every problem at once", async () => {
+  const answer = await handle(request(form({ comment: "", email: "nope" })),
+                              { fetchImpl: fakeFetch() });
+  assert.equal(answer.status, 400);
+  const { problem } = await answer.json();
+  assert.match(problem, /tell us what you see/);
+  assert.match(problem, /does not look like an address/);
+});
+
+test("a body that is not a form is refused rather than thrown", async () => {
+  const answer = await handle(
+    new Request("https://example.org/api/page-feedback",
+                { method: "POST", body: "{}", headers: { "content-type": "application/json" } }),
+    { fetchImpl: fakeFetch() });
+  assert.equal(answer.status, 400);
+});
+
+test("a database that will not take it says so, and says nothing was kept", async () => {
+  const impl = fakeFetch({
+    "/rest/v1/aci_page_feedback?select=id": () => new Response("[]", { status: 200 }),
+    "/rest/v1/aci_page_feedback": () => new Response("no", { status: 500 }),
+  });
+  const answer = await handle(request(form()), { fetchImpl: impl });
+  assert.equal(answer.status, 500);
+  assert.match((await answer.json()).problem, /Nothing was recorded/);
 });
