@@ -2235,6 +2235,26 @@ console.log("== Every page: the feedback bubble ==");
   check(drawn.there && drawn.painted > 100,
     "a drag on the overlay paints a box onto it", JSON.stringify(drawn));
 
+  /* A second mark, so undo can be told from clear. With one mark on the
+   * overlay, an undo that wrongly emptied the whole list would look exactly
+   * like an undo that popped the last one. */
+  const twoMarks = await page.evaluate(() => {
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 3, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 320, 40);
+    send("pointermove", 460, 150);
+    send("pointerup", 460, 150);
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(twoMarks > drawn.painted, "a second drag adds a mark rather than replacing the first",
+    JSON.stringify({ one: drawn.painted, two: twoMarks }));
+
   const afterUndo = await page.evaluate(() => {
     document.querySelector("#pf-undo").click();
     const canvas = document.querySelector("#pf-marks");
@@ -2243,17 +2263,33 @@ console.log("== Every page: the feedback bubble ==");
     for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
     return painted;
   });
-  check(afterUndo === 0, "undo takes the last mark off the overlay", String(afterUndo));
+  check(afterUndo > 0 && afterUndo < twoMarks,
+    "undo removes one mark and leaves the other",
+    JSON.stringify({ two: twoMarks, afterUndo }));
+
+  const afterClear = await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    const canvas = document.querySelector("#pf-marks");
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(afterClear === 0, "clear removes what undo left", String(afterClear));
 
   const tooling = await page.evaluate(() => {
     document.querySelector("#pf-tool-arrow").click();
     return {
       arrow: document.querySelector("#pf-tool-arrow").getAttribute("aria-pressed"),
       box: document.querySelector("#pf-tool-box").getAttribute("aria-pressed"),
+      undo: document.querySelector("#pf-undo").hasAttribute("aria-pressed"),
+      clear: document.querySelector("#pf-clear").hasAttribute("aria-pressed"),
     };
   });
-  check(tooling.arrow === "true" && tooling.box === "false",
-    "choosing a tool unpresses the one before it", JSON.stringify(tooling));
+  check(tooling.arrow === "true" && tooling.box === "false"
+      && !tooling.undo && !tooling.clear,
+    "choosing a tool unpresses the one before it and leaves undo and clear alone",
+    JSON.stringify(tooling));
 
   // Back to the box, and draw one that survives into the PNG the send carries.
   await page.evaluate(() => {

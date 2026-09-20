@@ -578,12 +578,15 @@ function build() {
 
   const toolButton = (name, label) => {
     const button = el("button", {
-      type: "button", className: "pf-tool", id: `pf-tool-${name}`, textContent: label,
+      type: "button", className: "pf-tool pf-pick", id: `pf-tool-${name}`, textContent: label,
     });
     button.setAttribute("aria-pressed", String(tools.tool === name));
     button.addEventListener("click", () => {
       tools.tool = name;
-      for (const other of toolbar.querySelectorAll(".pf-tool")) {
+      // .pf-pick and not .pf-tool: Undo and Clear wear .pf-tool for its pill
+      // styling and are not toggles, and a plain action button carrying
+      // aria-pressed is announced as an unpressed switch.
+      for (const other of toolbar.querySelectorAll(".pf-pick")) {
         other.setAttribute("aria-pressed", String(other === button));
       }
     });
