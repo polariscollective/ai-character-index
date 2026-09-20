@@ -220,9 +220,15 @@ function tagSticky() {
 
   const painted = sticky.map(node => node.getBoundingClientRect());
   const was = sticky.map(node => node.style.position);
-  for (const node of sticky) node.style.position = "static";
-  const settled = sticky.map(node => node.getBoundingClientRect());
-  sticky.forEach((node, i) => { node.style.position = was[i]; });
+  let settled;
+  try {
+    for (const node of sticky) node.style.position = "static";
+    settled = sticky.map(node => node.getBoundingClientRect());
+  } finally {
+    // A page whose headers stopped sticking because a measurement threw would
+    // be a page this broke, permanently, in order to take a picture of it.
+    sticky.forEach((node, i) => { node.style.position = was[i]; });
+  }
 
   sticky.forEach((node, i) => {
     node.dataset.pfSticky = JSON.stringify({
@@ -343,11 +349,22 @@ async function send(parts) {
   form.set("user_agent", navigator.userAgent);
   form.set("website", trap.value);
 
+  /* Outside the try below, this was a dialog stuck on "Sending." for good.
+   * compose draws the capture onto a canvas and reads it back, and reading a
+   * canvas back can throw. Losing the picture is recoverable and losing the
+   * words is not, so the words go without it, and the reader is told. */
+  let lost = false;
   if (state.base) {
-    const picture = await compose(state.base, state.shapes);
-    if (picture) {
-      form.set("capture_method", METHOD);
-      form.set("screenshot", picture, "page.png");
+    try {
+      const picture = await compose(state.base, state.shapes);
+      if (picture) {
+        form.set("capture_method", METHOD);
+        form.set("screenshot", picture, "page.png");
+      } else {
+        lost = true;
+      }
+    } catch {
+      lost = true;
     }
   }
 
@@ -361,7 +378,10 @@ async function send(parts) {
     }
     remember(address);
     comment.value = "";
-    say(said, outcome.done || "Thank you. We read every one.", false);
+    const thanks = outcome.done || "Thank you. We read every one.";
+    say(said, lost
+      ? `${thanks} The screenshot could not be attached, so your words went on their own.`
+      : thanks, false);
     setTimeout(() => note.close(), 1200);
   } catch {
     say(said, "That did not go through. It is worth trying again.", true);

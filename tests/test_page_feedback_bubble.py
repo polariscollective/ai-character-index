@@ -46,10 +46,18 @@ class TheBubbleIsOnEveryPublicPage(unittest.TestCase):
         self.assertIn('const LIBRARY = "/vendor/html2canvas.min.js";',
                       MODULE.read_text(encoding="utf-8"))
 
-    def test_sticky_elements_are_pinned_before_the_clone_is_painted(self):
+    def test_a_sticky_element_is_shifted_and_not_lifted_out_of_flow(self):
         """html2canvas draws a sticky element at its static position, so a
         reader who has scrolled would send a capture missing the header they
-        were looking at. All four pages use sticky."""
+        were looking at. The first attempt pinned them with position:
+        absolute, which takes an element out of flow and takes its space with
+        it: a table header collapsed onto its own rows, and a contents rail
+        let the flex sibling beside it swallow its column. Relative keeps the
+        space and moves only the paint, which is what sticky itself does. A
+        test naming only tagSticky and onclone passed under both, so it named
+        nothing."""
         source = MODULE.read_text(encoding="utf-8")
         self.assertIn("function tagSticky()", source)
         self.assertIn("onclone: clone => pinSticky(clone)", source)
+        self.assertIn('node.style.position = "relative"', source)
+        self.assertNotIn('node.style.position = "absolute"', source)
