@@ -20,6 +20,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
+         servePageFeedbackRoute, lastPageFeedbackReceived,
          CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
@@ -77,6 +78,9 @@ const server = createServer(async (req, res) => {
   // The dialog's own send: a fixture that always accepts, recording what it
   // was sent for the feedback dialog section below to read back.
   if (await serveFeedbackRoute(req, res)) return;
+  // The bubble's own send: a fixture that always accepts, recording what it was
+  // sent, picture included, for the page-feedback section below to read back.
+  if (await servePageFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
   /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is
    * also why site/index.html no longer exists: an array returned from rewrites()
@@ -2095,6 +2099,95 @@ console.log("== Overview: the governance view ==");
     JSON.stringify(keyed));
 
   check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
+}
+
+/* The bubble at the bottom right of every public page. What a walker can show
+ * that no unit test can is that the pill is there on a page that is not the
+ * reader, that the dialog refuses to send without both fields, and that what
+ * arrives at the route is what was typed. */
+console.log("== Every page: the feedback bubble ==");
+{
+  const root = new URL("/", base).href;
+  pageErrors = [];
+  await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
+  const resting = await page.evaluate(() => {
+    const pill = document.querySelector("#pf-pill");
+    const box = pill?.getBoundingClientRect();
+    return {
+      there: Boolean(pill),
+      label: pill?.textContent,
+      // Near the corner rather than exactly 16px from it: a classic scrollbar
+      // takes its own width out of innerWidth and the pill is positioned
+      // against the viewport, which excludes it.
+      corner: box ? (window.innerWidth - box.right) < 40
+                 && (window.innerHeight - box.bottom) < 40 : false,
+      closed: !document.querySelector("#pf-note").open,
+    };
+  });
+  check(resting.there && resting.label === "Feedback" && resting.corner && resting.closed,
+    "the pill rests in the bottom right corner of the overview, dialog closed",
+    JSON.stringify(resting));
+
+  await page.locator("#pf-pill").click();
+  await page.waitForTimeout(150);
+  let seen = await page.evaluate(() => ({
+    open: document.querySelector("#pf-note").open,
+    sendDisabled: document.querySelector("#pf-send").disabled,
+    focused: document.activeElement?.id,
+  }));
+  check(seen.open && seen.sendDisabled && seen.focused === "pf-comment",
+    "the dialog opens focused on the comment, with send refused while it is empty",
+    JSON.stringify(seen));
+
+  await page.locator("#pf-comment").fill("The governance table runs off the right.");
+  await page.waitForTimeout(80);
+  seen = await page.evaluate(() => ({
+    sendDisabled: document.querySelector("#pf-send").disabled,
+  }));
+  check(seen.sendDisabled, "words with no address still cannot be sent",
+    JSON.stringify(seen));
+
+  await page.locator("#pf-email").fill("reader@example.org");
+  await page.waitForTimeout(80);
+  seen = await page.evaluate(() => ({
+    sendDisabled: document.querySelector("#pf-send").disabled,
+  }));
+  check(!seen.sendDisabled, "an address enables the send button", JSON.stringify(seen));
+
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(400);
+  const sent = lastPageFeedbackReceived();
+  check(Boolean(sent)
+      && sent.comment === "The governance table runs off the right."
+      && sent.email === "reader@example.org"
+      && sent.page_url.endsWith("/overview.html")
+      && /^\d+x\d+ @\d/.test(sent.viewport)
+      && sent.user_agent.length > 0
+      && sent.website === "",
+    "the send posts the words, the address, the page, the window and the browser string",
+    JSON.stringify({ ...sent, screenshot: Boolean(sent?.screenshot) }));
+
+  const kept = await page.evaluate(() => {
+    try { return localStorage.getItem("aci-feedback-email"); } catch { return null; }
+  });
+  check(kept === "reader@example.org",
+    "the address is remembered under the key the paragraph dialog already uses", kept);
+
+  await page.waitForTimeout(1200);
+  const closed = await page.evaluate(() => !document.querySelector("#pf-note").open);
+  check(closed, "the dialog closes on its own after a successful send");
+
+  // The reader is the fourth page and the only one that is an application
+  // rather than a document, so the pill is checked there too.
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+  const onReader = await page.evaluate(() => Boolean(document.querySelector("#pf-pill")));
+  check(onReader, "the pill is on the reader as well as the prose pages");
+
+  check(pageErrors.length === 0, "the feedback bubble: no console errors",
+    pageErrors.join("; "));
 }
 
 // =============================================================================

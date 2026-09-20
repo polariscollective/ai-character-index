@@ -13,6 +13,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Buffer } from "node:buffer";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -136,4 +137,55 @@ export async function serveFeedbackRoute(request, response) {
 /** What the last POST /api/feedback sent, for a walker to assert against. */
 export function lastFeedbackReceived() {
   return lastFeedback;
+}
+
+/** The body of the most recent POST /api/page-feedback, or null before one
+ * arrives. Module-level for the same reason lastFeedback is: the walker reads
+ * it back well after the click that set it. */
+let lastPageFeedback = null;
+
+/**
+ * Answers POST /api/page-feedback the way app/api/page-feedback does when it
+ * accepts. A fixture for the browser walkers, not a rebuild of the route's own
+ * rules: those are tested under node against app/lib/page-feedback.mjs with no
+ * browser and no database. What this exists for is letting a walker prove what
+ * the bubble actually sent, picture included.
+ *
+ * The multipart body is parsed by handing it to Response, which is the same
+ * parser the route itself gets from the platform.
+ */
+export async function servePageFeedbackRoute(request, response) {
+  const url = new URL(request.url, "http://x");
+  if (url.pathname !== "/api/page-feedback" || request.method !== "POST") return false;
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  try {
+    const form = await new Response(Buffer.concat(chunks), {
+      headers: { "content-type": request.headers["content-type"] || "" },
+    }).formData();
+    const shot = form.get("screenshot");
+    lastPageFeedback = {
+      comment: form.get("comment"),
+      email: form.get("email"),
+      page_url: form.get("page_url"),
+      viewport: form.get("viewport"),
+      user_agent: form.get("user_agent"),
+      capture_method: form.get("capture_method"),
+      website: form.get("website"),
+      screenshot: shot && typeof shot === "object" && shot.size
+        ? { bytes: shot.size, type: shot.type,
+            png: Buffer.from(await shot.arrayBuffer()) }
+        : null,
+    };
+  } catch {
+    lastPageFeedback = null;
+  }
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(JSON.stringify({ done: "Thank you. We read every one." }));
+  return true;
+}
+
+/** What the last POST /api/page-feedback sent, for a walker to assert against. */
+export function lastPageFeedbackReceived() {
+  return lastPageFeedback;
 }
