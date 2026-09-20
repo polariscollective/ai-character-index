@@ -2112,6 +2112,26 @@ console.log("== Every page: the feedback bubble ==");
   await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
   await page.waitForTimeout(250);
 
+  /* The paragraph-note dialog ran earlier in this walker and left its address
+   * in localStorage under the key the bubble deliberately shares, so that
+   * typing an address into one dialog saves typing it into the other. That is
+   * a feature, and it is asserted here before it is cleared, because every
+   * check below is about a dialog nobody has typed an address into yet. */
+  const carried = await page.evaluate(() => {
+    const field = document.querySelector("#pf-email");
+    const was = field?.value;
+    try {
+      localStorage.removeItem("aci-feedback-email");
+    } catch {
+      // A private window. Nothing was remembered, so nothing needs clearing.
+    }
+    return was;
+  });
+  check(Boolean(carried) && carried.includes("@"),
+    "an address the paragraph dialog remembered prefills the bubble", carried);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
   const resting = await page.evaluate(() => {
     const pill = document.querySelector("#pf-pill");
     const box = pill?.getBoundingClientRect();
