@@ -1,6 +1,18 @@
 {
   "as_of": "September 2026",
   "researched": "2026-09-18",
+  "papers": {
+    "memo": {
+      "title": "Model spec governance and transparency: the state of play and four transparency asks",
+      "by": "Polaris Collective",
+      "status": "working paper, draft of 10 September 2026"
+    },
+    "kembery": {
+      "title": "Emerging International Best Practices for AI Model Specs",
+      "by": "Edward Kembery et al.",
+      "status": "working paper, under review"
+    }
+  },
   "labs": [
     {
       "id": "openai",
@@ -60,7 +72,25 @@
             "0": "Nothing, or only a policy on how users may behave.",
             "2": "Partial: only prohibitions, with no description of good behaviour and no order of authority.",
             "4": "A full model behaviour specification: how the model should behave, how conflicts between instructions are settled, and who may instruct it at what level."
-          }
+          },
+          "reading": "A 4 needs a document that says how the model should behave, and how a conflict between instructions is settled, as well as what it must refuse. The paper describes Google's policy guidelines for the Gemini app as prohibitions only, which is what a 2 describes.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 1, form",
+              "text": "checkable rules rather than long narrative, with default behaviour where no explicit rule applies and guidance for when principles conflict."
+            },
+            {
+              "paper": "memo",
+              "where": "Definitions, intended behaviour",
+              "text": "behaviour the developer has decided the model should exhibit and actively trains or enforces towards, whether or not current models exhibit it reliably."
+            },
+            {
+              "paper": "memo",
+              "where": "Current status of model specs, on Google",
+              "text": "This document only includes prohibitions, and does not include statements regarding positive behaviour, ordering of instructions, or anything on honesty."
+            }
+          ]
         },
         {
           "id": "1.2",
@@ -70,7 +100,25 @@
             "0": "No statement of coverage, or the flagship models are left out.",
             "2": "Coverage is implied but not stated.",
             "4": "Coverage is stated, and the most-used models are in it."
-          }
+          },
+          "reading": "A document that names no model cannot be tied to any product. A 4 needs the document to say which models it governs, and the most-used models to be among them. The memo states the principle; Kembery et al. spell out that the document itself should say which models it covers.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 1, coverage",
+              "text": "one spec may govern many models, but no deployed model goes ungoverned."
+            },
+            {
+              "paper": "kembery",
+              "where": "Section 2a, applicability",
+              "text": "The spec should state which models it applies to. If a developer maintains multiple model families, fine-tuned variants, or specialised models (e.g. for internal deployment, code generation, or military applications), the spec should say which are covered."
+            },
+            {
+              "paper": "memo",
+              "where": "Comparative assessment, scope carve-outs for Alibaba",
+              "text": "The document names no model or deployment class it governs."
+            }
+          ]
         },
         {
           "id": "1.3",
@@ -80,9 +128,56 @@
             "0": "Government, defence, specialised and large-scale internal deployments are not addressed.",
             "2": "The gap is acknowledged, but what applies instead is not disclosed.",
             "4": "They are covered, or the differences are published by kind of deployment."
-          }
+          },
+          "reading": "The paper lets a company keep the rules of a government, defence or other special deployment private, provided their existence and their differences from the public document are published. A 4 is either full coverage or that disclosure. A company that says such deployments exist without saying what applies to them scores 2.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 1, coverage",
+              "text": "one spec may govern many models, but no deployed model goes ungoverned. That includes government, military and intelligence deployments, and models used internally at scale."
+            },
+            {
+              "paper": "memo",
+              "where": "Definitions, disclosed",
+              "text": "public in summary rather than in full. A published spec is the complete text, public. A disclosed spec is one whose existence, coverage and deviations from the public spec are public, while the content of specific rules may be redacted. For each deployment class the document covers, the lab publishes: which parts of the public spec carry over; where it deviates, by category; and for each hard constraint, whether it has been kept, changed or dropped. Three things are always public: that the document exists, which deployment classes it covers, and a dated log entry when it changes. Redaction can hide the content of the rules, never their existence, and that floor is what makes coverage of government and enterprise deployments workable."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 1, cost",
+              "text": "one public spec plus a short statement per deployment class saying where it differs."
+            }
+          ]
         }
-      ]
+      ],
+      "reading": "The question asks whether a company has written down, in public, how its models are meant to behave, and whether that document reaches every model it puts in use. The paper counts a model as in use when people outside the company use it, or when the company itself uses it at scale. The checks follow the paper's own parts: what makes a document a specification, which models it covers, and the government, military and internal deployments the paper names.",
+      "quotes": [
+        {
+          "paper": "memo",
+          "where": "Ask 1",
+          "text": "Every model you deploy (internally at scale or externally) has a published governing spec."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 1, coverage",
+          "text": "one spec may govern many models, but no deployed model goes ungoverned. That includes government, military and intelligence deployments, and models used internally at scale."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 1, what makes it a spec",
+          "text": "all intended model behaviour is consistent with it, and no intended behaviour should be surprising in light of it. A deployment behaving under different rules with no governing document fails this test."
+        },
+        {
+          "paper": "memo",
+          "where": "Definitions, deployed",
+          "text": "made available for use outside the lab (consumers, enterprises, or governments), or used inside the lab at scale, meaning sustained use in production workflows rather than research and testing. A model only touched in experiments is not deployed."
+        },
+        {
+          "paper": "memo",
+          "where": "The minimum viable version",
+          "text": "Two things: every deployed model has a governing spec (ask 1), and one change log with its scope and timeline stated up front (ask 2). The spec is the object; the log is the commitment. For labs that already publish a spec, ask 1 is mostly done and the log is the new work. Asks 3 and 4 are the direction of travel."
+        }
+      ],
+      "minimum": true
     },
     {
       "id": "2",
@@ -98,7 +193,20 @@
             "0": "No version number and no archive.",
             "2": "Versioned, but the archive is incomplete or not linked.",
             "4": "Every version is dated and can be retrieved at a permanent address."
-          }
+          },
+          "reading": "The memo's ask takes versions for granted. The requirement that every version is dated and stays retrievable comes from Kembery et al., and it is here because a log of changes cannot be checked against versions nobody can find.",
+          "quotes": [
+            {
+              "paper": "kembery",
+              "where": "Section 3b",
+              "text": "Updates require clear version control: a versioned, dated source document; a changelog recording changes and their reasoning, including when constraints are weakened or removed (e.g. OpenAI, 2025); publicly accessible prior versions;"
+            },
+            {
+              "paper": "memo",
+              "where": "Definitions, change log",
+              "text": "a single public page listing every change, dated, with the diff and the reason."
+            }
+          ]
         },
         {
           "id": "2.2",
@@ -108,7 +216,20 @@
             "0": "Nothing.",
             "2": "Summaries of what changed, without the changed text and without reasons.",
             "4": "The changed text, line by line, with the reason for each change."
-          }
+          },
+          "reading": "A 4 needs, for every change, the changed text itself and the reason for it. A summary of what moved, without the text or the reason, is a 2.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Definitions, change log",
+              "text": "a single public page listing every change, dated, with the diff and the reason."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 2, why",
+              "text": "The rationale costs nothing new; every change already has one in its internal review."
+            }
+          ]
         },
         {
           "id": "2.3",
@@ -118,9 +239,56 @@
             "0": "None of the three.",
             "2": "One of the three.",
             "4": "All three: the log spans system prompts and guardrails, says which version of the model behaviour specification governs which model, and commits to a period within which changes are logged."
-          }
+          },
+          "reading": "Three things from the ask are counted together: the log covers system prompts and guardrails as well as the specification, it says which version governs which model, and it commits to logging every change within a fixed number of days. One of the three is a 2, all three a 4.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 2, detail",
+              "text": "the log opens with a one-paragraph scope statement (which layers and which deployments it covers) and a timeline: every change is entered within a fixed number of days of taking effect. That covers urgent changes too; a safeguard tightened overnight is logged inside the same window as everything else."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 2, version mapping",
+              "text": "Each deployed model states which spec version governs it, so anyone can connect the rules to the model they are actually using."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 2, why",
+              "text": "behaviour can change in any layer, and today an outsider watching a model change cannot tell which layer moved."
+            }
+          ]
         }
-      ]
+      ],
+      "reading": "The question asks for one public log in which every change to the rules a model follows can be found, whichever layer it happened in: the specification, the system prompts or the guardrails. The checks separate keeping the versions, explaining each change, and the reach of the log.",
+      "quotes": [
+        {
+          "paper": "memo",
+          "where": "Ask 2",
+          "text": "Run one change log across spec, system prompts and guardrails: every spec change goes in, with diffs, reasons, a model-to-spec-version mapping, and a stated scope and timeline."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 2, detail",
+          "text": "the log opens with a one-paragraph scope statement (which layers and which deployments it covers) and a timeline: every change is entered within a fixed number of days of taking effect. That covers urgent changes too; a safeguard tightened overnight is logged inside the same window as everything else. Changes to disclosed specs enter the same log, at deviation level: which deployment class, what date, and which category of deviation was added, changed, or removed."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 2, version mapping",
+          "text": "Each deployed model states which spec version governs it, so anyone can connect the rules to the model they are actually using. Without the mapping, a reader can see the spec versions but cannot tell which one applied to the model in front of them."
+        },
+        {
+          "paper": "memo",
+          "where": "Definitions, change log",
+          "text": "a single public page listing every change, dated, with the diff and the reason."
+        },
+        {
+          "paper": "memo",
+          "where": "The minimum viable version",
+          "text": "Two things: every deployed model has a governing spec (ask 1), and one change log with its scope and timeline stated up front (ask 2). The spec is the object; the log is the commitment. For labs that already publish a spec, ask 1 is mostly done and the log is the new work. Asks 3 and 4 are the direction of travel."
+        }
+      ],
+      "minimum": true
     },
     {
       "id": "3",
@@ -136,7 +304,20 @@
             "0": "Nothing beyond general language about safety.",
             "2": "Disclosed for one product only, or as marketing.",
             "4": "A list by kind, across every product in use."
-          }
+          },
+          "reading": "A 4 is an inventory of guardrails by kind that covers every product in use. Guardrails described for one product only, or in marketing, are a 2.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 3, cost",
+              "text": "an initial inventory of guardrails by category, then log entries on change. The inventory is the real work; labs with safeguard reports have most of it written."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 3, nothing proprietary is touched",
+              "text": "thresholds, prompts and detection logic stay undisclosed, and existence-and-category is information labs already publish piecemeal in system cards and safeguard reports; the ask only makes it systematic and dated."
+            }
+          ]
         },
         {
           "id": "3.2",
@@ -146,7 +327,43 @@
             "0": "Changes come to light through the press or through incidents.",
             "2": "Some are announced, but there is no register.",
             "4": "Every change is dated in the log."
-          }
+          },
+          "reading": "A 4 is every change to a guardrail dated in the log. Changes that come to light only through the press or an incident are a 0.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 3, nothing proprietary is touched",
+              "text": "System cards report how well a filter performs; they do not say when one was added, loosened, or removed, which is what the log adds."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 3, why",
+              "text": "Yet today a safeguard can be loosened or removed with nothing public to judge."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 2, detail",
+              "text": "That covers urgent changes too; a safeguard tightened overnight is logged inside the same window as everything else."
+            }
+          ]
+        }
+      ],
+      "reading": "The question asks for the list of filters a company runs around its models, by kind, with every change to them recorded. It asks for nothing that would help anyone get round them: thresholds, prompts and detection logic stay private.",
+      "quotes": [
+        {
+          "paper": "memo",
+          "where": "Ask 3",
+          "text": "Disclose guardrails: existence and category, changes in the log."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 3, why",
+          "text": "this follows from ask 1. If no intended behaviour should be surprising in light of the spec, behaviour enforced through classifiers cannot be exempt: a filter that changes what the model will do, and for whom, is model behaviour exactly as a spec line is. Yet today a safeguard can be loosened or removed with nothing public to judge."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 3, nothing proprietary is touched",
+          "text": "thresholds, prompts and detection logic stay undisclosed, and existence-and-category is information labs already publish piecemeal in system cards and safeguard reports; the ask only makes it systematic and dated."
         }
       ]
     },
@@ -164,7 +381,20 @@
             "0": "No such set.",
             "2": "Referred to, but not listed.",
             "4": "Named, listed, and marked as impossible to override."
-          }
+          },
+          "reading": "The ask does not ask for this. It is what the ask needs first: a window before a hard constraint is weakened presumes the hard constraints are named. Unlike the other checks, it scores what the specification contains rather than how it changes.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Definitions, hard constraint",
+              "text": "a rule the spec itself marks as non-overridable by users or developers."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 4, scope",
+              "text": "the spec's non-overridable core; in OpenAI's Model Spec, the root-level rules that system messages, developers and users cannot override; in Anthropic's constitution, the hard constraints."
+            }
+          ]
         },
         {
           "id": "4.2",
@@ -174,33 +404,266 @@
             "0": "No mechanism.",
             "2": "A one-off consultation, with no commitment for the future.",
             "4": "A standing commitment to a comment window, with room to act first and consult afterwards in an emergency."
-          }
+          },
+          "reading": "A 4 is a standing commitment to open a public window before any weakening, with the paper's allowance for acting first in an emergency and consulting afterwards. A consultation held once, with no commitment for next time, is a 2.",
+          "quotes": [
+            {
+              "paper": "memo",
+              "where": "Ask 4, mechanism",
+              "text": "a fixed window on a published draft, anyone may comment, submissions public, and the lab answers themes rather than individuals through a synopsis report."
+            },
+            {
+              "paper": "memo",
+              "where": "Ask 4, urgency",
+              "text": "where a lab judges a weakening cannot wait, it acts first and opens the window retrospectively, stating in the log why the delay was not possible."
+            }
+          ]
+        }
+      ],
+      "reading": "The question asks whether the public can see and comment on a weakening of the rules a model must never break, before it takes effect. The comments bind nobody. The ask is that such a weakening happens in public, with the company's reasons stated.",
+      "quotes": [
+        {
+          "paper": "memo",
+          "where": "Ask 4",
+          "text": "Open a comment window to the broader public before weakening, removing, or reclassifying hard constraints. Urgency may allow for an ex-post comment window."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 4, mechanism",
+          "text": "a fixed window on a published draft, anyone may comment, submissions public, and the lab answers themes rather than individuals through a synopsis report."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 4, urgency",
+          "text": "where a lab judges a weakening cannot wait, it acts first and opens the window retrospectively, stating in the log why the delay was not possible."
+        },
+        {
+          "paper": "memo",
+          "where": "Ask 4, what it accomplishes",
+          "text": "the comments are not binding, but at least any weakening of a non-overridable rule happens in public, with the lab's reasons stated transparently."
         }
       ]
     }
   ],
+  "minimum_note": "Our proposal asks four things of every company and names the first two as its minimum: a published model behaviour specification for every model the company uses, and one public change log that says up front which layers and models it covers and how soon a change is recorded. The specification is the object of the rules, and the log is the commitment that any change to them can be seen. The other two asks, on guardrails and hard constraints, are where the proposal says companies should go next. Meeting the minimum means 4 out of 4 on both questions.",
   "supporting": [
     {
       "id": "S1",
-      "label": "Anyone may freely reuse the model behaviour specification, under an open licence."
+      "short": "Open licence",
+      "label": "Anyone may freely reuse the model behaviour specification, under an open licence.",
+      "source": "Recommendation 1",
+      "reading": "A 2 is a licence that lets anyone reuse and adapt the text, such as CC0.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Recommendations for frontier AI companies, 1",
+          "text": "Write and publish a model spec, and release it under a permissive licence (e.g. CC0 1.0) so that others can adapt it"
+        }
+      ]
     },
     {
       "id": "S2",
-      "label": "The company publishes a current test of how well its models follow the model behaviour specification."
+      "short": "Adherence tests published",
+      "label": "The company publishes a current test of how well its models follow the model behaviour specification.",
+      "source": "Recommendation 3, and section 3d",
+      "reading": "A 2 is a published test, current for the models in use, of how well they follow the specification, with its method. Results that stop before the latest models, or a claim with no method, are a 1.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Recommendations for frontier AI companies, 3",
+          "text": "Evaluate compliance, publish the results, and state how compliance was measured."
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 2a, compliance and evaluation",
+          "text": "sharing evaluation results so third parties can assess the evidence"
+        }
+      ]
     },
     {
       "id": "S3",
-      "label": "Outside evaluators have access to test adherence to the model behaviour specification specifically."
+      "short": "Outside testers",
+      "label": "Outside evaluators have access to test adherence to the model behaviour specification specifically.",
+      "source": "Section 3d",
+      "reading": "A 2 is outside evaluators given access to test adherence to the specification itself. Outside testing of other risks, or an agreement with no published result, is a 1 at most.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Section 3d",
+          "text": "Developers could commission trusted third-party evaluators to assess compliance with the spec. They could share materials such as benchmarks and evaluation set ups to allow them to replicate their evaluations."
+        }
+      ]
     },
     {
       "id": "S4",
-      "label": "A model is released only once it meets an adherence threshold announced in advance."
+      "short": "Release threshold",
+      "label": "A model is released only once it meets an adherence threshold announced in advance.",
+      "source": "Recommendation 4",
+      "reading": "A 2 is a published threshold a model must meet before release, set before the test is run.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Recommendations for frontier AI companies, 4",
+          "text": "Gate releases on compliance, using a threshold set out in advance."
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 5c, commitment 2",
+          "text": "plus a commitment not to release models falling below a set level of compliance with pre-agreed provisions in a spec."
+        }
+      ]
     },
     {
       "id": "S5",
-      "label": "The company publishes who inside it approves changes to the model behaviour specification."
+      "short": "Change approval published",
+      "label": "The company publishes who inside it approves changes to the model behaviour specification.",
+      "source": "Section 3b",
+      "reading": "A 2 is a published account of who inside the company may change the specification, and what approval each kind of change needs.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Section 3b",
+          "text": "Companies should also define governance for updates [...] who can modify the spec, and what approval each level of change requires."
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 2a, update process",
+          "text": "what governance exists for approving changes"
+        }
+      ]
     }
   ],
+  "supporting_scale": {
+    "0": "Nothing found.",
+    "1": "Part of the practice, or a weaker form of it.",
+    "2": "The practice in full.",
+    "note": "The research note gives no description of each score. These three sum up how it scored."
+  },
+  "internal": [
+    {
+      "id": "I1",
+      "short": "Trained to follow it",
+      "label": "The company trains the models it deploys to follow the model behaviour specification.",
+      "source": "Recommendation 2, and section 3c",
+      "audit": "Whether the model behaviour specification enters the training data and the training process of each deployed model, and how.",
+      "reading": "The paper asks companies to train the models they deploy on the specification, and to say how: whether the specification generates training data, and at which stage of training it enters.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Recommendations for frontier AI companies, 2",
+          "text": "Train publicly deployed models to comply with the spec, and take reasonable steps to check that they do."
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 2a, relationship to training",
+          "text": "Developers should therefore say whether the spec directly generates a portion of training data, or exists as a separate document the model is trained to comply with without seeing its text. Commercial considerations may limit precision here, but some transparency helps external parties give useful feedback and lets developers share best practices."
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 3d",
+          "text": "Developers can provide structured transparency into how they align the model to the spec. This could include how the spec enters pre-training, midtraining, post-training, or the system prompt, with redactions where reporting would leak intellectual property or compromise safety features"
+        }
+      ],
+      "asked_to_publish": true,
+      "anchors": {
+        "0": "Nothing published. A company with no published specification scores 0, unless it describes training its models against an internal behaviour document.",
+        "1": "A general statement that models are trained towards the specification, without saying how, or only for older models, or only against a document nobody outside can read.",
+        "2": "How its current models are trained on the specification is published: whether it generates training data, and at which stages of training it enters."
+      }
+    },
+    {
+      "id": "I2",
+      "short": "Internal models",
+      "label": "Models the company uses internally follow the same basic provisions as its public models, apart from a narrow exception for safety research and testing.",
+      "source": "Recommendation 5, and section 4a",
+      "audit": "The list of models in internal use, and what each is trained to do that a public model would refuse.",
+      "reading": "The paper asks companies to hold the models they use internally to the same basic provisions as their public ones, and to be open about the exceptions.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Recommendations for frontier AI companies, 5",
+          "text": "Apply the same basic provisions to internally deployed models, with a narrow carve-out for safety research, evaluation and pre-deployment testing."
+        },
+        {
+          "paper": "kembery",
+          "where": "Executive summary, recommendations",
+          "text": "Extend basic provisions to internal deployment, with public transparency about carve outs where necessary"
+        },
+        {
+          "paper": "kembery",
+          "where": "Section 3b",
+          "text": "note whether the company trains any models that are not intended to comply (e.g. for internal or experimental use)."
+        }
+      ],
+      "asked_to_publish": true,
+      "anchors": {
+        "0": "Nothing published about the models it uses internally and the specification.",
+        "1": "It says some of its models, internal, specialised or experimental, are not covered, without saying what applies to them.",
+        "2": "It says the models it uses internally follow the same basic provisions as its public ones, and names the exceptions."
+      }
+    },
+    {
+      "id": "I3",
+      "short": "Same text inside",
+      "label": "The published model behaviour specification is the text used for training and inside the company, or the differences are stated.",
+      "source": "Section 3b",
+      "audit": "The internal versions of the model behaviour specification, compared with the published one.",
+      "reading": "The paper asks companies to say whether the text they publish is the text they train on and work from.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Section 3b",
+          "text": "disclose whether the published text differs from the version used for training or internal coordination,"
+        }
+      ],
+      "asked_to_publish": true,
+      "anchors": {
+        "0": "Nothing published. A company with no published specification scores 0.",
+        "1": "A general statement that the public text leaves out detail, or matches internal standards, without saying what differs.",
+        "2": "It says whether the published text is the one it trains on and works from, and names what differs."
+      }
+    },
+    {
+      "id": "I4",
+      "short": "Monitored in use",
+      "label": "The company checks whether deployed models follow the model behaviour specification, and reports serious violations.",
+      "source": "Section 3d",
+      "audit": "The company's monitoring of deployed models, and its records of violations.",
+      "reading": "The paper asks companies to monitor whether deployed models follow the specification, and to report serious violations in public.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Section 3d",
+          "text": "Developers could monitor compliance post-deployment. Privacy-preserving tools like Anthropic's Clio let developers assess compliance in practice (Huang et al., 2025), surfacing edge cases missed before release and avoiding biases from evaluation-aware models. Significant violations, their severity, and mitigations should be reported in line with emerging best practices, ideally via well-maintained public incident databases"
+        }
+      ],
+      "asked_to_publish": true,
+      "anchors": {
+        "0": "Nothing published. Tests before release do not count here.",
+        "1": "One of the two: it describes how it monitors models in use, or it reports serious violations publicly. Or both, without tying them to the specification or intended behaviour.",
+        "2": "Both: it monitors models in use against the specification or intended behaviour, and reports serious violations publicly."
+      }
+    },
+    {
+      "id": "I5",
+      "short": "Separate sign-off",
+      "label": "A change to the model behaviour specification is drafted by one team and can be vetoed by another on safety, legal or ethical grounds.",
+      "source": "Section 4g",
+      "audit": "The records of how past changes were proposed, reviewed and approved.",
+      "reading": "The paper raises this as an open problem, not a recommendation. It does not ask companies to publish it. Who approves a change is the published part, and it is scored under S5.",
+      "quotes": [
+        {
+          "paper": "kembery",
+          "where": "Section 4g",
+          "text": "Drafting, review, and approval are currently largely informal; as stakes grow, formalised separations of responsibility [...] one team drafting spec language, another holding veto or amendment authority on safety, legal, or ethical grounds, [...] could ensure commercially motivated decisions face meaningful internal challenge before deployment."
+        }
+      ],
+      "asked_to_publish": false
+    }
+  ],
+  "disclosed_intro": "Four practices from the same working paper that nobody outside a company can see, and that the paper asks companies to state publicly. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
+  "disclosure_note": "A company may well follow a practice without saying so. Where we score 0, we found no reliable public evidence, and no internal audit anyone can verify, that it does. Tell us if we are wrong.",
+  "internal_note": "The paper raises this as an open problem and does not ask companies to publish it. Only an internal audit could show it. None has been done, so every company is marked NA, not assessed.",
   "scores": {
     "openai": {"1.1": 4, "1.2": 3, "1.3": 1, "2.1": 4, "2.2": 2, "2.3": 1, "3.1": 3, "3.2": 1, "4.1": 3, "4.2": 1},
     "anthropic": {"1.1": 4, "1.2": 4, "1.3": 1, "2.1": 1, "2.2": 0, "2.3": 2, "3.1": 4, "3.2": 1, "4.1": 4, "4.2": 1},
@@ -212,21 +675,534 @@
     "moonshot": {"1.1": 1, "1.2": 0, "1.3": 0, "2.1": 1, "2.2": 0, "2.3": 1, "3.1": 1, "3.2": 0, "4.1": 0, "4.2": 0},
     "deepseek": {"1.1": 1, "1.2": 0, "1.3": 0, "2.1": 0, "2.2": 0, "2.3": 0, "3.1": 1, "3.2": 0, "4.1": 0, "4.2": 0}
   },
-  "supporting_totals": {
-    "openai": 4,
-    "anthropic": 3,
-    "alibaba": 0,
-    "google": 1,
-    "mistral": 0,
-    "meta": 3,
-    "xai": 1,
-    "moonshot": 1,
-    "deepseek": 0
+  "supporting_scores": {
+    "openai": {"S1": 2, "S2": 1, "S3": 0, "S4": 0, "S5": 1},
+    "anthropic": {"S1": 2, "S2": 1, "S3": 0, "S4": 0, "S5": 0},
+    "alibaba": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0},
+    "google": {"S1": 0, "S2": 0, "S3": 1, "S4": 0, "S5": 0},
+    "mistral": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0},
+    "meta": {"S1": 0, "S2": 1, "S3": 1, "S4": 0, "S5": 1},
+    "xai": {"S1": 0, "S2": 0, "S3": 1, "S4": 0, "S5": 0},
+    "moonshot": {"S1": 0, "S2": 1, "S3": 0, "S4": 0, "S5": 0},
+    "deepseek": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0}
+  },
+  "supporting_notes": {
+    "google": {
+      "S3": "The research note gives Google this point without naming the practice it belongs to. It is filed here because the pilot lets outside evaluators test Gemini, like the points Meta and xAI score on this practice."
+    }
+  },
+  "internal_scores": {
+    "openai": {"I1": 1, "I2": 1, "I3": 2, "I4": 2},
+    "anthropic": {"I1": 2, "I2": 1, "I3": 2, "I4": 2},
+    "alibaba": {"I1": 1, "I2": 0, "I3": 1, "I4": 0},
+    "google": {"I1": 1, "I2": 0, "I3": 0, "I4": 1},
+    "mistral": {"I1": 0, "I2": 0, "I3": 0, "I4": 0},
+    "meta": {"I1": 1, "I2": 0, "I3": 0, "I4": 1},
+    "xai": {"I1": 1, "I2": 0, "I3": 0, "I4": 1},
+    "moonshot": {"I1": 1, "I2": 0, "I3": 0, "I4": 0},
+    "deepseek": {"I1": 1, "I2": 0, "I3": 0, "I4": 0}
+  },
+  "internal_evidence": {
+    "openai": {
+      "I1": {
+        "sentence": "OpenAI says it trains its models to align with the Model Spec, and it has described in detail how an earlier generation of models (o1 and o3-mini) was trained on safety specifications based in part on it, but it has published nothing comparable for its current models.",
+        "sources": [
+          {
+            "quote": "We are training our models to align to the principles in the Model Spec.",
+            "title": "Model Spec (2026/08/18)",
+            "url": "https://model-spec.openai.com/2026-08-18.html",
+            "date": "18 August 2026"
+          },
+          {
+            "quote": "We use it to make intended behavior clearer, so we can train toward it, evaluate against it, and improve it over time.",
+            "title": "Inside our approach to the Model Spec",
+            "url": "https://openai.com/index/our-approach-to-the-model-spec/",
+            "date": "25 March 2026"
+          },
+          {
+            "quote": "We try to avoid anchoring it to implementation details, such as internal token formats or the exact training recipe for a particular behavior, because those details may change even when the desired behavior does not.",
+            "title": "Inside our approach to the Model Spec",
+            "url": "https://openai.com/index/our-approach-to-the-model-spec/",
+            "date": "25 March 2026"
+          },
+          {
+            "quote": "The specifications we used are based in part on OpenAI’s published model spec [14].",
+            "title": "Deliberative Alignment: Reasoning Enables Safer Language Models",
+            "url": "https://arxiv.org/abs/2412.16339",
+            "date": "8 January 2025"
+          },
+          {
+            "quote": "We used deliberative alignment to align OpenAI’s o-series models, including o1-preview, o1, and o3-mini.",
+            "title": "Deliberative Alignment: Reasoning Enables Safer Language Models",
+            "url": "https://arxiv.org/abs/2412.16339",
+            "date": "8 January 2025"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "OpenAI's Model Spec says that rail-free models used for safety testing and red teaming need not follow it and that publicly deployed models should, but it does not say whether the models OpenAI uses internally follow the spec.",
+        "sources": [
+          {
+            "quote": "“Rail free” models that can output restricted content can be very useful for safety testing and red teaming. However, the models that we deploy publicly should comply with the Model Spec, and in particular not be susceptible to violating root-level principles through a system message.",
+            "title": "Model Spec (2026/08/18)",
+            "url": "https://model-spec.openai.com/2026-08-18.html",
+            "date": "18 August 2026"
+          },
+          {
+            "quote": "We are committed to upholding the following high-level principles, which guide our approach to model behavior and related policies, across all deployments of our models",
+            "title": "Model Spec (2026/08/18)",
+            "url": "https://model-spec.openai.com/2026-08-18.html",
+            "date": "18 August 2026"
+          }
+        ]
+      },
+      "I3": {
+        "sentence": "OpenAI says it trains on the Model Spec and that the public version may not include every detail, and it names what is held back, including detailed policies kept confidential because they contain information hazards.",
+        "sources": [
+          {
+            "quote": "We are training our models to align to the principles in the Model Spec. While the public version of the Model Spec may not include every detail, it is fully consistent with our intended model behavior.",
+            "title": "Model Spec (2026/08/18), Overview",
+            "url": "https://model-spec.openai.com/2026-08-18.html",
+            "date": "18 August 2026"
+          },
+          {
+            "quote": "In particular some detailed policies prohibiting the model from revealing information hazards can themselves contain these information hazards. This does not mean that all such messages or policies must be confidential. OpenAI publicly shares substantial information about our policies, including this Model Spec, and we encourage developers to do the same.",
+            "title": "Model Spec (2026/08/18), privileged information section",
+            "url": "https://model-spec.openai.com/2026-08-18.html",
+            "date": "18 August 2026"
+          },
+          {
+            "quote": "Internally, it gives us a north star for intended behavior and a shared framework for training, evaluation, and governance.",
+            "title": "Inside our approach to the Model Spec",
+            "url": "https://openai.com/index/our-approach-to-the-model-spec/",
+            "date": "25 March 2026"
+          },
+          {
+            "quote": "And the Spec is not a complete writeup of our entire training stack or every internal policy distinction. The goal is not to capture every detail.",
+            "title": "Inside our approach to the Model Spec",
+            "url": "https://openai.com/index/our-approach-to-the-model-spec/",
+            "date": "25 March 2026"
+          }
+        ]
+      },
+      "I4": {
+        "sentence": "OpenAI monitors how its deployed models behave against its Model Spec, including in de-identified ChatGPT traffic and internal agent use, and publishes post-mortems and incident reports with mitigations, most recently in 2026.",
+        "sources": [
+          {
+            "quote": "We spent the next two days monitoring early usage and internal signals, including user feedback. By Sunday, it was clear the model’s behavior wasn’t meeting our expectations.",
+            "title": "Expanding on what we missed with sycophancy",
+            "url": "https://openai.com/index/expanding-on-sycophancy/",
+            "date": "2 May 2025"
+          },
+          {
+            "quote": "When shaping model behavior, we start with baseline principles and instructions outlined in our Model Spec.",
+            "title": "Sycophancy in GPT-4o: What happened and what we’re doing about it",
+            "url": "https://openai.com/index/sycophancy-in-gpt-4o/",
+            "date": "29 April 2025"
+          },
+          {
+            "quote": "We have rolled back last week’s GPT-4o update in ChatGPT so people are now using an earlier version with more balanced behavior.",
+            "title": "Sycophancy in GPT-4o: What happened and what we’re doing about it",
+            "url": "https://openai.com/index/sycophancy-in-gpt-4o/",
+            "date": "29 April 2025"
+          },
+          {
+            "quote": "We estimate that the latest update to GPT-5 reduced the rate of responses that do not fully comply with desired behavior under our taxonomies for challenging conversations related to mental health issues by 65% in recent production traffic.",
+            "title": "Strengthening ChatGPT’s responses in sensitive conversations",
+            "url": "https://openai.com/index/strengthening-chatgpt-responses-in-sensitive-conversations/",
+            "date": "27 October 2025"
+          },
+          {
+            "quote": "In Figure 2, we show the incidence for GPT-5.1 of multiple categories of misalignment, using a production evaluation derived entirely from GPT-5 traffic. We then compare the rate actually observed in GPT-5.1 once deployed.",
+            "title": "Sidestepping Evaluation Awareness and Anticipating Misalignment with Production Evaluations",
+            "url": "https://alignment.openai.com/prod-evals/",
+            "date": "18 December 2025"
+          },
+          {
+            "quote": "In its latest form, our monitoring system reviews interactions within 30 minutes of completion, categorizing the interaction and assigning it a severity level.",
+            "title": "How we monitor internal coding agents for misalignment",
+            "url": "https://openai.com/index/how-we-monitor-internal-coding-agents-misalignment/",
+            "date": "March 2026"
+          }
+        ]
+      }
+    },
+    "anthropic": {
+      "I1": {
+        "sentence": "Anthropic says Claude uses the constitution to generate synthetic training data, including rankings of possible responses, and that it trains on documents and example conversations written to the constitution as well as in reinforcement learning environments; it also says its current model, Claude Opus 5, was post-trained towards the constitution's values.",
+        "sources": [
+          {
+            "quote": "We use the constitution at various stages of the training process. This has grown out of training techniques we’ve been using since 2023, when we first began training Claude models using Constitutional AI.",
+            "title": "Claude's new constitution",
+            "url": "https://www.anthropic.com/news/claude-new-constitution",
+            "date": "22 January 2026"
+          },
+          {
+            "quote": "Claude itself also uses the constitution to construct many kinds of synthetic training data, including data that helps it learn and understand the constitution, conversations where the constitution might be relevant, responses that are in line with its values, and rankings of possible responses. All of these can be used to train future versions of Claude to become the kind of entity the constitution describes.",
+            "title": "Claude's new constitution",
+            "url": "https://www.anthropic.com/news/claude-new-constitution",
+            "date": "22 January 2026"
+          },
+          {
+            "quote": "We align Claude through SDF on constitutionally aligned documents, high quality SFT that demonstrates constitutional responses to difficult questions, and a diverse set of RL environments.",
+            "title": "Teaching Claude Why",
+            "url": "https://alignment.anthropic.com/2026/teaching-claude-why/",
+            "date": "8 May 2026"
+          },
+          {
+            "quote": "After the pretraining process, Opus 5 underwent rigorous post-training and fine-tuning, aimed at making it an assistant whose behavior aligns with the values described in Claude’s constitution.",
+            "title": "System Card: Claude Opus 5",
+            "url": "https://www-cdn.anthropic.com/c5fbac3f0b1280a933ebd26d3cb8bb9f5bdeaf48/Claude%20Opus%205%20System%20Card.pdf",
+            "date": "24 July 2026"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "Anthropic says its constitution is written for its mainline, general-access models and that some specialised models do not fully fit it, and it discloses helpful-only variants used for dangerous-capability evaluations, but it does not state that its internally deployed models follow the constitution.",
+        "sources": [
+          {
+            "quote": "This constitution is written for our mainline, general-access Claude models. We have some models built for specialized uses that don’t fully fit this constitution; as we continue to develop products for specialized use cases, we will continue to evaluate how to best ensure our models meet the core objectives outlined in this constitution.",
+            "title": "Claude’s Constitution",
+            "url": "https://www.anthropic.com/constitution",
+            "date": "22 January 2026"
+          },
+          {
+            "quote": "We continue to train model variants that produce fewer refusals (“helpful-only models”), primarily for use in dangerous-capability evaluations.",
+            "title": "Risk Report: August 2026",
+            "url": "https://www.anthropic.com/aug-2026-risk-report",
+            "date": "August 2026"
+          },
+          {
+            "quote": "We focus our analysis on Claude Mythos 5 and Model 2, our most capable and most commonly internally used models.",
+            "title": "Risk Report: August 2026",
+            "url": "https://www.anthropic.com/aug-2026-risk-report",
+            "date": "August 2026"
+          }
+        ]
+      },
+      "I3": {
+        "sentence": "Anthropic publishes the constitution it trains on in full and says that some more specific guidelines may be used mainly in training without being published.",
+        "sources": [
+          {
+            "quote": "It plays a crucial role in our training process, and its content directly shapes Claude’s behavior.",
+            "title": "Claude’s Constitution, preface",
+            "url": "https://www.anthropic.com/constitution",
+            "date": "22 January 2026"
+          },
+          {
+            "quote": "We may publish some guidelines as amendments or appendices to this document, alongside examples of hard cases and exemplary behavior. Other guidelines may be more niche and used primarily during training without broad publication.",
+            "title": "Claude’s Constitution, Following Anthropic’s guidelines",
+            "url": "https://www.anthropic.com/constitution",
+            "date": "22 January 2026"
+          },
+          {
+            "quote": "We anticipate that most of Anthropic's specific guidelines will be relatively mundane from an outside perspective: practical advice for handling particular types of requests, useful context about tools and their appropriate use, information that helps Claude calibrate its responses in specialized domains, and similar operational guidance.",
+            "title": "Claude’s Constitution, Following Anthropic’s guidelines",
+            "url": "https://www.anthropic.com/constitution",
+            "date": "22 January 2026"
+          }
+        ]
+      },
+      "I4": {
+        "sentence": "Anthropic analyses real Claude conversations with privacy-preserving tools such as Clio to check them against the values it trains for, and publishes post-mortems and incident assessments with severity and fixes, most recently in September 2026.",
+        "sources": [
+          {
+            "quote": "Clio is an automated analysis tool that enables privacy-preserving analysis of real-world language model use.",
+            "title": "Clio: Privacy-preserving insights into real-world AI use",
+            "url": "https://www.anthropic.com/research/clio",
+            "date": "12 December 2024"
+          },
+          {
+            "quote": "There were, however, some rare clusters of values that appeared opposed to what we’d attempted to train into Claude.",
+            "title": "Values in the wild: Discovering and analyzing values in real-world language model interactions",
+            "url": "https://www.anthropic.com/research/values-wild",
+            "date": "21 April 2025"
+          },
+          {
+            "quote": "Over the past month, we’ve been looking into reports that Claude’s responses have worsened for some users. We’ve traced these reports to three separate changes that affected Claude Code, the Claude Agent SDK, and Claude Cowork.",
+            "title": "An update on recent Claude Code quality reports",
+            "url": "https://www.anthropic.com/engineering/april-23-postmortem",
+            "date": "23 April 2026"
+          },
+          {
+            "quote": "In addition to the efforts focused on high-risk evaluations and training, we expanded our offline monitoring to cover most other forms of internal frontier agentic usage.",
+            "title": "Improving our alignment and security practices",
+            "url": "https://www.anthropic.com/news/improving-alignment-security-efforts",
+            "date": "31 August 2026"
+          },
+          {
+            "quote": "To be clear about our assessment of the severity of these incidents: while Claude’s actions were misaligned, they remained within a narrow scope",
+            "title": "An alignment assessment of recent cybersecurity incidents",
+            "url": "https://www.anthropic.com/research/alignment-assessment-cybersecurity-incidents",
+            "date": "9 September 2026"
+          }
+        ]
+      }
+    },
+    "alibaba": {
+      "I1": {
+        "sentence": "Alibaba's Model Spec says the company is carrying out targeted training so that its models conform to the specification's principles, without saying how or naming the models concerned.",
+        "sources": [
+          {
+            "quote": "我们正在进行针对性的模型训练与优化，确保其表现符合模型规约所倡导的核心原则。尽管公开的文档未能详述所有底层实现细节，但其所传递的价值准则与我们内部设定的模型行为标准完全吻合。我们深知当前生产模型与模型规约的理想状态之间尚有差距，但正通过持续的技术改进和系统升级，循序渐进地推动模型向这些准则演进，实现规约要求的逐步落地。",
+            "title": "AI Model Spec, Overview",
+            "url": "https://s.alibaba.com/aaig/specification",
+            "date": "April 2026",
+            "translation": "We are carrying out targeted model training and optimisation to ensure its behaviour conforms to the core principles the Model Spec advocates. Although the public document does not set out every underlying implementation detail, the value principles it conveys fully match the model behaviour standards we have set internally. We know that there is still a gap between current production models and the ideal the Model Spec describes, and through continuous technical improvement and system upgrades we are moving the models step by step towards these principles, so that its requirements are put into practice gradually."
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "Alibaba's AI Model Spec says nothing about the models Alibaba uses internally or about models not meant to follow it.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "Alibaba's AI Model Spec says the public document does not set out every underlying implementation detail but fully matches its internal behaviour standards, without saying what is left out.",
+        "sources": [
+          {
+            "quote": "我们正在进行针对性的模型训练与优化，确保其表现符合模型规约所倡导的核心原则。尽管公开的文档未能详述所有底层实现细节，但其所传递的价值准则与我们内部设定的模型行为标准完全吻合。",
+            "title": "AI Model Spec, Overview",
+            "url": "https://s.alibaba.com/aaig/specification",
+            "date": "April 2026",
+            "translation": "We are carrying out targeted model training and optimisation to ensure its behaviour conforms to the core principles the Model Spec advocates. Although the public document does not set out every underlying implementation detail, the value principles it conveys fully match the model behaviour standards we have set internally."
+          }
+        ]
+      },
+      "I4": {
+        "sentence": "Alibaba's model spec says service providers need continuous monitoring, but there is no public description of Alibaba monitoring its deployed models against the spec and no published incident reports.",
+        "sources": []
+      }
+    },
+    "google": {
+      "I1": {
+        "sentence": "Google has no model behaviour specification; its technical reports describe building its safety policies and a short list of desired behaviours into Gemini's training through data filtering, fine-tuning and reinforcement learning.",
+        "sources": [
+          {
+            "quote": "We build safety into the models though pre-and post-training approaches. We start by constructing metrics based on the policies and desiderata above, which we typically turn into automated evaluations that guide model development through successive model iterations. We use data filtering and conditional pre-training, as well as Supervised Fine-Tuning (SFT), and Reinforcement Learning from Human and Critic Feedback (RL*F).",
+            "title": "Gemini 2.5 technical report",
+            "url": "https://arxiv.org/html/2507.06261v1",
+            "date": "7 July 2025"
+          },
+          {
+            "quote": "Safety and responsibility was built into Gemini 3 Pro throughout the training and deployment lifecycle, including pre-training, post-training, and product-level mitigations. Mitigations include, but are not limited to: dataset filtering; conditional pre-training; supervised fine-tuning; reinforcement learning from human and critic feedback; safety policies and desiderata; product-level mitigations such as safety filtering.",
+            "title": "Gemini 3 Pro Model Card",
+            "url": "https://storage.googleapis.com/deepmind-media/Model-Cards/Gemini-3-Pro-Model-Card.pdf",
+            "date": "November 2025, updated May 2026"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "Google DeepMind publishes no model specification, and neither its Gemini app policy guidelines nor its Frontier Safety Framework says which behaviour rules its internally deployed models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "Google DeepMind publishes no model specification, so it makes no statement on whether a public text matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "Google describes continuous post-launch monitoring of its models, but its last published post-mortem of a Gemini behaviour failure dates from February 2024.",
+        "sources": [
+          {
+            "quote": "So what went wrong? In short, two things. First, our tuning to ensure that Gemini showed a range of people failed to account for cases that should clearly not show a range.",
+            "title": "Gemini image generation got it wrong. We'll do better.",
+            "url": "https://blog.google/products/gemini/gemini-image-generation-issue/",
+            "date": "23 February 2024"
+          },
+          {
+            "quote": "We use a combination of automated systems and human reviews to engage in continuous post-launch monitoring to improve our AI models and products, and detect activity and behavior that suggests misuse of our consumer products.",
+            "title": "Responsible AI Progress Report",
+            "url": "https://ai.google/static/documents/ai-responsibility-update-2026.pdf",
+            "date": "February 2026"
+          },
+          {
+            "quote": "We conducted rigorous testing to assess model alignment with our policies and frameworks. We applied these insights to deploy targeted mitigations to further model alignment, while our ongoing monitoring helps inform continuous model improvement.",
+            "title": "Responsible AI Progress Report",
+            "url": "https://ai.google/static/documents/ai-responsibility-update-2026.pdf",
+            "date": "February 2026"
+          }
+        ]
+      }
+    },
+    "mistral": {
+      "I1": {
+        "sentence": "Mistral AI publishes no model behaviour specification and has made no public statement that its models are trained against one.",
+        "sources": []
+      },
+      "I2": {
+        "sentence": "Mistral AI publishes no model specification, and no public statement was found on the rules its internal models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "Mistral AI publishes no model specification, so it makes no statement on whether a public text matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "There is no public description of Mistral monitoring its deployed models' behaviour and no published report of a behaviour incident.",
+        "sources": []
+      }
+    },
+    "meta": {
+      "I1": {
+        "sentence": "Meta has not yet published its specification; its report on Muse Spark describes an early internal behaviour specification of the properties it intends the model to have, and says its models are trained to put Meta's policies first, without saying how the specification enters training.",
+        "sources": [
+          {
+            "quote": "Our analysis is structured on the basis of an early internal behavior specification which outlines the properties we intend for the model to have. In accordance with the Advanced AI Scaling Framework, we plan to release a finalized specification in the future.",
+            "title": "Muse Spark Safety & Preparedness Report",
+            "url": "https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/",
+            "date": "26 May 2026"
+          },
+          {
+            "quote": "We train our models to prioritize instructions from different sources in the following order: 1. Meta’s policies and system instructions 2. Developer instructions (from those deploying the model for specific use cases)",
+            "title": "Muse Spark Safety & Preparedness Report, section 4.1.1",
+            "url": "https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/",
+            "date": "26 May 2026"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "Meta publishes no model specification, and its Advanced AI Scaling Framework, which covers catastrophic risk from internal use and promises a future model spec, says nothing about which behaviour rules internal models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "Meta publishes no model specification for its assistant, so it makes no statement on whether a public text matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "Meta describes automated post-launch monitoring of Meta AI for safety regressions but publishes no reports of its own on behaviour incidents, answering them only through statements to the press.",
+        "sources": [
+          {
+            "quote": "We extensively evaluate the compliance of Meta AI, the deployed system powered by Muse Spark, with Meta’s content safety policies across a broad range of content risk categories, languages, and input and output modalities (Section 5).",
+            "title": "Muse Spark Safety & Preparedness Report",
+            "url": "https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/",
+            "date": "26 May 2026"
+          },
+          {
+            "quote": "This is complemented by post-launch automated online monitoring, providing ongoing detection of possible safety regressions in production traffic.",
+            "title": "Muse Spark Safety & Preparedness Report",
+            "url": "https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/",
+            "date": "26 May 2026"
+          }
+        ]
+      }
+    },
+    "xai": {
+      "I1": {
+        "sentence": "xAI has no model behaviour specification; its model card says fine-tuning and reinforcement learning train Grok 4.6 to refuse clearly harmful or criminal requests under an internal refusal policy.",
+        "sources": [
+          {
+            "quote": "Safety fine-tuning and post-training (supervised fine-tuning plus reinforcement learning from human feedback, verifiable rewards, and model-based grading) train the model to refuse requests that show clear intent to cause severe harm or engage in criminal activity.",
+            "title": "Model Card: Grok 4.6",
+            "url": "https://media.x.ai/v1/website/card-4p6-4cd2dc57.pdf",
+            "date": "12 August 2026, revised 17 August 2026"
+          },
+          {
+            "quote": "System prompts: Providing high-priority instructions to our models to enforce our basic refusal policy.",
+            "title": "xAI Frontier Artificial Intelligence Framework",
+            "url": "https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf",
+            "date": "30 June 2026"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "xAI publishes no model specification, and its risk frameworks say nothing about the rules its internally used models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "xAI publishes Grok system prompts but no model specification, so it makes no statement on whether a public specification matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "xAI published brief explanations and fixes for Grok incidents in May and July 2025 and describes post-market monitoring, but it has published no incident report since, including on the January 2026 image-editing scandal.",
+        "sources": [
+          {
+            "quote": "On May 14 at approximately 3:15 AM PST, an unauthorized modification was made to the Grok response bot's prompt on X. This change, which directed Grok to provide a specific response on a political topic, violated xAI's internal policies and core values.",
+            "title": "xAI post on the Grok response bot incident",
+            "url": "https://x.com/xai/status/1923183620606619649",
+            "date": "16 May 2025"
+          },
+          {
+            "quote": "We’re putting in place a 24/7 monitoring team to respond to incidents with Grok’s answers that are not caught by automated systems, so we can respond faster if all other measures fail.",
+            "title": "xAI post on the Grok response bot incident",
+            "url": "https://x.com/xai/status/1923183620606619649",
+            "date": "16 May 2025"
+          },
+          {
+            "quote": "The update was active for 16 hrs, in which deprecated code made @grok susceptible to existing X user posts; including when such posts contained extremist views.",
+            "title": "Update on where has @grok been & what happened on July 8th",
+            "url": "https://x.com/grok/status/1943916977481036128",
+            "date": "12 July 2025"
+          },
+          {
+            "quote": "xAI conducts appropriate post-market monitoring to gather information relevant to assess whether the risk could be determined to not be acceptable and to inform whether a model update is necessary.",
+            "title": "xAI Frontier Artificial Intelligence Framework",
+            "url": "https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf",
+            "date": "30 June 2026"
+          }
+        ]
+      }
+    },
+    "moonshot": {
+      "I1": {
+        "sentence": "Moonshot AI has no model behaviour specification; its 2025 report on Kimi K2 described reinforcement learning that ranked answers against published rubrics of the assistant's values, while the report on its current model, Kimi K3, names no such document.",
+        "sources": [
+          {
+            "quote": "The K2 critic then ranks all results by performing pairwise evaluations against a combination of rubrics, which incorporates both core rubrics (Appendix. F.1), which represent the fundamental values of our AI assistant that Kimi cherish, prescriptive rubrics (Appendix. F.2) that aim to eliminate reward hacking, and human-annotated rubrics crafted by our data team for specific instructional contexts.",
+            "title": "Kimi K2: Open Agentic Intelligence",
+            "url": "https://arxiv.org/html/2507.20534",
+            "date": "3 February 2026 (first version July 2025)"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "Moonshot AI publishes no model specification, and no public statement was found on the rules its internal models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "Moonshot AI publishes no model specification, so it makes no statement on whether a public text matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "There is no public description of Moonshot AI monitoring Kimi's behaviour in use and no published incident report, including on the 2026 incidents others reported.",
+        "sources": []
+      }
+    },
+    "deepseek": {
+      "I1": {
+        "sentence": "DeepSeek has no model behaviour specification; it says its models are safety-aligned with purpose-built data so that their replies reflect human values, and its paper on DeepSeek-R1 describes a safety reward model trained on answers labelled against internal safety guidelines.",
+        "sources": [
+          {
+            "quote": "为了确保模型的安全性，在模型优化训练阶段，我们会构造专门的安全数据对模型进行安全对齐，教会模型的回复符合人类的价值观，增强模型内生的安全能力。",
+            "title": "Model mechanism and training methods (模型原理与训练方法说明)",
+            "url": "https://cdn.deepseek.com/policies/zh-CN/model-algorithm-disclosure.html",
+            "date": "undated, read 21 September 2026",
+            "translation": "To make the model safe, during optimisation training we build dedicated safety data to align the model, teaching it to give replies that conform to human values and strengthening its own safety."
+          },
+          {
+            "quote": "To assess and improve model safety, we curated a dataset of 106,000 prompts with model-generated responses annotated as “safe\" or “unsafe\" according to predefined safety guidelines.",
+            "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
+            "url": "https://arxiv.org/abs/2501.12948",
+            "date": "4 January 2026 (second version)"
+          }
+        ]
+      },
+      "I2": {
+        "sentence": "DeepSeek publishes no model specification, and no public statement was found on the rules its internal models follow.",
+        "sources": []
+      },
+      "I3": {
+        "sentence": "DeepSeek publishes no model specification, so it makes no statement on whether a public text matches what it trains on.",
+        "sources": []
+      },
+      "I4": {
+        "sentence": "DeepSeek's public disclosures commit to safety across the model lifecycle but describe no monitoring of deployed models' behaviour and no incident reports.",
+        "sources": []
+      }
+    }
   },
   "findings": [
     {
       "title": "No company meets the minimum",
-      "text": "The minimum we propose is the first two questions together: a published model behaviour specification for every model in use, and one public change log. The best combined score is OpenAI's, 15 out of 24. Anthropic, whose model behaviour specification is the more complete, scores 12. The change log is where every company falls short, the two leaders included: across all nine, the best score on it is 7 out of 12."
+      "text": "Our proposal names its first two asks as the minimum it expects of every company: a published model behaviour specification for every model in use, and one public change log that says up front what it covers and how soon a change is recorded. Meeting it means 4 out of 4 on both questions, and no company does. OpenAI has the best pair, 2.7 on the specification and 2.3 on the change log. Anthropic, whose model behaviour specification is the more complete, scores 3.0 and 1.0. The change log is where every company falls short, the two leaders included: across all nine, the best score on it is 2.3 out of 4."
     },
     {
       "title": "No company gives notice before weakening a hard constraint",
@@ -250,7 +1226,7 @@
     },
     {
       "title": "The companies whose models anyone can download sit at the bottom, partly because of the questions",
-      "text": "The four lowest scores, Mistral's 6, Moonshot AI's 4, DeepSeek's 2, and the older Llama models within Meta's 5, all belong to companies whose flagship model, or nearly, can be downloaded and run by anyone: its weights, the numbers that make up the model, are published. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
+      "text": "Four of the five lowest scores, Mistral's 2.7, Moonshot AI's 1.5, DeepSeek's 0.8, and the older Llama models within Meta's 2.0, belong to companies whose flagship model, or nearly, can be downloaded and run by anyone: its weights, the numbers that make up the model, are published. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
     },
     {
       "title": "Two companies must already write this document for a regulator, and do not publish it",

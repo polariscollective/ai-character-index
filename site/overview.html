@@ -511,32 +511,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   white-space: nowrap;
 }
 
-/* The governance view is a board: three headline figures, then one table that
-   takes the whole width, the companies across and their scores down. Anything
+/* The governance view is a board: one table that takes the whole width, the
+   companies across and their scores down. Anything
    more, what a question asks or why a company scored what it did, opens in a
    popover beside what was pressed, so the table is never pushed aside by it. */
-.gov-lede { max-width: 96ch; margin-bottom: 0; }
+.gov-lede { max-width: 96ch; margin-bottom: 26px; }
 #gov-status:empty { display: none; }
-
-/* Three figures, divided by rules rather than boxed. Proportional figures in the
-   interface face at display size: equal-width digits look loose this large. */
-.gov-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 20px 0 26px;
-}
-.gov-kpi { margin: 0; padding: 2px 24px 2px 0; }
-.gov-kpi + .gov-kpi { padding-left: 24px; border-left: 1px solid var(--line); }
-.gov-kpi-figure {
-  display: block;
-  font-family: var(--ui);
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.1;
-  color: var(--ink);
-}
-.gov-kpi-figure small { font-size: 17px; color: var(--muted); font-weight: 600; }
-.gov-kpi-caption { display: block; margin-top: 4px; max-width: 42ch; color: var(--muted); font-size: 14px; line-height: 1.45; }
 
 .gov-toolbar {
   display: flex;
@@ -612,9 +592,30 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-heatmap .total-row { border-bottom: 1px solid var(--muted); }
 .gov-heatmap .total-row .cell-button { min-height: 54px; }
 .gov-heatmap .total-row .cell-figure { font-size: 20px; }
-/* Supporting practices are shown and never counted, so they stand apart. */
-.gov-heatmap .supporting-row th, .gov-heatmap .supporting-row td { padding-top: 14px; }
-.gov-heatmap .supporting-row { border-top: 1px solid var(--muted); }
+/* The best practices are shown and never counted, so they stand apart, under a
+   line across the table that says so. */
+.gov-heatmap .outside-row { border-top: 2px solid var(--muted); }
+.gov-heatmap .outside-row th, .gov-heatmap .outside-row td { padding-top: 22px; padding-bottom: 6px; }
+.gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
+/* Not assessed: no score, so no colour, and a dashed edge so the cell still
+   reads as one. */
+.gov-heatmap .cell-button.cell-na {
+  border: 1px dashed var(--muted);
+  background: transparent;
+  color: var(--muted);
+}
+.gov-heatmap .cell-na .cell-figure { font-weight: 400; }
+.chip-na {
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+  font-weight: 400;
+}
+.legend-na { display: inline-flex; align-items: center; gap: 6px; }
+/* Inside the supporting practices, the line between the five scored from public
+   sources and the five only an audit could score. */
+.gov-heatmap .practice-divider { border-top: 1px solid var(--muted); }
+.gov-heatmap .practice-divider th, .gov-heatmap .practice-divider td { padding-top: 12px; padding-bottom: 6px; }
+.gov-heatmap .divider-note { color: var(--muted); font-size: 13px; vertical-align: middle; }
 /* A question's checks, indented under it and a size smaller. */
 .gov-heatmap .check-row th { padding-left: 34px; }
 /* A check's cell starts a fifth of the way into its own column, like the second
@@ -771,6 +772,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-pop .aside { margin: 14px 0 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--muted); }
 .gov-pop a { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
 .gov-pop .gov-button { margin-top: 6px; }
+/* The working paper's own words, quoted exactly, each under a chartreuse rule. */
+.gov-pop .paper-fold { margin-top: 10px; }
+.paper-name { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.paper-quote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 3px solid var(--energy); }
+.paper-quote p { margin: 0; }
+.paper-quote .paper-where { margin-top: 3px; font-size: 12px; color: var(--faint); }
 .chip {
   flex: none;
   display: inline-block;
@@ -856,8 +863,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   .gov-heatmap thead th.row-col { top: auto; }
 }
 @media (max-width: 760px) {
-  .gov-kpis { grid-template-columns: 1fr; gap: 16px; }
-  .gov-kpi + .gov-kpi { padding-left: 0; padding-top: 16px; border-left: 0; border-top: 1px solid var(--line); }
   .gov-findings-list { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -956,7 +961,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     Polaris Collective's own and open to challenge.
   </p>
 
-  <div class="gov-kpis" id="gov-kpis"></div>
   <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
 
   <div class="gov-toolbar">
@@ -980,11 +984,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     such a model behaves once it has been downloaded, so part of a low score
     there reflects a limit of the questions.
   </p>
-  <p class="gov-foot">
-    Meta and xAI tie on 5. Meta is placed sixth on the supporting practices and
-    on its direction of travel: it has committed in writing to publish a model
-    behaviour specification, and it already tests its models against an internal one.
-  </p>
+  <!-- Written by governance.js from the scores, so it cannot name a tie the
+       table does not have. -->
+  <p class="gov-foot" id="gov-ties"></p>
   <p class="gov-date">As of September 2026</p>
 
   <section class="gov-findings" aria-labelledby="gov-findings-title">
@@ -1009,9 +1011,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           company's products.
         </p>
         <p>
-          <strong>The checks say more than the total.</strong> The totals put
-          OpenAI and Anthropic one point apart, and they fall short in opposite
-          ways. OpenAI keeps a record of its versions and does not list its hard
+          <strong>The checks say more than the overall score.</strong> OpenAI
+          and Anthropic have the same overall score, and they fall short in
+          opposite ways. OpenAI keeps a record of its versions and does not list its hard
           constraints, while Anthropic lists its hard constraints and keeps no
           record of its versions.
         </p>
@@ -1046,26 +1048,51 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <summary>How we scored</summary>
       <div class="gov-more-body">
         <p>
-          The four questions are the four asks of a transparency proposal
-          Polaris Collective has been drafting since 10 September 2026. Each is
-          split into checks scored from 0 to 4. The first two questions have
-          three checks each, because together they are the minimum the proposal
-          asks for; the other two have two. The total is out of 40.
+          The four questions are the four asks of a working paper Polaris
+          Collective is writing, in its draft of 10 September 2026. Each is
+          split into checks scored from 0 to 4: three for each of the first two
+          questions and two for the others. The first two are what the proposal
+          calls its minimum, the asks it expects of every company before the
+          other two: a published model behaviour specification for every model in
+          use, and one public change log. A question's score is the average of its checks,
+          from 0 to 4, and the overall score is the sum of the four questions,
+          out of 16, so every question weighs the same.
         </p>
         <p>
           The tables below say what earns 0, 2 and 4 on each check. A score of 1
           or 3 falls between the descriptions either side of it.
         </p>
         <div id="gov-scoring"></div>
-        <h3>Supporting practices</h3>
+        <h3>Best practices, outside the total</h3>
         <p>
-          Five further practices, taken from Kembery and colleagues, Emerging
+          Five further practices, taken from Kembery et al., Emerging
           International Best Practices for AI Model Specs, keeping only those an
           outsider can check from public sources. Each is scored 0, 1 or 2, for a
           total out of 10. They are reported beside the ranking and left out of its
-          total, because they measure related good practice.
+          total, because they measure related good practice. The research note gives
+          no description of each score. In its scoring, 2 is the practice in full, 1
+          part of it or a weaker form of it, and 0 means nothing was found.
         </p>
         <ul class="gov-bullets" id="gov-supporting"></ul>
+        <h3>Best practices only the company can show</h3>
+        <p>
+          Four more practices from the same working paper. Nobody outside a
+          company can see whether it follows them, and the paper asks companies to
+          say so publicly. Each is scored 0, 1 or 2 on what the company publishes,
+          and 0 when it publishes nothing. A company may well follow a practice
+          without saying so: where we score 0, we found no reliable public
+          evidence, and no internal audit anyone can verify, that it does. Tell us
+          if we are wrong.
+        </p>
+        <ul class="gov-bullets" id="gov-disclosed"></ul>
+        <h3>A best practice only an internal audit could score</h3>
+        <p>
+          One more practice from the same working paper, which the paper raises as
+          an open problem and does not ask companies to publish. Only an internal
+          audit could show it. No such audit has been done, every company is
+          marked NA, not assessed, and it counts towards nothing.
+        </p>
+        <ul class="gov-bullets" id="gov-internal"></ul>
         <h3>Who the companies are</h3>
         <p>
           Some trading names mislead, so here are the companies behind three of

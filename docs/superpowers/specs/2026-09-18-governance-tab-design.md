@@ -59,6 +59,11 @@ transcription:
 - **Supporting indicators are shown as totals only.** The note gives a per-lab
   breakdown in prose but no per-indicator matrix, and for Google it does not
   say which indicator scored the point. The view does not invent one.
+  Superseded on 21 September 2026: the practices now open one by one, read from
+  the parenthesised scores of each profile, with Google's point filed under S3
+  and marked as such. The same group goes on with four practices only the
+  company can show, scored on what it publishes, and one only an internal audit
+  could show, NA for every company. See the repository's `CLAUDE.md`.
 - House rules: British spelling outside quotations, sentence case, no long
   dashes, dated claims carry "as of September 2026".
 

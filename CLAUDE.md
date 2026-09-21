@@ -1143,6 +1143,90 @@ index's own passages, not at its address, and a scope clause in a preface the
 index does not keep would change check 1.2. The design is
 `docs/superpowers/specs/2026-09-18-governance-tab-design.md`.
 
+**What the method takes from its sources, and what it does not.** Since 21
+September 2026 the board shows the text its method comes from. The four questions
+are the four asks of Polaris Collective's working paper "Model spec governance
+and transparency" (draft of 10 September 2026). The supporting practices come
+from "Emerging International Best Practices for AI Model Specs", a working paper
+by Edward Kembery and colleagues that is under review. Neither paper splits a
+question into checks, weighs one question against another, or says what earns a
+score. The research note did all three. It wrote ten checks, three for each of
+the first two questions because the memo calls those two its minimum and two for
+the others, and added them up, so the questions weighed 12, 12, 8 and 8. It also
+wrote every 0, 2 and 4 description.
+
+Since 21 September 2026 a question is the average of its checks, on their own 0
+to 4 scale, and the overall score is the sum of the four questions, out of 16.
+Every question weighs the same whatever its number of checks, a question opened
+into its checks shows figures on one scale, and the overall score reads as a
+different kind of figure. The order of the nine is unchanged, but two ties
+appear: OpenAI and Anthropic on 9.0, Meta and xAI on 2.0. The best practices put
+Meta ahead of xAI, as the note broke its own tie. OpenAI and Anthropic are level on
+the best practices as well, 10 of 18 each, so they share first place and the next
+rank is third; nothing else is invented to separate them. The sentence under the
+table is written from the scores, so it cannot name a tie the table does not have.
+One finding had quoted "the four lowest scores" for four companies when a fifth,
+xAI, tied with one of them; it says four of the five lowest now. The one check with no ask
+behind it is 4.1, hard constraints listed, which rewards what a specification
+contains rather than how it changes, and gives Alibaba 4 of its 10 points.
+
+The supporting practices are called best practices on the page now, after the
+title of the paper they come from, under a line across the table that says they
+are outside the total. They open one by one, each scored 0, 1 or 2. The note's
+profiles score every practice in parentheses and in order, except Google's one
+point, which the note gives to an evaluation pilot without naming the practice.
+It is filed under S3, outside testers, where Meta's and xAI's points for outside
+evaluators sit, and its popover says so. The test holds every other lab's
+figures to the order of its paragraph. The note never described what 0, 1 and 2
+mean. The board sums up how it scored and says the summary is ours.
+
+The same group goes on with five practices from Kembery's paper that nobody
+outside a company can see. Four of them the paper asks companies to state
+publicly: whether the models are trained on the specification and how, whether
+internal models follow it, whether the published text is the one used inside, and
+whether models in use are monitored and serious violations reported. Those four
+are scored 0, 1 or 2 on what each company publishes, and 0 when it publishes
+nothing, under a note saying that a company may well do these things without
+saying so and that we found no public evidence or verifiable audit that it does.
+The scores come from research on 21 September 2026, one agent per practice across
+all nine companies so that each practice is judged the same way everywhere, and
+every score above 0 rests on a quoted passage with its address in
+`internal_evidence`. The fifth, a separate sign-off on changes, the paper raises
+as an open problem without asking anyone to publish it, so it stays NA for every
+company and the test fails if it is ever scored.
+
+One reading in that research is a judgement call and is worth knowing. For
+training on the specification, five of the six companies with no specification
+score 1, because they describe training against an internal safety or refusal
+policy, and the anchor allowed an internal behaviour document to count. Read
+strictly, as a document that works like a specification, Google, xAI and DeepSeek
+would score 0.
+
+**The minimum is named where it applies, and the headline figures are gone.**
+The memo calls its first two asks its "minimum viable version": a governing spec
+for every deployed model, and one change log with its scope and timeline stated up
+front, the other two being "the direction of travel". The board used to open with
+three headline figures, the first of them the best score on that minimum, and it
+could not be read without knowing what the minimum was. The three figures were
+removed on 21 September 2026, since the findings say the same things with their
+context. The first two questions now carry "part of the minimum" under their
+names, their popover explains it, the memo's own passage is among their quotes,
+and the finding on the minimum says that meeting it means 4 out of 4 on both
+questions. A reviewer's comment in the memo proposes a different minimum; the
+board follows the memo's text, not the comment.
+
+**Every row carries the text it rests on.** Each question, check and practice has
+a `reading`, what it asks in our words, and `quotes`, the passages of the two
+working papers it rests on. The page shows them, folded, in the popover a row's
+name opens. They are meant to be what a judge is given when these scores are judged
+again, which is why they are the papers' words and not a summary. The quotes were
+cut out of the papers by a one-off script, from a start and an end, never typed:
+footnote markers, markdown and link targets are dropped, spaces collapsed, and a
+passage containing a long dash is quoted in fragments joined by "[...]". The
+papers are not in this repository, because the memo is an unpublished draft and
+Kembery and colleagues' paper is under review, so a quote cannot be checked
+against its source here and the test holds only their shape.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

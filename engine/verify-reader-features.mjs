@@ -2008,13 +2008,13 @@ console.log("== Overview: the governance view ==");
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
   check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
         + "Meta, xAI, Moonshot AI, DeepSeek"
-      && seen.overall.join(",") === "23,22,10,9,6,5,5,4,2" && seen.outOf.join() === "/40"
+      && seen.overall.join(",") === "9.0,9.0,4.3,3.8,2.7,2.0,2.0,1.5,0.8" && seen.outOf.join() === "/16"
       && seen.flagged.join(", ") === "Mistral AI, Moonshot AI, DeepSeek",
-    "the nine companies run across in the note's order, Meta sixth on the tie, "
-      + "each total out of 40, the open-weight ones marked",
+    "the nine companies run across in the note's order, both ties broken as the note breaks them, "
+      + "each overall score out of 16, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
   check(seen.rows.join(", ") === "Overall, Model behaviour specification, Change log, Guardrails, "
-        + "Hard constraints, Supporting practices"
+        + "Hard constraints, Best practices"
       && seen.findings === 8,
     "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));
@@ -2030,6 +2030,31 @@ console.log("== Overview: the governance view ==");
   check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the log"
       && opened.expanded === "true",
     "the change log opens into its three checks", JSON.stringify(opened));
+
+  // The best practices open into the five anyone can check, then the four only
+  // the company can show, scored on what it publishes, then the one only an
+  // internal audit could score, NA for everyone.
+  await page.locator('.row-toggle[data-question="supporting"]').click();
+  await page.waitForTimeout(100);
+  const practices = await page.evaluate(() => {
+    const shown = [...document.querySelectorAll('#gov-heatmap tr.check-row[data-parent="supporting"]:not([hidden])')];
+    const openai = id => document.querySelector(`.cell-button[data-lab="openai"][data-row="${id}"]`);
+    const figures = ids => [...new Set(ids.flatMap(id =>
+      [...document.querySelectorAll(`.cell-button[data-row="${id}"] .cell-figure`)].map(n => n.textContent)))];
+    return {
+      rows: shown.map(row => row.id.replace("gov-check-", "")).join(),
+      openai: ["S1", "S2", "S3", "S4", "S5"].map(id => openai(id)?.querySelector(".cell-figure")?.textContent),
+      outOf: openai("S1")?.querySelector(".cell-max")?.textContent,
+      disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0", "1", "2"].includes(mark)),
+      marks: figures(["I5"]),
+    };
+  });
+  check(practices.rows === "S1,S2,S3,S4,S5,disclosed,I1,I2,I3,I4,internal,I5"
+      && practices.openai.join() === "2,1,0,0,1" && practices.outOf === "/2"
+      && practices.disclosed && practices.marks.join() === "NA",
+    "the best practices open into five anyone can check, four scored on what the company publishes, one NA",
+    JSON.stringify(practices));
+  await page.locator('.row-toggle[data-question="supporting"]').click();
 
   // A check's score opens a popover beside it, with its place on the scale marked.
   const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');
@@ -2067,12 +2092,31 @@ console.log("== Overview: the governance view ==");
     return {
       title: pop.querySelector("h2")?.textContent,
       shares: [...pop.querySelectorAll("h3")].map(n => n.textContent),
-      checks: pop.querySelectorAll("details").length,
+      checks: pop.querySelectorAll("details:not(.paper-fold)").length,
     };
   });
-  check(about.title === "Guardrails" && about.shares.includes("How its 8 points are shared out")
+  check(about.title === "Guardrails" && about.shares.includes("How it is scored")
       && about.checks === 2,
-    "a question's name opens what it asks and how its points are shared out", JSON.stringify(about));
+    "a question's name opens what it asks and how it is scored", JSON.stringify(about));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+
+  // A check's name opens, folded, what the working paper says about it: our
+  // reading, then the paper's own words.
+  await page.locator('#gov-check-2-3 .row-name').click();
+  await page.waitForTimeout(150);
+  const paper = await page.evaluate(() => {
+    const fold = document.querySelector("#gov-pop .paper-fold");
+    return {
+      open: fold?.open,
+      summary: fold?.querySelector("summary")?.textContent,
+      quotes: fold?.querySelectorAll(".paper-quote").length,
+      first: fold?.querySelector(".paper-quote p")?.textContent.slice(0, 40),
+    };
+  });
+  check(paper.open === false && paper.summary === "What the working paper says" && paper.quotes === 3
+      && paper.first === "the log opens with a one-paragraph scope",
+    "a check's name opens the working paper's own words, folded", JSON.stringify(paper));
   await page.keyboard.press("Escape");
   await page.waitForTimeout(100);
 
