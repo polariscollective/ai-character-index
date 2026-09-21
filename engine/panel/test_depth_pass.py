@@ -61,13 +61,14 @@ JUDGEMENTS = [
     {"call_id": "call-fable", "locator": PASSAGES[2][0], "verdict": 2, "parsed": True},
     {"call_id": "call-deepseek", "locator": PASSAGES[2][0], "verdict": 2, "parsed": True},
 ]
+ASSESSMENT_RUN_ROW = {"id": ASSESSMENT_RUN, "panels": {"criteria": ["sol", "fable", "deepseek"]}}
 ASSESSMENT_CALLS = [
     {"id": "acall-sol", "run_id": ASSESSMENT_RUN, "spec_version_id": VERSION_ID,
-     "question": "criteria", "seat": "sol"},
+     "question": "criteria", "seat": "sol", "status": "done"},
     {"id": "acall-fable", "run_id": ASSESSMENT_RUN, "spec_version_id": VERSION_ID,
-     "question": "criteria", "seat": "fable"},
+     "question": "criteria", "seat": "fable", "status": "done"},
     {"id": "acall-deepseek", "run_id": ASSESSMENT_RUN, "spec_version_id": VERSION_ID,
-     "question": "criteria", "seat": "deepseek"},
+     "question": "criteria", "seat": "deepseek", "status": "done"},
 ]
 # sol and fable both cite the first passage: it reaches the quorum of two.
 # Only sol cites the second: it stays out of the rules block.
@@ -120,9 +121,11 @@ class FakeStore:
 
 def store(**extra):
     tables = {
+        "aci_runs": [{"id": RUN}],
         "aci_spec_versions": [dict(VERSION)],
         "aci_judge_calls": [dict(c) for c in CALLS],
         "aci_judgements": [dict(j) for j in JUDGEMENTS],
+        "aci_assessment_runs": [dict(ASSESSMENT_RUN_ROW)],
         "aci_assessment_calls": [dict(c) for c in ASSESSMENT_CALLS],
         "aci_assessment_scores": [dict(s) for s in ASSESSMENT_SCORES],
         "aci_depths_out_of_ten": [],
@@ -181,13 +184,38 @@ class PriceTest(unittest.TestCase):
         out = printed.getvalue()
         self.assertIn("Priced at about", out)
         self.assertIn("one call", out)
-        self.assertIn("five", out)
+        # The worst case is computed per seat actually present, from the ladder
+        # and config["substitutes"]: 3 for a seat with no declared substitute
+        # (sol), 3 + 2*2 for fable (opus, kimi), 3 + 2*1 for deepseek (kimi).
+        self.assertIn("sol up to 3", out)
+        self.assertIn("fable up to 7", out)
+        self.assertIn("deepseek up to 5", out)
+
+    def test_the_price_names_only_the_seats_actually_present(self):
+        fake = store(aci_judge_calls=[dict(CALLS[0])])
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            depth_pass.give_pass(fake, CONFIG, [RUN], ASSESSMENT_RUN, passages_for,
+                                 call_model=Scripted(), go=False, registry=REGISTRY)
+        out = printed.getvalue()
+        self.assertIn("sol up to 3", out)
+        self.assertNotIn("fable", out)
+        self.assertNotIn("deepseek", out)
 
     def test_an_unassessed_document_is_refused_before_anything_is_written_priced(self):
         fake = store()
         with self.assertRaises(SystemExit) as refused:
             give(fake, assessment_run="assess-missing", go=False)
         self.assertIn(DOC, str(refused.exception))
+        self.assertEqual(fake.writes, [])
+
+    def test_a_document_missing_one_of_three_criteria_seats_is_refused(self):
+        fake = store(aci_assessment_calls=[dict(ASSESSMENT_CALLS[0])])
+        with self.assertRaises(SystemExit) as refused:
+            give(fake, go=False)
+        message = str(refused.exception)
+        self.assertIn(DOC, message)
+        self.assertIn("fable", message)
+        self.assertIn("deepseek", message)
         self.assertEqual(fake.writes, [])
 
 
@@ -277,6 +305,38 @@ class GiveTest(unittest.TestCase):
         self.assertEqual(row["model"], "kimi")
         self.assertEqual(row["substitution_reason"], depth_ladder.SUBSTITUTION_REASON)
 
+    def test_a_substitutes_depth_sums_cost_and_tokens_over_every_attempt_of_the_ladder(self):
+        model = Scripted(deepseek=["DEPTH: -1"] * 3,
+                         kimi=["DEPTH: -1", "DEPTH: 5\nRATIONALE: A default only."])
+        fake = store()
+        give(fake, model=model)
+        row = next(r for r in fake.tables["aci_depths_out_of_ten"]
+                  if r["call_id"] == "call-deepseek")
+        self.assertEqual(row["status"], "done")
+        self.assertEqual(len(row["attempts"]), 5, "3 of deepseek, 2 of kimi")
+        self.assertEqual(row["cost_usd"], depth_pass._sum(a["cost_usd"] for a in row["attempts"]))
+        self.assertIsNotNone(row["cost_usd"])
+        self.assertEqual(row["prompt_tokens"], 5 * 1000)
+        self.assertEqual(row["completion_tokens"], 5 * 100)
+
+    def test_a_declared_substitute_already_seated_in_the_cell_is_skipped(self):
+        # An Alibaba-like cell: kimi already gave one of the cell's depths, in
+        # fable's seat, and deepseek is off scale three times. Its only
+        # declared substitute is kimi, already seated, so it cannot give a
+        # second depth in the same cell.
+        calls = [dict(CALLS[0]), dict(CALLS[1], id="call-kimi", model="kimi"), dict(CALLS[2])]
+        fake = store(aci_judge_calls=calls)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3)
+        give(fake, model=model)
+        row = next(r for r in fake.tables["aci_depths_out_of_ten"]
+                  if r["call_id"] == "call-deepseek")
+        self.assertEqual(row["status"], "error")
+        self.assertTrue(any(a.get("model") == "kimi" and a.get("reason") ==
+                            depth_ladder.ALREADY_SEATED for a in row["attempts"]))
+        kimi_asks = [user for tag, user in model.asked if tag == "kimi"]
+        self.assertEqual(len(kimi_asks), 1,
+                         "kimi answers once, for its own row, and is not asked again for deepseek")
+
     def test_nothing_parsing_leaves_the_row_in_error_with_the_last_reply(self):
         model = Scripted(sol=["not a depth"] * 3)
         fake = store()
@@ -286,6 +346,25 @@ class GiveTest(unittest.TestCase):
         self.assertIsNone(row.get("depth"))
         self.assertEqual(row["raw_output"], "not a depth")
         self.assertIsNotNone(row["error"])
+
+    def test_a_failed_depth_keeps_the_last_non_null_reply_when_the_last_attempt_raised(self):
+        model = Scripted(sol=["first off-scale reply", "second off-scale reply",
+                              RuntimeError("boom")])
+        fake = store()
+        give(fake, model=model)
+        row = next(r for r in fake.tables["aci_depths_out_of_ten"] if r["call_id"] == "call-sol")
+        self.assertEqual(row["status"], "error")
+        self.assertEqual(row["raw_output"], "second off-scale reply",
+                         "the last reply that came back, not the literal last attempt, which raised")
+
+    def test_a_failed_depths_raw_output_is_capped_at_20000_characters(self):
+        long_reply = "y" * 20005
+        model = Scripted(sol=[long_reply] * 3)
+        fake = store()
+        give(fake, model=model)
+        row = next(r for r in fake.tables["aci_depths_out_of_ten"] if r["call_id"] == "call-sol")
+        self.assertEqual(row["status"], "error")
+        self.assertEqual(row["raw_output"], "y" * 20000)
 
     def test_a_row_retried_after_an_error_clears_its_stale_raw_output(self):
         fake = store(aci_depths_out_of_ten=[
@@ -298,6 +377,27 @@ class GiveTest(unittest.TestCase):
         self.assertEqual(row["status"], "done")
         self.assertIsNone(row["raw_output"])
 
+    def test_a_row_retried_after_an_error_keeps_its_earlier_bill(self):
+        earlier_attempt = {"model": "sol", "reminder": 0, "finish_reason": "stop",
+                          "cost_usd": 0.05, "parsed": False}
+        fake = store(aci_depths_out_of_ten=[
+            {"id": "row-sol", "call_id": "call-sol",
+             "prompt_sha256": depth_call.prompt_sha256(10),
+             "assessment_run_id": ASSESSMENT_RUN, "status": "error",
+             "attempts": [dict(earlier_attempt)], "cost_usd": 0.05,
+             "prompt_tokens": 500, "completion_tokens": 50,
+             "raw_output": "a stale unparsed reply", "error": "no depth parsed"}])
+        give(fake)
+        row = next(r for r in fake.tables["aci_depths_out_of_ten"] if r["call_id"] == "call-sol")
+        self.assertEqual(row["status"], "done")
+        self.assertEqual(row["attempts"][0], earlier_attempt,
+                         "the earlier attempt is kept, not replaced")
+        self.assertEqual(len(row["attempts"]), 2, "the new attempt is appended to the earlier one")
+        new_cost = depth_pass._sum(a["cost_usd"] for a in row["attempts"][1:])
+        self.assertAlmostEqual(row["cost_usd"], 0.05 + new_cost)
+        self.assertEqual(row["prompt_tokens"], 500 + 1000)
+        self.assertEqual(row["completion_tokens"], 50 + 100)
+
     def test_a_cell_with_nothing_retained_is_depth_zero_without_a_call(self):
         empty_calls = [{"id": "call-sol-2", "run_id": RUN, "behaviour_slug": "silence",
                        "spec_version_id": VERSION_ID, "model": "sol", "status": "done"}]
@@ -309,6 +409,14 @@ class GiveTest(unittest.TestCase):
         self.assertEqual(row["rationale"], depth_call.NOTHING_RETAINED)
         self.assertEqual(model.asked, [])
 
+    def test_a_cell_with_nothing_retained_records_its_assessment_run_id(self):
+        empty_calls = [{"id": "call-sol-2", "run_id": RUN, "behaviour_slug": "silence",
+                       "spec_version_id": VERSION_ID, "model": "sol", "status": "done"}]
+        fake = store(aci_judge_calls=empty_calls, aci_judgements=[])
+        give(fake)
+        [row] = fake.tables["aci_depths_out_of_ten"]
+        self.assertEqual(row["assessment_run_id"], ASSESSMENT_RUN)
+
     def test_an_unassessed_document_is_refused_before_anything_is_written(self):
         fake = store()
         model = Scripted()
@@ -316,6 +424,16 @@ class GiveTest(unittest.TestCase):
             give(fake, assessment_run="assess-missing", model=model)
         self.assertIn(DOC, str(refused.exception))
         self.assertEqual(fake.writes, [])
+        self.assertEqual(model.asked, [])
+
+    def test_a_done_call_in_an_incomplete_cell_on_an_unassessed_document_stops_everything(self):
+        calls = [dict(CALLS[0]), dict(CALLS[1], status="pending"), dict(CALLS[2])]
+        fake = store(aci_judge_calls=calls, aci_assessment_calls=[])
+        model = Scripted()
+        with self.assertRaises(SystemExit) as refused:
+            give(fake, model=model)
+        self.assertIn(DOC, str(refused.exception))
+        self.assertEqual(fake.writes, [], "not even call-sol's placeholder is written")
         self.assertEqual(model.asked, [])
 
 
@@ -348,6 +466,27 @@ class MainTest(unittest.TestCase):
         self.assertTrue(fake.tables["aci_depths_out_of_ten"])
         self.assertTrue(all(r["status"] == "done"
                             for r in fake.tables["aci_depths_out_of_ten"]))
+
+    def test_an_unknown_run_id_stops_the_command_before_anything_is_written(self):
+        fake = store()
+        with self.assertRaises(SystemExit) as refused:
+            self.main([f"--runs={RUN},bogus-run",
+                      f"--assessment-run={ASSESSMENT_RUN}", "--go"], fake)
+        self.assertIn("bogus-run", str(refused.exception))
+        self.assertEqual(fake.writes, [])
+
+    def test_a_short_run_id_is_not_a_run_that_exists(self):
+        fake = store()
+        with self.assertRaises(SystemExit) as refused:
+            self.main([f"--runs={RUN[:-1]}", f"--assessment-run={ASSESSMENT_RUN}", "--go"], fake)
+        self.assertIn(RUN[:-1], str(refused.exception))
+        self.assertEqual(fake.writes, [])
+
+    def test_a_run_id_is_stripped_of_surrounding_whitespace(self):
+        fake = store()
+        code, printed = self.main([f"--runs= {RUN} ", f"--assessment-run={ASSESSMENT_RUN}"], fake)
+        self.assertEqual(code, 0)
+        self.assertIn("Priced at about", printed)
 
 
 if __name__ == "__main__":

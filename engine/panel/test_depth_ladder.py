@@ -48,8 +48,9 @@ class GiveTest(unittest.TestCase):
     def setUpClass(cls):
         cls.config = depth_ladder.h.load_config()
 
-    def give(self, tag, model, panel="frontier_fast"):
-        return depth_ladder.give(tag, SYSTEM, USER, self.config, model, panel=panel)
+    def give(self, tag, model, panel="frontier_fast", seated=None):
+        return depth_ladder.give(tag, SYSTEM, USER, self.config, model, panel=panel,
+                                 seated=seated)
 
     def test_the_first_reply_that_parses_answers(self):
         model = Scripted()
@@ -111,6 +112,30 @@ class GiveTest(unittest.TestCase):
         given = self.give("deepseek", Scripted(deepseek=["DEPTH: -1"] * 3), panel="cheap")
         self.assertIsNone(given["depth"])
         self.assertEqual({a["model"] for a in given["attempts"]}, {"deepseek"})
+
+    def test_a_substitute_already_seated_is_skipped_and_recorded(self):
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, kimi=["DEPTH: -1"] * 2)
+        given = self.give("deepseek", model, seated={"kimi"})
+        self.assertIsNone(given["depth"])
+        self.assertEqual(given["model"], "deepseek")
+        self.assertEqual([(a["model"], a.get("reminder"), a.get("reason"), a["parsed"])
+                          for a in given["attempts"]],
+                         [("deepseek", 0, None, False), ("deepseek", 1, None, False),
+                          ("deepseek", 2, None, False),
+                          ("kimi", None, depth_ladder.ALREADY_SEATED, False)])
+        self.assertNotIn("cost_usd", given["attempts"][3])
+        self.assertEqual(given["replies"], ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1", None])
+        self.assertEqual(model.asked, [("deepseek", USER),
+                                       ("deepseek", depth_call.retry_user(USER, 1)),
+                                       ("deepseek", depth_call.retry_user(USER, 2))],
+                         "kimi is never asked at all once it is already seated")
+
+    def test_with_no_seated_argument_a_substitute_is_tried_as_before(self):
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, kimi=["DEPTH: -1"] * 2)
+        given = self.give("deepseek", model)
+        self.assertIsNone(given["depth"])
+        self.assertEqual({a["model"] for a in given["attempts"]}, {"deepseek", "kimi"})
+        self.assertIn(("kimi", USER), model.asked, "kimi is tried when nothing seats it")
 
     def test_a_raised_call_is_an_attempt_with_no_reply_and_no_cost(self):
         model = Scripted(deepseek=[RuntimeError("429"), ANSWER])

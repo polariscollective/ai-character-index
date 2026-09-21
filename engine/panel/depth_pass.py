@@ -61,11 +61,35 @@ def _sum(values):
     return round(sum(known), 6) if known else None
 
 
-def assessed_versions(store, assessment_run_id):
-    """The spec_version_id of every document the named assessment run has any
-    call for, whichever question."""
-    return {c["spec_version_id"] for c in store.select("aci_assessment_calls")
-            if c["run_id"] == assessment_run_id}
+def missing_criteria_seats(store, assessment_run_id, version_id):
+    """The seats of `assessment_run_id`'s criteria panel whose criteria call for
+    `version_id` is missing or not done: what it means for the run to have
+    assessed the document, since a criteria call is the one that reads the
+    document's general rules for conflicts. Every criteria call is missing,
+    named as such rather than by seat, when the run itself does not exist,
+    since there is then no panel to name them from."""
+    runs = [r for r in store.select("aci_assessment_runs") if r["id"] == assessment_run_id]
+    if not runs:
+        return ["(the assessment run does not exist)"]
+    seats = runs[0].get("panels", {}).get("criteria", [])
+    done = {c["seat"] for c in store.select("aci_assessment_calls")
+            if c["run_id"] == assessment_run_id and c["spec_version_id"] == version_id
+            and c["question"] == "criteria" and c["status"] == "done"}
+    return [seat for seat in seats if seat not in done]
+
+
+def refuse_if_unassessed(store, assessment_run_id, version_ids, versions):
+    """Raises SystemExit, naming every one, when a document among `version_ids`
+    is not assessed: some seat of the run's criteria panel has no done criteria
+    call for it."""
+    missing = {v: missing_criteria_seats(store, assessment_run_id, v) for v in version_ids}
+    missing = {v: seats for v, seats in missing.items() if seats}
+    if not missing:
+        return
+    parts = [f"{versions[v]['spec_id']}@{versions[v]['version']} (seats: {', '.join(seats)})"
+            for v, seats in sorted(missing.items())]
+    raise SystemExit(
+        f"the assessment run {assessment_run_id} has not fully read: " + "; ".join(parts))
 
 
 def conflict_rules_for(store, assessment_run_id, version, passages_for):
@@ -108,25 +132,24 @@ def ready_cells(store, run_ids):
 
 
 def jobs_for(store, run_ids, assessment_run_id, passages_for, versions):
-    """[(call, retained passages, conflict rules)] ready to be given a depth
-    out of ten: every call of a whole cell of `run_ids` that has no done row
-    of `aci_depths_out_of_ten` for the current prompt of ten and this
-    assessment run.
+    """[(call, retained passages, conflict rules, seated models)] ready to be
+    given a depth out of ten: every call of a whole cell of `run_ids` that has
+    no done row of `aci_depths_out_of_ten` for the current prompt of ten and
+    this assessment run. `seated` is the models of the cell's own done calls,
+    for `depth_ladder.give` to refuse a second depth from one of them.
 
     Raises SystemExit, naming every one, before reading or writing anything
-    else, when a cell's document is not among those the assessment run has a
-    call for."""
+    else, when a document of any done call of `run_ids` is not assessed: this
+    covers every call a pending row would be written for, not only the calls
+    of a cell whole enough to be given a depth."""
     prompt = depth_call.prompt_sha256(10)
     done = {(d["call_id"], d["prompt_sha256"], d["assessment_run_id"])
            for d in store.select("aci_depths_out_of_ten") if d["status"] == "done"}
     ready = ready_cells(store, run_ids)
 
-    version_ids = sorted({key[2] for key in ready})
-    assessed = assessed_versions(store, assessment_run_id)
-    missing = [version_id for version_id in version_ids if version_id not in assessed]
-    if missing:
-        names = ", ".join(f"{versions[v]['spec_id']}@{versions[v]['version']}" for v in missing)
-        raise SystemExit(f"the assessment run {assessment_run_id} did not assess: {names}")
+    touched_versions = sorted({c["spec_version_id"] for c in store.select("aci_judge_calls")
+                              if c["run_id"] in run_ids and c["status"] == "done"})
+    refuse_if_unassessed(store, assessment_run_id, touched_versions, versions)
 
     judgements = store.select("aci_judgements") if ready else []
     rules_of = {}
@@ -139,31 +162,52 @@ def jobs_for(store, run_ids, assessment_run_id, passages_for, versions):
             rules_of[version_id] = conflict_rules_for(store, assessment_run_id, version,
                                                        passages_for)
         rules = rules_of[version_id]
+        seated = {c["model"] for c in cell}
         for call in cell:
             if (call["id"], prompt, assessment_run_id) in done:
                 continue
-            jobs.append((call, retained, rules))
+            jobs.append((call, retained, rules, seated))
     return jobs
+
+
+def worst_case_calls(tag, config, panel="frontier_fast"):
+    """The most calls `depth_ladder.give` can make for `tag` before it answers
+    or gives up: three of `tag`'s own model, plain then each reminder, plus two
+    of every substitute `panel` declares for `tag`, plain then the first
+    reminder. A substitute skipped as already seated is not a call, so this is
+    the worst case before any seating is known."""
+    substitutes = config.get("substitutes", {}).get(panel, {}).get(tag, [])
+    return 3 + 2 * len(substitutes)
 
 
 def price(jobs, registry, config):
     """What giving these depths would cost: one call per depth, at the seat's
     own model. A cell with nothing retained costs nothing, since it is given
-    without a call."""
+    without a call. Returns (estimate, priced count, {seat: worst case calls})
+    for the seats actually present among the depths that will make a call."""
     estimate, priced_count = 0.0, 0
-    for call, retained, rules in jobs:
+    worst_case = {}
+    for call, retained, rules, _seated in jobs:
         if not retained:
             continue
+        worst_case.setdefault(call["model"], worst_case_calls(call["model"], config))
         system, user = depth_call.compose(call["behaviour_slug"], registry, retained,
                                           scale=10, conflict_rules=rules)
         estimate += seat_call.priced(call["model"], system, user, PRICE_OUTPUT_TOKENS, config)
         priced_count += 1
-    return round(estimate, 2), priced_count
+    return round(estimate, 2), priced_count, worst_case
 
 
-def give_one(store, call, retained, rules, registry, config, call_model, row_id, report):
+def give_one(store, call, retained, rules, registry, config, call_model, row, report, seated=None):
     """One judge's depth out of ten for its call's cell, written running then
-    done or error by the row's own id."""
+    done or error by the row's own id.
+
+    When `row` already carries `attempts` from an earlier pass that left it in
+    error, this pass's attempts are appended to them rather than replacing
+    them, and its cost and tokens add to the row's earlier totals: a row given
+    again keeps the bill of what it already spent, on top of what giving it
+    again costs."""
+    row_id = row["id"]
     match = {"id": row_id}
     store.update("aci_depths_out_of_ten", match, {"status": "running", "started_at": now()})
     if not retained:
@@ -175,12 +219,15 @@ def give_one(store, call, retained, rules, registry, config, call_model, row_id,
 
     system, user = depth_call.compose(call["behaviour_slug"], registry, retained,
                                       scale=10, conflict_rules=rules)
-    result = depth_ladder.give(call["model"], system, user, config, call_model)
-    patch = {"attempts": result["attempts"], "passages": len(retained),
-             "prompt_tokens": result["prompt_tokens"],
-             "completion_tokens": result["completion_tokens"],
+    result = depth_ladder.give(call["model"], system, user, config, call_model, seated=seated)
+    attempts = (row.get("attempts") or []) + result["attempts"]
+    # An already-seated skip carries no "cost_usd" key at all, not merely None.
+    new_cost = _sum(attempt.get("cost_usd") for attempt in result["attempts"])
+    patch = {"attempts": attempts, "passages": len(retained),
+             "prompt_tokens": _sum([row.get("prompt_tokens"), result["prompt_tokens"]]),
+             "completion_tokens": _sum([row.get("completion_tokens"), result["completion_tokens"]]),
              "seconds": result["seconds"],
-             "cost_usd": _sum(attempt["cost_usd"] for attempt in result["attempts"]),
+             "cost_usd": _sum([row.get("cost_usd"), new_cost]),
              "finished_at": now()}
     if result["substitution_reason"] is not None:
         # Never the seat's own model: the table's check refuses a model with
@@ -188,9 +235,15 @@ def give_one(store, call, retained, rules, registry, config, call_model, row_id,
         patch["model"] = result["model"]
         patch["substitution_reason"] = result["substitution_reason"]
     if result["depth"] is None:
+        # The last reply that came back at all, not merely the last element of
+        # replies: an attempt that raised leaves a None there, which would
+        # otherwise throw away an earlier attempt's actual text. Capped as
+        # batch_job.one_depth caps the scale of four's own raw_output.
+        last_reply = next((reply for reply in reversed(result["replies"]) if reply is not None),
+                          None)
         patch.update(status="error",
                      error=f"no depth parsed after {len(result['attempts'])} attempt(s)",
-                     raw_output=result["replies"][-1] if result["replies"] else None)
+                     raw_output=last_reply[:20000] if last_reply is not None else None)
         report["failed"] += 1
     else:
         # raw_output=None clears whatever a previous failed attempt on this
@@ -213,10 +266,12 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
     registry = registry if registry is not None else index_store.judging_registry(store)
     jobs = jobs_for(store, run_ids, assessment_run_id, passages_for, versions)
 
-    estimate, priced_count = price(jobs, registry, config)
+    estimate, priced_count, worst_case = price(jobs, registry, config)
+    detail = "; ".join(f"{seat} up to {worst_case[seat]}" for seat in sorted(worst_case))
+    warning = ("A depth that does not parse can cost the ladder more calls before it "
+              "answers or gives up")
     print(f"Priced at about {estimate} dollars for {priced_count} depth(s), one call each. "
-          "A depth that does not parse can cost the ladder up to five calls, its own model "
-          "and its declared substitutes, before it answers or gives up.")
+          f"{warning}{f': {detail}.' if detail else '.'}")
     if not go:
         return estimate, None
 
@@ -238,10 +293,23 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
                    if d["prompt_sha256"] == prompt and d["assessment_run_id"] == assessment_run_id}
 
     report = {"done": 0, "failed": 0}
-    for call, retained, rules in jobs:
+    for call, retained, rules, seated in jobs:
         row = rows_by_call[call["id"]]
-        give_one(store, call, retained, rules, registry, config, call_model, row["id"], report)
+        give_one(store, call, retained, rules, registry, config, call_model, row, report,
+                seated=seated)
     return estimate, report
+
+
+def parse_run_ids(raw, store):
+    """The run ids of `raw`, comma-separated and stripped of surrounding
+    whitespace, refusing before anything is written when one is not the full
+    id of a run in aci_runs."""
+    ids = [part.strip() for part in raw.split(",") if part.strip()]
+    known = {r["id"] for r in store.select("aci_runs")}
+    unknown = [run_id for run_id in ids if run_id not in known]
+    if unknown:
+        raise SystemExit(f"--runs names a run that does not exist: {', '.join(unknown)}")
+    return ids
 
 
 def main(argv=None):
@@ -256,7 +324,7 @@ def main(argv=None):
     store = Store.from_env()
     index_store.install_registry(store)
     config = h.load_config()
-    run_ids = [run_id for run_id in args.runs.split(",") if run_id]
+    run_ids = parse_run_ids(args.runs, store)
     _estimate, report = give_pass(store, config, run_ids, args.assessment_run, h.passages,
                                   go=args.go)
     if not args.go:

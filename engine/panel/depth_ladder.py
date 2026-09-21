@@ -23,6 +23,7 @@ import seat_call                 # noqa: E402
 h = seat_call.h
 
 SUBSTITUTION_REASON = "off-scale reply after two reminders"
+ALREADY_SEATED = "already seated"
 
 
 def _sum(values):
@@ -30,10 +31,18 @@ def _sum(values):
     return sum(known) if known else None
 
 
-def give(tag, system, user, config, call_model, panel="frontier_fast"):
+def give(tag, system, user, config, call_model, panel="frontier_fast", seated=None):
     """One seat's depth out of ten: `tag`'s own model three times (plain, then
     each reminder), then each of `tag`'s declared substitutes in `panel` twice
     (plain, then the first reminder), until an attempt parses.
+
+    `seated` is every model already giving a depth for this call's cell: a
+    declared substitute that is one of them is skipped rather than asked, so no
+    model gives two of one cell's depths, and the skip is recorded in
+    `attempts` as {"model", "reason": ALREADY_SEATED, "parsed": False}, with no
+    cost. `tag`'s own model is always asked, whether or not it is in `seated`.
+    Omitted or empty, nothing is ever skipped, which is how the pilot calls
+    this and must go on behaving.
 
     Returns {"depth", "rationale", "model", "substitution_reason", "attempts",
     "replies", "prompt_tokens", "completion_tokens", "seconds"}:
@@ -43,12 +52,15 @@ def give(tag, system, user, config, call_model, panel="frontier_fast"):
       and `tag` when nothing answered;
     - `substitution_reason` is set only when a substitute answered;
     - `attempts` holds every call made, in order, each {"model", "reminder",
-      "finish_reason", "cost_usd", "parsed"}. A call that raised is an attempt
-      that did not parse, with no cost and no finish_reason;
+      "finish_reason", "cost_usd", "parsed"}, or the already-seated shape above
+      for a substitute skipped rather than asked. A call that raised is an
+      attempt that did not parse, with no cost and no finish_reason;
     - `replies` holds each attempt's reply text, index for index with
-      `attempts`, None for an attempt that raised;
+      `attempts`, None for an attempt that raised or was skipped as already
+      seated;
     - the tokens and seconds are summed over the attempts that came back, None
       when none did."""
+    seated = seated or ()
     attempts, replies, answered = [], [], []
 
     def try_once(model, reminder):
@@ -83,6 +95,10 @@ def give(tag, system, user, config, call_model, panel="frontier_fast"):
             return result(*given, tag, None)
 
     for substitute in config.get("substitutes", {}).get(panel, {}).get(tag, []):
+        if substitute in seated:
+            attempts.append({"model": substitute, "reason": ALREADY_SEATED, "parsed": False})
+            replies.append(None)
+            continue
         for reminder in (0, 1):
             given = try_once(substitute, reminder)
             if given is not None:
