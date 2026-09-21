@@ -15,11 +15,18 @@
 import { writeFileSync } from "node:fs";
 import { readerLinks } from "../app/lib/links.mjs";
 
-export async function buildLinks(runIds, notePrompts, fetchImpl = fetch) {
+/* `comparisons: false` leaves the comparison paragraphs out, which a publication
+ * on the scale of ten asks for: every paragraph written so far quotes each
+ * document's figure out of 4. The key stays, empty and in its place, so a
+ * reader looking for a comparison finds none rather than a missing field, and
+ * nothing else in the file moves. */
+export async function buildLinks(runIds, notePrompts, fetchImpl = fetch,
+                                 { comparisons = true } = {}) {
   if (!Array.isArray(runIds) || !runIds.length) {
     throw new Error("build-links-data: name at least one run with --link-runs");
   }
-  return readerLinks(fetchImpl, runIds, notePrompts);
+  const links = await readerLinks(fetchImpl, runIds, notePrompts);
+  return comparisons ? links : { ...links, comparisons: {} };
 }
 
 /* Two space indentation and no trailing newline. Not a style choice: the
@@ -31,22 +38,29 @@ export function serialise(value) {
   return JSON.stringify(value, null, 2);
 }
 
-function argument(name) {
-  const found = process.argv.find(arg => arg.startsWith(`--${name}=`));
-  return found ? found.slice(name.length + 3) : null;
-}
-
-async function main() {
-  const out = argument("out");
-  if (!out) throw new Error("build-links-data: --out is required");
-  const runIds = (argument("link-runs") || "").split(",").filter(Boolean);
+/* What the command line asks for. */
+export function options(argv) {
+  const argument = name => {
+    const found = argv.find(arg => arg.startsWith(`--${name}=`));
+    return found ? found.slice(name.length + 3) : null;
+  };
   /* Absent and empty are different answers. No flag means take every note, which
    * is what a reader outside a publication wants; an empty flag means this
    * publication pinned no notes at all, and must not silently acquire the ones
    * written since. */
   const notes = argument("note-prompts");
-  const notePrompts = notes === null ? null : notes.split(",").filter(Boolean);
-  writeFileSync(out, serialise(await buildLinks(runIds, notePrompts)));
+  return {
+    out: argument("out"),
+    runIds: (argument("link-runs") || "").split(",").filter(Boolean),
+    notePrompts: notes === null ? null : notes.split(",").filter(Boolean),
+    comparisons: !argv.includes("--without-comparisons"),
+  };
+}
+
+async function main() {
+  const { out, runIds, notePrompts, comparisons } = options(process.argv);
+  if (!out) throw new Error("build-links-data: --out is required");
+  writeFileSync(out, serialise(await buildLinks(runIds, notePrompts, fetch, { comparisons })));
 }
 
 if (process.argv[1] && process.argv[1].endsWith("build-links-data.mjs")) {

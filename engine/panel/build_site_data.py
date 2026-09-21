@@ -37,6 +37,14 @@ naming a seat this panel does not have is not shown: it changed no verdict, so
 it names no substitute. No other cell carries the key, so a payload with no
 substitution is byte-identical to one built before substitutions existed.
 
+--depth-prompt and --assessment-run choose the scale of the depths. Naming
+neither, or the prompt of four, builds exactly the payload built before the
+scale of ten existed. Naming an assessment run reads the depths out of ten given
+with it, under the prompt of ten, which --depth-prompt must then name; the
+payload gains `depthScale`: 10, and `assessment`, each document's assessment as
+a whole from that run: the four criteria with every judge, the contradictions
+the judges claimed with how each was settled, and the total out of 20.
+
 --out is required and is where the payload goes. There is no timestamped file and
 no manifest: a local build was how a run got pinned by ?data=, and a publication
 is what pins one now.
@@ -47,6 +55,10 @@ is what pins one now.
                        keeps_citation; committed config untouched)
   --solid-threshold=N  override display.solid_threshold for this build (the
                        adjacent flag cut; committed config untouched)
+  --depth-prompt=SHA256  the depth prompt the depths were given under (default:
+                         the prompt of four)
+  --assessment-run=ID  the assessment run the depths out of ten were given with,
+                       and whose assessment of each document the payload carries
 """
 import collections
 import importlib.util
@@ -60,7 +72,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "engine"))
+sys.path.insert(0, str(HERE))
 import seat_substitutions         # noqa: E402
+import assessment_call            # noqa: E402
+import assessment_run             # noqa: E402
 
 MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
                "gpt-mini": "GPT-5 mini", "haiku": "Claude Haiku 4.5", "qwen-small": "Qwen3-32B"}
@@ -249,6 +264,79 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
     return out
 
 
+def document_assessment(run, calls, scores, claims, verdicts, text):
+    """Pure: one document's assessment as a whole, as the payload carries it, from
+    the rows one assessment run wrote about it.
+
+    `criteria`: each of the four criteria one call scores, with every seat's
+    score and rationale, "model" beside them when a declared substitute answered
+    in the seat, and the mean to one decimal. `contradictions`: every claim, in
+    locator order, settled by assessment_run.settle, which is the rule the run
+    itself applies, with both passages' text, and the score assessment_run's
+    confirm_score gives the confirmed ones. Nothing here decides whether a claim
+    holds: a finder's verdict row says only that it found the claim, so the
+    second readings put to `settle` are the other seats' verdicts. A person's
+    reading is not carried yet, so `reviewed` is null. `total`: the four means
+    as shown plus the contradictions score, out of 20, so the figures on the
+    page add up to the total beside them.
+    """
+    seat_of = {call["id"]: call for call in calls
+               if call["question"] == "criteria" and call["status"] == "done"}
+    criteria = {}
+    for criterion in assessment_call.CRITERIA:
+        judges = {}
+        for score in scores:
+            call = seat_of.get(score["call_id"])
+            if call is None or score["criterion"] != criterion:
+                continue
+            judge = {"score": score["score"], "rationale": score.get("rationale")}
+            if call.get("model") and call["model"] != call["seat"]:
+                judge["model"] = call["model"]
+            judges[call["seat"]] = judge
+        if not judges:
+            sys.exit(f"no judge scored {criterion}: the assessment is not complete")
+        criteria[criterion] = {
+            "mean": round(sum(j["score"] for j in judges.values()) / len(judges), 1),
+            "judges": dict(sorted(judges.items()))}
+
+    seats = run["panels"]["contradictions"]
+    readings = collections.defaultdict(dict)
+    for verdict in verdicts:
+        readings[verdict["claim_id"]][verdict["seat"]] = verdict
+    unquoted = sorted({locator for claim in claims
+                       for locator in (claim["first_locator"], claim["second_locator"])
+                       if locator not in text})
+    if unquoted:
+        sys.exit("contradictions claimed on passages the document does not hold: "
+                 + ", ".join(unquoted))
+    settled = []
+    for claim in sorted(claims, key=lambda c: (c["first_locator"], c["second_locator"])):
+        found_by = list(claim["found_by"])
+        second_readings = {seat: {0: {"holds": v["holds"], "absolute": v["absolute"],
+                                      "reason": v["reason"]}}
+                           for seat, v in readings[claim["id"]].items() if seat not in found_by}
+        [one] = assessment_run.settle(
+            [{"first": 1, "second": 2, "situation": claim["situation"], "why": claim["why"],
+              "found_by": found_by}],
+            second_readings, seats,
+            [(claim["first_locator"],), (claim["second_locator"],)])
+        settled.append(one)
+    score = assessment_run.confirm_score(settled)
+    return {
+        "criteria": criteria,
+        "contradictions": {
+            "claims": [{"first": one["first"], "second": one["second"],
+                        "situation": one["situation"], "why": one["why"],
+                        "foundBy": one["found_by"], "holds": one["holds"],
+                        "doesNotHold": one["does_not_hold"], "absolute": one["absolute"],
+                        "confirmed": one["confirmed"], "reviewed": None,
+                        "firstText": text[one["first"]], "secondText": text[one["second"]]}
+                       for one in settled],
+            "score": score},
+        "total": round(sum(c["mean"] for c in criteria.values()) + score, 1),
+    }
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     sp = importlib.util.spec_from_file_location("h", HERE / "harness.py")
@@ -266,6 +354,8 @@ def main(argv=None):
     # before the row. Without it, the publication the reader serves.
     cells = None
     run_date = str(date.today())
+    depth_prompt = None       # the prompt of four unless named
+    assessment_run_id = None  # none: the scale of four, and no assessment
     for a in argv:
         if a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
@@ -298,12 +388,16 @@ def main(argv=None):
             if value is None or value < 0:
                 sys.exit(f"--solid-threshold must be a non-negative integer, got {raw!r}")
             DISPLAY["solid_threshold"] = value
+        elif a.startswith("--depth-prompt="):   # the digest the depths were given under
+            depth_prompt = a.split("=", 1)[1]
+        elif a.startswith("--assessment-run="):  # depths out of ten, and each document assessed
+            assessment_run_id = a.split("=", 1)[1]
         else:
             # Unknown args were ignored, so `--help` ran a full build and wrote a
             # payload + manifest. Asking for help must not mutate the repo.
             sys.exit(f"unknown argument {a!r} -- valid: --rubric= --panel= "
                      "--behaviours= --run-date= --out= --cells= "
-                     "--threshold= --solid-threshold=")
+                     "--threshold= --solid-threshold= --depth-prompt= --assessment-run=")
     if out_name is None:
         sys.exit("--out=PATH is required: this writes the payload where it is told")
     panel = resolve_panel(config, DISPLAY["panel"])
@@ -311,6 +405,9 @@ def main(argv=None):
     sys.path.insert(0, str(ROOT / "engine"))
     import index_store            # noqa: E402
     from store import Store       # noqa: E402
+    # Before the store is opened: a pairing that reads the wrong scale is refused
+    # before anything is read on it.
+    index_store.depth_scale(depth_prompt, assessment_run_id)
     store = Store.from_env()
     index_store.install_registry(store)
     registry = index_store.behaviours(store)
@@ -344,12 +441,17 @@ def main(argv=None):
     # One document per published version; its id heads every locator into it.
     published = [versions[i] for i in index_store.published_spec_version_ids(store, cells=cells)]
     document_ids = [f"{v['spec_id']}@{v['version']}" for v in published]
+    if assessment_run_id is not None:
+        # Refused here, naming every document the run left out, before anything
+        # else is read on its behalf.
+        assessment_run_row, assessed = index_store.assessment(store, assessment_run_id, published)
     text = {}
     for version in published:
         for loc, _sec, t in h.passages(version["spec_id"], version["version"]):
             text[loc] = t
     depths = {(slug, f"{versions[version_id]['spec_id']}@{versions[version_id]['version']}"): depth
-              for (slug, version_id), depth in index_store.cell_depths(store, cells).items()}
+              for (slug, version_id), depth
+              in index_store.cell_depths(store, cells, assessment_run_id).items()}
 
     behaviours = display_behaviours(DISPLAY["behaviours"], registry)
     out_behaviours = build_behaviours(behaviours, votes, text, document_ids, depths,
@@ -376,8 +478,19 @@ def main(argv=None):
                "scoring": ("per passage: sum over judges of defining=3/core=2/related=1/neither=0; "
                            "display thresholds are client-side URL params") if max_verdict >= 3 else
                           ("per passage: sum over judges of core=2/related=1/neither=0; "
-                           "display thresholds are client-side URL params")},
-           "behaviours": out_behaviours}
+                           "display thresholds are client-side URL params")}}
+    if assessment_run_id is not None:
+        # Only on the scale of ten, and before the behaviours so a reader knows
+        # the scale before it reads a depth. A payload with neither key is on the
+        # scale of four and carries no assessment, which is every payload built
+        # before these existed, byte for byte.
+        out["depthScale"] = 10
+        out["assessment"] = dict(sorted(
+            (f"{version['spec_id']}@{version['version']}", document_assessment(
+                assessment_run_row, *(assessed[version["id"]][table] for table in
+                                      ("calls", "scores", "claims", "verdicts")), text))
+            for version in published))
+    out["behaviours"] = out_behaviours
     n = sum(len(c["passages"]) for b in out_behaviours for c in b["coverage"].values())
     summary = f"{len(out_behaviours)} behaviours, {n} citations " \
               f"(threshold {DISPLAY['threshold']}, solid {DISPLAY['solid_threshold']})"

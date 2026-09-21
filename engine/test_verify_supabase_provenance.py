@@ -169,6 +169,41 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(failed, [], printed)
         self.assertEqual(seen["links"], [])
 
+    def rebuilt_with(self, build_params):
+        """What each builder was asked for, rebuilding a publication that records
+        `build_params`."""
+        row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True,
+                          build_params=build_params)
+        seen = {}
+
+        def build(name, cells, behaviours, run_date=None, panel_name=None, **given):
+            seen[name] = given
+            return ({"payload": PAYLOAD, "documents": DOCUMENTS}[name],
+                    row[f"{name}_sha256"])
+
+        with mock.patch.object(verify.publish, "build", side_effect=build):
+            printed, failed = run(verify.check_the_publication_rebuilds_to_its_digests,
+                                  self.store(row), row)
+        self.assertEqual(failed, [], printed)
+        return seen
+
+    def test_a_publication_out_of_ten_is_rebuilt_with_what_it_recorded(self):
+        ten = "d" * 64
+        seen = self.rebuilt_with({"behaviours": ["helpfulness"], "documents": ["v1"],
+                                  "panel": "frontier_fast", "rubric": "v5", "run_date": None,
+                                  "depth_prompt_sha256": ten, "assessment_run_id": "a-1",
+                                  "comparisons": False})
+        for name in ("payload", "documents"):
+            self.assertEqual((seen[name]["depth_prompt"], seen[name]["assessment_run"],
+                              seen[name]["comparisons"]), (ten, "a-1", False))
+
+    def test_a_publication_that_recorded_none_of_them_is_rebuilt_as_before(self):
+        """Absent means not passed at all, rather than passed as a default, so
+        the rebuild is the call it always was."""
+        seen = self.rebuilt_with(None)
+        for name in ("payload", "documents"):
+            self.assertEqual(sorted(seen[name]), ["link_runs", "note_prompts"])
+
     def test_a_rebuild_that_differs_from_the_stored_digest_fails(self):
         row = publication(PUBLIC_ID, published_at="2026-09-12", is_public=True)
         with mock.patch.object(verify.publish, "build",

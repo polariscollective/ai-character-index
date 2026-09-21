@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildLinks, serialise } from "../../../engine/build-links-data.mjs";
+import { buildLinks, options, serialise } from "../../../engine/build-links-data.mjs";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
@@ -62,6 +62,60 @@ test("an empty note-prompts list takes no notes", async () => {
   ];
   const out = await buildLinks([RUN], [], stubWithNotes(notes));
   assert.deepEqual(out.notes.depth, {});
+});
+
+/* A stub holding one run's calls between two documents and the comparison
+ * paragraph written for that pair, so the comparison has something to carry. */
+function stubWithComparison() {
+  const rows = {
+    aci_link_calls: [{ id: "call-1", run_id: RUN, behaviour_slug: "helpfulness",
+                       model: "sol", status: "done",
+                       source_version_id: "v-a", target_version_id: "v-b" }],
+    aci_spec_versions: [{ id: "v-a", spec_id: "lab--a", version: "1" },
+                        { id: "v-b", spec_id: "lab--b", version: "1" }],
+    aci_link_summaries: [{ run_id: RUN, behaviour_slug: "helpfulness",
+                           document_ids: ["lab--b@1", "lab--a@1"], model: "sol",
+                           body: "Each document scores 3 out of 4.",
+                           created_at: "2026-09-17" }],
+    aci_document_notes: [{ behaviour_slug: "helpfulness", document_id: "lab--a@1",
+                           kind: "standing", body: "Standing.", created_at: "2026-09-17",
+                           prompt_sha256: "sha-standing" }],
+  };
+  return async url => {
+    const table = Object.keys(rows).find(name => String(url).includes(`/${name}?`));
+    return { ok: true, status: 200, json: async () => rows[table] || [],
+             text: async () => "" };
+  };
+}
+
+test("without the flag the comparisons are carried as they always were", async () => {
+  const out = await buildLinks([RUN], null, stubWithComparison());
+  assert.deepEqual(out.comparisons, {
+    "helpfulness\nlab--a@1\nlab--b@1": { writtenBy: "sol", text: "Each document scores 3 out of 4." },
+  });
+});
+
+/* A publication out of ten carries no comparison paragraph, because every one
+ * written so far quotes a figure out of 4. Everything else is what it was, in
+ * the same place, so the rest of the file's bytes do not move. */
+test("leaving comparisons out empties them and changes nothing else", async () => {
+  const withThem = await buildLinks([RUN], null, stubWithComparison());
+  const without = await buildLinks([RUN], null, stubWithComparison(),
+                                   { comparisons: false });
+  assert.deepEqual(without.comparisons, {});
+  assert.deepEqual(Object.keys(without), Object.keys(withThem));
+  assert.equal(serialise({ ...without, comparisons: withThem.comparisons }),
+               serialise(withThem));
+});
+
+test("the command line asks for comparisons unless told to leave them out", () => {
+  const argv = ["node", "engine/build-links-data.mjs", "--link-runs=r1,r0",
+                "--note-prompts=p1", "--out=links.json"];
+  assert.deepEqual(options(argv), {
+    out: "links.json", runIds: ["r1", "r0"], notePrompts: ["p1"], comparisons: true,
+  });
+  assert.equal(options([...argv, "--without-comparisons"]).comparisons, false);
+  assert.equal(options(["node", "x", "--out=o"]).notePrompts, null);
 });
 
 /* The digest publish.py records describes these exact bytes, and

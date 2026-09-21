@@ -24,6 +24,7 @@ sys.path.insert(0, str(HERE / "spec-cite"))
 import publish                     # noqa: E402
 
 TEN = publish.depth_call.prompt_sha256(10)
+FOUR = publish.depth_call.prompt_sha256(4)
 
 
 class FakeStore:
@@ -507,6 +508,242 @@ class BuildTest(unittest.TestCase):
             publish.build("links", [], ["helpfulness"], link_runs=["r0"],
                           note_prompts=[])
         self.assertIn("--note-prompts=", seen["argv"])
+
+
+def fake_builder(seen):
+    def fake_run(argv, capture_output, text):
+        seen.append(argv)
+        out = next(a.split("=", 1)[1] for a in argv if a.startswith("--out="))
+        Path(out).write_text("{}")
+        return type("Done", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+    return fake_run
+
+
+class BuildOutOfTenTest(unittest.TestCase):
+    """The new arguments reach a builder only when they are given, so a build
+    that names neither is launched exactly as it was before they existed."""
+
+    def argv(self, name, **extra):
+        seen = []
+        with mock.patch.object(publish.subprocess, "run", fake_builder(seen)):
+            publish.build(name, [], ["helpfulness"], "2026-09-16", "frontier_fast",
+                          link_runs=["r0"], note_prompts=["p0"], **extra)
+        return [a for a in seen[0] if not a.startswith(("--cells=", "--out="))]
+
+    def test_naming_neither_launches_the_payload_builder_as_before(self):
+        self.assertEqual(self.argv("payload")[2:], [
+            "--threshold=4", "--solid-threshold=6", "--run-date=2026-09-16",
+            "--behaviours=helpfulness", "--panel=frontier_fast"])
+
+    def test_the_depth_prompt_and_the_assessment_run_reach_the_payload_builder(self):
+        argv = self.argv("payload", depth_prompt=TEN, assessment_run="assessment-1")
+        self.assertIn(f"--depth-prompt={TEN}", argv)
+        self.assertIn("--assessment-run=assessment-1", argv)
+        # And no other builder: they describe the depths, which only the payload holds.
+        for name in ("documents", "links"):
+            argv = self.argv(name, depth_prompt=TEN, assessment_run="assessment-1")
+            self.assertFalse(any(a.startswith(("--depth-prompt=", "--assessment-run="))
+                                 for a in argv), argv)
+
+    def test_comparisons_are_left_out_of_the_links_only_when_asked(self):
+        self.assertNotIn("--without-comparisons", self.argv("links"))
+        self.assertIn("--without-comparisons", self.argv("links", comparisons=False))
+        self.assertNotIn("--without-comparisons", self.argv("payload", comparisons=False))
+
+
+CONFIG = {"display": {"panel": "frontier_fast"}, "panels": {"frontier_fast": PANEL},
+          "substitutes": {}}
+ASSESSMENT_PANELS = {"criteria": ["sol", "fable", "deepseek"],
+                     "contradictions": ["sol", "fable", "kimi"]}
+
+
+def assessment_of(version_id, run_id="assessment-1"):
+    """The rows of one document fully assessed: every seat of both questions
+    answered, every criterion scored, no claim."""
+    calls = [{"id": f"{run_id}-{version_id}-{question}-{seat}", "run_id": run_id,
+              "spec_version_id": version_id, "question": question, "seat": seat,
+              "model": seat, "status": "done"}
+             for question, seats in ASSESSMENT_PANELS.items() for seat in seats]
+    scores = [{"call_id": call["id"], "criterion": criterion, "score": 3, "rationale": "r",
+               "locators": []}
+              for call in calls if call["question"] == "criteria"
+              for criterion in ("conflict_rules", "rule_force", "reasons", "situations")]
+    return calls, scores
+
+
+class RecordingStore(FakeStore):
+    def __init__(self, **tables):
+        super().__init__(**tables)
+        self.inserted = []
+
+    def insert(self, table, rows, returning=False):
+        self.inserted.append((table, rows))
+        return [dict(row, id="publication-1") for row in rows] if returning else None
+
+
+def publishing_store(assessed=("v1", "v2"), four=True, ten=True, notes=None):
+    run_calls = [dict(call, id=f"{call['id']}-{version_id}")
+                 for version_id in ("v1", "v2")
+                 for call in calls("r1", "helpfulness", version_id, PANEL)]
+    assessment_calls, assessment_scores = [], []
+    for version_id in assessed:
+        more_calls, more_scores = assessment_of(version_id)
+        assessment_calls += more_calls
+        assessment_scores += more_scores
+    return RecordingStore(
+        aci_runs=[{"id": "r1", "rubric": "v5", "created_at": "2026-09-15"}],
+        aci_judge_calls=run_calls,
+        aci_depths=depth_rows(call_ids(run_calls)) if four else [],
+        aci_depths_out_of_ten=ten_depth_rows(call_ids(run_calls), "assessment-1") if ten else [],
+        aci_spec_versions=[V1, V2], aci_seat_substitutions=[],
+        aci_assessment_runs=[{"id": "assessment-1", "panels": ASSESSMENT_PANELS}],
+        aci_assessment_calls=assessment_calls, aci_assessment_scores=assessment_scores,
+        aci_assessment_claims=[], aci_assessment_verdicts=[],
+        aci_document_notes=notes if notes is not None else [
+            {"kind": "depth", "prompt_sha256": "sha-depth"},
+            {"kind": "standing", "prompt_sha256": "sha-standing"},
+            {"kind": "standing", "prompt_sha256": "sha-standing-older"}])
+
+
+class PublishOutOfTenTest(unittest.TestCase):
+    """A publication out of ten: what it requires before anything is written,
+    what it asks each builder for, and what its build parameters record."""
+
+    def publish(self, store, **extra):
+        self.builds = []
+
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+                  note_prompts=None, **given):
+            self.builds.append({"name": name, "note_prompts": note_prompts, **given})
+            return {name: True}, f"sha-{name}"
+
+        with mock.patch.object(publish, "build", side_effect=build):
+            return publish.publish(store, ["helpfulness"], ["v1", "v2"], "v5", "tester",
+                                   config=CONFIG, link_runs=["link-1"], **extra)
+
+    def build_params(self, store):
+        [(table, [row])] = [entry for entry in store.inserted
+                            if entry[0] == "aci_publications"]
+        return row["build_params"]
+
+    def test_naming_neither_publishes_exactly_as_before(self):
+        store = publishing_store()
+        self.publish(store)
+        self.assertEqual(self.build_params(store), {
+            "behaviours": ["helpfulness"], "documents": ["v1", "v2"], "panel": "frontier_fast",
+            "rubric": "v5", "run_date": None, "link_runs": ["link-1"],
+            "note_prompts": ["sha-depth", "sha-standing", "sha-standing-older"]})
+        # The defaults, which BuildOutOfTenTest holds to launching every builder
+        # exactly as before.
+        self.assertEqual(self.builds, [
+            {"name": "payload", "note_prompts": None, "depth_prompt": None,
+             "assessment_run": None},
+            {"name": "documents", "note_prompts": None},
+            {"name": "links", "note_prompts": ["sha-depth", "sha-standing",
+                                               "sha-standing-older"], "comparisons": True}])
+
+    def test_a_publication_out_of_ten_records_what_it_read_and_leaves_out(self):
+        store = publishing_store()
+        self.publish(store, depth_prompt=TEN, assessment_run="assessment-1")
+        params = self.build_params(store)
+        self.assertEqual(params["depth_prompt_sha256"], TEN)
+        self.assertEqual(params["assessment_run_id"], "assessment-1")
+        self.assertIs(params["comparisons"], False)
+        # Only standing notes: a depth note explains a figure out of 4.
+        self.assertEqual(params["note_prompts"], ["sha-standing", "sha-standing-older"])
+        by_name = {build["name"]: build for build in self.builds}
+        self.assertEqual((by_name["payload"]["depth_prompt"],
+                          by_name["payload"]["assessment_run"]), (TEN, "assessment-1"))
+        self.assertIs(by_name["links"]["comparisons"], False)
+        self.assertEqual(by_name["links"]["note_prompts"], ["sha-standing", "sha-standing-older"])
+
+    def test_the_prompt_of_four_named_outright_is_recorded_and_changes_nothing_else(self):
+        store = publishing_store()
+        self.publish(store, depth_prompt=FOUR)
+        params = self.build_params(store)
+        self.assertEqual(params["depth_prompt_sha256"], FOUR)
+        self.assertNotIn("assessment_run_id", params)
+        self.assertNotIn("comparisons", params)
+        self.assertEqual(params["note_prompts"], ["sha-depth", "sha-standing",
+                                                  "sha-standing-older"])
+
+    def refused(self, store, **extra):
+        with self.assertRaises(SystemExit) as refused:
+            self.publish(store, **extra)
+        self.assertEqual(store.inserted, [], "a refused publication wrote something")
+        self.assertEqual(self.builds, [], "a refused publication built something")
+        return str(refused.exception)
+
+    def test_a_document_the_assessment_run_did_not_assess_is_refused_before_anything(self):
+        message = self.refused(publishing_store(assessed=("v1",)),
+                               depth_prompt=TEN, assessment_run="assessment-1")
+        self.assertIn("model-spec@2025-12-18", message)
+        self.assertNotIn("constitution@2026-01-20", message)
+
+    def test_an_assessment_run_under_the_prompt_of_four_is_refused_naming_both(self):
+        for named in ({}, {"depth_prompt": FOUR}):
+            message = self.refused(publishing_store(), assessment_run="assessment-1", **named)
+            self.assertIn(FOUR, message)
+            self.assertIn(TEN, message)
+
+    def test_the_prompt_of_ten_needs_its_assessment_run(self):
+        self.assertIn("--assessment-run", self.refused(publishing_store(), depth_prompt=TEN))
+
+    def test_depths_out_of_ten_are_what_a_publication_out_of_ten_requires(self):
+        message = self.refused(publishing_store(ten=False), depth_prompt=TEN,
+                               assessment_run="assessment-1")
+        self.assertIn("helpfulness x constitution@2026-01-20", message)
+        # And depths of four are not needed by it.
+        self.publish(publishing_store(four=False), depth_prompt=TEN,
+                     assessment_run="assessment-1")
+
+    def test_a_standing_note_written_under_a_depth_note_s_prompt_is_refused(self):
+        notes = [{"kind": "depth", "prompt_sha256": "sha-shared"},
+                 {"kind": "standing", "prompt_sha256": "sha-shared"}]
+        message = self.refused(publishing_store(notes=notes), depth_prompt=TEN,
+                               assessment_run="assessment-1")
+        self.assertIn("sha-shared", message)
+
+
+class ChooseCellsOutOfTenTest(unittest.TestCase):
+    def test_with_an_assessment_run_the_run_complete_out_of_ten_is_preferred(self):
+        old_calls = calls("old", "helpfulness", "v1", PANEL)
+        new_calls = calls("new", "helpfulness", "v1", PANEL)
+        s = FakeStore(
+            aci_runs=[{"id": "old", "rubric": "v5", "created_at": "2026-08-01"},
+                      {"id": "new", "rubric": "v5", "created_at": "2026-09-01"}],
+            aci_judge_calls=old_calls + new_calls,
+            aci_depths=depth_rows(call_ids(old_calls)) + depth_rows(call_ids(new_calls)),
+            aci_depths_out_of_ten=ten_depth_rows(call_ids(old_calls), "assessment-1"),
+            aci_spec_versions=[V1, V2], aci_seat_substitutions=[])
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "new")
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5", "assessment-1")
+        self.assertEqual(cell["run_id"], "old")
+
+
+class MainTest(unittest.TestCase):
+    def forwarded(self, *flags):
+        seen = {}
+
+        def fake_publish(*args, **kwargs):
+            seen.update(args=args, kwargs=kwargs)
+            return {"id": "p", "payload_sha256": "0" * 64, "documents_sha256": "1" * 64,
+                    "links_sha256": "2" * 64}, []
+
+        with mock.patch.object(publish.Store, "from_env", return_value=FakeStore()), \
+             mock.patch.object(publish.index_store, "install_registry"), \
+             mock.patch.object(publish, "publish", side_effect=fake_publish), \
+             mock.patch("sys.stdout"):
+            publish.main(["--behaviours=helpfulness", "--documents=v1", "--link-runs=l1",
+                          *flags])
+        return seen["kwargs"]
+
+    def test_the_new_flags_reach_publish_only_when_given(self):
+        self.assertEqual(self.forwarded(), {"link_runs": ["l1"]})
+        kwargs = self.forwarded(f"--depth-prompt={TEN}", "--assessment-run=assessment-1")
+        self.assertEqual((kwargs["depth_prompt"], kwargs["assessment_run"]),
+                         (TEN, "assessment-1"))
 
 
 class LinksFormatTest(unittest.TestCase):

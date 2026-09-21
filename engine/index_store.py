@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "spec-cite"))
 import cite  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "panel"))
+import assessment_call  # noqa: E402
 import depth_call  # noqa: E402
 
 
@@ -292,6 +293,144 @@ def cell_depths(store, cells, assessment_run_id=None):
             cell_entry["scale"] = 10
         out[key] = cell_entry
     return out
+
+
+def depth_scale(depth_prompt=None, assessment_run_id=None):
+    """The scale a build reads its depths on, 4 or 10, from the depth prompt and
+    the assessment run it names.
+
+    Naming nothing, or the prompt of four, reads the scale of four, as every
+    publication built before the scale of ten did. The prompt of ten is read with
+    the assessment run its depths were given with, because the conflict rules
+    each of those depths was shown come from that run, and `cell_depths` reads no
+    other prompt of ten. Any other pairing is refused, naming the digest given
+    and the digest expected, rather than building a payload on a scale nobody
+    asked for.
+    """
+    four, ten = depth_call.prompt_sha256(4), depth_call.prompt_sha256(10)
+    if assessment_run_id is not None:
+        if depth_prompt != ten:
+            named = depth_prompt or f"{four}, the prompt of four, by default"
+            raise SystemExit(
+                f"--assessment-run={assessment_run_id} reads depths out of ten, given under "
+                f"the depth prompt {ten}, and --depth-prompt names {named}. Pass "
+                f"--depth-prompt={ten}.")
+        return 10
+    if depth_prompt is None or depth_prompt == four:
+        return 4
+    if depth_prompt == ten:
+        raise SystemExit(
+            f"--depth-prompt={ten} is the prompt of ten, and a depth out of ten is read "
+            "with the assessment run it was given with: name it with --assessment-run=<id>.")
+    raise SystemExit(
+        f"--depth-prompt={depth_prompt} is neither depth prompt: the scale of four is "
+        f"{four}, and the scale of ten is {ten}, read with --assessment-run=<id>.")
+
+
+def _any_of(values):
+    """A PostgREST `in.()` filter, each value quoted, as seat_substitutions sends."""
+    return "in.(" + ",".join(f'"{value}"' for value in sorted(values)) + ")"
+
+
+def assessment_rows(store, assessment_run_id, spec_version_ids):
+    """(run, {version id: {"calls", "scores", "claims", "verdicts"}}) for one
+    assessment run, restricted to the documents named. The run is None when no
+    run carries that id.
+
+    Each read is filtered to the run, or to the calls and claims already read,
+    and every row is held to the run and the documents again once read, so a
+    store that answered a filter loosely could not bring another run's rows in.
+    """
+    runs = [row for row in _rows(store, "aci_assessment_runs",
+                                 {"id": f"eq.{assessment_run_id}"})
+            if row["id"] == assessment_run_id]
+    wanted = set(spec_version_ids)
+    by_version = {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
+                  for version_id in wanted}
+    if not runs:
+        return None, by_version
+
+    def mine(table):
+        return [row for row in _rows(store, table, {"run_id": f"eq.{assessment_run_id}"})
+                if row["run_id"] == assessment_run_id and row["spec_version_id"] in wanted]
+
+    calls, claims = mine("aci_assessment_calls"), mine("aci_assessment_claims")
+    version_of_call = {call["id"]: call["spec_version_id"] for call in calls}
+    version_of_claim = {claim["id"]: claim["spec_version_id"] for claim in claims}
+    scores = ([row for row in _rows(store, "aci_assessment_scores",
+                                    {"call_id": _any_of(version_of_call)})
+               if row["call_id"] in version_of_call] if calls else [])
+    verdicts = ([row for row in _rows(store, "aci_assessment_verdicts",
+                                      {"claim_id": _any_of(version_of_claim)})
+                 if row["claim_id"] in version_of_claim] if claims else [])
+    for call in calls:
+        by_version[call["spec_version_id"]]["calls"].append(call)
+    for claim in claims:
+        by_version[claim["spec_version_id"]]["claims"].append(claim)
+    for score in scores:
+        by_version[version_of_call[score["call_id"]]]["scores"].append(score)
+    for verdict in verdicts:
+        by_version[version_of_claim[verdict["claim_id"]]]["verdicts"].append(verdict)
+    return runs[0], by_version
+
+
+def assessment_gaps(assessment_run_id, run, by_version, versions):
+    """What keeps an assessment run from standing for each document named, one
+    sentence per gap, or nothing when it assessed them all.
+
+    A document is assessed when every seat of the run's criteria answered with
+    all four criteria scored, every seat of its contradictions answered, and
+    every confirmation it asked finished. A seat that could not answer and
+    whose substitutes could not either leaves its call in error, and a total
+    built without it would be a mean of fewer judges presented as the panel's.
+    """
+    if run is None:
+        return [f"there is no assessment run {assessment_run_id}"]
+    panels = run.get("panels") or {}
+    gaps = []
+    for version in versions:
+        name = f"{version['spec_id']}@{version['version']}"
+        rows = by_version.get(version["id"]) or {}
+        calls = rows.get("calls") or []
+        if not calls:
+            gaps.append(f"{name}: the assessment run did not assess it")
+            continue
+        scored = {}
+        for score in rows.get("scores") or []:
+            scored.setdefault(score["call_id"], set()).add(score["criterion"])
+        for question in assessment_call.QUESTIONS:
+            for seat in panels.get(question, []):
+                done = [call for call in calls if call["question"] == question
+                        and call["seat"] == seat and call["status"] == "done"]
+                if not done:
+                    gaps.append(f"{name}: {seat} gave no {question} answer")
+                elif question == "criteria":
+                    missing = [criterion for criterion in assessment_call.CRITERIA
+                               if criterion not in scored.get(done[0]["id"], set())]
+                    if missing:
+                        gaps.append(f"{name}: {seat}'s criteria answer scored no "
+                                    + ", ".join(missing))
+        unfinished = sorted(call["seat"] for call in calls
+                            if call["question"] == "confirm" and call["status"] != "done")
+        if unfinished:
+            gaps.append(f"{name}: the confirmation asked of {', '.join(unfinished)} "
+                        "did not finish")
+    return gaps
+
+
+def assessment(store, assessment_run_id, versions):
+    """(run, {version id: rows}) for an assessment run that assessed every
+    document in `versions`, or a refusal naming every gap at once."""
+    run, by_version = assessment_rows(store, assessment_run_id,
+                                      [version["id"] for version in versions])
+    gaps = assessment_gaps(assessment_run_id, run, by_version, versions)
+    if gaps:
+        raise SystemExit(
+            f"assessment run {assessment_run_id} does not assess every document this "
+            "publication carries:\n  " + "\n  ".join(gaps)
+            + "\nAssess the documents missing, or retry the calls that failed, then "
+            "build again.")
+    return run, by_version
 
 
 def current_publication(store):

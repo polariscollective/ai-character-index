@@ -120,12 +120,22 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
     writes rather than a second copy of it. The run date is the one the stored
     payload carries: a build that did not pin one took the day it ran, and a
     rebuild on any other day must not.
+
+    A publication out of ten recorded the depth prompt, the assessment run and
+    whether comparisons were carried, and is rebuilt with them. One that recorded
+    none of them is rebuilt without them, by the call every publication before
+    them was rebuilt with.
     """
     params = publication.get("build_params") or {}
     cells = cells_of(store, publication)
     run_date = (params.get("run_date")
                 or (publication["payload"].get("provenance") or {}).get("runDate"))
     panel_name = params.get("panel")
+    recorded = {argument: params[key] for key, argument in
+                (("depth_prompt_sha256", "depth_prompt"),
+                 ("assessment_run_id", "assessment_run"),
+                 ("comparisons", "comparisons"))
+                if key in params}
     for name in ("payload", "documents", "links"):
         if publication.get(name) is None:
             continue
@@ -134,7 +144,8 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
             _built, got = publish.build(name, cells, params.get("behaviours") or [],
                                         run_date, panel_name,
                                         link_runs=params.get("link_runs") or (),
-                                        note_prompts=params.get("note_prompts"))
+                                        note_prompts=params.get("note_prompts"),
+                                        **recorded)
         except SystemExit as refused:
             report(False, label, (str(refused).strip().splitlines() or ["no output"])[-1])
             continue

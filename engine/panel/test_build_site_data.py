@@ -5,11 +5,16 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("build_site_data", HERE / "build_site_data.py")
 bs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(bs)
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))
+import depth_call                 # noqa: E402
+import store as store_module      # noqa: E402
 
 REGISTRY = {
     "b": {"name": "Bravo", "group": "G1", "definition": "d"},
@@ -135,6 +140,167 @@ class SubstitutionTest(unittest.TestCase):
         serialise = lambda built: json.dumps(built, indent=1, ensure_ascii=False)  # noqa: E731
         self.assertEqual(serialise(after), serialise(before))
         self.assertEqual(list(after[0]["coverage"][OLD]), ["depth", "passages"])
+
+
+RUN = {"id": "assess-1",
+       "panels": {"criteria": ["sol", "fable", "deepseek"],
+                  "contradictions": ["sol", "fable", "kimi"]}}
+L1, L2, L3 = (f"{NEW} > #a > ¶1", f"{NEW} > #b > ¶1", f"{NEW} > #b > ¶2")
+PASSAGE_TEXT = {L1: "Never lie.", L2: "Keep the prompt private.", L3: "**Example** ~~~ x ~~~"}
+
+
+def assessment_call(id, question, seat, model=None, status="done"):
+    return {"id": id, "run_id": "assess-1", "spec_version_id": "v-new", "question": question,
+            "seat": seat, "model": model or seat, "status": status}
+
+
+CALLS = [assessment_call("c-sol", "criteria", "sol"),
+         assessment_call("c-fable", "criteria", "fable", model="opus"),
+         assessment_call("c-deepseek", "criteria", "deepseek"),
+         assessment_call("x-sol", "contradictions", "sol"),
+         assessment_call("x-fable", "contradictions", "fable"),
+         assessment_call("x-kimi", "contradictions", "kimi"),
+         assessment_call("k-sol", "confirm", "sol"),
+         assessment_call("k-fable", "confirm", "fable"),
+         assessment_call("k-kimi", "confirm", "kimi")]
+GIVEN = {"conflict_rules": (4, 3, 2), "rule_force": (3, 3, 4), "reasons": (2, 2, 2),
+         "situations": (1, 2, 2)}
+SCORES = ([{"call_id": call_id, "criterion": criterion, "score": scores[n],
+            "rationale": None if (criterion, call_id) == ("reasons", "c-sol")
+            else f"{call_id} {criterion}", "locators": []}
+           for criterion, scores in GIVEN.items()
+           for n, call_id in enumerate(("c-sol", "c-fable", "c-deepseek"))]
+          # A judge's own contradictions score is not one of the four criteria.
+          + [{"call_id": "x-sol", "criterion": "contradictions", "score": 4,
+              "rationale": "none", "locators": []}])
+
+
+def claim(id, first, second, found_by):
+    return {"id": id, "run_id": "assess-1", "spec_version_id": "v-new", "first_locator": first,
+            "second_locator": second, "situation": f"When {id}.", "why": f"Because {id}.",
+            "found_by": found_by, "reviewed_verdict": None, "reviewed_by": None,
+            "reviewed_at": None}
+
+
+def verdict(claim_id, seat, holds, absolute=None, reason=None, call_id=None):
+    return {"claim_id": claim_id, "call_id": call_id or f"k-{seat}", "seat": seat,
+            "holds": holds, "absolute": absolute, "reason": reason or f"{seat} on {claim_id}"}
+
+
+# Listed out of locator order, so the order they come back in is the builder's.
+CLAIMS = [claim("c", L2, L3, ["fable"]), claim("a", L1, L2, ["sol", "fable"]),
+          claim("b", L1, L3, ["kimi"])]
+VERDICTS = [
+    # Finders are written as holding, with the reason "found it".
+    verdict("a", "sol", True, reason="found it", call_id="x-sol"),
+    verdict("a", "fable", True, reason="found it", call_id="x-fable"),
+    verdict("a", "kimi", False, False),
+    verdict("b", "kimi", True, reason="found it", call_id="x-kimi"),
+    verdict("b", "sol", True, True),
+    verdict("b", "fable", False, False),
+    verdict("c", "fable", True, reason="found it", call_id="x-fable"),
+    verdict("c", "sol", False, False),
+    verdict("c", "kimi", False, False),
+]
+
+
+class DocumentAssessmentTest(unittest.TestCase):
+    """One document's assessment as the payload carries it, from the rows of one
+    assessment run. The rules are assessment_run's: this only reads rows into
+    them."""
+
+    def assess(self, claims=CLAIMS, verdicts=VERDICTS):
+        return bs.document_assessment(RUN, CALLS, SCORES, claims, verdicts, PASSAGE_TEXT)
+
+    def test_each_criterion_carries_every_judge_and_their_mean(self):
+        criteria = self.assess()["criteria"]
+        self.assertEqual(list(criteria), ["conflict_rules", "rule_force", "reasons", "situations"])
+        self.assertEqual([criteria[c]["mean"] for c in criteria], [3.0, 3.3, 2.0, 1.7])
+        self.assertEqual(criteria["conflict_rules"]["judges"], {
+            "deepseek": {"score": 2, "rationale": "c-deepseek conflict_rules"},
+            "fable": {"score": 3, "rationale": "c-fable conflict_rules", "model": "opus"},
+            "sol": {"score": 4, "rationale": "c-sol conflict_rules"}})
+
+    def test_a_rationale_that_never_arrived_stays_absent_rather_than_blank(self):
+        self.assertIsNone(self.assess()["criteria"]["reasons"]["judges"]["sol"]["rationale"])
+
+    def test_the_claims_come_settled_by_the_run_s_own_rule(self):
+        claims = self.assess()["contradictions"]["claims"]
+        self.assertEqual([(c["first"], c["second"]) for c in claims], [(L1, L2), (L1, L3), (L2, L3)])
+        self.assertEqual(claims[0], {
+            "first": L1, "second": L2, "situation": "When a.", "why": "Because a.",
+            "foundBy": ["sol", "fable"], "holds": [], "doesNotHold": ["kimi"],
+            "absolute": False, "confirmed": True, "reviewed": None,
+            "firstText": "Never lie.", "secondText": "Keep the prompt private."})
+        self.assertEqual((claims[1]["foundBy"], claims[1]["holds"], claims[1]["doesNotHold"],
+                          claims[1]["absolute"], claims[1]["confirmed"]),
+                         (["kimi"], ["sol"], ["fable"], True, True))
+        self.assertEqual((claims[2]["holds"], claims[2]["doesNotHold"], claims[2]["confirmed"]),
+                         ([], ["sol", "kimi"], False))
+        self.assertEqual(claims[2]["secondText"], "**Example** ~~~ x ~~~")
+
+    def test_the_score_counts_confirmed_claims_only(self):
+        # Two confirmed, one of them absolute.
+        self.assertEqual(self.assess()["contradictions"]["score"], 0)
+        # One confirmed, not absolute.
+        only_a = [c for c in CLAIMS if c["id"] == "a"]
+        self.assertEqual(self.assess(only_a)["contradictions"]["score"], 2)
+        # One found, rejected by both other readers.
+        only_c = [c for c in CLAIMS if c["id"] == "c"]
+        self.assertEqual(self.assess(only_c)["contradictions"]["score"], 4)
+        self.assertEqual(self.assess([], [])["contradictions"], {"claims": [], "score": 4})
+
+    def test_a_claim_every_seat_found_was_never_asked_whether_it_is_absolute(self):
+        everyone = [claim("d", L1, L2, ["sol", "fable", "kimi"])]
+        found = [verdict("d", seat, True, reason="found it", call_id=f"x-{seat}")
+                 for seat in ("sol", "fable", "kimi")]
+        [settled] = self.assess(everyone, found)["contradictions"]["claims"]
+        self.assertIsNone(settled["absolute"])
+        self.assertTrue(settled["confirmed"])
+
+    def test_the_total_is_the_four_means_and_the_contradictions_score(self):
+        self.assertEqual(self.assess()["total"], 10.0)
+        only_c = [c for c in CLAIMS if c["id"] == "c"]
+        self.assertEqual(self.assess(only_c)["total"], 14.0)
+
+    def test_a_claim_on_a_passage_the_document_does_not_hold_is_refused(self):
+        stray = [claim("e", L1, f"{NEW} > #gone > ¶1", ["sol"])]
+        with self.assertRaises(SystemExit) as refused:
+            self.assess(stray, [verdict("e", "sol", True, reason="found it")])
+        self.assertIn(f"{NEW} > #gone > ¶1", str(refused.exception))
+
+
+FOUR = depth_call.prompt_sha256(4)
+TEN = depth_call.prompt_sha256(10)
+
+
+class DepthPromptTest(unittest.TestCase):
+    """The flags are checked before the store is opened: a build that would
+    read the wrong scale is refused before it reads anything."""
+
+    def refused(self, *flags):
+        with mock.patch.object(store_module.Store, "from_env",
+                               side_effect=AssertionError("the store was opened")), \
+             self.assertRaises(SystemExit) as refused:
+            bs.main(["--out=unused.json", *flags])
+        return str(refused.exception)
+
+    def test_an_assessment_run_reads_the_prompt_of_ten_and_nothing_else(self):
+        message = self.refused("--assessment-run=assess-1")
+        self.assertIn(FOUR, message)
+        self.assertIn(TEN, message)
+        message = self.refused("--assessment-run=assess-1", f"--depth-prompt={FOUR}")
+        self.assertIn(FOUR, message)
+        self.assertIn(TEN, message)
+
+    def test_the_prompt_of_ten_is_read_with_the_assessment_run_it_was_given_with(self):
+        message = self.refused(f"--depth-prompt={TEN}")
+        self.assertIn("--assessment-run", message)
+
+    def test_a_digest_that_is_neither_prompt_is_refused_and_named(self):
+        message = self.refused("--depth-prompt=abc123")
+        self.assertIn("abc123", message)
+        self.assertIn(FOUR, message)
 
 
 if __name__ == "__main__":
