@@ -223,40 +223,46 @@ recorded with its reason on the call row.
 One migration in `evals/`, applied by hand with `supabase db push`, since the
 `Migrations` workflow has failed on every run since #30.
 
-**`aci_depths` gains its scale and its prompt.**
+**Depths out of ten get a table of their own, and `aci_depths` does not change.**
+This replaces the first version of this section, which added a scale and a prompt
+to `aci_depths` and keyed it by both. The review of that migration, on 21
+September 2026, showed the code that runs in production today treats `call_id`
+as the key of `aci_depths`: once a second row existed for a call, a judge job
+could overwrite either row, a publication built from the portal could read
+either one, and the portal would count a pending depth out of ten as work left
+to launch on a run that is done. Keeping the scale of four's table as it is
+removes the order in which code and schema would otherwise have to be deployed,
+and the backfill with it.
 
-- `scale smallint not null default 4 check (scale in (4, 10))`, and the depth
-  check becomes `depth between 0 and scale`. A row says which scale it was
-  given on, so no reader has to infer it.
-- `prompt_sha256 text not null`, backfilled, and the primary key becomes
-  `(call_id, prompt_sha256)`. A new prompt writes new rows beside the old ones,
-  which is how `aci_passage_notes` and `aci_document_notes` already work, and
-  every earlier publication keeps rebuilding.
-- `assessment_run_id uuid null`, referencing the assessment run whose conflict
-  rules the depth was given with. Null on every row of the 0 to 4 scale.
+`aci_depths_out_of_ten` holds one row per judge call, depth prompt and
+assessment run: the assessment run is in the key because the conflict rules the
+depth was given with come from it, so a document assessed again gives new depths
+beside the old ones. It carries the depth from 0 to 10, the rationale, the number
+of passages read, the model and a reason when a declared substitute gave the
+depth, every attempt of the ladder, and tokens, cost, timing and status as
+`aci_depths` does. Its cost is not added to the run's `cost_usd`, which the
+scale of four's job computes; the pass that gives these depths reports its own.
 
-The backfill cannot trust `aci_runs.config.depth_prompt_sha256`. The three runs
-of the public publication were composed under `20df8c4d` and their depths were
-given again under `bd096eba` on 16 September. The migration decides each row's
-digest from its `finished_at` against that re-judging, and the plan's first task
-counts the rows each way before anything is written.
+**Five new tables** for the assessment:
 
-**Four new tables** for the assessment:
-
-- `aci_assessment_runs`: who launched it, its status, the panel, the two
-  prompts' digests, the config, the estimate and the cost.
-- `aci_assessment_calls`: one judge reading one document for one of the two
-  questions. The seat, the model that answered, and a substitution reason that
-  is set when they differ. The raw reply, tokens, cost, timing and status, as
-  `aci_judge_calls` carries them.
+- `aci_assessment_runs`: who launched it, its status, the seats of each
+  question, the three prompts' digests, the config, the estimate and the cost.
+- `aci_assessment_calls`: one seat reading one document for one question
+  (criteria, contradictions or confirmation). The seat, the model that answered,
+  every attempt with its reason, the raw reply, tokens, cost, timing and status.
 - `aci_assessment_scores`: per call and criterion, the score from 0 to 4, the
   rationale, and for the first criterion the locators of the conflict rules.
-- `aci_assessment_contradictions`: per call, each contradiction found, with its
-  two locators, the situation and the sentence.
+- `aci_assessment_claims`: each contradiction claimed on a document, one row per
+  pair of passages whoever found it, with room for a person's reading later. The
+  two locators are compared byte by byte (`collate "C"`), the order the engine
+  sorts them in.
+- `aci_assessment_verdicts`: each seat's reading of each claim, the finders'
+  included, which is what the confirmed rule counts.
 
-Scores and contradictions are evidence and take insert and select only. Calls
-take update, since their status moves while a job runs. Nothing is granted to
-`anon`: the public reads what a publication froze.
+Scores, claims and verdicts are evidence and take insert and select only, except
+a claim's three review columns. Calls take update, since their status moves while
+a job runs. Nothing is granted to `anon`: the public reads what a publication
+froze.
 
 ## Publication
 
