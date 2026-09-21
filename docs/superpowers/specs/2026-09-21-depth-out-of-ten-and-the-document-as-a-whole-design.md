@@ -498,6 +498,14 @@ and a quorum of two in which one reader is `deepseek` confirms its errors.
    does what the design asked of it. Keep it.
 2. Seat a declared substitute for `deepseek` when its depth reply is off the
    scale, recorded as every substitution is, instead of changing the panel.
+   Done in `a36edf3`: a depth that does not parse is asked again with a format
+   reminder, then with a one-shot example, and only then given by `kimi`, now
+   declared for `deepseek`. Replaying the two failed depths of the second pilot
+   (`artefacts/2026-09-21T16-57-27-pilot-scale-ten-replay`, under one cent) gave
+   8 for the instruction hierarchy and 8 for harm to third parties, both on the
+   third attempt, with no substitute needed. With them, every cell of the model
+   spec has three depths: honesty 9, 9 and 9; sycophancy 7, 7 and 6; the
+   instruction hierarchy 9, 9 and 8; harm to third parties 9, 8 and 8.
 3. Do not score contradictions from the judges alone. They find and cross-check
    candidates, and a person decides which ones the published list carries, as
    the governance view's scores are decided by hand. The score is computed from
