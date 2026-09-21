@@ -230,13 +230,23 @@ test("readerResponse answers 404 for a publication carrying no links", async () 
   assert.equal(out.status, 404);
 });
 
-test("readerResponse returns only the behaviours the address names", async () => {
+test("readerResponse returns all behaviours, withheld ones lose their passages", async () => {
+  const doc = "anthropic--constitution@2026-01-20";
   const { fetchImpl } = stub([{ id: ID, payload: {
-    behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] } }]);
+    behaviours: [
+      { id: 1, slug: "helpfulness", coverage: { [doc]: { depth: { mean: 2.7 }, passages: [{ locator: `${doc} > s > ¶1` }] } } },
+      { id: 2, slug: "no-sycophancy", coverage: { [doc]: { depth: { mean: 1.0 }, passages: [{ locator: `${doc} > s > ¶2` }] } } }
+    ] } }]);
   const out = await readerResponse("payload",
     new URLSearchParams(`publication=${ID}&behavior=helpfulness`), fetchImpl);
   assert.equal(out.status, 200);
-  assert.deepEqual(out.body.behaviours, [{ slug: "helpfulness" }]);
+  assert.equal(out.body.behaviours.length, 2, "both behaviours are listed");
+  assert.equal(out.body.behaviours[0].slug, "helpfulness");
+  assert.equal(out.body.behaviours[0].coverage[doc].passages.length, 1, "asked behaviour keeps passages");
+  assert.equal(out.body.behaviours[1].slug, "no-sycophancy");
+  assert.equal(out.body.behaviours[1].coverage[doc].passagesWithheld, true, "unwanted behaviour marked withheld");
+  assert.equal("passages" in out.body.behaviours[1].coverage[doc], false, "and carries no passages key");
+  assert.deepEqual(out.body.behaviours[1].coverage[doc].depth, { mean: 1.0 }, "but keeps its depth");
 });
 
 test("with no behavior parameter the whole column is served, as before", async () => {
@@ -246,10 +256,14 @@ test("with no behavior parameter the whole column is served, as before", async (
   assert.deepEqual(out.body, whole);
 });
 
-test("an empty behavior parameter names no behaviour, which is not the same as none given", async () => {
+test("an empty behavior parameter withholds all paragraphs, which is not the same as none given", async () => {
+  const doc = "anthropic--constitution@2026-01-20";
   const { fetchImpl } = stub([{ payload: {
-    behaviours: [{ slug: "helpfulness" }] } }]);
+    behaviours: [{ id: 1, slug: "helpfulness", coverage: { [doc]: { depth: { mean: 2.7 }, passages: [{ locator: `${doc} > s > ¶1` }] } } }] } }]);
   const out = await readerResponse("payload",
     new URLSearchParams(`publication=${ID}&behavior=`), fetchImpl);
-  assert.deepEqual(out.body.behaviours, []);
+  assert.equal(out.body.behaviours.length, 1, "behaviour is still listed");
+  assert.equal(out.body.behaviours[0].slug, "helpfulness");
+  assert.equal(out.body.behaviours[0].coverage[doc].passagesWithheld, true, "with paragraphs withheld");
+  assert.equal("passages" in out.body.behaviours[0].coverage[doc], false, "and no passages key");
 });
