@@ -4778,8 +4778,18 @@ async function ensureBehaviours(slugs) {
  * for changes nothing, and revealPassageLink says so. */
 async function openPassageLink(locator) {
   if (!locator) return null;
-  const doc = documentForLocator(state.payload.documents, locator);
+  let doc = documentForLocator(state.payload.documents, locator);
   if (!doc) return { locator, resolved: false };
+
+  /* A ?passage= link can name a document the address does not, and urlSpecs
+     only covers spec and compare-with, so the target may have arrived with its
+     text withheld. Fetch it before reading it: the reader followed a link to a
+     passage and should be shown it rather than refused. */
+  if (doc.textWithheld) {
+    await ensureDocument(doc.id).catch(() => {});
+    doc = (state.payload?.documents || []).find(d => d.id === doc.id) || doc;
+  }
+  if (typeof doc.markdown !== "string") return { locator, resolved: false };
 
   /* Under a sliced payload state.rawBehaviours holds only what has been loaded,
    * so searching it directly would miss a citing behaviour the URL never named
