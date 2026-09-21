@@ -17,6 +17,13 @@ given with its document's general rules for conflicts, and those are the
 passages at least two judges cited as such. Then each behaviour gets a depth out
 of ten from the judges of its cell's published run, over the passages that run
 retained, so the new figure reads beside the old one.
+
+A contradiction a seat lists is not taken on its word: every other seat that did
+not already list it is asked to confirm it on a second reading, and a claim
+counts as confirmed only once two seats stand behind it. Where a seat's own
+model is refused, or answers with nothing, its declared substitutes are tried
+in turn for that call, on criteria, contradictions and confirmation alike; the
+summary and pilot.json both say when a substitute answered in a seat's place.
 """
 
 import argparse
@@ -149,7 +156,7 @@ def _candidates(seat, panel, config):
     return [seat] + config.get("substitutes", {}).get(panel, {}).get(seat, [])
 
 
-def ask_with_substitutes(seat, system, user, config, call_model, panel):
+def ask_with_substitutes(seat, question, system, user, config, call_model, panel, here):
     """Ask `seat`'s own model, then its declared substitutes in order, until
     one answers.
 
@@ -157,22 +164,32 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel):
     content-filtered, or when its reply is empty once stripped. Returns
     (tag, answer, substituted): `tag` and `answer` are the candidate that
     answered and `ask`'s dict for it, or (None, None) when every candidate
-    failed. `substituted` lists {"model", "reason"} for every candidate that
-    failed before the one returned, in the order tried."""
+    failed. `substituted` lists {"model", "reason", "cost_usd",
+    "finish_reason", "model_id"} for every candidate that failed before the
+    one returned, in the order tried; the last three are None when the
+    candidate raised before answering, since it was never billed. A refused
+    candidate's reply, when it has any text, is saved to
+    `<seat>.<question>.<candidate>.refused.txt` beside the other replies."""
     substituted = []
     for tag in _candidates(seat, panel, config):
         try:
             answer = ask(tag, system, user, config, call_model)
         except Exception as refused:                      # noqa: BLE001
-            substituted.append({"model": tag, "reason": str(refused)[:300]})
+            substituted.append({"model": tag, "reason": str(refused)[:300],
+                                "cost_usd": None, "finish_reason": None, "model_id": None})
             continue
         if answer["finish_reason"] == "content_filter":
-            substituted.append({"model": tag, "reason": "finish_reason=content_filter"})
-            continue
-        if not answer["reply"].strip():
-            substituted.append({"model": tag, "reason": "empty reply"})
-            continue
-        return tag, answer, substituted
+            reason = "finish_reason=content_filter"
+        elif not answer["reply"].strip():
+            reason = f"empty reply, finish_reason={answer['finish_reason']}"
+        else:
+            return tag, answer, substituted
+        substituted.append({"model": tag, "reason": reason, "cost_usd": answer["cost_usd"],
+                            "finish_reason": answer["finish_reason"],
+                            "model_id": answer["model_id"]})
+        if answer["reply"]:
+            (here / f"{seat}.{question}.{tag}.refused.txt").write_text(answer["reply"],
+                                                                       encoding="utf-8")
     return None, None, substituted
 
 
@@ -220,7 +237,9 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
     pooled = _pool_claims(contradictions_by_seat, seats)
     holds = [[] for _ in pooled]
     does_not_hold = [[] for _ in pooled]
-    absolute = [False for _ in pooled]
+    # A claim every seat already found is never put to anyone, so its
+    # absoluteness is unasked rather than false.
+    absolute = [None if len(claim["found_by"]) >= len(seats) else False for claim in pooled]
     reasons = [{} for _ in pooled]
 
     for seat in seats:
@@ -233,8 +252,8 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
                   "situation": claim["situation"], "why": claim["why"]}
                  for _i, claim in to_confirm]
         system, user = assessment_call.compose_confirm(prompt_passages, claims)
-        tag, answer, substituted = ask_with_substitutes(seat, system, user, config,
-                                                         call_model, panel)
+        tag, answer, substituted = ask_with_substitutes(seat, "confirm", system, user, config,
+                                                         call_model, panel, here)
         if answer is None:
             record["assessment"][seat]["confirm"] = {
                 "error": substituted[-1]["reason"], "substituted": substituted}
@@ -244,7 +263,8 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
         record["assessment"][seat]["confirm"] = dict(
             verdicts=verdicts, model=tag, substituted=substituted,
             cost_usd=answer["cost_usd"], finish_reason=answer["finish_reason"],
-            provider=answer["provider"], model_id=answer["model_id"], kwargs=answer["kwargs"])
+            provider=answer["provider"], model_id=answer["model_id"], kwargs=answer["kwargs"],
+            claims_asked=len(claims))
         for position, verdict in verdicts.items():
             i, _claim = to_confirm[position - 1]
             reasons[i][seat] = verdict["reason"]
@@ -264,11 +284,17 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
 
 
 def _costs(results):
+    """Every cost billed: the answering call's own, and every attempt in its
+    `substituted` list, refused or not, for criteria, contradictions and
+    confirmation calls alike, error records included."""
     for record in results["documents"].values():
         for questions in record["assessment"].values():
             for answer in questions.values():
                 if answer.get("cost_usd") is not None:
                     yield answer["cost_usd"]
+                for attempt in answer.get("substituted", []):
+                    if attempt.get("cost_usd") is not None:
+                        yield attempt["cost_usd"]
         for cell in record["cells"].values():
             for given in cell["new"].values():
                 if given.get("cost_usd") is not None:
@@ -306,9 +332,12 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
             system, user = assessment_call.compose(question, prompt_passages[document])
             estimate += sum(priced(seat, system, user, OUTPUT_TOKENS[question], config)
                             for seat in seats)
-        # A confirmation call's shape is only known once contradictions come
-        # back, so it is priced here as one call per seat regardless.
-        estimate += sum(priced(seat, confirm_system, "x" * CONFIRM_CLAIMS_CHARS,
+        # A confirmation call carries the whole document, as compose_confirm
+        # opens with it, plus an allowance for the claims; its shape is only
+        # known once contradictions come back, so it is priced here as one
+        # call per seat regardless.
+        _system, confirm_user = assessment_call.compose_confirm(prompt_passages[document], [])
+        estimate += sum(priced(seat, confirm_system, confirm_user + "x" * CONFIRM_CLAIMS_CHARS,
                                CONFIRM_OUTPUT_TOKENS, config) for seat in seats)
     for (_document, slug), (retained, calls, _old) in evidence.items():
         system, user = depth_call.compose(slug, registry, retained, scale=10)
@@ -350,7 +379,7 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
                 print(f"  {seat} assessing {document}: {question} ...", flush=True)
                 system, user = assessment_call.compose(question, labelled)
                 tag, answer, substituted = ask_with_substitutes(
-                    seat, system, user, config, call_model, panel)
+                    seat, question, system, user, config, call_model, panel, here)
                 if answer is None:
                     record["assessment"][seat][question] = {
                         "error": substituted[-1]["reason"], "substituted": substituted}
@@ -459,6 +488,31 @@ def _substitution_clause(answer):
     return ", ".join(parts) + "; "
 
 
+def _all_failed_clause(substituted):
+    """'fable refused (reason), opus refused (reason), kimi refused (reason)',
+    for a seat whose every candidate failed."""
+    return ", ".join(f"{item['model']} refused ({item['reason']})" for item in substituted)
+
+
+def _seat_label(record, seat, question):
+    """'fable (opus)' when a substitute answered `seat`'s `question` call,
+    otherwise just `seat`."""
+    model = record["assessment"].get(seat, {}).get(question, {}).get("model")
+    return f"{seat} ({model})" if model and model != seat else seat
+
+
+def _confirmed_status(claim):
+    """'confirmed', 'not confirmed', with ', absolute' appended when a seat
+    called it absolute, or ', absoluteness not asked' when nobody was asked
+    about the claim at all (every seat found it already)."""
+    status = "confirmed" if claim["confirmed"] else "not confirmed"
+    if claim["absolute"] is None:
+        return f"{status}, absoluteness not asked"
+    if claim["absolute"]:
+        return f"{status}, absolute"
+    return status
+
+
 def _calls_lines(record):
     """One line per seat and question: for criteria, finish_reason and whether
     the reply was complete; for contradictions, items listed, items unreadable,
@@ -469,7 +523,8 @@ def _calls_lines(record):
     for seat, answers in record["assessment"].items():
         for question, answer in answers.items():
             if "error" in answer:
-                lines.append(f"- {seat} {question}: {answer['error']}")
+                lines.append(f"- {seat} {question}: "
+                             f"{_all_failed_clause(answer.get('substituted', []))}")
             elif question == "contradictions":
                 lines.append(
                     f"- {seat} {question}: {_substitution_clause(answer)}"
@@ -477,13 +532,11 @@ def _calls_lines(record):
                     f"{answer.get('unreadable', 0)} unreadable, score {answer.get('score')}, "
                     f"finish_reason={answer.get('finish_reason')}")
             elif question == "confirm":
-                verdicts = answer.get("verdicts", {})
-                holds = sum(1 for verdict in verdicts.values() if verdict["holds"])
+                answered = len(answer.get("verdicts", {}))
                 lines.append(
                     f"- {seat} confirm: {_substitution_clause(answer)}"
-                    f"{len(verdicts)} claims answered, {holds} hold, "
-                    f"{len(verdicts) - holds} do not hold, "
-                    f"finish_reason={answer.get('finish_reason')}")
+                    f"{answer.get('claims_asked', answered)} claims asked, "
+                    f"{answered} answered, finish_reason={answer.get('finish_reason')}")
             else:
                 complete = "complete" if answer.get("complete") else "incomplete"
                 lines.append(f"- {seat} {question}: {_substitution_clause(answer)}"
@@ -492,20 +545,25 @@ def _calls_lines(record):
 
 
 def _contradictions_lines(record):
-    """One item per pooled claim: whether it is confirmed, who found it, who
-    held and rejected it on a second reading with their reasons, then both
+    """One item per pooled claim: whether it is confirmed and, when its
+    absoluteness was asked about, whether it is absolute; who found it, who
+    held and rejected it on a second reading with their reasons, a seat named
+    beside its substitute where one answered in its place; then both
     passages' text cut to 300 characters."""
     passage_text = record.get("passage_text", {})
     lines = []
     for claim in record.get("contradictions", []):
-        status = "confirmed" if claim["confirmed"] else "not confirmed"
-        held = ", ".join(f"{seat} ({_cell_text(claim['reasons'].get(seat, ''))})"
+        found = ", ".join(_seat_label(record, seat, "contradictions")
+                          for seat in claim["found_by"])
+        held = ", ".join(f"{_seat_label(record, seat, 'confirm')} "
+                         f"({_cell_text(claim['reasons'].get(seat, ''))})"
                          for seat in claim["holds"])
-        rejected = ", ".join(f"{seat} ({_cell_text(claim['reasons'].get(seat, ''))})"
+        rejected = ", ".join(f"{_seat_label(record, seat, 'confirm')} "
+                             f"({_cell_text(claim['reasons'].get(seat, ''))})"
                              for seat in claim["does_not_hold"])
-        lines.append(f"- `{claim['first']}` against `{claim['second']}`: {status}. "
-                     f"{claim['situation']} {claim['why']}")
-        lines.append(f"  - Found by {', '.join(claim['found_by'])}."
+        lines.append(f"- `{claim['first']}` against `{claim['second']}`: "
+                     f"{_confirmed_status(claim)}. {claim['situation']} {claim['why']}")
+        lines.append(f"  - Found by {found}."
                      + (f" Held by {held}." if held else "")
                      + (f" Rejected by {rejected}." if rejected else ""))
         lines.append(f"  - `{claim['first']}`: {_cut(passage_text.get(claim['first']))}")
@@ -531,8 +589,11 @@ def _rationales_lines(record):
 def summary(results):
     """The pilot, for a person to read: per document, the five criteria by
     judge, the calls behind them, the general conflict rules with their text,
-    every contradiction listed with its rationale and its passages' text, and
-    each depth out of ten beside the published depth out of four, doubled.
+    every contradiction after its second reading with who found it, who held
+    and rejected it and whether it is confirmed and absolute, and each depth
+    out of ten beside the published depth out of four, doubled. A seat named
+    beside a substitute, such as "fable (opus)", means the substitute
+    answered that call in the seat's place.
 
     finished_at and cost_usd are absent from a write made mid-run; the header
     then says the run is not finished and gives the cost run up so far."""

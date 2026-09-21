@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -122,6 +123,32 @@ class PilotTest(unittest.TestCase):
             self.assertEqual(model.asked, [])
             self.assertEqual(list(Path(out).iterdir()), [])
 
+    def test_the_confirmation_price_includes_the_whole_document(self):
+        """A confirmation call carries the whole document, as compose_confirm
+        opens with it, so its price must too."""
+        calls = []
+        real_priced = pilot.priced
+
+        def spy(tag, system, user, output_tokens, config):
+            calls.append((tag, system, user, output_tokens))
+            return real_priced(tag, system, user, output_tokens, config)
+
+        with tempfile.TemporaryDirectory() as out, mock.patch.object(pilot, "priced", spy):
+            estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                               passages_for, out, documents=(DOC,),
+                                               behaviours=(SLUG,))
+        self.assertIsNone(folder)
+        self.assertGreater(estimate, 0)
+        confirm_system = assessment_call.system_prompt("confirm")
+        _system, confirm_user = assessment_call.compose_confirm(PASSAGES, [])
+        expected_user = confirm_user + "x" * pilot.CONFIRM_CLAIMS_CHARS
+        confirm_calls = [call for call in calls if call[1] == confirm_system]
+        seats = self.config["panels"][pilot.PANEL]
+        self.assertEqual(len(confirm_calls), len(seats))
+        for _tag, _system, user, output_tokens in confirm_calls:
+            self.assertEqual(user, expected_user)
+            self.assertEqual(output_tokens, pilot.CONFIRM_OUTPUT_TOKENS)
+
     def test_every_seat_answers_both_questions_and_every_judge_gives_a_depth(self):
         model = Scripted()
         with tempfile.TemporaryDirectory() as out:
@@ -184,6 +211,60 @@ class PilotTest(unittest.TestCase):
         # sol and deepseek still cite the first passage, which is the quorum.
         self.assertEqual(record["conflict_rules"], [PASSAGES[0][0]])
 
+    def test_a_content_filtered_attempts_cost_and_reply_are_kept(self):
+        def model(provider, model_id, system, user, kwargs):
+            if (system == assessment_call.system_prompt("criteria")
+                    and "fable" in model_id.lower()):
+                return ("filtered partial reply",
+                        {"prompt_tokens": 500, "completion_tokens": 50},
+                        "content_filter", 0.01)
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+            refused_reply = folder / "lab--spec_2026-01-01" / "fable.criteria.fable.refused.txt"
+            self.assertEqual(refused_reply.read_text(), "filtered partial reply")
+        criteria = results["documents"][DOC]["assessment"]["fable"]["criteria"]
+        attempt = criteria["substituted"][0]
+        self.assertEqual(attempt["model"], "fable")
+        self.assertEqual(attempt["finish_reason"], "content_filter")
+        self.assertIsNotNone(attempt["model_id"])
+        self.assertIsNotNone(attempt["cost_usd"])
+        self.assertGreater(attempt["cost_usd"], 0)
+        self.assertIn(attempt["cost_usd"], list(pilot._costs(results)))
+        self.assertGreaterEqual(results["cost_usd"], attempt["cost_usd"])
+
+    def test_every_attempt_of_an_all_failed_seat_counts_its_cost(self):
+        def model(provider, model_id, system, user, kwargs):
+            mid = model_id.lower()
+            if system == assessment_call.system_prompt("criteria") and (
+                    "fable" in mid or "opus" in mid or "kimi" in mid):
+                return ("no", {"prompt_tokens": 20, "completion_tokens": 5},
+                        "content_filter", 0.01)
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        criteria = results["documents"][DOC]["assessment"]["fable"]["criteria"]
+        self.assertIn("error", criteria)
+        self.assertEqual(len(criteria["substituted"]), 3)
+        attempt_costs = [item["cost_usd"] for item in criteria["substituted"]]
+        self.assertTrue(all(cost is not None and cost > 0 for cost in attempt_costs))
+        self.assertGreaterEqual(round(results["cost_usd"], 6), round(sum(attempt_costs), 6))
+
+    def test_a_raised_refusal_records_no_cost_for_that_attempt(self):
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(Scripted(refuse=("fable",)), out)
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        attempt = results["documents"][DOC]["assessment"]["fable"]["criteria"]["substituted"][0]
+        self.assertIsNone(attempt["cost_usd"])
+        self.assertIsNone(attempt["finish_reason"])
+        self.assertIsNone(attempt["model_id"])
+
     def test_a_refused_contradictions_call_falls_to_its_substitute(self):
         def model(provider, model_id, system, user, kwargs):
             if (system == assessment_call.system_prompt("contradictions")
@@ -195,10 +276,14 @@ class PilotTest(unittest.TestCase):
                                                 passages_for, out, call_model=model, go=True,
                                                 documents=(DOC,), behaviours=(SLUG,))
             results = __import__("json").loads((folder / "pilot.json").read_text())
+            text = (folder / "summary.md").read_text()
         contradictions = results["documents"][DOC]["assessment"]["fable"]["contradictions"]
         self.assertEqual(contradictions["model"], "opus")
         self.assertEqual(contradictions["substituted"][0]["model"], "fable")
         self.assertIn("content_filter", contradictions["substituted"][0]["reason"])
+        # Every seat found the same pair, so the substituted seat is named
+        # beside its substitute.
+        self.assertIn("Found by sol, fable (opus), deepseek.", text)
 
     def test_heading_attributes_reach_whole_document_calls_not_depth_calls(self):
         fake = store()
@@ -219,6 +304,8 @@ class PilotTest(unittest.TestCase):
             self.assertNotIn("{authority=user}", user)
 
     def test_confirmed_and_unconfirmed_contradictions_score_and_summarise(self):
+        sol_confirm_users = []
+
         def model(provider, model_id, system, user, kwargs):
             mid = model_id.lower()
             if system == assessment_call.system_prompt("contradictions"):
@@ -235,15 +322,21 @@ class PilotTest(unittest.TestCase):
                 return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
             if system == assessment_call.system_prompt("confirm"):
                 if "sol" in mid:
+                    sol_confirm_users.append(user)
                     reply = "ITEM 1: does not hold | absolute: no | Not persuasive."
-                elif "fable" in mid:
+                    return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+                if "fable" in mid:
+                    # fable's own model answers empty; its declared substitute,
+                    # opus, answers in its place.
+                    return "", {"prompt_tokens": 10, "completion_tokens": 0}, "stop", 0.01
+                if "opus" in mid:
                     reply = ("ITEM 1: holds | absolute: no | Matches.\n"
                              "ITEM 2: does not hold | absolute: no | Not persuasive.")
-                elif "deepseek" in mid:
+                    return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+                if "deepseek" in mid:
                     reply = "ITEM 1: holds | absolute: no | Matches."
-                else:
-                    reply = ""
-                return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+                    return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+                return "", {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
             return Scripted()(provider, model_id, system, user, kwargs)
         with tempfile.TemporaryDirectory() as out:
             _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
@@ -258,20 +351,47 @@ class PilotTest(unittest.TestCase):
         pair_12 = contradictions[frozenset((PASSAGES[0][0], PASSAGES[1][0]))]
         self.assertTrue(pair_23["confirmed"])
         self.assertFalse(pair_12["confirmed"])
+        # fable and deepseek both confirmed the pair sol found, in the order
+        # the panel asks them (sol itself is never asked, having found it).
+        self.assertEqual(pair_23["holds"], ["fable", "deepseek"])
+        # Every confirmer of the pair deepseek found (sol and fable, in that
+        # order) rejected it.
+        self.assertEqual(pair_12["does_not_hold"], ["sol", "fable"])
         self.assertEqual(record["contradictions_score"], 2)
         self.assertEqual(results["prompts"]["confirm"], assessment_call.prompt_sha256("confirm"))
-        self.assertIn("confirmed", text)
+        # An exact marker, so the assertion cannot pass on "not confirmed" alone.
+        self.assertIn(": confirmed.", text)
         self.assertIn("not confirmed", text)
         self.assertIn("Score from confirmed contradictions: 2.", text)
+        # fable's confirmation was substituted, and the summary says so.
+        self.assertIn("fable (opus)", text)
+        fable_confirm = record["assessment"]["fable"]["confirm"]
+        self.assertEqual(fable_confirm["model"], "opus")
+        self.assertEqual(fable_confirm["substituted"][0]["model"], "fable")
+        self.assertIn("empty reply", fable_confirm["substituted"][0]["reason"])
+        self.assertIn("finish_reason=stop", fable_confirm["substituted"][0]["reason"])
+        self.assertIn("2 claims asked, 2 answered, finish_reason=stop", text)
+        # sol is never asked to confirm the pair it found itself.
+        self.assertEqual(len(sol_confirm_users), 1)
+        self.assertNotIn("[2] and [3]", sol_confirm_users[0])
+        self.assertIn("[1] and [2]", sol_confirm_users[0])
 
     def test_every_seat_finding_the_same_contradiction_needs_no_confirmation(self):
         model = Scripted()
         with tempfile.TemporaryDirectory() as out:
             _estimate, folder = self.go(model, out)
             results = __import__("json").loads((folder / "pilot.json").read_text())
+            text = (folder / "summary.md").read_text()
         record = results["documents"][DOC]
         self.assertEqual(len(record["contradictions"]), 1)
         self.assertTrue(record["contradictions"][0]["confirmed"])
+        # Nobody was asked to confirm it, since every seat found it already,
+        # so its absoluteness is unknown rather than false.
+        self.assertIsNone(record["contradictions"][0]["absolute"])
+        self.assertIn("absoluteness not asked", text)
+        # The score treats an unasked absoluteness as not absolute: one
+        # confirmed claim scores 2, not 0.
+        self.assertEqual(record["contradictions_score"], 2)
         self.assertNotIn(assessment_call.system_prompt("confirm"),
                          [system for _m, system, _u in model.asked])
 
