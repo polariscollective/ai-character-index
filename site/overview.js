@@ -517,8 +517,13 @@ function render() {
 
 async function initialize() {
   const [payload, documents, registry, links] = await Promise.all([
-    loadJSON(`/api/reader/payload${PINNED}`, null),
-    loadJSON(`/api/reader/documents${PINNED}`, null),
+    /* Both sets present and empty: every behaviour and every document is still
+     * listed with its heading and its figures, and none of them carries the
+     * paragraphs or the document text this page never reads. Measured on
+     * 9b7ce377: the payload falls from 914 KB to 66 and the documents from
+     * 1161 KB to 1. */
+    loadJSON(`/api/reader/payload${PINNED ? `${PINNED}&` : "?"}behavior=`, null),
+    loadJSON(`/api/reader/documents${PINNED ? `${PINNED}&` : "?"}spec=`, null),
     loadJSON(`/api/reader/behaviours${PINNED}`, null),
     /* One route for both, where two gitignored files used to sit. They were
      * never on any deployment, so this page has shown its figures with nothing
