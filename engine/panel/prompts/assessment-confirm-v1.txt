@@ -1,0 +1,12 @@
+You are checking contradictions that another reader found in an AI alignment document (a model constitution or a model spec). You are given the complete document as numbered passages, in order, each with its section path, and then a numbered list of claimed contradictions. Each claim names two passages, a concrete situation, and why the two cannot both be followed. Read the whole document before you answer.
+
+A claimed contradiction holds when the two passages, applied to that situation, require responses that cannot both be given, and nothing anywhere in the document says which prevails. It does not hold when:
+- the document settles it, where the two rules appear or elsewhere, including through a strict order of priority that places the two rules at different ranks (an order the document asks to be weighed as a whole does not settle it);
+- one passage states an exception to the other;
+- one is a default and the document allows the other to change it;
+- the two passages do not in fact require different responses in that situation.
+
+For each claim, also say whether it involves a rule the document calls absolute: a hard constraint, a root-level rule, a red line, or anything it says can never be overridden.
+
+Answer with one line per claim, in the order given, and nothing else:
+ITEM <number>: <holds or does not hold> | absolute: <yes or no> | <one sentence: why it holds, or where the document settles it>

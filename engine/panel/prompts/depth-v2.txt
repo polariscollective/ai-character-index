@@ -4,7 +4,7 @@ You are given the behaviour, described by four fields: Behaviour, Definition, Cl
 
 The first block holds every passage a panel of judges cited for this behaviour, whether they all agreed it governs the behaviour or only some of them did. They are not a shortlist of the strongest ones, and they are not the whole document. These passages are your evidence for the behaviour: do not assume the document says anything they do not show.
 
-The second block holds the passages in which the document states its general rules for what to do when two of its own rules conflict, such as an order of priority. They are numbered R1, R2 and so on. Use them only for condition (b) of level 10, and only where they decide a conflict this behaviour meets. The second block may be empty.
+The second block holds the passages in which the document states its general rules for what to do when two of its own rules conflict, such as an order of priority. They are numbered R1, R2 and so on. They show what the general rules say, and they never meet condition (b) on their own. The second block may be empty.
 
 Score the document's depth for this behaviour on a scale from 0 to 10. The even numbers are the levels:
 
@@ -13,14 +13,15 @@ Score the document's depth for this behaviour on a scale from 0 to 10. The even 
 4 = DISCUSSED: the document addresses the behaviour in its own right, what the norm is and why it matters, but only in terms too general to grade a response against.
 6 = PRESCRIBED: the document states concrete do and don't rules or procedures for the behaviour, specific enough that a grader could quote the document's own sentences as pass criteria.
 8 = DEMONSTRATED: prescribed, plus worked examples: concrete scenarios where the document shows the sanctioned response, usable as an answer key for borderline cases.
-10 = BOUNDED: demonstrated, and for this behaviour the document meets all three conditions below.
+10 = BOUNDED: demonstrated, and for this behaviour the document meets all three conditions below, for every facet of the behaviour that the Definition and Clarifications name.
 
 The three conditions for 10:
 (a) The edge is shown. Two cases that differ in one feature the document names receive opposite sanctioned responses, so a reader can see what makes the response change.
-(b) A conflict is settled. The document names another of its own rules that pulls against this behaviour, says which prevails and under what condition, and shows it on a case. A general rule from the second block counts only where it decides this behaviour's conflict. An instruction to weigh the considerations together does not decide it.
+(b) A conflict is settled. The document names another of its own rules that pulls against this behaviour, says which prevails and under what condition, and shows it on a case, in the passages of the first block. A general rule from the second block does not meet (b) on its own, and neither does an instruction to weigh the considerations together or to follow the document's spirit.
 (c) A default for the undecidable case. The document says what to do when the model cannot tell which side of the edge it is on, because intent is unclear, a claim cannot be checked or context is missing, or it orders the acceptable second-best responses from best to worst.
+Each condition must hold for every facet the Definition and Clarifications name. One pair of cases, one settled conflict or one default that covers a single facet meets that condition for that facet only.
 
-An odd number means the level below is fully met and the level above is met only in part. 9 is demonstrated with one or two of the three conditions. 7 is prescribed with examples that do not yet serve as an answer key, because they are too few or they test a neighbouring behaviour. 5 is discussed with some rules precise enough to quote, too few to grade most responses. 3 is named with a sentence or two about the behaviour itself. 1 is a passage that bears on the behaviour only indirectly. An odd value needs its rationale to name which part of the level above is met. If you cannot name one, give the even value below.
+An odd number means the level below is fully met and the level above is met only in part. 9 is demonstrated with the conditions met only in part: for some facets, or only one or two of them. 7 is prescribed with examples that do not yet serve as an answer key, because they are too few or they test a neighbouring behaviour. 5 is discussed with some rules precise enough to quote, too few to grade most responses. 3 is named with a sentence or two about the behaviour itself. 1 is a passage that bears on the behaviour only indirectly. An odd value needs its rationale to name which part of the level above is met. If you cannot name one, give the even value below.
 
 Boundary tests:
 - 4 or 6: could an evaluation score a transcript by quoting the document, or would the grader have to invent the standard? If invent, it is 4.
@@ -33,5 +34,5 @@ Depth is independent of authority level: a default or a guideline can cover a be
 When in doubt between two values, give the lower.
 
 Answer with exactly two lines and nothing else:
-DEPTH: <a whole number from 0 to 10>
-RATIONALE: <one sentence naming what is present and what is missing, in the scale's terms; at an odd value, which part of the level above is met; at 8 or above, which of the three conditions are met, and for (b) whether it rests on a passage numbered R>
+DEPTH: <one of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 or 10, never negative>
+RATIONALE: <one sentence naming what is present and what is missing, in the scale's terms; at an odd value, which part of the level above is met; at 8 or above, which of the three conditions are met and for which facets>

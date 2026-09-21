@@ -203,6 +203,20 @@ class ScaleOfTenComposeTest(unittest.TestCase):
         self.assertIn("An odd value needs its rationale to name which part of the level "
                       "above is met", system)
 
+    def test_the_prompt_of_ten_says_never_negative_and_every_facet(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("never negative", system)
+        self.assertIn("for every facet", system)
+
+    def test_the_scale_of_ten_ends_with_its_own_answer_line(self):
+        _system, four = depth_call.compose("defined-behaviour", self.registry, RETAINED)
+        self.assertTrue(four.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+        _system, ten = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                          scale=10)
+        self.assertTrue(ten.endswith(
+            "\n\nAnswer with the two lines DEPTH and RATIONALE. "
+            "DEPTH is one whole number from 0 to 10."))
+
     def test_the_scale_of_four_composes_as_it_always_has(self):
         self.assertEqual(
             depth_call.compose("defined-behaviour", self.registry, RETAINED),
@@ -218,7 +232,9 @@ class ScaleOfTenComposeTest(unittest.TestCase):
         self.assertIn("general rules for conflicts between its own rules (1):\n"
                       "[R1] (§ X > Y) A higher rule prevails.", user)
         self.assertLess(user.index("[2] (§ A > C)"), user.index("[R1]"))
-        self.assertTrue(user.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+        self.assertTrue(user.endswith(
+            "\n\nAnswer with the two lines DEPTH and RATIONALE. "
+            "DEPTH is one whole number from 0 to 10."))
 
     def test_an_empty_rules_block_says_so(self):
         _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,

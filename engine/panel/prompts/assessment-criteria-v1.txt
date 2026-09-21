@@ -4,8 +4,8 @@ Score four criteria, each on a scale from 0 to 4. The descriptions at 0, 2 and 4
 
 CONFLICT_RULES: what the document says, in general, when two of its own rules conflict.
 0 = nothing.
-2 = an order of priority between its rules, or an instruction to settle conflicts by judgement or by the document's spirit, without saying who wins in a given case.
-4 = an order that decides who wins, a rule for two rules of the same rank, and examples of the order applied.
+2 = an order of priority between its rules that the document asks to be weighed as a whole, or an instruction to settle conflicts by judgement or by the document's spirit. Either is at most 2, however detailed.
+4 = a strict order that decides who wins whenever two ranks conflict, a rule for two rules of the same rank that names a winner or an outcome, and examples of the order applied.
 Also list the numbers of the passages that state these general rules, each number written out, without ranges. Count only passages about conflicts between the document's own rules or between levels of instruction, not passages about a single behaviour.
 
 RULE_FORCE: whether a reader can tell, for each rule, if it is absolute or a default that can be changed, and by whom.

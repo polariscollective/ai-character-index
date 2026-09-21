@@ -106,7 +106,10 @@ def compose(behaviour, registry, retained, scale=4, conflict_rules=None):
         rules = list(conflict_rules or [])
         user += ("\n\nThe document's general rules for conflicts between its own rules "
                  f"({len(rules)}):\n{_numbered(rules, 'R') or '(none were identified)'}")
-    user += "\n\nAnswer with the two lines DEPTH and RATIONALE."
+        user += ("\n\nAnswer with the two lines DEPTH and RATIONALE. "
+                 "DEPTH is one whole number from 0 to 10.")
+    else:
+        user += "\n\nAnswer with the two lines DEPTH and RATIONALE."
     return system_prompt(scale), user
 
 

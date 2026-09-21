@@ -38,9 +38,27 @@ class PromptTest(unittest.TestCase):
                 self.assertEqual(assessment_call.prompt_sha256(question),
                                  hashlib.sha256(path.read_bytes()).hexdigest())
 
+    def test_questions_stays_criteria_and_contradictions(self):
+        # PROMPTS gains "confirm", but QUESTIONS is the two questions a document
+        # is scored on; "confirm" is a follow-up call, not a third question.
+        self.assertEqual(assessment_call.QUESTIONS, ("criteria", "contradictions"))
+
+    def test_the_confirm_prompt_matches_the_file_and_has_no_long_dash(self):
+        path = HERE / "prompts" / "assessment-confirm-v1.txt"
+        text = assessment_call.system_prompt("confirm")
+        self.assertEqual(text, path.read_text())
+        self.assertEqual(assessment_call.prompt_sha256("confirm"),
+                         hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertNotIn("—", text)
+        self.assertNotIn("–", text)
+
     def test_the_contradictions_prompt_requires_a_strict_order(self):
         text = assessment_call.system_prompt("contradictions")
         self.assertIn("strict and places the two rules at different ranks", text)
+
+    def test_the_criteria_prompt_caps_a_vague_conflict_rule_at_two(self):
+        text = assessment_call.system_prompt("criteria")
+        self.assertIn("Either is at most 2, however detailed.", text)
 
     def test_no_prompt_carries_a_long_dash(self):
         for question in assessment_call.QUESTIONS:
@@ -139,6 +157,71 @@ class ParseContradictionsTest(unittest.TestCase):
         parsed = assessment_call.parse_contradictions(
             "CONTRADICTION: none found.\nCONTRADICTIONS: 4", 3)
         self.assertEqual((parsed["items"], parsed["unreadable"], parsed["score"]), ([], 0, 4))
+
+
+class ComposeConfirmTest(unittest.TestCase):
+    def test_the_numbered_document_comes_first_and_claims_are_numbered(self):
+        claims = [{"first": 2, "second": 3, "situation": "S", "why": "W"}]
+        system, user = assessment_call.compose_confirm(PASSAGES, claims)
+        self.assertEqual(system, assessment_call.system_prompt("confirm"))
+        self.assertTrue(user.startswith(
+            "The complete document, as 3 numbered passages in order:\n"
+            "[1] (§ A) In a conflict, safety comes first.\n"
+            "[2] (§ B) Never lie.\n"
+            "[3] (§ B) Keep the operator's instructions private."))
+        self.assertIn("\n\nClaimed contradictions (1):\n[1] passages [2] and [3] | S | W",
+                      user)
+        self.assertTrue(user.endswith(
+            "Answer with one ITEM line per claim, in the order given."))
+
+    def test_compose_criteria_is_unaffected_by_the_confirm_helper(self):
+        system, user = assessment_call.compose("criteria", PASSAGES)
+        self.assertEqual(system, assessment_call.system_prompt("criteria"))
+        self.assertTrue(user.startswith("The complete document, as 3 numbered passages in order:\n"
+                                        "[1] (§ A) In a conflict, safety comes first.\n"
+                                        "[2] (§ B) Never lie.\n"
+                                        "[3] (§ B) Keep the operator's instructions private."))
+        self.assertTrue(user.endswith(assessment_call.ASK["criteria"]))
+
+
+class ParseConfirmTest(unittest.TestCase):
+    def test_a_well_formed_reply(self):
+        reply = ("ITEM 1: holds | absolute: yes | R1\n"
+                 "**ITEM 2:** does not hold | absolute: no | Settled in 4.")
+        self.assertEqual(assessment_call.parse_confirm(reply, 2),
+                         {1: {"holds": True, "absolute": True, "reason": "R1"},
+                          2: {"holds": False, "absolute": False, "reason": "Settled in 4."}})
+
+    def test_unreadable_or_out_of_range_items_are_skipped(self):
+        reply = "ITEM 3: maybe | absolute: no | x\nITEM 9: holds | absolute: no | x"
+        self.assertEqual(assessment_call.parse_confirm(reply, 2), {})
+
+    def test_a_later_line_for_the_same_item_wins(self):
+        reply = ("ITEM 1: holds | absolute: yes | first\n"
+                 "ITEM 1: does not hold | absolute: no | second")
+        self.assertEqual(assessment_call.parse_confirm(reply, 1),
+                         {1: {"holds": False, "absolute": False, "reason": "second"}})
+
+
+class HeadingAttributesTest(unittest.TestCase):
+    MARKDOWN = "# Truth\n\n## Do not lie {#do_not_lie authority=user}\n\nNever lie.\n"
+
+    def test_a_heading_anchor_gains_its_attributes(self):
+        passages = [("doc@v > #do_not_lie > ¶1", "Truth > Do not lie", "Never lie.")]
+        out = assessment_call.with_heading_attributes(passages, self.MARKDOWN)
+        self.assertEqual(out, [("doc@v > #do_not_lie > ¶1",
+                               "Truth > Do not lie {authority=user}", "Never lie.")])
+
+    def test_a_section_already_carrying_authority_is_unchanged(self):
+        passages = [("doc@v > #do_not_lie > ¶1", "Truth > Do not lie {authority=root}",
+                     "Never lie.")]
+        self.assertEqual(assessment_call.with_heading_attributes(passages, self.MARKDOWN),
+                         passages)
+
+    def test_a_heading_path_locator_is_unchanged(self):
+        passages = [("doc@v > Truth > Do not lie > ¶1", "Truth > Do not lie", "Never lie.")]
+        self.assertEqual(assessment_call.with_heading_attributes(passages, self.MARKDOWN),
+                         passages)
 
 
 if __name__ == "__main__":
