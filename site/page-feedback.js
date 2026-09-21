@@ -78,7 +78,28 @@ const STYLE = `
   line-height: 1.55;
 }
 .pf-note::backdrop { background: rgb(35 40 27 / .5); }
-.pf-note h2 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+.pf-note h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.pf-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.pf-close {
+  flex: none;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: #5C6B3C;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+.pf-close:hover { background: #B7C94B; color: #23281B; }
+.pf-close:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
 .pf-note label { display: block; margin: 0 0 4px; font-weight: 600; }
 .pf-note textarea,
 .pf-note input[type="email"] {
@@ -751,6 +772,39 @@ function overlay(base, tools) {
   return canvas;
 }
 
+/**
+ * Keep the pill somewhere it can be pressed.
+ *
+ * A modal dialog makes everything outside its own subtree inert, and the top
+ * layer is no exception: raised into it with showPopover the pill is drawn
+ * above the backdrop and still refuses a click and a focus, which was
+ * measured against this application before this was written. The one place
+ * the platform leaves operable is inside the dialog, so that is where the
+ * pill goes while one is open, and back to the body when it closes.
+ * `position: fixed` puts it in the same corner either way, because a fixed
+ * box is placed against the viewport and not against its parent.
+ *
+ * This is what lets somebody report a panel: the overview opens its evidence
+ * with showModal, and a reader who wants to say that the panel is wrong has
+ * to be able to reach the pill while looking at it.
+ *
+ * Our own dialog is skipped. The pill opened it, and the pill has no business
+ * inside the picture it just took.
+ */
+function follow(pill, note) {
+  const settle = () => {
+    const open = [...document.querySelectorAll("dialog[open]")].filter(one => one !== note);
+    const host = open.length ? open[open.length - 1] : document.body;
+    if (pill.parentElement !== host) host.append(pill);
+  };
+  settle();
+  // The open attribute is what showModal and show both set, and it is the
+  // only signal either of them gives.
+  new MutationObserver(settle).observe(document.documentElement, {
+    subtree: true, attributes: true, attributeFilter: ["open"],
+  });
+}
+
 function build() {
   document.head.append(el("style", { textContent: STYLE }));
 
@@ -848,8 +902,19 @@ function build() {
     if (canvas) repaint(canvas, null);
   });
 
+  /* The same close the reader's own note dialog carries, in the same hand: a
+   * multiplication sign, labelled for a screen reader because the character
+   * is not a word. Escape closes the dialog too, and always did, but a cross
+   * is what somebody looks for. */
+  const close = el("button", {
+    type: "button", className: "pf-close", id: "pf-close", textContent: "\u00D7",
+  });
+  close.setAttribute("aria-label", "Close");
+
   const note = el("dialog", { className: "pf-note", id: "pf-note" },
-    el("h2", { id: "pf-title", textContent: "Tell us what you see" }),
+    el("div", { className: "pf-head" },
+      el("h2", { id: "pf-title", textContent: "Tell us what you see" }),
+      close),
     toolbar,
     shot,
     shotRow,
@@ -894,6 +959,7 @@ function build() {
   ready();
 
   cancel.addEventListener("click", () => note.close());
+  close.addEventListener("click", () => note.close());
   sendButton.addEventListener("click",
     () => send({ comment, email, trap, said, sendButton, note }));
 
@@ -978,6 +1044,7 @@ function build() {
   });
 
   document.body.append(note, pill);
+  follow(pill, note);
 }
 
 build();

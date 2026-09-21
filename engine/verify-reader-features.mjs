@@ -2786,6 +2786,69 @@ console.log("== Every page: the feedback bubble ==");
     "no capture-only attribute is left on the page once a capture has run",
     String(leftover));
 
+  /* A modal dialog makes everything outside its own subtree inert, the top
+   * layer included: a pill raised into it with showPopover is drawn above the
+   * backdrop and still refuses a click, measured against this application. So
+   * the pill moves into whatever modal is open, which is the one place the
+   * platform leaves operable. The overview opens its evidence panel with
+   * showModal, and somebody who wants to report that panel has to reach the
+   * pill while looking at it. */
+  await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  const atRest = await page.evaluate(() =>
+    document.querySelector("#pf-pill")?.parentElement?.tagName);
+  check(atRest === "BODY", "with nothing open the pill lives on the body", atRest);
+
+  const panelButton = page.locator("table button").first();
+  if (await panelButton.count()) {
+    await panelButton.click();
+    await page.waitForTimeout(300);
+    const tookItIn = await page.evaluate(() => {
+      const pill = document.querySelector("#pf-pill");
+      const box = pill.getBoundingClientRect();
+      const over = document.elementFromPoint(box.left + box.width / 2,
+                                             box.top + box.height / 2);
+      return {
+        modals: [...document.querySelectorAll("dialog[open]")].map(one => one.id),
+        host: pill.parentElement?.id || pill.parentElement?.tagName,
+        reachable: over === pill,
+      };
+    });
+    check(tookItIn.modals.length > 0 && tookItIn.host === tookItIn.modals[tookItIn.modals.length - 1]
+        && tookItIn.reachable,
+      "a modal panel takes the pill in, where it can still be pressed",
+      JSON.stringify(tookItIn));
+
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    const gaveItBack = await page.evaluate(() =>
+      document.querySelector("#pf-pill")?.parentElement?.tagName);
+    check(gaveItBack === "BODY", "closing the panel gives the pill back to the body", gaveItBack);
+  } else {
+    check(false, "the overview has a modal panel to test the pill against");
+  }
+
+  /* The cross. Escape closed this dialog before there was one, and still does,
+   * but a cross is what somebody looks for. */
+  await page.locator("#pf-pill").click();
+  await page.waitForTimeout(200);
+  const crossPressed = await page.evaluate(() => {
+    const cross = document.querySelector("#pf-close");
+    if (!cross) return { there: false };
+    const its = cross.getBoundingClientRect();
+    const dialog = document.querySelector("#pf-note").getBoundingClientRect();
+    cross.click();
+    return {
+      there: true,
+      label: cross.getAttribute("aria-label"),
+      topRight: its.top - dialog.top < 40 && dialog.right - its.right < 40,
+      closed: !document.querySelector("#pf-note").open,
+    };
+  });
+  check(crossPressed.there && crossPressed.label === "Close" && crossPressed.topRight && crossPressed.closed,
+    "the cross sits at the dialog's top right, is labelled, and closes it",
+    JSON.stringify(crossPressed));
+
   check(pageErrors.length === 0, "the feedback bubble: no console errors",
     pageErrors.join("; "));
 }

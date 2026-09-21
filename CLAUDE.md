@@ -413,14 +413,22 @@ there is one popover open at `pointerdown`, none at `pointerup`, none at
 `click`. It is measured in a capture-phase `pointerdown` listener, read once
 and emptied, and an abandoned press is cleared by the next one.
 
-**What is still wrong with the capture, and is not hidden.** A note opened with
-`showModal` rather than `showPopover` puts a backdrop over the page, so the
-pill cannot be clicked at all while one is open. The reader opens five of its
-notes with `showPopover` and two things with `showModal`, and those two are out
-of reach while a pill is the trigger. And on `/about`, a link the page draws as
-a 2px chartreuse underline comes out as a filled chartreuse block behind the
-text, so links in that capture look hovered; the reader's own navigation link
-renders correctly, so it is per-page CSS rather than universal.
+**A modal takes the pill in, because the platform allows nothing else.** A
+modal dialog makes everything outside its own subtree inert, and the top layer
+is no exception: a pill raised into it with `showPopover` is drawn above the
+backdrop and still refuses a click and a focus, which was measured against
+this application rather than assumed. The one place left operable is inside
+the dialog, so that is where the pill goes while one is open, and back to the
+body when it closes. `position: fixed` puts it in the same corner either way.
+This is what lets somebody report a panel: the overview opens its evidence
+with `showModal`, and a reader who wants to say that panel is wrong has to be
+able to reach the pill while looking at it.
+
+**What is still wrong with the capture, and is not hidden.** On `/about`, a
+link the page draws as a 2px chartreuse underline comes out as a filled
+chartreuse block behind the text, so links in that capture look hovered. The
+reader's own navigation link renders correctly, so it is per-page CSS rather
+than universal.
 
 **Slack is told twice when it has to be.** Slack fetches `image_url` itself and
 refuses the whole message when one block displeases it, so a signed link it
