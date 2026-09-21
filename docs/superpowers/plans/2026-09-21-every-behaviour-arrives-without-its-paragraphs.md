@@ -993,8 +993,9 @@ In `site/overview.js`, replace the first two entries of the `Promise.all`:
     /* Both sets present and empty: every behaviour and every document is still
      * listed with its heading and its figures, and none of them carries the
      * paragraphs or the document text this page never reads. Measured on
-     * 9b7ce377: the payload falls from 914 KB to 66 and the documents from
-     * 1161 KB to 1. */
+     * 9b7ce377: the payload falls from 914 KB to 134 and the documents from
+     * 1161 KB to 1. Of that 134, half is a citedBy index this page never
+     * reads, which sliceColumn attaches whenever a behaviour set is present. */
     loadJSON(`/api/reader/payload${PINNED ? `${PINNED}&` : "?"}behavior=`, null),
     loadJSON(`/api/reader/documents${PINNED ? `${PINNED}&` : "?"}spec=`, null),
 ```
