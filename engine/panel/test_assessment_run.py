@@ -30,8 +30,9 @@ def tag_of(model_id):
 
 
 class Scripted:
-    """{tag: (reply, finish_reason)} or {tag: exception}; a tag not scripted
-    answers "an answer" with finish_reason stop."""
+    """{tag: (reply, finish_reason)} or {tag: exception}, a KeyboardInterrupt or
+    a SystemExit included; a tag not scripted answers "an answer" with
+    finish_reason stop."""
 
     def __init__(self, **script):
         self.script = script
@@ -41,7 +42,7 @@ class Scripted:
         tag = tag_of(model_id)
         self.asked.append(tag)
         scripted = self.script.get(tag, ("an answer", "stop"))
-        if isinstance(scripted, Exception):
+        if isinstance(scripted, BaseException):
             raise scripted
         reply, finish_reason = scripted
         return reply, dict(USAGE), finish_reason, 0.5
@@ -74,6 +75,10 @@ class AskWithSubstitutesTest(unittest.TestCase):
         self.assertGreater(substituted[0]["cost_usd"], 0)
         self.assertIsNotNone(substituted[0]["model_id"])
         self.assertEqual(refused, [("fable", "partial")])
+        # A refused attempt is billed, so its tokens are known too, the same
+        # way its cost is.
+        self.assertEqual(substituted[0]["prompt_tokens"], USAGE["prompt_tokens"])
+        self.assertEqual(substituted[0]["completion_tokens"], USAGE["completion_tokens"])
 
     def test_an_empty_reply_and_a_raised_call_are_refusals_too(self):
         model = Scripted(fable=("  ", "stop"), opus=RuntimeError("401 Unauthorized"))
@@ -82,7 +87,8 @@ class AskWithSubstitutesTest(unittest.TestCase):
         self.assertEqual(substituted[0]["reason"], "empty reply, finish_reason=stop")
         self.assertEqual(substituted[1], {"model": "opus", "reason": "401 Unauthorized",
                                           "cost_usd": None, "finish_reason": None,
-                                          "model_id": None})
+                                          "model_id": None, "prompt_tokens": None,
+                                          "completion_tokens": None})
         # A whitespace reply is still text, and kept; a raised call has none.
         self.assertEqual(refused, [("fable", "  ")])
 
@@ -123,6 +129,19 @@ class AskWithSubstitutesTest(unittest.TestCase):
                                                        seated=("sol", "fable", "kimi"))
         self.assertEqual(tag, "fable")
         self.assertEqual(substituted, [])
+
+    def test_an_interrupt_keeps_what_the_caller_s_list_already_billed(self):
+        model = Scripted(fable=("", "content_filter"), opus=KeyboardInterrupt())
+        substituted = []
+        with self.assertRaises(KeyboardInterrupt):
+            assessment_run.ask_with_substitutes("fable", "system", "user", self.config, model,
+                                                "frontier_fast", substituted=substituted)
+        # opus was never billed, so it never made it into the list: the
+        # interrupt propagated before this function could append anything for
+        # it, and the list the caller passed in is what carries fable's.
+        self.assertEqual([item["model"] for item in substituted], ["fable"])
+        self.assertEqual(substituted[0]["reason"], "finish_reason=content_filter")
+        self.assertGreater(substituted[0]["cost_usd"], 0)
 
 
 def item(first, second, situation="s", why="w"):

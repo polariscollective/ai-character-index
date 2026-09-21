@@ -57,6 +57,17 @@ def summed(costs):
     return round(sum(known), 6) if known else None
 
 
+def summed_tokens(field, substituted, answer):
+    """A call's `field` ("prompt_tokens" or "completion_tokens"), summed over
+    every billed attempt: a refused candidate's, the same way its cost already
+    is, and the answering reply's, when there is one. One rule for both meters,
+    as `depth_ladder.give` already sums an attempt's tokens and seconds."""
+    values = [item.get(field) for item in substituted]
+    if answer is not None:
+        values.append((answer["usage"] or {}).get(field))
+    return summed(values)
+
+
 def parse_criteria(passages):
     def parse(reply):
         parsed = assessment_call.parse_criteria(reply, len(passages))
@@ -99,12 +110,20 @@ def contradictions_scores(call_id, parsed):
 
 
 def claim_rows(run_id, version_id, pooled, claim_ids, passages):
-    """One row per pooled claim, its two locators in code point order, which is
-    the byte order the table's `collate "C"` compares them in."""
+    """One row per pooled claim whose two passages resolve to different
+    locators, its two locators in code point order, which is the byte order
+    the table's `collate "C"` compares them in.
+
+    A claim whose two passages resolve to the same locator is counted as
+    unreadable on the finder's call and gets no row, so the table's
+    `first_locator < second_locator` check can never refuse a row after the
+    calls that found the claim were already paid for."""
     rows = []
     for claim_id, claim in zip(claim_ids, pooled):
         first, second = sorted((passages[claim["first"] - 1][0],
                                 passages[claim["second"] - 1][0]))
+        if first == second:
+            continue
         rows.append({"id": claim_id, "run_id": run_id, "spec_version_id": version_id,
                      "first_locator": first, "second_locator": second,
                      "situation": claim["situation"], "why": claim["why"],
@@ -123,6 +142,11 @@ class Assessment:
         self.run_id = None
 
     def start(self, created_by, estimate):
+        """Insert the run row pending, then mark it running. The second write
+        is retried once; if it still fails, that is reported on stderr with
+        the run id, so an operator can find and close the row by hand, and the
+        failure is raised, which the caller's `finish(stopped)` marks `error`,
+        so the run never stays silently `pending`."""
         self.run_id = str(uuid.uuid4())
         self.store.insert("aci_assessment_runs", [{
             "id": self.run_id, "created_by": created_by, "status": "pending",
@@ -131,8 +155,17 @@ class Assessment:
                         for question in PROMPTS},
             "config": {"substitutes": self.config.get("substitutes", {})},
             "estimated_usd": estimate}])
-        self.store.update("aci_assessment_runs", {"id": self.run_id},
-                          {"status": "running", "started_at": now()})
+        patch = {"status": "running", "started_at": now()}
+        try:
+            self.store.update("aci_assessment_runs", {"id": self.run_id}, patch)
+        except Exception:
+            try:
+                self.store.update("aci_assessment_runs", {"id": self.run_id}, patch)
+            except Exception as failed:
+                print(f"assessment run {self.run_id} could not be marked running, "
+                      f"even on retry: {failed}. It is inserted pending; find and "
+                      "close it by hand.", file=sys.stderr)
+                raise
 
     def finish(self, stopped=None):
         patch = {"status": "done", "cost_usd": summed(self.costs), "finished_at": now()}
@@ -140,13 +173,24 @@ class Assessment:
             patch.update(status="error", error=str(stopped)[:1000] or type(stopped).__name__)
         self.store.update("aci_assessment_runs", {"id": self.run_id}, patch)
 
-    def call(self, version, question, seat, system, user, parse):
+    def call(self, version, question, seat, system, user, parse, seated):
         """One seat answering one question about one document, written pending,
         running, then done or error. Returns (call id, what `parse` made of the
-        reply), the second None when no candidate answered.
+        reply, the model that answered), the second and third None when no
+        candidate answered.
 
-        The call's cost is every billed attempt's, a refused one included; its
-        tokens, seconds and finish reason are the answering reply's."""
+        `seated` is passed straight to `ask_with_substitutes`: every model that
+        must not answer this question for this document a second time. The
+        caller builds it as the seats of one question answer, so a substitute
+        already seated by an earlier seat's call is skipped rather than asked
+        again.
+
+        The call's cost and tokens are every billed attempt's, a refused one
+        included; its seconds and finish reason are the answering reply's. A
+        `KeyboardInterrupt` or a `SystemExit` raised mid-call still leaves the
+        call `error` with whatever attempts were already billed, and their cost
+        in the run's total, because `substituted` is the same list
+        `ask_with_substitutes` was filling in place when it was interrupted."""
         call_id = str(uuid.uuid4())
         match = {"id": call_id}
         self.store.insert("aci_assessment_calls", [{
@@ -155,36 +199,41 @@ class Assessment:
         self.store.update("aci_assessment_calls", match,
                           {"status": "running", "started_at": now()})
         print(f"  {seat} {question} on {name_of(version)} ...", flush=True)
+        substituted, billed = [], False
         try:
             tag, answer, substituted, refused = assessment_run.ask_with_substitutes(
                 seat, system, user, self.config, self.call_model, self.panel,
-                seated=self.panels["contradictions" if question == "confirm" else question])
+                seated=seated, substituted=substituted)
             attempts = attempt_rows(tag, answer, substituted)
             cost = summed(attempt["cost_usd"] for attempt in attempts)
             self.costs.append(cost)
+            billed = True
             if answer is None:
                 self.store.update("aci_assessment_calls", match, {
                     "status": "error", "error": assessment_run.last_failure(substituted),
                     "attempts": attempts, "cost_usd": cost,
                     "raw_output": refused[-1][1] if refused else None,
                     "finished_at": now()})
-                return call_id, None
+                return call_id, None, None
             parsed, complete = parse(answer["reply"])
         except BaseException as stopped:
+            if not billed:
+                attempts = attempt_rows(None, None, substituted)
+                cost = summed(attempt["cost_usd"] for attempt in attempts)
+                self.costs.append(cost)
             self.store.update("aci_assessment_calls", match, {
                 "status": "error", "error": str(stopped)[:1000] or type(stopped).__name__,
-                "finished_at": now()})
+                "attempts": attempts, "cost_usd": cost, "finished_at": now()})
             raise
-        usage = answer["usage"] or {}
         self.store.update("aci_assessment_calls", match, {
             "status": "done", "model": tag, "attempts": attempts,
             "raw_output": None if complete else answer["reply"],
             "finish_reason": answer["finish_reason"],
-            "prompt_tokens": usage.get("prompt_tokens"),
-            "completion_tokens": usage.get("completion_tokens"),
+            "prompt_tokens": summed_tokens("prompt_tokens", substituted, answer),
+            "completion_tokens": summed_tokens("completion_tokens", substituted, answer),
             "cost_usd": cost, "seconds": answer["seconds"], "error": None,
             "finished_at": now()})
-        return call_id, parsed
+        return call_id, parsed, tag
 
     def insert(self, table, rows):
         if rows:
@@ -193,22 +242,33 @@ class Assessment:
     def document(self, document):
         """Criteria per criteria seat, contradictions per contradictions seat,
         the pooled claims with their finders' verdicts, then a confirmation per
-        contradictions seat that has claims it did not find."""
+        contradictions seat that has claims it did not find.
+
+        Within each question, `seated` starts at the question's configured
+        seats and gains every model that answers it, so a later seat's
+        substitute never repeats a model this document has already had answer
+        the same question."""
         version, passages, labelled = (document["version"], document["passages"],
                                        document["labelled"])
+        seated = set(self.panels["criteria"])
         for seat in self.panels["criteria"]:
             system, user = assessment_call.compose("criteria", labelled)
-            call_id, parsed = self.call(version, "criteria", seat, system, user,
-                                        parse_criteria(passages))
+            call_id, parsed, tag = self.call(version, "criteria", seat, system, user,
+                                             parse_criteria(passages), seated)
+            if tag is not None:
+                seated.add(tag)
             if parsed is not None:
                 self.insert("aci_assessment_scores", criteria_scores(call_id, parsed, passages))
 
         seats = self.panels["contradictions"]
+        seated = set(seats)
         found, finder_calls = {}, {}
         for seat in seats:
             system, user = assessment_call.compose("contradictions", labelled)
-            call_id, parsed = self.call(version, "contradictions", seat, system, user,
-                                        parse_contradictions(passages))
+            call_id, parsed, tag = self.call(version, "contradictions", seat, system, user,
+                                             parse_contradictions(passages), seated)
+            if tag is not None:
+                seated.add(tag)
             finder_calls[seat] = call_id
             if parsed is not None:
                 found[seat] = parsed["items"]
@@ -216,21 +276,32 @@ class Assessment:
 
         pooled = assessment_run.pool_claims(found, seats)
         claim_ids = [str(uuid.uuid4()) for _claim in pooled]
-        self.insert("aci_assessment_claims",
-                    claim_rows(self.run_id, version["id"], pooled, claim_ids, passages))
+        rows = claim_rows(self.run_id, version["id"], pooled, claim_ids, passages)
+        # A claim whose two passages share a locator got no row above (it is
+        # counted as unreadable on the finder's call): drop it here too, so no
+        # verdict or confirmation is asked about a claim nothing was written
+        # for.
+        written = {row["id"] for row in rows}
+        pooled, claim_ids = (
+            [claim for claim, claim_id in zip(pooled, claim_ids) if claim_id in written],
+            [claim_id for claim_id in claim_ids if claim_id in written])
+        self.insert("aci_assessment_claims", rows)
         self.insert("aci_assessment_verdicts", [
             {"claim_id": claim_id, "call_id": finder_calls[seat], "seat": seat,
              "holds": True, "absolute": None, "reason": "found it"}
             for claim_id, claim in zip(claim_ids, pooled) for seat in claim["found_by"]])
 
+        seated = set(seats)
         for seat in seats:
             to_confirm = assessment_run.claims_to_confirm(pooled, seat)
             if not to_confirm:
                 continue
             claims = [claim for _i, claim in to_confirm]
             system, user = assessment_call.compose_confirm(labelled, claims)
-            call_id, verdicts = self.call(version, "confirm", seat, system, user,
-                                          parse_confirm(claims))
+            call_id, verdicts, tag = self.call(version, "confirm", seat, system, user,
+                                               parse_confirm(claims), seated)
+            if tag is not None:
+                seated.add(tag)
             if verdicts is None:
                 continue
             self.insert("aci_assessment_verdicts", [

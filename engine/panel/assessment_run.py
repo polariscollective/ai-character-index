@@ -45,27 +45,44 @@ def candidates(seat, config, panel):
     return [seat] + config.get("substitutes", {}).get(panel, {}).get(seat, [])
 
 
-def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=()):
+def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(),
+                         substituted=None):
     """Ask `seat`'s own model, then its declared substitutes in order, until
-    one answers. A substitute that is itself one of `seated`, the seats of the
-    same question, is skipped rather than asked, so no model answers one
-    question twice; the seat itself is always asked.
+    one answers.
+
+    `seated` is every model that must not answer this question for this
+    document a second time: the caller passes the question's configured
+    seats, plus every model that has already answered it earlier in the same
+    document's loop over those seats. A substitute that is one of `seated` is
+    skipped rather than asked, so no model answers one question twice for one
+    document; the seat itself is always asked, whether or not it is in
+    `seated`.
 
     A candidate fails when the call raises, when it comes back
     content-filtered, or when its reply is empty once stripped.
+
+    `substituted` may be a list the caller passes in, filled in place as
+    candidates fail or are skipped rather than only built and returned. A
+    `KeyboardInterrupt` or a `SystemExit` raised while asking a candidate is
+    not treated as that candidate failing: it propagates straight out of this
+    call, before the candidate itself is billed, but the caller's list still
+    holds every earlier candidate's attempt, billed or not, because it is the
+    same list this function has been appending to rather than a copy.
 
     Returns (tag, answer, substituted, refused):
 
     - `tag` and `answer` are the candidate that answered and `seat_call.ask`'s
       dict for it, or (None, None) when every candidate failed;
     - `substituted` lists every candidate before the one returned, in the order
-      tried: {"model", "reason", "cost_usd", "finish_reason", "model_id"} for
-      one that failed, the last three None when it raised before answering,
-      since it was never billed; and {"model", "reason": "already seated"} for
-      one that was skipped;
+      tried: {"model", "reason", "cost_usd", "finish_reason", "model_id",
+      "prompt_tokens", "completion_tokens"} for one that failed, the last five
+      None when it raised before answering, since it was never billed; and
+      {"model", "reason": "already seated"} for one that was skipped;
     - `refused` lists (candidate, reply) for every failed candidate whose reply
       had any text, for the caller to keep."""
-    substituted, refused = [], []
+    if substituted is None:
+        substituted = []
+    refused = []
     for position, tag in enumerate(candidates(seat, config, panel)):
         if position and tag in seated:
             substituted.append({"model": tag, "reason": ALREADY_SEATED})
@@ -74,7 +91,8 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(
             answer = seat_call.ask(tag, system, user, config, call_model)
         except Exception as failed:                      # noqa: BLE001
             substituted.append({"model": tag, "reason": str(failed)[:300],
-                                "cost_usd": None, "finish_reason": None, "model_id": None})
+                                "cost_usd": None, "finish_reason": None, "model_id": None,
+                                "prompt_tokens": None, "completion_tokens": None})
             continue
         if answer["finish_reason"] == "content_filter":
             reason = "finish_reason=content_filter"
@@ -82,9 +100,12 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(
             reason = f"empty reply, finish_reason={answer['finish_reason']}"
         else:
             return tag, answer, substituted, refused
+        usage = answer["usage"] or {}
         substituted.append({"model": tag, "reason": reason, "cost_usd": answer["cost_usd"],
                             "finish_reason": answer["finish_reason"],
-                            "model_id": answer["model_id"]})
+                            "model_id": answer["model_id"],
+                            "prompt_tokens": usage.get("prompt_tokens"),
+                            "completion_tokens": usage.get("completion_tokens")})
         if answer["reply"]:
             refused.append((tag, answer["reply"]))
     return None, None, substituted, refused

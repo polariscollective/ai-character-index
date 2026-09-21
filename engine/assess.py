@@ -85,14 +85,16 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
         print(f"  {name_of(document['version'])}: {len(document['passages'])} passages")
     print(f"Priced at about {estimate} dollars: criteria by {', '.join(panels['criteria'])}; "
           f"contradictions and their confirmation by {', '.join(panels['contradictions'])}. "
-          "A seat answered by a substitute costs more.")
+          "The price counts each seat's own model once; a refused attempt is billed "
+          "before its substitute answers, so a run that meets a refusal costs more "
+          "than this estimate.")
     if not go:
         return estimate, None
 
     run = assessment_store.Assessment(store, config, panels,
                                       call_model or batch_job.call_openrouter, panel)
-    run.start(created_by, estimate)
     try:
+        run.start(created_by, estimate)
         for document in documents:
             run.document(document)
     except BaseException as stopped:

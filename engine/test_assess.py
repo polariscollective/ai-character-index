@@ -24,6 +24,7 @@ sys.path.insert(0, str(HERE / "spec-cite"))
 import assess                    # noqa: E402
 import assessment_call           # noqa: E402
 import assessment_run            # noqa: E402
+import assessment_store          # noqa: E402
 import batch_job                 # noqa: E402
 
 CONFIG = json.loads((HERE / "panel" / "panel-config.json").read_text())
@@ -114,7 +115,8 @@ class Scripted:
     """Answers by question and model. The default: every criteria call cites
     passage 1; sol and fable find the privacy clash, kimi the safety clash; each
     confirmation holds its first claim and rejects any second one. `script`
-    overrides a (question, tag) with (reply, finish_reason) or an exception."""
+    overrides a (question, tag) with (reply, finish_reason) or an exception, a
+    KeyboardInterrupt or a SystemExit included."""
 
     def __init__(self, **script):
         self.script = {tuple(key.split("__")): value for key, value in script.items()}
@@ -125,7 +127,7 @@ class Scripted:
         self.asked.append((question, tag, user))
         if (question, tag) in self.script:
             scripted = self.script[(question, tag)]
-            if isinstance(scripted, Exception):
+            if isinstance(scripted, BaseException):
                 raise scripted
             reply, finish_reason = scripted
             return reply, dict(USAGE), finish_reason, 0.5
@@ -308,9 +310,30 @@ class RunTest(unittest.TestCase):
             {"model": "opus", "finish_reason": "stop", "cost_usd": opus_cost, "reason": None}])
         # Both attempts were billed, so both are in the call's cost.
         self.assertEqual(call["cost_usd"], round(fable_cost + opus_cost, 6))
+        # And both attempts' tokens are in the call's, the same way its cost is.
+        self.assertEqual((call["prompt_tokens"], call["completion_tokens"]),
+                         (2 * USAGE["prompt_tokens"], 2 * USAGE["completion_tokens"]))
         scores = [row for row in fake.inserted("aci_assessment_scores")
                   if row["call_id"] == call["id"]]
         self.assertEqual(len(scores), 4)
+
+    def test_no_model_answers_one_question_twice_for_one_document(self):
+        # fable, then its substitutes opus and kimi, all refused on criteria:
+        # kimi answers deepseek's substitute list too, but must not be asked
+        # to answer criteria a second time.
+        model = Scripted(criteria__fable=("", "content_filter"),
+                         criteria__opus=("", "content_filter"),
+                         criteria__deepseek=("", "content_filter"))
+        fake, _estimate, _run_id = run(model)
+        calls = calls_by(fake)
+        self.assertEqual(calls[("criteria", "fable")]["model"], "kimi")
+        deepseek_call = calls[("criteria", "deepseek")]
+        self.assertEqual(deepseek_call["status"], "error")
+        self.assertEqual([(a["model"], a["reason"]) for a in deepseek_call["attempts"]], [
+            ("deepseek", "finish_reason=content_filter"), ("kimi", "already seated")])
+        asked = [(question, tag) for question, tag, _user in model.asked]
+        self.assertEqual(asked.count(("criteria", "kimi")), 1)
+        self.assertEqual(fake.tables["aci_assessment_runs"][0]["status"], "done")
 
     def test_a_substitute_already_seated_for_the_question_is_skipped(self):
         model = Scripted(contradictions__fable=("", "content_filter"),
@@ -375,6 +398,80 @@ class RunTest(unittest.TestCase):
         self.assertFalse([v for v in fake.inserted("aci_assessment_verdicts")
                           if v["call_id"] == call["id"]])
 
+    def test_an_interrupted_call_keeps_what_it_already_billed(self):
+        model = Scripted(criteria__fable=("", "content_filter"),
+                         criteria__opus=KeyboardInterrupt())
+        fake = store()
+        with self.assertRaises(KeyboardInterrupt):
+            run(model, fake=fake)
+        calls = calls_by(fake)
+        sol_cost = calls[("criteria", "sol")]["cost_usd"]
+        call = calls[("criteria", "fable")]
+        self.assertEqual(call["status"], "error")
+        fable_cost = batch_job.cost_of("fable", USAGE, CONFIG)
+        self.assertEqual(call["attempts"], [
+            {"model": "fable", "finish_reason": "content_filter", "cost_usd": fable_cost,
+             "reason": "finish_reason=content_filter"}])
+        self.assertEqual(call["cost_usd"], fable_cost)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertEqual(run_row["status"], "error")
+        # The run's cost includes the interrupted call's billed attempt, and
+        # nothing from deepseek's call, which never started.
+        self.assertEqual(run_row["cost_usd"], round(sol_cost + fable_cost, 6))
+        self.assertNotIn(("criteria", "deepseek"), calls)
+
+    def test_a_run_that_cannot_be_marked_running_ends_error_or_is_reported(self):
+        class Balky(FakeStore):
+            def update(self, table, match, patch):
+                if table == "aci_assessment_runs" and patch.get("status") == "running":
+                    raise RuntimeError("connection reset")
+                return super().update(table, match, patch)
+        fake = Balky(aci_spec_versions=[dict(VERSION)])
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            with self.assertRaises(RuntimeError):
+                run(Scripted(), fake=fake)
+        [row] = fake.tables["aci_assessment_runs"]
+        self.assertNotEqual(row["status"], "pending")
+        self.assertEqual(row["status"], "error")
+        self.assertIn(row["id"], stderr.getvalue())
+
+    def test_a_claim_whose_two_passages_share_a_locator_gets_no_row(self):
+        shared = f"{DOC} > #b > ¶2"
+        passages = [(shared, "B", "one reading"), (shared, "B", "another reading")]
+        rows = assessment_store.claim_rows(
+            "run", "v", [{"first": 1, "second": 2, "situation": "s", "why": "w",
+                         "found_by": ["sol"]}], ["claim-1"], passages)
+        self.assertEqual(rows, [])
+
+    def test_a_document_run_never_writes_a_verdict_for_a_claim_with_no_row(self):
+        shared = f"{DOC} > #b > ¶2"
+        dup_passages = [(shared, "B", "one reading"), (shared, "B", "another reading")]
+        dup_version = {"id": "dup", "spec_id": "lab--dup", "version": "2026-01-01",
+                       "markdown": "## B {#b authority=user}\n\ntext"}
+        fake = FakeStore(aci_spec_versions=[dup_version])
+        # Only sol finds the pair, so fable and kimi would otherwise be asked
+        # to confirm it: a claim on a locator collision must never reach that
+        # stage, or its verdict would name a claim with no row.
+        found = ("CONTRADICTION: [1] [2] | Conflicting readings. | "
+                "One passage cited under two different numbers.\n"
+                "CONTRADICTIONS: 2\nCONTRADICTIONS_RATIONALE: One clash.")
+        not_found = "CONTRADICTION: none\nCONTRADICTIONS: 4\nCONTRADICTIONS_RATIONALE: None found."
+        model = Scripted(contradictions__sol=(found, "stop"),
+                         contradictions__fable=(not_found, "stop"),
+                         contradictions__kimi=(not_found, "stop"))
+        with contextlib.redirect_stdout(io.StringIO()):
+            assess.assess(fake, CONFIG, ["dup"], lambda *_a: dup_passages, call_model=model,
+                          go=True, created_by="tester")
+        # The claim, sharing a locator, got no row, and nobody was asked to
+        # confirm what was never written.
+        self.assertEqual(fake.tables.get("aci_assessment_claims", []), [])
+        self.assertNotIn(("confirm", "fable"),
+                         {(q, t) for q, t, _u in model.asked})
+        written = {row["id"] for row in fake.tables.get("aci_assessment_claims", [])}
+        for verdict in fake.tables.get("aci_assessment_verdicts", []):
+            self.assertIn(verdict["claim_id"], written)
+
     def test_a_failure_that_stops_the_run_is_recorded_on_it(self):
         class Failing(FakeStore):
             def insert(self, table, rows, chunk=1000, returning=False):
@@ -408,6 +505,9 @@ class MainTest(unittest.TestCase):
         printed = self.main(["--documents=v"], fake)
         self.assertIn("Priced at about", printed)
         self.assertIn("--go", printed)
+        self.assertIn("counts each seat's own model once", printed)
+        self.assertIn("a refused attempt is billed before its substitute answers", printed)
+        self.assertNotIn("A seat answered by a substitute costs more", printed)
         self.assertEqual(fake.writes, [])
 
     def test_with_go_it_prints_the_run_and_records_who_launched_it(self):
