@@ -617,7 +617,13 @@ check("a behaviour whose paragraphs were withheld still shows its figure",
  * publication order, and that it stays fragile. This is the guard that turns
  * "by construction" into something that fails loudly if a later change makes the
  * array partial again. */
-var HUE_SLOTS = 12;
+/* Extracted, not written out. The whole point of this harness is that a symbol
+   cannot drift from the file it is testing, and a hardcoded 12 here would be a
+   second copy of a constant that lives in app.js. test_appjs_links.js does the
+   same for this same symbol. This repository has published a wrong figure once
+   from exactly that kind of duplication, when bands.shown_by_default drifted
+   from the reader's own DEFAULT_BANDS. */
+eval(extractConst("HUE_SLOTS"));
 eval(extractFn("function payloadBehaviours() {"));
 eval(extractFn("function behaviourHue(behaviour) {"));
 
