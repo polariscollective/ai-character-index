@@ -95,8 +95,9 @@ BUILD_PARAMS_1919EE6B = {
 PANEL = ["deepseek", "fable", "sol"]
 SUBSTITUTED = ("harm-avoidance-to-third-parties", "v-openai-2026")
 FILTERED = "fable's output was content-filtered on every attempt."
-ASSESSMENT = "assess-1"
-EARLIER_ASSESSMENT = "assess-0"
+# Assessment run ids as the database writes them: the builder refuses any other.
+ASSESSMENT = "3b9d6f1a-7c2e-4a5b-8d0f-1e3a5c7b9d2f"
+EARLIER_ASSESSMENT = "0c2e4a6b-8d1f-4b3c-9e5a-7f9b1d3c5e7a"
 ASSESSMENT_PANELS = {"criteria": ["sol", "fable", "deepseek"],
                      "contradictions": ["sol", "fable", "kimi"]}
 
@@ -508,7 +509,8 @@ class OutOfTenTest(unittest.TestCase):
 
     def test_the_depths_are_the_ones_given_out_of_ten_with_that_assessment_run(self):
         store = FakeStore(self.tables)
-        given = publish.index_store.cell_depths(store, cells_of(self.tables), ASSESSMENT)
+        given = publish.index_store.cell_depths(store, cells_of(self.tables), ASSESSMENT,
+                                                depth_prompt=TEN)
         versions = {v["id"]: f"{v['spec_id']}@{v['version']}"
                     for v in self.tables["aci_spec_versions"]}
         for (slug, version_id), depth in given.items():
@@ -565,6 +567,21 @@ class OutOfTenTest(unittest.TestCase):
         payload, _digest = build_payload(self.tables, depth_prompt=TEN,
                                          assessment_run=ASSESSMENT)
         self.assertEqual(payload, self.payload)
+
+    def test_a_publication_recorded_under_an_earlier_prompt_of_ten_still_rebuilds(self):
+        """The prompt of ten is edited after a publication was built: its file
+        digest moves, and the publication, rebuilt with the digest it recorded,
+        still reads its own rows and comes back to the same bytes."""
+        payload, digest = build_payload(self.tables, depth_prompt=TEN,
+                                        assessment_run=ASSESSMENT)
+        original = publish.depth_call.prompt_sha256
+        with mock.patch.object(publish.depth_call, "prompt_sha256",
+                               lambda scale=4: "e" * 64 if scale == 10 else original(scale)):
+            self.assertNotEqual(publish.depth_call.prompt_sha256(10), TEN)
+            rebuilt, rebuilt_digest = build_payload(self.tables, depth_prompt=TEN,
+                                                    assessment_run=ASSESSMENT)
+        self.assertEqual(rebuilt_digest, digest)
+        self.assertEqual(rebuilt, payload)
 
     def test_an_assessment_run_that_left_a_document_out_is_refused_naming_it(self):
         with self.assertRaises(SystemExit) as refused:

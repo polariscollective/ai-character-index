@@ -26,7 +26,8 @@ ANSWER = "DEPTH: 7\nRATIONALE: Rules, one worked example."
 
 class Scripted:
     """Replies per tag, taken in order; a tag with nothing left answers ANSWER.
-    A reply that is an exception is raised instead of returned."""
+    A reply that is an exception, a KeyboardInterrupt included, is raised
+    instead of returned."""
 
     def __init__(self, **script):
         self.script = {tag: list(replies) for tag, replies in script.items()}
@@ -38,7 +39,7 @@ class Scripted:
         self.asked.append((tag, user))
         replies = self.script.get(tag) or []
         reply = replies.pop(0) if replies else ANSWER
-        if isinstance(reply, Exception):
+        if isinstance(reply, BaseException):
             raise reply
         return reply, dict(USAGE), "stop", 0.5
 
@@ -143,9 +144,71 @@ class GiveTest(unittest.TestCase):
         self.assertEqual(given["depth"], 7)
         self.assertEqual(given["attempts"][0], {"model": "deepseek", "reminder": 0,
                                                 "finish_reason": None, "cost_usd": None,
-                                                "parsed": False})
+                                                "parsed": False,
+                                                "error": "RuntimeError: 429"})
         self.assertEqual(given["attempts"][1]["reminder"], 1)
+        self.assertNotIn("error", given["attempts"][1], "only an attempt that raised has one")
         self.assertEqual(given["replies"], [None, ANSWER])
+
+    def test_what_a_raised_call_said_is_cut_to_300_characters(self):
+        given = self.give("sol", Scripted(sol=[RuntimeError("x" * 1000), ANSWER]))
+        error = given["attempts"][0]["error"]
+        self.assertEqual(len(error), 300)
+        self.assertTrue(error.startswith("RuntimeError: xxx"))
+
+    def test_a_seat_that_only_replied_off_the_scale_is_substituted_as_off_scale(self):
+        model = Scripted(deepseek=["DEPTH: -1", "no depth", "DEPTH: 11"])
+        given = self.give("deepseek", model)
+        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["substitution_reason"], "off-scale reply after two reminders")
+        self.assertEqual(given["substitution_reason"], depth_ladder.SUBSTITUTION_REASON)
+
+    def test_a_seat_that_raised_every_time_is_not_reported_as_off_the_scale(self):
+        model = Scripted(deepseek=[RuntimeError("provider refused the input"),
+                                   RuntimeError("second"), RuntimeError("third")])
+        given = self.give("deepseek", model)
+        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["substitution_reason"],
+                         "the seat's model raised on every attempt: "
+                         "RuntimeError: provider refused the input")
+
+    def test_a_seat_that_raised_on_every_attempt_names_its_first_error_cut(self):
+        model = Scripted(deepseek=[RuntimeError("y" * 1000)] * 3)
+        given = self.give("deepseek", model)
+        reason = given["substitution_reason"]
+        self.assertEqual(reason, "the seat's model raised on every attempt: "
+                         + ("RuntimeError: " + "y" * 1000)[:300])
+
+    def test_a_seat_that_raised_and_replied_off_the_scale_says_both(self):
+        model = Scripted(deepseek=[RuntimeError("429"), "DEPTH: -1", RuntimeError("500")])
+        given = self.give("deepseek", model)
+        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["substitution_reason"],
+                         "the seat's model raised or replied off the scale")
+
+    def test_attempts_can_be_filled_in_a_list_the_caller_holds(self):
+        """So a caller interrupted mid-ladder still holds what was billed."""
+        held = []
+        model = Scripted(sol=["DEPTH: -1", KeyboardInterrupt()])
+        with self.assertRaises(KeyboardInterrupt):
+            depth_ladder.give("sol", SYSTEM, USER, self.config, model, attempts=held)
+        self.assertEqual(len(held), 1)
+        self.assertEqual(held[0]["model"], "sol")
+        self.assertEqual(held[0]["cost_usd"], batch_job.cost_of("sol", USAGE, self.config))
+        given = depth_ladder.give("sol", SYSTEM, USER, self.config, Scripted(), attempts=[])
+        self.assertEqual(given["depth"], 7)
+
+    def test_every_attempt_the_ladder_can_make_is_listed_in_order(self):
+        self.assertEqual(depth_ladder.attempts_at_most("fable", self.config), [
+            ("fable", 0), ("fable", 1), ("fable", 2), ("opus", 0), ("opus", 1),
+            ("kimi", 0), ("kimi", 1)])
+        self.assertEqual(depth_ladder.attempts_at_most("sol", self.config),
+                         [("sol", 0), ("sol", 1), ("sol", 2)])
+        model = Scripted(fable=["DEPTH: -1"] * 3, opus=["DEPTH: -1"] * 2,
+                         kimi=["DEPTH: -1"] * 2)
+        given = self.give("fable", model)
+        self.assertEqual([(a["model"], a["reminder"]) for a in given["attempts"]],
+                         depth_ladder.attempts_at_most("fable", self.config))
 
     def test_tokens_and_seconds_are_summed_over_the_attempts_that_came_back(self):
         given = self.give("deepseek", Scripted(deepseek=[RuntimeError("429"), "DEPTH: -1",

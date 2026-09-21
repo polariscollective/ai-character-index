@@ -101,9 +101,12 @@ def require_depths(store, cells, panel, assessment_run_id=None):
     its depth must be too.
 
     `assessment_run_id` names the assessment run to read depths out of ten
-    from; without it, depths come from the scale of four, the prompt every
-    publication built so far was judged on."""
-    given = index_store.cell_depths(store, cells, assessment_run_id)
+    from, under the current prompt of ten, the only one a new publication is
+    built with; without it, depths come from the scale of four, the prompt
+    every publication built so far was judged on."""
+    given = index_store.cell_depths(
+        store, cells, assessment_run_id,
+        depth_prompt=depth_call.prompt_sha256(10) if assessment_run_id is not None else None)
     recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
 
@@ -363,6 +366,15 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         raise SystemExit("publish: --link-runs is required, because a publication "
                          "names the link runs it carries")
     out_of_ten = index_store.depth_scale(depth_prompt, assessment_run) == 10
+    if out_of_ten and depth_prompt != depth_call.prompt_sha256(10):
+        # Only here: a rebuild reads the digest it recorded, whatever the prompt
+        # of ten has since become, but a new publication is built on the current one.
+        current = depth_call.prompt_sha256(10)
+        raise SystemExit(
+            f"--depth-prompt={depth_prompt} is not the prompt of ten as it stands, {current}. "
+            "A new publication carries depths given under the current prompt: give them "
+            f"again (engine/panel/depth_pass.py --runs=... --assessment-run={assessment_run} "
+            f"--go), then build with --depth-prompt={current}.")
     config = config or json.loads((HERE / "panel" / "panel-config.json").read_text())
     panel_name = config["display"]["panel"]
     panel = panel_seats(config, panel_name)
@@ -435,6 +447,9 @@ def main(argv=None):
                         help="the aci_assessment_runs id the depths out of ten were given "
                              "with, and whose assessment of each document is carried")
     args = parser.parse_args(argv)
+    if args.assessment_run is not None:
+        # Before the store is opened: an id that is not one is refused by name.
+        args.assessment_run = index_store.assessment_run_id(args.assessment_run)
 
     store = Store.from_env()
     index_store.install_registry(store)

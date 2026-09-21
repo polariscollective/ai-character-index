@@ -25,6 +25,9 @@ import publish                     # noqa: E402
 
 TEN = publish.depth_call.prompt_sha256(10)
 FOUR = publish.depth_call.prompt_sha256(4)
+# An assessment run id as the database writes one, for the command line, which
+# refuses anything else.
+RUN_UUID = "8a4e2c6f-1b3d-4f5a-9c7e-0d2b4f6a8c1e"
 
 
 class FakeStore:
@@ -720,6 +723,19 @@ class PublishOutOfTenTest(unittest.TestCase):
             self.assertIn(FOUR, message)
             self.assertIn(TEN, message)
 
+    def test_a_new_publication_uses_the_current_prompt_of_ten(self):
+        """A digest of ten the prompt file no longer has builds nothing new:
+        rebuilding an old publication reads its recorded digest, publishing a
+        new one does not."""
+        original = publish.depth_call.prompt_sha256
+        edited = "e" * 64
+        with mock.patch.object(publish.depth_call, "prompt_sha256",
+                               lambda scale=4: edited if scale == 10 else original(scale)):
+            message = self.refused(publishing_store(), depth_prompt=TEN,
+                                   assessment_run="assessment-1")
+        self.assertIn(TEN, message)
+        self.assertIn(edited, message)
+
     def test_the_prompt_of_ten_needs_its_assessment_run(self):
         self.assertIn("--assessment-run", self.refused(publishing_store(), depth_prompt=TEN))
 
@@ -775,9 +791,26 @@ class MainTest(unittest.TestCase):
 
     def test_the_new_flags_reach_publish_only_when_given(self):
         self.assertEqual(self.forwarded(), {"link_runs": ["l1"]})
-        kwargs = self.forwarded(f"--depth-prompt={TEN}", "--assessment-run=assessment-1")
+        kwargs = self.forwarded(f"--depth-prompt={TEN}", f"--assessment-run={RUN_UUID}")
         self.assertEqual((kwargs["depth_prompt"], kwargs["assessment_run"]),
-                         (TEN, "assessment-1"))
+                         (TEN, RUN_UUID))
+
+    def test_an_assessment_run_in_capitals_is_forwarded_as_the_database_writes_it(self):
+        kwargs = self.forwarded(f"--depth-prompt={TEN}", f"--assessment-run={RUN_UUID.upper()}")
+        self.assertEqual(kwargs["assessment_run"], RUN_UUID)
+
+    def test_an_assessment_run_that_is_not_a_uuid_is_refused_before_the_store(self):
+        for given in ("assessment-1", RUN_UUID[:-1], RUN_UUID.replace("-", "")):
+            with mock.patch.object(publish.Store, "from_env",
+                                   side_effect=AssertionError("the store was opened")), \
+                 mock.patch.object(publish, "publish",
+                                   side_effect=AssertionError("publish was called")), \
+                 self.assertRaises(SystemExit) as refused:
+                publish.main(["--behaviours=helpfulness", "--documents=v1", "--link-runs=l1",
+                              f"--depth-prompt={TEN}", f"--assessment-run={given}"])
+            message = str(refused.exception)
+            self.assertIn(f"--assessment-run={given}", message)
+            self.assertIn("uuid", message)
 
 
 class LinksFormatTest(unittest.TestCase):

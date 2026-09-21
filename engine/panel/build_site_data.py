@@ -40,7 +40,9 @@ substitution is byte-identical to one built before substitutions existed.
 --depth-prompt and --assessment-run choose the scale of the depths. Naming
 neither, or the prompt of four, builds exactly the payload built before the
 scale of ten existed. Naming an assessment run reads the depths out of ten given
-with it, under the prompt of ten, which --depth-prompt must then name; the
+with it, under the prompt of ten whose digest --depth-prompt must then name: the
+digest the depths were given under, which a rebuild takes from what the
+publication recorded, whatever the prompt of ten has become since. The
 payload gains `depthScale`: 10, and `assessment`, each document's assessment as
 a whole from that run: the four criteria with every judge, the contradictions
 the judges claimed with how each was settled, and the total out of 20.
@@ -58,7 +60,8 @@ is what pins one now.
   --depth-prompt=SHA256  the depth prompt the depths were given under (default:
                          the prompt of four)
   --assessment-run=ID  the assessment run the depths out of ten were given with,
-                       and whose assessment of each document the payload carries
+                       and whose assessment of each document the payload carries;
+                       a uuid, refused before the store is opened otherwise
 """
 import collections
 import importlib.util
@@ -438,8 +441,10 @@ def main(argv=None):
     sys.path.insert(0, str(ROOT / "engine"))
     import index_store            # noqa: E402
     from store import Store       # noqa: E402
-    # Before the store is opened: a pairing that reads the wrong scale is refused
-    # before anything is read on it.
+    # Before the store is opened: an assessment run id that is not one, or a
+    # pairing that reads the wrong scale, is refused before anything is read on it.
+    if assessment_run_id is not None:
+        assessment_run_id = index_store.assessment_run_id(assessment_run_id)
     index_store.depth_scale(depth_prompt, assessment_run_id)
     store = Store.from_env()
     index_store.install_registry(store)
@@ -484,7 +489,8 @@ def main(argv=None):
             text[loc] = t
     depths = {(slug, f"{versions[version_id]['spec_id']}@{versions[version_id]['version']}"): depth
               for (slug, version_id), depth
-              in index_store.cell_depths(store, cells, assessment_run_id).items()}
+              in index_store.cell_depths(store, cells, assessment_run_id,
+                                         depth_prompt=depth_prompt).items()}
 
     behaviours = display_behaviours(DISPLAY["behaviours"], registry)
     out_behaviours = build_behaviours(behaviours, votes, text, document_ids, depths,

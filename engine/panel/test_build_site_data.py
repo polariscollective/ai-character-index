@@ -337,6 +337,7 @@ class DocumentAssessmentTest(unittest.TestCase):
 
 FOUR = depth_call.prompt_sha256(4)
 TEN = depth_call.prompt_sha256(10)
+RUN_UUID = "8a4e2c6f-1b3d-4f5a-9c7e-0d2b4f6a8c1e"
 
 
 class DepthPromptTest(unittest.TestCase):
@@ -351,12 +352,18 @@ class DepthPromptTest(unittest.TestCase):
         return str(refused.exception)
 
     def test_an_assessment_run_reads_the_prompt_of_ten_and_nothing_else(self):
-        message = self.refused("--assessment-run=assess-1")
+        message = self.refused(f"--assessment-run={RUN_UUID}")
         self.assertIn(FOUR, message)
         self.assertIn(TEN, message)
-        message = self.refused("--assessment-run=assess-1", f"--depth-prompt={FOUR}")
+        message = self.refused(f"--assessment-run={RUN_UUID}", f"--depth-prompt={FOUR}")
         self.assertIn(FOUR, message)
         self.assertIn(TEN, message)
+
+    def test_an_assessment_run_that_is_not_a_uuid_is_refused_and_named(self):
+        for given in ("assess-1", RUN_UUID[:-1], "{" + RUN_UUID + "}"):
+            message = self.refused(f"--assessment-run={given}", f"--depth-prompt={TEN}")
+            self.assertIn(f"--assessment-run={given}", message)
+            self.assertIn("uuid", message)
 
     def test_the_prompt_of_ten_is_read_with_the_assessment_run_it_was_given_with(self):
         message = self.refused(f"--depth-prompt={TEN}")

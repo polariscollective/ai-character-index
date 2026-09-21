@@ -26,6 +26,7 @@ import assessment_call           # noqa: E402
 import assessment_run            # noqa: E402
 import assessment_store          # noqa: E402
 import batch_job                 # noqa: E402
+import seat_call                 # noqa: E402
 
 CONFIG = json.loads((HERE / "panel" / "panel-config.json").read_text())
 
@@ -167,6 +168,41 @@ class PriceTest(unittest.TestCase):
         self.assertEqual(estimate, round(assessment_run.price_document(
             labelled, CONFIG["assessment"], CONFIG), 2))
         self.assertGreater(estimate, 0)
+
+    def test_the_ceiling_bills_every_declared_candidate_at_its_largest_output(self):
+        labelled = assessment_call.with_heading_attributes(PASSAGES, VERSION["markdown"])
+
+        def at_most(tag, system, user):
+            usage = {"prompt_tokens": (len(system) + len(user)) // 4,
+                     "completion_tokens": CONFIG["models"][tag].get("max_output", 32768)}
+            return batch_job.cost_of(tag, usage, CONFIG)
+
+        want = 0.0
+        # Criteria: sol, fable then opus then kimi, deepseek then kimi.
+        system, user = assessment_call.compose("criteria", labelled)
+        want += sum(at_most(tag, system, user)
+                    for tag in ("sol", "fable", "opus", "kimi", "deepseek", "kimi"))
+        # Contradictions: sol, fable then opus then kimi, kimi.
+        system, user = assessment_call.compose("contradictions", labelled)
+        want += sum(at_most(tag, system, user)
+                    for tag in ("sol", "fable", "opus", "kimi", "kimi"))
+        # Confirmation, at the estimate's own input: the document and 3,000
+        # characters of claims, asked of the contradictions' seats.
+        system, user = assessment_call.compose_confirm(labelled, [])
+        user += "x" * assessment_run.CONFIRM_CLAIMS_CHARS
+        want += sum(at_most(tag, system, user)
+                    for tag in ("sol", "fable", "opus", "kimi", "kimi"))
+        self.assertAlmostEqual(assess.ceiling_document(labelled, CONFIG["assessment"], CONFIG),
+                               want)
+
+        fake = store()
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            estimate, _run_id = assess.assess(fake, CONFIG, ["v"], passages_for,
+                                              call_model=Scripted(), go=False)
+        out = printed.getvalue()
+        self.assertIn(f"ceiling of {round(want, 2)} dollars", out)
+        self.assertIn("the most this assessment can cost", out)
+        self.assertGreater(round(want, 2), estimate)
 
     def test_an_unknown_document_is_refused_before_anything_is_written(self):
         fake = store()
@@ -489,16 +525,56 @@ class RunTest(unittest.TestCase):
 
 
 class MainTest(unittest.TestCase):
-    def main(self, argv, fake):
+    def main(self, argv, fake, model=None, code=0, environ=None):
         with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
                     lambda: fake)})), \
                 mock.patch.object(assess.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(assess.h, "passages", passages_for), \
-                mock.patch.object(assess.batch_job, "call_openrouter", Scripted()), \
-                mock.patch.dict(os.environ, {"USER": "someone"}), \
+                mock.patch.object(assess.batch_job, "call_openrouter", model or Scripted()), \
+                mock.patch.dict(os.environ, {"USER": "someone", **(environ or {})}), \
                 contextlib.redirect_stdout(io.StringIO()) as printed:
-            self.assertEqual(assess.main(argv), 0)
+            self.assertEqual(assess.main(argv), code)
         return printed.getvalue()
+
+    def test_a_run_that_assessed_every_document_exits_zero_and_names_no_gap(self):
+        printed = self.main(["--documents=v", "--go"], store())
+        self.assertNotIn("gave no", printed)
+        self.assertNotIn("does not assess", printed)
+
+    def test_a_run_with_gaps_prints_every_one_and_exits_one_after_closing_the_run(self):
+        # sol has no substitute, so its criteria call is left in error, and
+        # deepseek's reply leaves a criterion unscored.
+        partial = ("CONFLICT_RULES: 3\nCONFLICT_RULES_PASSAGES: none\n"
+                   "RULE_FORCE: 2\nREASONS: 2\nREASONS_RATIONALE: Some.")
+        model = Scripted(criteria__sol=RuntimeError("provider refused the input"),
+                         criteria__deepseek=(partial, "stop"))
+        fake = store()
+        printed = self.main(["--documents=v", "--go"], fake, model=model, code=1)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertEqual(run_row["status"], "done", "the run row is closed first")
+        self.assertIn(run_row["id"], printed)
+        self.assertIn(f"{DOC}: sol gave no criteria answer", printed)
+        self.assertIn(f"{DOC}: deepseek's criteria answer scored no situations", printed)
+        self.assertLess(printed.index(run_row["id"]), printed.index("sol gave no criteria"))
+
+    def test_the_gaps_are_the_ones_a_publication_would_refuse(self):
+        model = Scripted(criteria__sol=RuntimeError("provider refused the input"))
+        fake = store()
+        with contextlib.redirect_stdout(io.StringIO()):
+            _estimate, run_id = assess.assess(fake, CONFIG, ["v"], passages_for,
+                                              call_model=model, go=True)
+        gaps = assess.gaps(fake, run_id, ["v"])
+        run, by_version = assess.index_store.assessment_rows(fake, run_id, ["v"])
+        self.assertEqual(gaps, assess.index_store.assessment_gaps(run_id, run, by_version,
+                                                                  [VERSION]))
+        self.assertTrue(gaps)
+
+    def test_a_set_anthropic_key_is_noted_with_go(self):
+        with contextlib.redirect_stderr(io.StringIO()) as noted:
+            self.main(["--documents=v", "--go"], store(),
+                      environ={"ANTHROPIC_API_KEY": "sk-stale"})
+        # The harness may note its own routing after it, once per process.
+        self.assertEqual(noted.getvalue().splitlines()[0], seat_call.ANTHROPIC_KEY_NOTE)
 
     def test_without_go_it_prints_the_price_and_writes_nothing(self):
         fake = store()

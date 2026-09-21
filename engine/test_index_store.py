@@ -2,6 +2,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -379,7 +380,7 @@ class CellDepthOutOfTenTest(unittest.TestCase):
 
     def test_an_assessment_run_reads_its_own_rows_of_ten(self):
         got = index_store.cell_depths(self.store(out_of_ten=self.full_ten()),
-                                      [self.CELL], self.RUN)
+                                      [self.CELL], self.RUN, depth_prompt=TEN)
         self.assertEqual(got[("helpfulness", "row-1")], {
             "mean": 5.3,
             "scale": 10,
@@ -392,21 +393,46 @@ class CellDepthOutOfTenTest(unittest.TestCase):
     def test_a_row_of_another_assessment_run_is_ignored(self):
         rows = [self.ten("sol", 6, assessment_run_id="other-run"),
                self.ten("fable", 6), self.ten("deepseek", 4)]
-        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN)
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
         self.assertEqual(got, {})
 
     def test_a_row_of_another_prompt_digest_is_ignored(self):
         rows = [self.ten("sol", 6, prompt_sha256="stale-digest"),
                self.ten("fable", 6), self.ten("deepseek", 4)]
-        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN)
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
         self.assertEqual(got, {})
+
+    def test_rows_are_read_by_the_digest_given_not_by_the_prompt_on_disk(self):
+        """A publication records the digest its depths were given under. When
+        the prompt of ten is later edited, the file's digest moves and the
+        publication must still read its own rows."""
+        original = index_store.depth_call.prompt_sha256
+        edited = "e" * 64
+        with mock.patch.object(index_store.depth_call, "prompt_sha256",
+                               lambda scale=4: edited if scale == 10 else original(scale)):
+            got = index_store.cell_depths(self.store(out_of_ten=self.full_ten()),
+                                          [self.CELL], self.RUN, depth_prompt=TEN)
+            self.assertEqual(got[("helpfulness", "row-1")]["mean"], 5.3)
+            under_the_edit = [self.ten(m, 1, prompt_sha256=edited)
+                              for m in ("sol", "fable", "deepseek")]
+            got = index_store.cell_depths(self.store(out_of_ten=under_the_edit),
+                                          [self.CELL], self.RUN, depth_prompt=TEN)
+            self.assertEqual(got, {}, "rows under the file's new digest are not the ones given")
+
+    def test_reading_out_of_ten_needs_the_digest_it_was_given_under(self):
+        with self.assertRaises(ValueError):
+            index_store.cell_depths(self.store(out_of_ten=self.full_ten()), [self.CELL],
+                                    self.RUN)
 
     def test_a_row_naming_its_substitute_carries_it(self):
         rows = [self.ten("sol", 6, substitute="kimi",
                          rationale="kimi says 6 out of ten.",
                          substitution_reason="sol was refused on input."),
                self.ten("fable", 6), self.ten("deepseek", 4)]
-        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN)
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
         entry = got[("helpfulness", "row-1")]["judges"]["sol"]
         self.assertEqual(entry, {"depth": 6, "rationale": "kimi says 6 out of ten.",
                                  "model": "kimi",
@@ -433,6 +459,16 @@ class DepthScaleTest(unittest.TestCase):
     def test_the_prompt_of_ten_with_an_assessment_run_reads_the_scale_of_ten(self):
         self.assertEqual(index_store.depth_scale(TEN, "assessment-1"), 10)
 
+    def test_an_earlier_prompt_of_ten_still_reads_the_scale_of_ten(self):
+        """What a publication recorded is what it is rebuilt with: whether a
+        new publication uses the current prompt is publish.py's question."""
+        self.assertEqual(index_store.depth_scale("e" * 64, "assessment-1"), 10)
+
+    def test_a_depth_prompt_that_is_not_a_digest_is_refused_with_an_assessment_run(self):
+        message = self.refusal("abc123", "assessment-1")
+        self.assertIn("abc123", message)
+        self.assertIn("sha256", message)
+
     def test_an_assessment_run_under_any_other_prompt_is_refused_naming_both(self):
         for named in (None, FOUR):
             message = self.refusal(named, "assessment-1")
@@ -446,6 +482,24 @@ class DepthScaleTest(unittest.TestCase):
         message = self.refusal("abc123", None)
         self.assertIn("abc123", message)
         self.assertIn(FOUR, message)
+
+
+class AssessmentRunIdTest(unittest.TestCase):
+    """An assessment run id is a uuid as the database writes it, and anything
+    else given for one is refused by name before a store is read."""
+    ID = "8a4e2c6f-1b3d-4f5a-9c7e-0d2b4f6a8c1e"
+
+    def test_a_uuid_is_taken_as_the_database_writes_it(self):
+        self.assertEqual(index_store.assessment_run_id(self.ID), self.ID)
+        self.assertEqual(index_store.assessment_run_id(self.ID.upper()), self.ID)
+
+    def test_anything_else_is_refused_naming_it(self):
+        for given in ("assessment-1", self.ID[:-1], self.ID + "0", self.ID.replace("-", ""),
+                      "{" + self.ID + "}", f" {self.ID}", ""):
+            with self.assertRaises(SystemExit) as refused:
+                index_store.assessment_run_id(given)
+            self.assertIn(f"--assessment-run={given} is not an assessment run id",
+                          str(refused.exception))
 
 
 V1 = {"id": "row-1", "spec_id": "acme", "version": "2026-01-01"}

@@ -10,6 +10,7 @@ One convention is worth stating. A reader document is a version, and its id is
 versions of one specification are two documents.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -242,7 +243,7 @@ def runlog_rows(store, run_id):
     return rows
 
 
-def cell_depths(store, cells, assessment_run_id=None):
+def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     """The depth of each cell a publication carries, from its own run.
 
     {(behaviour_slug, spec_version_id): {"mean": float, "judges": {model: {"depth",
@@ -250,12 +251,15 @@ def cell_depths(store, cells, assessment_run_id=None):
     the caller decides whether that refuses a publication.
 
     With no assessment run, this reads `aci_depths`, the scale of four, exactly
-    as every publication built so far was. With one, it reads
-    `aci_depths_out_of_ten` instead, for that assessment run and the current
-    prompt of ten (`depth_call.prompt_sha256(10)`); a row of another assessment
-    run or another prompt digest is not read. The cell's entry then gains
-    "scale": 10, and a judge's entry gains "model" and "substitution_reason"
-    when a declared substitute gave that depth.
+    as every publication built so far was, and `depth_prompt` is not read. With
+    one, it reads `aci_depths_out_of_ten` instead, for that assessment run and
+    the digest `depth_prompt` names, which is required: the digest a build was
+    given, and a publication recorded, rather than the digest of the prompt of
+    ten as it stands on disk, so a publication still reads its own depths after
+    the prompt is edited. A row of another assessment run or another prompt
+    digest is not read. The cell's entry then gains "scale": 10, and a judge's
+    entry gains "model" and "substitution_reason" when a declared substitute
+    gave that depth.
     """
     wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
     calls = [c for c in _rows(store, "aci_judge_calls")
@@ -265,10 +269,12 @@ def cell_depths(store, cells, assessment_run_id=None):
     if assessment_run_id is None:
         depths = {d["call_id"]: d for d in _rows(store, "aci_depths")}
     else:
-        prompt_sha256 = depth_call.prompt_sha256(10)
+        if depth_prompt is None:
+            raise ValueError("depths out of ten are read by the digest of the prompt they were "
+                             "given under: pass depth_prompt")
         depths = {d["call_id"]: d for d in _rows(store, "aci_depths_out_of_ten")
                   if d.get("assessment_run_id") == assessment_run_id
-                  and d.get("prompt_sha256") == prompt_sha256}
+                  and d.get("prompt_sha256") == depth_prompt}
 
     by_cell = {}
     for call in calls:
@@ -294,26 +300,36 @@ def cell_depths(store, cells, assessment_run_id=None):
     return out
 
 
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
 def depth_scale(depth_prompt=None, assessment_run_id=None):
     """The scale a build reads its depths on, 4 or 10, from the depth prompt and
     the assessment run it names.
 
     Naming nothing, or the prompt of four, reads the scale of four, as every
-    publication built before the scale of ten did. The prompt of ten is read with
-    the assessment run its depths were given with, because the conflict rules
-    each of those depths was shown come from that run, and `cell_depths` reads no
-    other prompt of ten. Any other pairing is refused, naming the digest given
-    and the digest expected, rather than building a payload on a scale nobody
-    asked for.
+    publication built before the scale of ten did. Depths out of ten are read
+    with the assessment run they were given with, because the conflict rules
+    each of those depths was shown come from that run, and under the digest of
+    the prompt of ten they were given under, which must be named. That digest
+    may be an earlier prompt of ten than the one on disk: a publication is
+    rebuilt with the digest it recorded, and whether a new publication uses the
+    current prompt of ten is `publish.py`'s check, not this one. Any other
+    pairing is refused, naming the digest given and the digest expected, rather
+    than building a payload on a scale nobody asked for.
     """
     four, ten = depth_call.prompt_sha256(4), depth_call.prompt_sha256(10)
     if assessment_run_id is not None:
-        if depth_prompt != ten:
+        if depth_prompt is None or depth_prompt == four:
             named = depth_prompt or f"{four}, the prompt of four, by default"
             raise SystemExit(
                 f"--assessment-run={assessment_run_id} reads depths out of ten, given under "
-                f"the depth prompt {ten}, and --depth-prompt names {named}. Pass "
-                f"--depth-prompt={ten}.")
+                f"a depth prompt of ten ({ten} as it stands), and --depth-prompt names "
+                f"{named}. Pass --depth-prompt= with the digest the depths were given under.")
+        if not SHA256_RE.match(depth_prompt):
+            raise SystemExit(
+                f"--depth-prompt={depth_prompt} is not a sha256 digest: name the digest of "
+                f"the prompt of ten the depths were given under ({ten} as it stands).")
         return 10
     if depth_prompt is None or depth_prompt == four:
         return 4
@@ -324,6 +340,25 @@ def depth_scale(depth_prompt=None, assessment_run_id=None):
     raise SystemExit(
         f"--depth-prompt={depth_prompt} is neither depth prompt: the scale of four is "
         f"{four}, and the scale of ten is {ten}, read with --assessment-run=<id>.")
+
+
+UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                     re.IGNORECASE)
+
+
+def assessment_run_id(value, flag="--assessment-run"):
+    """`value` as an assessment run id, in lowercase as the database writes it,
+    or a refusal naming what was given.
+
+    Checked before anything is read: PostgREST answers a filter on a uuid column
+    that holds something else with an error about the query, which says nothing
+    about the id that was mistyped."""
+    if UUID_RE.match(value or ""):
+        return value.lower()
+    raise SystemExit(
+        f"{flag}={value} is not an assessment run id. An assessment run id is a uuid, "
+        "36 characters of hexadecimal digits and hyphens, as engine/assess.py prints it "
+        "and aci_assessment_runs holds it.")
 
 
 def _any_of(values):
