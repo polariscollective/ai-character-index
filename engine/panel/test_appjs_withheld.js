@@ -108,7 +108,10 @@ check("a behaviour whose paragraphs were withheld still shows its figure",
  * publication order, and that it stays fragile. This is the guard that turns
  * "by construction" into something that fails loudly if a later change makes the
  * array partial again. */
-var HUE_SLOTS = 12;
+/* HUE_SLOTS is extracted rather than hardcoded: this harness holds functions
+ * and constants to the real app.js through extractFn and extractConst. A copy
+ * of a value can drift silently, so every constant is pulled from its source. */
+eval(extractConst("HUE_SLOTS"));
 eval(extractFn("function payloadBehaviours() {"));
 eval(extractFn("function behaviourHue(behaviour) {"));
 
