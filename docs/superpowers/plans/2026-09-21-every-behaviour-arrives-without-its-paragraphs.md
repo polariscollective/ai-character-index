@@ -852,6 +852,34 @@ At the top of `renderDocument`, before the `markdownContext` is built:
   }
 ```
 
+- [ ] **Step 5b: Fetch the document a passage link names**
+
+`urlSpecs()` reads `spec` and `compare-with` only, so a `?passage=` link can
+name a document the address never asks for, and that document arrives withheld.
+`openPassageLink` then reads `doc.markdown` with no guard. Shared passage links
+are what that route exists for, so this is not a corner case.
+
+Fetch rather than refuse: the reader followed a link to a passage and should be
+shown it. In `openPassageLink`, after the document is resolved and before
+anything reads its text:
+
+```javascript
+  /* A ?passage= link can name a document the address does not, and urlSpecs
+     only covers spec and compare-with, so the target may have arrived with its
+     text withheld. Fetch it before reading it. */
+  if (doc.textWithheld) {
+    await ensureDocument(doc.id).catch(() => {});
+    doc = (state.payload?.documents || []).find(d => d.id === doc.id) || doc;
+  }
+  if (typeof doc.markdown !== "string") return { locator, resolved: false };
+```
+
+Re-resolve after awaiting, because `ensureDocument` replaces the entry in
+`state.payload.documents` rather than mutating it. The final line returns the
+shape this function already returns for a locator it cannot place, which
+`revealPassageLink` already handles, so a failed fetch degrades instead of
+throwing. If `doc` is `const`, make it `let` rather than adding a second name.
+
 - [ ] **Step 6: Run the fall-through harness and watch it pass**
 
 Run: `node engine/panel/test_appjs_fallthrough.js`
