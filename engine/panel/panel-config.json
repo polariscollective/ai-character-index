@@ -273,6 +273,9 @@
       "fable": [
         "opus",
         "kimi"
+      ],
+      "deepseek": [
+        "kimi"
       ]
     }
   },

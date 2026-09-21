@@ -2,6 +2,7 @@
 
 Nothing touches a network, and nothing may write to the store: FakeStore has no
 insert and no update, so a write would fail the test with AttributeError."""
+import json
 import os
 import sys
 import tempfile
@@ -70,11 +71,16 @@ def store():
 
 
 class Scripted:
-    """A model that answers from a script and remembers what it was asked."""
+    """A model that answers from a script and remembers what it was asked.
 
-    def __init__(self, refuse=()):
+    `depth_script` maps a tag to a list of depth replies for calls whose
+    model id names that tag, taken in order; once a tag's list runs out, or
+    for a tag not scripted at all, its depth calls get the default answer."""
+
+    def __init__(self, refuse=(), depth_script=None):
         self.asked = []
         self.refuse = set(refuse)
+        self.depth_script = {tag: list(replies) for tag, replies in (depth_script or {}).items()}
 
     def __call__(self, provider, model_id, system, user, kwargs):
         self.asked.append((model_id, system, user))
@@ -93,6 +99,10 @@ class Scripted:
         else:
             assert system == depth_call.system_prompt(10), "an unexpected prompt"
             reply = "DEPTH: 9\nRATIONALE: Demonstrated, a conflict settled, no default."
+            for tag, replies in self.depth_script.items():
+                if tag.lower() in model_id.lower() and replies:
+                    reply = replies.pop(0)
+                    break
         return reply, {"prompt_tokens": 1000, "completion_tokens": 100}, "stop", 0.1
 
 
@@ -428,8 +438,11 @@ class PilotTest(unittest.TestCase):
         self.assertIn("1 unreadable", text)
 
     def test_a_depth_with_no_line_shows_its_finish_reason_and_counts_as_no_depth(self):
+        # deepseek's declared substitute, kimi, is asked too once the ladder of
+        # three reminders is exhausted; both must fail to reach "no depth" here.
         def model(provider, model_id, system, user, kwargs):
-            if system == depth_call.system_prompt(10) and "deepseek" in model_id.lower():
+            mid = model_id.lower()
+            if system == depth_call.system_prompt(10) and ("deepseek" in mid or "kimi" in mid):
                 return ("I cannot decide.", {"prompt_tokens": 10, "completion_tokens": 10},
                         "content_filter", 0.01)
             return Scripted()(provider, model_id, system, user, kwargs)
@@ -440,6 +453,121 @@ class PilotTest(unittest.TestCase):
             text = (folder / "summary.md").read_text()
         self.assertIn("content_filter", text)
         self.assertIn("1 gave no depth", text)
+
+    def test_an_off_scale_reply_is_asked_again_and_the_reminder_answers(self):
+        model = Scripted(depth_script={
+            "deepseek": ["DEPTH: -1", "DEPTH: 7\nRATIONALE: Rules, one worked example."]})
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(model, out)
+            results = json.loads((folder / "pilot.json").read_text())
+        given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
+        self.assertEqual(given["depth"], 7)
+        self.assertEqual(given["model"], "deepseek")
+        self.assertNotIn("substituted", given)
+        self.assertEqual(len(given["attempts"]), 2)
+        self.assertEqual(given["attempts"][0]["reminder"], 0)
+        self.assertFalse(given["attempts"][0]["parsed"])
+        self.assertEqual(given["attempts"][1]["reminder"], 1)
+        self.assertTrue(given["attempts"][1]["parsed"])
+        self.assertTrue(all(a["cost_usd"] for a in given["attempts"]))
+        self.assertGreaterEqual(round(results["cost_usd"], 6),
+                                round(sum(a["cost_usd"] for a in given["attempts"]), 6))
+        deepseek_users = [user for mid, system, user in model.asked
+                          if system == depth_call.system_prompt(10) and "deepseek" in mid.lower()]
+        self.assertEqual(len(deepseek_users), 2)
+        self.assertNotIn("did not give a whole number", deepseek_users[0])
+        self.assertIn(depth_call.REMINDERS_OF_TEN[0], deepseek_users[1])
+
+    def test_three_off_scale_replies_fall_to_the_declared_substitute(self):
+        model = Scripted(depth_script={"deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"]})
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(model, out)
+            results = json.loads((folder / "pilot.json").read_text())
+            text = (folder / "summary.md").read_text()
+        given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
+        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(len(given["attempts"]), 4)
+        self.assertEqual([a["reminder"] for a in given["attempts"]], [0, 1, 2, 0])
+        self.assertEqual(given["substituted"],
+                         {"model": "kimi", "reason": "off-scale reply after two reminders"})
+        self.assertIn("deepseek (kimi)", text)
+
+    def test_every_attempt_failing_leaves_no_depth(self):
+        model = Scripted(depth_script={
+            "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+            "kimi": ["DEPTH: -1", "DEPTH: -1"]})
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(model, out)
+            results = json.loads((folder / "pilot.json").read_text())
+            text = (folder / "summary.md").read_text()
+        given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
+        self.assertIsNone(given["depth"])
+        self.assertEqual(len(given["attempts"]), 5)
+        self.assertNotIn("substituted", given)
+        self.assertIn("no depth", text)
+
+
+class ReplayPilotTest(unittest.TestCase):
+    """`replay_pilot` gives a run's failed depths again, through the same
+    ladder, without touching a whole-document question."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = pilot.h.load_config()
+        cls.registry = fixture.judging_registry()
+
+    def _run_with_one_failed_depth(self, out):
+        """A saved pilot.json whose only depth failure is deepseek's, its
+        declared substitute kimi failing too."""
+        model = Scripted(depth_script={
+            "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+            "kimi": ["DEPTH: -1", "DEPTH: -1"]})
+        _estimate, folder = pilot.run_pilot(store(), self.config, self.registry, passages_for,
+                                            out, call_model=model, go=True, documents=(DOC,),
+                                            behaviours=(SLUG,))
+        return folder
+
+    def test_replay_gives_the_failed_depth_again_through_depth_calls_only(self):
+        with tempfile.TemporaryDirectory() as out:
+            folder = self._run_with_one_failed_depth(out)
+            replay_model = Scripted(depth_script={
+                "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+                "kimi": ["DEPTH: 6\nRATIONALE: Given again, prescribed."]})
+            cost, replay_folder = pilot.replay_pilot(
+                store(), self.config, self.registry, passages_for, folder, out,
+                call_model=replay_model, go=True)
+            results = json.loads((replay_folder / "pilot.json").read_text())
+        systems_seen = {system for _mid, system, _user in replay_model.asked}
+        self.assertEqual(systems_seen, {depth_call.system_prompt(10)})
+        self.assertEqual(results["replayed_from"], str(folder))
+        given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
+        self.assertEqual(given["depth"], 6)
+        self.assertEqual(given["model"], "kimi")
+        self.assertGreater(cost, 0)
+
+    def test_replay_refuses_a_pilot_whose_depth_prompt_differs(self):
+        with tempfile.TemporaryDirectory() as out:
+            folder = Path(out) / "stale-pilot"
+            folder.mkdir()
+            (folder / "pilot.json").write_text(json.dumps({
+                "publication": "pub", "prompts": {"depth": "stale-digest"},
+                "documents": {}}), encoding="utf-8")
+            with self.assertRaises(SystemExit) as refused:
+                pilot.replay_pilot(store(), self.config, self.registry, passages_for, folder, out)
+        message = str(refused.exception)
+        self.assertIn("stale-digest", message)
+        self.assertIn(depth_call.prompt_sha256(10), message)
+
+    def test_replay_price_mode_calls_no_model(self):
+        with tempfile.TemporaryDirectory() as out:
+            folder = self._run_with_one_failed_depth(out)
+            probe = Scripted()
+            estimate, replay_folder = pilot.replay_pilot(
+                store(), self.config, self.registry, passages_for, folder, out,
+                call_model=probe)
+        self.assertIsNone(replay_folder)
+        self.assertGreater(estimate, 0)
+        self.assertEqual(probe.asked, [])
 
 
 class ConflictRulesTest(unittest.TestCase):

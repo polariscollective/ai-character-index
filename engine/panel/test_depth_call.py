@@ -276,5 +276,35 @@ class ParseOutOfTenTest(unittest.TestCase):
         self.assertEqual(depth_call.parse("DEPTH: 3/4")[0], 3)
 
 
+class RetryUserTest(unittest.TestCase):
+    """The two reminders appended to a depth call's user message when a reply
+    gave no depth, on the scale of ten only."""
+
+    def test_there_are_exactly_two_reminders(self):
+        self.assertEqual(len(depth_call.REMINDERS_OF_TEN), 2)
+
+    def test_the_first_reminder_asks_for_the_form_again(self):
+        self.assertIn("did not give a whole number from 0 to 10",
+                      depth_call.REMINDERS_OF_TEN[0])
+        self.assertIn("never negative", depth_call.REMINDERS_OF_TEN[0])
+
+    def test_the_second_reminder_carries_a_one_shot_example(self):
+        self.assertIn("DEPTH: 3", depth_call.REMINDERS_OF_TEN[1])
+        self.assertIn("RATIONALE:", depth_call.REMINDERS_OF_TEN[1])
+
+    def test_no_reminder_carries_a_long_dash(self):
+        for reminder in depth_call.REMINDERS_OF_TEN:
+            self.assertNotIn("—", reminder)
+            self.assertNotIn("–", reminder)
+
+    def test_attempt_one_appends_the_first_reminder(self):
+        self.assertEqual(depth_call.retry_user("USER", 1),
+                         "USER" + depth_call.REMINDERS_OF_TEN[0])
+
+    def test_attempt_two_appends_the_second_reminder(self):
+        self.assertEqual(depth_call.retry_user("USER", 2),
+                         "USER" + depth_call.REMINDERS_OF_TEN[1])
+
+
 if __name__ == "__main__":
     unittest.main()

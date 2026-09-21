@@ -80,6 +80,26 @@ ANSWER_SUFFIX_RE = ANSWER_SUFFIX[4]
 # found to grade, which is depth 0 by the scale's own definition.
 NOTHING_RETAINED = "No passage was retained for this behaviour in this document."
 
+# Appended in turn to a scale-of-ten depth call's user message when a reply
+# gave no depth: a format reminder, then a one-shot example. The scale of four
+# never retries, so these are read by nothing else.
+REMINDERS_OF_TEN = (
+    "\n\nYour previous answer did not give a whole number from 0 to 10. Answer "
+    "again with exactly two lines: DEPTH: followed by one of 0, 1, 2, 3, 4, 5, "
+    "6, 7, 8, 9 or 10, then RATIONALE: one sentence. A depth is never negative; "
+    "if no passage bears on the behaviour, it is 0.",
+    "\n\nA reply in the right form reads, for a different behaviour and "
+    "document:\nDEPTH: 3\nRATIONALE: The document names the behaviour and says "
+    "a sentence about it, with no rule a grader could quote.\nAnswer for this "
+    "behaviour and this document in that form.",
+)
+
+
+def retry_user(user, attempt):
+    """The user message asked again after `attempt` gave no depth: `attempt`
+    1 carries the format reminder, `attempt` 2 the one-shot example."""
+    return user + REMINDERS_OF_TEN[attempt - 1]
+
 
 def system_prompt(scale=4):
     return PROMPTS[scale].read_text()

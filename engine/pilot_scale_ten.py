@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """A pilot of depth out of ten, and of the assessment of a document as a whole.
 
-    python3 engine/pilot_scale_ten.py         # prices it, spends nothing
-    python3 engine/pilot_scale_ten.py --go    # spends
+    python3 engine/pilot_scale_ten.py                 # prices it, spends nothing
+    python3 engine/pilot_scale_ten.py --go            # spends
+    python3 engine/pilot_scale_ten.py --replay FOLDER # prices giving a saved run's failed
+                                                       # depths again through the ladder;
+                                                       # --go spends
 
 It reads the database and writes nothing to it. Everything lands in artefacts/,
 in a folder of its own: every reply as it came back, what was made of it in
@@ -24,6 +27,13 @@ counts as confirmed only once two seats stand behind it. Where a seat's own
 model is refused, or answers with nothing, its declared substitutes are tried
 in turn for that call, on criteria, contradictions and confirmation alike; the
 summary and pilot.json both say when a substitute answered in a seat's place.
+
+A depth call whose reply gives no whole number from 0 to 10 is asked again,
+first with a format reminder, then with a one-shot example; if it is still off
+the scale, the judge's declared substitutes give it in turn, each tried plain
+and then with the format reminder. Every attempt is kept and costed.
+`--replay` gives a saved run's failed depths again through that same ladder,
+with no whole-document call made.
 """
 
 import argparse
@@ -193,6 +203,65 @@ def ask_with_substitutes(seat, question, system, user, config, call_model, panel
     return None, None, substituted
 
 
+def depth_with_ladder(slug, judge, system, user, config, call_model, panel, here):
+    """One judge's depth out of ten, given by `judge`'s own model first, then
+    asked again with each of `depth_call.REMINDERS_OF_TEN` in turn when a reply
+    gives no depth, and finally by `judge`'s declared substitutes in order, each
+    tried with the plain user message and, if that fails too, one reminder. The
+    first attempt that parses to a depth answers.
+
+    Returns the cell's entry for `judge`: `depth`, `rationale`, `model` (the
+    model that answered, `judge` itself unless a substitute did), `attempts`
+    (every call made, in order, each `{"model", "reminder", "finish_reason",
+    "cost_usd", "parsed"}`), and `substituted` (present only once a substitute
+    answered). When nothing answers, `depth` and `rationale` are None and
+    `attempts` still holds every call made. An exception from a call is
+    recorded as an attempt that did not parse, with no cost and no
+    finish_reason, and the ladder moves on to its next step.
+
+    Every attempt with a reply, parsed or not, is saved to
+    `<slug>.<model>.depth.<n>.reply.txt`, `n` counting from 1 for that model."""
+    attempts = []
+    counters = {}
+
+    def try_once(tag, reminder):
+        this_user = user if reminder == 0 else depth_call.retry_user(user, reminder)
+        try:
+            answer = ask(tag, system, this_user, config, call_model)
+        except Exception:                              # noqa: BLE001
+            attempts.append({"model": tag, "reminder": reminder, "finish_reason": None,
+                             "cost_usd": None, "parsed": False})
+            return None
+        n = counters.get(tag, 0) + 1
+        counters[tag] = n
+        (here / f"{slug}.{tag}.depth.{n}.reply.txt").write_text(answer["reply"],
+                                                                 encoding="utf-8")
+        depth, rationale = depth_call.parse(answer["reply"], scale=10)
+        attempts.append({"model": tag, "reminder": reminder,
+                         "finish_reason": answer["finish_reason"],
+                         "cost_usd": answer["cost_usd"], "parsed": depth is not None})
+        return None if depth is None else (depth, rationale)
+
+    for reminder in (0, 1, 2):
+        result = try_once(judge, reminder)
+        if result is not None:
+            depth, rationale = result
+            return {"depth": depth, "rationale": rationale, "model": judge,
+                    "attempts": attempts}
+
+    for substitute in config.get("substitutes", {}).get(panel, {}).get(judge, []):
+        for reminder in (0, 1):
+            result = try_once(substitute, reminder)
+            if result is not None:
+                depth, rationale = result
+                return {"depth": depth, "rationale": rationale, "model": substitute,
+                        "attempts": attempts,
+                        "substituted": {"model": substitute,
+                                       "reason": "off-scale reply after two reminders"}}
+
+    return {"depth": None, "rationale": None, "model": judge, "attempts": attempts}
+
+
 def _pool_claims(contradictions_by_seat, seats):
     """The pooled claims, one per distinct unordered pair of passage numbers,
     in the order first found: {"first", "second", "situation", "why",
@@ -286,9 +355,11 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
 def _costs(results):
     """Every cost billed: the answering call's own, and every attempt in its
     `substituted` list, refused or not, for criteria, contradictions and
-    confirmation calls alike, error records included."""
+    confirmation calls alike, error records included; and every depth
+    attempt's own cost. A replay's records carry no `assessment` at all,
+    only `cells`, so that half is read with a default rather than assumed."""
     for record in results["documents"].values():
-        for questions in record["assessment"].values():
+        for questions in record.get("assessment", {}).values():
             for answer in questions.values():
                 if answer.get("cost_usd") is not None:
                     yield answer["cost_usd"]
@@ -297,8 +368,9 @@ def _costs(results):
                         yield attempt["cost_usd"]
         for cell in record["cells"].values():
             for given in cell["new"].values():
-                if given.get("cost_usd") is not None:
-                    yield given["cost_usd"]
+                for attempt in given.get("attempts", []):
+                    if attempt.get("cost_usd") is not None:
+                        yield attempt["cost_usd"]
 
 
 def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
@@ -431,21 +503,10 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
             system, user = depth_call.compose(slug, registry, retained, scale=10,
                                               conflict_rules=rules)
             for call in calls:
-                tag = call["model"]
-                print(f"  {tag} giving {slug} on {document} a depth out of ten ...", flush=True)
-                try:
-                    answer = ask(tag, system, user, config, call_model)
-                except Exception as refused:          # noqa: BLE001
-                    cell["new"][tag] = {"error": str(refused)[:1000]}
-                    continue
-                (here / f"{slug}.{tag}.depth.reply.txt").write_text(answer["reply"],
-                                                                   encoding="utf-8")
-                depth, rationale = depth_call.parse(answer["reply"], scale=10)
-                cell["new"][tag] = {"depth": depth, "rationale": rationale,
-                                    "cost_usd": answer["cost_usd"],
-                                    "finish_reason": answer["finish_reason"],
-                                    "provider": answer["provider"], "model_id": answer["model_id"],
-                                    "kwargs": answer["kwargs"]}
+                judge = call["model"]
+                print(f"  {judge} giving {slug} on {document} a depth out of ten ...", flush=True)
+                cell["new"][judge] = depth_with_ladder(slug, judge, system, user, config,
+                                                       call_model, panel, here)
 
         (folder / "pilot.json").write_text(json.dumps(results, indent=2, ensure_ascii=False),
                                            encoding="utf-8")
@@ -456,6 +517,102 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
     (folder / "pilot.json").write_text(json.dumps(results, indent=2, ensure_ascii=False),
                                        encoding="utf-8")
     (folder / "summary.md").write_text(summary(results), encoding="utf-8")
+    return estimate, folder
+
+
+def _resolve_conflict_rules(locators, spec_passages, document):
+    """The document's general rules for conflicts, as a replay's saved
+    `conflict_rules` locators resolve against a freshly fetched passage list.
+    A saved locator that no longer resolves stops the replay, naming it and
+    the document."""
+    by_locator = {locator: (locator, section, text) for locator, section, text in spec_passages}
+    rules = []
+    for locator in locators:
+        if locator not in by_locator:
+            raise SystemExit(
+                f"{document}: the conflict rule {locator!r} no longer resolves against "
+                "its passages; replay refused")
+        rules.append(by_locator[locator])
+    return rules
+
+
+def replay_pilot(store, config, registry, passages_for, source_folder, out_dir, call_model=None,
+                 go=False, panel=PANEL):
+    """Replay a pilot's failed depths: for every cell of `source_folder`'s
+    pilot.json carrying a judge whose depth is None, give that judge's depth
+    again through `depth_with_ladder`, and nothing else: no whole-document
+    call is made. Returns (the price in dollars, the folder written, or None
+    when nothing was run), the same shape as `run_pilot`.
+
+    The retained passages are recomputed by `cell_evidence`, so its evidence
+    guard still applies, and the conflict rules are the source run's own
+    `conflict_rules` locators looked up in a freshly fetched passage list."""
+    source_folder = Path(source_folder)
+    saved = json.loads((source_folder / "pilot.json").read_text())
+    saved_digest = saved["prompts"]["depth"]
+    current_digest = depth_call.prompt_sha256(10)
+    if saved_digest != current_digest:
+        raise SystemExit(
+            f"{source_folder} was judged with depth prompt {saved_digest}, but the prompt "
+            f"on disk is {current_digest}; replay refused")
+
+    versions = {f"{row['spec_id']}@{row['version']}": row
+                for row in store.select("aci_spec_versions")}
+    publication_id = saved["publication"]
+
+    to_replay = []                                  # (document, slug, judges, system, user)
+    estimate = 0.0
+    for document, record in saved["documents"].items():
+        failed = {slug: [judge for judge, given in cell["new"].items()
+                         if given.get("depth") is None]
+                 for slug, cell in record["cells"].items()}
+        failed = {slug: judges for slug, judges in failed.items() if judges}
+        if not failed:
+            continue
+        spec_id, version = split_document(document)
+        spec_passages = passages_for(spec_id, version)
+        rules = _resolve_conflict_rules(record.get("conflict_rules", []), spec_passages, document)
+        for slug, judges in failed.items():
+            retained, _calls, _old = cell_evidence(store, publication_id, slug,
+                                                   versions[document]["id"], spec_passages)
+            system, user = depth_call.compose(slug, registry, retained, scale=10,
+                                              conflict_rules=rules)
+            estimate += sum(priced(judge, system, user, OUTPUT_TOKENS["depth"], config)
+                           for judge in judges)
+            to_replay.append((document, slug, judges, system, user))
+
+    # A replay is typically a handful of depth calls, cheap enough that two
+    # decimal places would round every one of them to zero: the sample pilot
+    # this design was checked against prices a single deepseek depth call at
+    # $0.001834, which rounds to nothing at run_pilot's own precision.
+    estimate = round(estimate, 4)
+    if not go:
+        return estimate, None
+    call_model = call_model or batch_job.call_openrouter
+
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+    folder = Path(out_dir) / f"{stamp}-pilot-scale-ten-replay"
+    folder.mkdir(parents=True, exist_ok=True)
+    results = {"started_at": now(), "replayed_from": str(source_folder),
+              "publication": publication_id, "estimate_usd": estimate,
+              "prompts": {"depth": current_digest}, "documents": {}}
+
+    for document, slug, judges, system, user in to_replay:
+        here = folder / document.replace("@", "_")
+        here.mkdir(exist_ok=True)
+        cell = (results["documents"].setdefault(document, {"cells": {}})
+               ["cells"].setdefault(slug, {"new": {}}))
+        for judge in judges:
+            print(f"  {judge} giving {slug} on {document} a depth out of ten again ...",
+                 flush=True)
+            cell["new"][judge] = depth_with_ladder(slug, judge, system, user, config, call_model,
+                                                   panel, here)
+
+    results["finished_at"] = now()
+    results["cost_usd"] = round(sum(_costs(results)), 6)
+    (folder / "pilot.json").write_text(json.dumps(results, indent=2, ensure_ascii=False),
+                                       encoding="utf-8")
+    (folder / "summary.md").write_text(replay_summary(results), encoding="utf-8")
     return estimate, folder
 
 
@@ -499,6 +656,20 @@ def _seat_label(record, seat, question):
     otherwise just `seat`."""
     model = record["assessment"].get(seat, {}).get(question, {}).get("model")
     return f"{seat} ({model})" if model and model != seat else seat
+
+
+def _depth_label(judge, given):
+    """'deepseek (kimi)' when a substitute answered `judge`'s depth call,
+    otherwise just `judge`."""
+    model = given.get("model")
+    return f"{judge} ({model})" if model and model != judge else judge
+
+
+def _depth_calls_suffix(given):
+    """' (3 calls)' when the ladder took more than one call to settle `given`,
+    otherwise ''."""
+    attempts = given.get("attempts") or []
+    return f" ({len(attempts)} calls)" if len(attempts) > 1 else ""
 
 
 def _confirmed_status(claim):
@@ -653,13 +824,50 @@ def summary(results):
                     if "error" in given:
                         reason = given["error"]
                     else:
-                        reason = f"no depth (finish_reason={given.get('finish_reason')})"
-                lines.append(f"| {slug} | {tag} | "
+                        attempts = given.get("attempts") or []
+                        finish_reason = (attempts[-1]["finish_reason"] if attempts
+                                        else given.get("finish_reason"))
+                        reason = f"no depth (finish_reason={finish_reason})"
+                reason = f"{reason}{_depth_calls_suffix(given)}"
+                lines.append(f"| {slug} | {_depth_label(tag, given)} | "
                              f"{'no answer' if old is None else old * 2} | "
                              f"{'no answer' if new is None else new} | "
                              f"{_cell_text(reason)} |")
     lines += ["", f"Odd values: {odd} of {given_count} depths out of ten. {no_depth} gave no "
                   "depth."]
+    return "\n".join(lines) + "\n"
+
+
+def replay_summary(results):
+    """A replay, for a person to read: which pilot it replayed, the depth
+    table for the cells it gave again, and the cost. No whole-document
+    question is part of a replay, so this carries none of `summary`'s other
+    sections."""
+    finished_at = results.get("finished_at")
+    if finished_at:
+        status = f"finished {finished_at}. Cost {results['cost_usd']} dollars."
+    else:
+        status = f"not finished. Priced at {results['estimate_usd']} dollars."
+    lines = ["# Pilot replay: failed depths given again", "",
+             f"Replayed from `{results['replayed_from']}`. Publication read: "
+             f"`{results['publication']}`. Started {results['started_at']}, {status}", "",
+             "| Document | Behaviour | Judge | Out of ten | Rationale |",
+             "|---|---|---|---|---|"]
+    for document, record in results["documents"].items():
+        for slug, cell in record["cells"].items():
+            for judge, given in cell["new"].items():
+                new = given.get("depth")
+                if new is not None:
+                    reason = given.get("rationale") or ""
+                elif "error" in given:
+                    reason = given["error"]
+                else:
+                    attempts = given.get("attempts") or []
+                    finish_reason = attempts[-1]["finish_reason"] if attempts else None
+                    reason = f"no depth (finish_reason={finish_reason})"
+                reason = f"{reason}{_depth_calls_suffix(given)}"
+                lines.append(f"| {document} | {slug} | {_depth_label(judge, given)} | "
+                             f"{'no answer' if new is None else new} | {_cell_text(reason)} |")
     return "\n".join(lines) + "\n"
 
 
@@ -673,6 +881,9 @@ def main(argv=None):
                         help="behaviour slugs, comma-separated")
     parser.add_argument("--out", default=str(ROOT / "artefacts"),
                         help="where the results go (default: artefacts/)")
+    parser.add_argument("--replay", default=None, metavar="FOLDER",
+                        help="give a saved pilot's failed depths again, through the ladder "
+                             "only; no whole-document call is made")
     args = parser.parse_args(argv)
 
     from store import Store
@@ -684,9 +895,13 @@ def main(argv=None):
         print("note: ANTHROPIC_API_KEY is set, so fable is called on Anthropic's own "
               "API. The repository's .env has carried a stale key that answers 401; "
               "unset it to go through OpenRouter, as the container does.", file=sys.stderr)
-    estimate, folder = run_pilot(store, config, registry, h.passages, args.out, go=args.go,
-                                 documents=tuple(args.documents.split(",")),
-                                 behaviours=tuple(args.behaviours.split(",")))
+    if args.replay:
+        estimate, folder = replay_pilot(store, config, registry, h.passages, args.replay,
+                                        args.out, go=args.go)
+    else:
+        estimate, folder = run_pilot(store, config, registry, h.passages, args.out, go=args.go,
+                                     documents=tuple(args.documents.split(",")),
+                                     behaviours=tuple(args.behaviours.split(",")))
     if folder is None:
         print(f"Priced at about {estimate} dollars. Nothing was spent; run again with --go.")
         return 0
