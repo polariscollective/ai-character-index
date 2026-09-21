@@ -154,6 +154,12 @@ check("so the second behaviour is left no row of its own",
 /* ---- the reading of the counterparts, which is not one of them ---- */
 const summary = (behaviours, text) => ({
   relation: "summary", comment: text, behaviours, settled: false, judge: "opus-5",
+  /* The pair it was written about. A summary carries no locator of its own to
+     hold against the pair on screen, so linkBubbles keeps it only where `about`
+     names that pair: without this field the fixture asserted a shape the reader
+     stopped accepting when summaries of one run were found showing under a pair
+     they had never been written about. */
+  about: [LEFT, RIGHT],
 });
 check("a row with no counterpart to travel to is shown beside the ones that have one",
       () => pills(render([summary([POWER.slug], "In short, they agree."),

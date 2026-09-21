@@ -2,9 +2,14 @@
 /* Automated guard for the payload resolution that site/spec-reader/app.js
  * implements:  ?publication=<uuid> pin -> the current publication.  app.js runs
  * DOM code at module scope, so it cannot be imported directly; instead the
- * resolution functions (payloadName, payloadUrl, loadBehaviours) are extracted
- * verbatim from the real file and loadBehaviours is driven against a stubbed
- * loadJSON, exactly as the browser's fetch would resolve it.
+ * resolution functions (payloadName, sliceParams, urlSlugs, loadBehaviours) are
+ * extracted verbatim from the real file and loadBehaviours is driven against a
+ * stubbed loadJSON, exactly as the browser's fetch would resolve it.
+ *
+ * payloadUrl was one of them until the reader learned to ask for only what its
+ * URL names: the address is built from sliceParams and urlSlugs now. Naming a
+ * function the file no longer has does not fail a check, it kills the suite on
+ * load, so this list is worth keeping true.
  *
  * The chain used to have three tiers and now has two. The manifest was a ledger
  * of local runs and the shipped fallback existed for a fresh clone; a payload
@@ -56,16 +61,26 @@ eval(consts + "\n" +
   "let asked = [];\n" +
   "const state = {};\n" +
   "let location;\n" +   // browser global, injected per-scenario below
+  /* initialParams is a module-level const in app.js, read once from
+     location.search. Here location is replaced per scenario, so the runner
+     re-derives it below; left as a single binding, every scenario after the
+     first would resolve against the first one's URL. */
+  "let initialParams;\n" +
   "async function loadJSON(url) {\n" +
   "  asked.push(url);\n" +
   "  if (url in fetchMap) return fetchMap[url];\n" +
   "  throw new Error(\"HTTP 404 for \" + url);\n" +
   "}\n" +
   extractFn("function payloadName(id)") + "\n" +
-  extractFn("function payloadUrl(id)") + "\n" +
+  /* payloadUrl no longer exists: loadBehaviours builds its address from
+     sliceParams and urlSlugs, so those are what the fall-through must run
+     against. Extracting a function the file has lost makes this suite die on
+     load, which is how it fell silent rather than failing by name. */
+  extractFn("function sliceParams(pinned, { behaviours, specs } = {})") + "\n" +
+  extractFn("function urlSlugs()") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
   extractOrThrowing("async function loadDocuments()") + "\n" +
-  "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; state.payloadSource = undefined; return loadBehaviours(); };\n" +
+  "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; initialParams = new URLSearchParams(search); state.payloadSource = undefined; return loadBehaviours(); };\n" +
   "documentsRunner = async (search, map) => { await runner(search, map); return loadDocuments(); };\n" +
   "readAsked = () => asked;\n" +
   "readSource = () => state.payloadSource;");

@@ -504,7 +504,15 @@ function withComparison(behaviour, text, { comparing = true, legacy = false } = 
   show(JUDGED_DOCUMENTS, JUDGED_HELPFULNESS, { comparing });
   linkRows = legacy
     ? { comparison: { behaviour, writtenBy: "sol", text } }
-    : { comparisons: { [behaviour]: { writtenBy: "sol", text } } };
+    /* Behaviour AND pair, sorted, the way comparisonFor builds the key and
+       comparisonKey in app/lib/links.mjs writes it. Keyed by behaviour alone,
+       as this fixture was, it asserted a shape the reader stopped reading the
+       day a comparison became one per pair of documents rather than one per
+       behaviour: comparing one OpenAI version with another opened a paragraph
+       written about Alibaba. */
+    : { comparisons: {
+        [[behaviour, ...JUDGED_DOCUMENTS.map(doc => doc.id).sort()].join("\n")]:
+          { writtenBy: "sol", text } } };
   const found = comparisonFor("helpfulness");
   linkRows = null;
   return found
