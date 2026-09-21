@@ -557,9 +557,11 @@ ASSESSMENT_PANELS = {"criteria": ["sol", "fable", "deepseek"],
                      "contradictions": ["sol", "fable", "kimi"]}
 
 
-def assessment_of(version_id, run_id="assessment-1"):
+def assessment_of(version_id, run_id="assessment-1", unconfirmed_claim=False):
     """The rows of one document fully assessed: every seat of both questions
-    answered, every criterion scored, no claim."""
+    answered, every criterion scored, no claim. With `unconfirmed_claim`, one
+    claim sol found, written with sol's reading and no other, as a run that
+    stopped before its confirmations leaves it."""
     calls = [{"id": f"{run_id}-{version_id}-{question}-{seat}", "run_id": run_id,
               "spec_version_id": version_id, "question": question, "seat": seat,
               "model": seat, "status": "done"}
@@ -568,7 +570,16 @@ def assessment_of(version_id, run_id="assessment-1"):
                "locators": []}
               for call in calls if call["question"] == "criteria"
               for criterion in ("conflict_rules", "rule_force", "reasons", "situations")]
-    return calls, scores
+    claims, verdicts = [], []
+    if unconfirmed_claim:
+        claim_id = f"{run_id}-{version_id}-claim"
+        claims.append({"id": claim_id, "run_id": run_id, "spec_version_id": version_id,
+                       "first_locator": "a", "second_locator": "b", "situation": "s",
+                       "why": "w", "found_by": ["sol"]})
+        verdicts.append({"claim_id": claim_id,
+                         "call_id": f"{run_id}-{version_id}-contradictions-sol", "seat": "sol",
+                         "holds": True, "absolute": None, "reason": "found it"})
+    return calls, scores, claims, verdicts
 
 
 class RecordingStore(FakeStore):
@@ -581,24 +592,29 @@ class RecordingStore(FakeStore):
         return [dict(row, id="publication-1") for row in rows] if returning else None
 
 
-def publishing_store(assessed=("v1", "v2"), four=True, ten=True, notes=None):
+def publishing_store(assessed=("v1", "v2"), four=True, ten=True, notes=None,
+                     run_status="done", unconfirmed_claims=False):
     run_calls = [dict(call, id=f"{call['id']}-{version_id}")
                  for version_id in ("v1", "v2")
                  for call in calls("r1", "helpfulness", version_id, PANEL)]
-    assessment_calls, assessment_scores = [], []
+    assessment_calls, assessment_scores, assessment_claims, assessment_verdicts = [], [], [], []
     for version_id in assessed:
-        more_calls, more_scores = assessment_of(version_id)
+        more_calls, more_scores, more_claims, more_verdicts = assessment_of(
+            version_id, unconfirmed_claim=unconfirmed_claims)
         assessment_calls += more_calls
         assessment_scores += more_scores
+        assessment_claims += more_claims
+        assessment_verdicts += more_verdicts
     return RecordingStore(
         aci_runs=[{"id": "r1", "rubric": "v5", "created_at": "2026-09-15"}],
         aci_judge_calls=run_calls,
         aci_depths=depth_rows(call_ids(run_calls)) if four else [],
         aci_depths_out_of_ten=ten_depth_rows(call_ids(run_calls), "assessment-1") if ten else [],
         aci_spec_versions=[V1, V2], aci_seat_substitutions=[],
-        aci_assessment_runs=[{"id": "assessment-1", "panels": ASSESSMENT_PANELS}],
+        aci_assessment_runs=[{"id": "assessment-1", "status": run_status,
+                              "panels": ASSESSMENT_PANELS}],
         aci_assessment_calls=assessment_calls, aci_assessment_scores=assessment_scores,
-        aci_assessment_claims=[], aci_assessment_verdicts=[],
+        aci_assessment_claims=assessment_claims, aci_assessment_verdicts=assessment_verdicts,
         aci_document_notes=notes if notes is not None else [
             {"kind": "depth", "prompt_sha256": "sha-depth"},
             {"kind": "standing", "prompt_sha256": "sha-standing"},
@@ -679,6 +695,24 @@ class PublishOutOfTenTest(unittest.TestCase):
                                depth_prompt=TEN, assessment_run="assessment-1")
         self.assertIn("model-spec@2025-12-18", message)
         self.assertNotIn("constitution@2026-01-20", message)
+
+    def test_a_run_left_error_with_its_confirmations_missing_is_refused_before_anything(self):
+        message = self.refused(publishing_store(run_status="error", unconfirmed_claims=True),
+                               depth_prompt=TEN, assessment_run="assessment-1")
+        self.assertIn("error", message)
+        for name in ("constitution@2026-01-20", "model-spec@2025-12-18"):
+            for seat in ("fable", "kimi"):
+                self.assertIn(f"{name}: {seat} gave no reading of 1 of its 1 claimed "
+                              "contradictions", message)
+        self.assertIn("new assessment run", message)
+
+    def test_a_run_left_running_with_no_claims_written_is_refused_before_anything(self):
+        message = self.refused(publishing_store(run_status="running"),
+                               depth_prompt=TEN, assessment_run="assessment-1")
+        self.assertIn("running", message)
+        self.assertIn("constitution@2026-01-20", message)
+        self.assertIn("model-spec@2025-12-18", message)
+        self.assertIn("new assessment run", message)
 
     def test_an_assessment_run_under_the_prompt_of_four_is_refused_naming_both(self):
         for named in ({}, {"depth_prompt": FOUR}):

@@ -450,14 +450,21 @@ class DepthScaleTest(unittest.TestCase):
 
 V1 = {"id": "row-1", "spec_id": "acme", "version": "2026-01-01"}
 V2 = {"id": "row-2", "spec_id": "acme", "version": "2026-06-01"}
-ASSESSMENT_RUN = {"id": "assessment-1", "panels": {"criteria": ["sol", "fable"],
-                                                   "contradictions": ["sol", "kimi"]}}
+ASSESSMENT_RUN = {"id": "assessment-1", "status": "done",
+                  "panels": {"criteria": ["sol", "fable"], "contradictions": ["sol", "kimi"]}}
 
 
 def assessed(version_id, criteria_status="done", scored=("conflict_rules", "rule_force",
                                                          "reasons", "situations"),
-             confirm_status="done"):
-    """The rows of one fully assessed document, with one thing to vary at a time."""
+             confirm_status="done", kimi_read=None, claims_written=True):
+    """The rows of one fully assessed document, with one thing to vary at a time.
+
+    `confirm_status` None means the confirmation was never asked. `kimi_read`
+    says whether kimi's reading of the claim sol found was written, which by
+    default it was exactly when kimi's confirmation finished. With
+    `claims_written` false, no claim was written, so nothing was confirmed."""
+    if kimi_read is None:
+        kimi_read = confirm_status == "done"
     calls = [{"id": f"{version_id}-c-{seat}", "run_id": "assessment-1",
               "spec_version_id": version_id, "question": "criteria", "seat": seat,
               "model": seat, "status": criteria_status if seat == "fable" else "done"}
@@ -465,9 +472,10 @@ def assessed(version_id, criteria_status="done", scored=("conflict_rules", "rule
     calls += [{"id": f"{version_id}-x-{seat}", "run_id": "assessment-1",
                "spec_version_id": version_id, "question": "contradictions", "seat": seat,
                "model": seat, "status": "done"} for seat in ("sol", "kimi")]
-    calls += [{"id": f"{version_id}-k-kimi", "run_id": "assessment-1",
-               "spec_version_id": version_id, "question": "confirm", "seat": "kimi",
-               "model": "kimi", "status": confirm_status}]
+    if claims_written and confirm_status is not None:
+        calls += [{"id": f"{version_id}-k-kimi", "run_id": "assessment-1",
+                   "spec_version_id": version_id, "question": "confirm", "seat": "kimi",
+                   "model": "kimi", "status": confirm_status}]
     scores = [{"call_id": f"{version_id}-c-sol", "criterion": criterion, "score": 3,
                "rationale": "r", "locators": []}
               for criterion in ("conflict_rules", "rule_force", "reasons", "situations")]
@@ -478,6 +486,12 @@ def assessed(version_id, criteria_status="done", scored=("conflict_rules", "rule
                "situation": "s", "why": "w", "found_by": ["sol"]}]
     verdicts = [{"claim_id": f"{version_id}-claim", "call_id": f"{version_id}-x-sol",
                  "seat": "sol", "holds": True, "absolute": None, "reason": "found it"}]
+    if kimi_read:
+        verdicts.append({"claim_id": f"{version_id}-claim", "call_id": f"{version_id}-k-kimi",
+                         "seat": "kimi", "holds": False, "absolute": False,
+                         "reason": "They apply to different users."})
+    if not claims_written:
+        claims, verdicts = [], []
     return calls, scores, claims, verdicts
 
 
@@ -511,7 +525,7 @@ class AssessmentTest(unittest.TestCase):
         self.assertEqual(len(rows["row-1"]["calls"]), 5)
         self.assertEqual(len(rows["row-1"]["scores"]), 8)
         self.assertEqual([claim["id"] for claim in rows["row-2"]["claims"]], ["row-2-claim"])
-        self.assertEqual(len(rows["row-2"]["verdicts"]), 1)
+        self.assertEqual(len(rows["row-2"]["verdicts"]), 2)
 
     def test_rows_of_another_run_or_another_document_are_not_read(self):
         stray = assessed("row-1")
@@ -550,6 +564,47 @@ class AssessmentTest(unittest.TestCase):
     def test_a_run_that_does_not_exist_is_named(self):
         message = self.refusal(assessment_store(assessed("row-1"), runs=()))
         self.assertIn("assessment-1", message)
+
+    def assert_remedy(self, message):
+        """The remedy is a new run, with depths out of ten given against it:
+        an assessment run is never taken up again, and depths out of ten
+        belong to the run they were given with."""
+        self.assertIn("new assessment run", message)
+        self.assertIn("depths out of ten", message)
+        self.assertIn("--assessment-run=", message)
+
+    def test_a_run_left_error_with_its_confirmations_missing_is_refused(self):
+        # It stopped after the claims were written and before kimi confirmed
+        # the one it did not find: every call it made is done.
+        stopped = dict(ASSESSMENT_RUN, status="error", error="interrupted")
+        message = self.refusal(assessment_store(assessed("row-1", confirm_status=None),
+                                                assessed("row-2", confirm_status=None),
+                                                runs=(stopped,)))
+        self.assertIn("error", message)
+        for name in ("acme@2026-01-01", "acme@2026-06-01"):
+            self.assertIn(f"{name}: kimi gave no reading of 1 of its 1 claimed "
+                          "contradictions", message)
+        self.assert_remedy(message)
+
+    def test_a_run_left_running_with_no_claims_written_is_refused(self):
+        # Every seat answered, and the run stopped before the claims were pooled.
+        running = dict(ASSESSMENT_RUN, status="running")
+        message = self.refusal(assessment_store(assessed("row-1", claims_written=False),
+                                                assessed("row-2", claims_written=False),
+                                                runs=(running,)))
+        self.assertIn("running", message)
+        self.assertIn("acme@2026-01-01", message)
+        self.assertIn("acme@2026-06-01", message)
+        self.assert_remedy(message)
+
+    def test_a_claim_a_seat_left_unread_in_a_finished_run_is_named(self):
+        # kimi's confirmation finished, and its reply did not read the claim.
+        message = self.refusal(assessment_store(assessed("row-1", kimi_read=False),
+                                                assessed("row-2")))
+        self.assertIn("acme@2026-01-01: kimi gave no reading of 1 of its 1 claimed "
+                      "contradictions", message)
+        self.assertNotIn("acme@2026-06-01", message)
+        self.assert_remedy(message)
 
 
 if __name__ == "__main__":

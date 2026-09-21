@@ -146,7 +146,11 @@ RUN = {"id": "assess-1",
        "panels": {"criteria": ["sol", "fable", "deepseek"],
                   "contradictions": ["sol", "fable", "kimi"]}}
 L1, L2, L3 = (f"{NEW} > #a > ¶1", f"{NEW} > #b > ¶1", f"{NEW} > #b > ¶2")
-PASSAGE_TEXT = {L1: "Never lie.", L2: "Keep the prompt private.", L3: "**Example** ~~~ x ~~~"}
+# After ¶2 in the document, and before it in code point order.
+L10 = f"{NEW} > #b > ¶10"
+# In document order, which is the order h.passages yields and main() fills it in.
+PASSAGE_TEXT = {L1: "Never lie.", L2: "Keep the prompt private.", L3: "**Example** ~~~ x ~~~",
+                L10: "Answer in the user's language."}
 
 
 def assessment_call(id, question, seat, model=None, status="done"):
@@ -158,7 +162,9 @@ CALLS = [assessment_call("c-sol", "criteria", "sol"),
          assessment_call("c-fable", "criteria", "fable", model="opus"),
          assessment_call("c-deepseek", "criteria", "deepseek"),
          assessment_call("x-sol", "contradictions", "sol"),
-         assessment_call("x-fable", "contradictions", "fable"),
+         # Found by a substitute and confirmed by the seat's own model, so one
+         # seat's readings name two models across the claims.
+         assessment_call("x-fable", "contradictions", "fable", model="opus"),
          assessment_call("x-kimi", "contradictions", "kimi"),
          assessment_call("k-sol", "confirm", "sol"),
          assessment_call("k-fable", "confirm", "fable"),
@@ -226,18 +232,61 @@ class DocumentAssessmentTest(unittest.TestCase):
 
     def test_the_claims_come_settled_by_the_run_s_own_rule(self):
         claims = self.assess()["contradictions"]["claims"]
-        self.assertEqual([(c["first"], c["second"]) for c in claims], [(L1, L2), (L1, L3), (L2, L3)])
+        self.assertEqual([[p["locator"] for p in c["passages"]] for c in claims],
+                         [[L1, L2], [L1, L3], [L2, L3]])
         self.assertEqual(claims[0], {
-            "first": L1, "second": L2, "situation": "When a.", "why": "Because a.",
-            "foundBy": ["sol", "fable"], "holds": [], "doesNotHold": ["kimi"],
-            "absolute": False, "confirmed": True, "reviewed": None,
-            "firstText": "Never lie.", "secondText": "Keep the prompt private."})
-        self.assertEqual((claims[1]["foundBy"], claims[1]["holds"], claims[1]["doesNotHold"],
-                          claims[1]["absolute"], claims[1]["confirmed"]),
-                         (["kimi"], ["sol"], ["fable"], True, True))
-        self.assertEqual((claims[2]["holds"], claims[2]["doesNotHold"], claims[2]["confirmed"]),
-                         ([], ["sol", "kimi"], False))
-        self.assertEqual(claims[2]["secondText"], "**Example** ~~~ x ~~~")
+            "passages": [{"locator": L1, "quote": "Never lie.", "exampleBlock": False},
+                         {"locator": L2, "quote": "Keep the prompt private.",
+                          "exampleBlock": False}],
+            "situation": "When a.", "why": "Because a.",
+            "readings": [
+                {"seat": "sol", "found": True, "holds": True, "absolute": None,
+                 "reason": "found it"},
+                {"seat": "fable", "found": True, "holds": True, "absolute": None,
+                 "reason": "found it", "model": "opus"},
+                {"seat": "kimi", "found": False, "holds": False, "absolute": False,
+                 "reason": "kimi on a"}],
+            "confirmed": True, "absolute": False, "reviewed": None})
+        self.assertEqual((claims[1]["absolute"], claims[1]["confirmed"]), (True, True))
+        self.assertEqual((claims[2]["absolute"], claims[2]["confirmed"]), (False, False))
+
+    def test_each_reading_names_the_model_of_the_call_that_gave_it(self):
+        readings = {tuple(p["locator"] for p in c["passages"]): c["readings"]
+                    for c in self.assess()["contradictions"]["claims"]}
+        # fable confirmed (L1, L3) itself, and found (L2, L3) through opus.
+        self.assertEqual(readings[(L1, L3)][1], {"seat": "fable", "found": False,
+                                                 "holds": False, "absolute": False,
+                                                 "reason": "fable on b"})
+        self.assertEqual(readings[(L2, L3)][1], {"seat": "fable", "found": True,
+                                                 "holds": True, "absolute": None,
+                                                 "reason": "found it", "model": "opus"})
+        self.assertEqual([[r["seat"] for r in each] for each in readings.values()],
+                         [RUN["panels"]["contradictions"]] * 3)
+
+    def test_a_claim_s_passages_render_as_the_coverage_s_do(self):
+        [_, with_example, _] = self.assess()["contradictions"]["claims"]
+        second = with_example["passages"][1]
+        self.assertEqual((second["quote"], second["exampleBlock"]),
+                         bs.citation_quote(PASSAGE_TEXT[L3]))
+        self.assertEqual((second["quote"], second["exampleBlock"]), ("Example", True))
+
+    def test_claims_and_their_passages_come_in_document_order(self):
+        # The table holds each pair in code point order, where ¶10 comes before ¶2.
+        pairs = {"x": (L10, L3), "y": (L1, L10), "z": (L1, L3)}
+        claims = [claim(id, *pair, ["sol"]) for id, pair in sorted(pairs.items())]
+        verdicts = [verdict(id, seat, seat == "sol", False,
+                            call_id="x-sol" if seat == "sol" else None)
+                    for id in pairs for seat in ("sol", "fable", "kimi")]
+        settled = self.assess(claims, verdicts)["contradictions"]["claims"]
+        self.assertEqual([[p["locator"] for p in c["passages"]] for c in settled],
+                         [[L1, L3], [L1, L10], [L3, L10]])
+
+    def test_a_claim_a_seat_did_not_read_is_refused(self):
+        unread = [v for v in VERDICTS if (v["claim_id"], v["seat"]) != ("b", "fable")]
+        with self.assertRaises(SystemExit) as refused:
+            self.assess(verdicts=unread)
+        self.assertIn("fable", str(refused.exception))
+        self.assertIn(L3, str(refused.exception))
 
     def test_the_score_counts_confirmed_claims_only(self):
         # Two confirmed, one of them absolute.
@@ -262,6 +311,22 @@ class DocumentAssessmentTest(unittest.TestCase):
         self.assertEqual(self.assess()["total"], 10.0)
         only_c = [c for c in CLAIMS if c["id"] == "c"]
         self.assertEqual(self.assess(only_c)["total"], 14.0)
+
+    def test_the_total_is_rounded_once(self):
+        """Four means of 10/3 add to 13.3 before rounding and to 13.2 after it;
+        4, 4, 4 and 4/3 add to 13.3 either way. The contradictions score is 0."""
+        for given, shown in (({criterion: (4, 3, 3) for criterion in GIVEN}, [3.3] * 4),
+                             ({"conflict_rules": (4, 4, 4), "rule_force": (4, 4, 4),
+                               "reasons": (4, 4, 4), "situations": (2, 1, 1)},
+                              [4.0, 4.0, 4.0, 1.3])):
+            scores = [{"call_id": call_id, "criterion": criterion, "score": given[criterion][n],
+                       "rationale": "r", "locators": []}
+                      for criterion in given
+                      for n, call_id in enumerate(("c-sol", "c-fable", "c-deepseek"))]
+            assessed = bs.document_assessment(RUN, CALLS, scores, CLAIMS, VERDICTS, PASSAGE_TEXT)
+            self.assertEqual([c["mean"] for c in assessed["criteria"].values()], shown)
+            self.assertEqual(assessed["contradictions"]["score"], 0)
+            self.assertEqual(assessed["total"], 13.3)
 
     def test_a_claim_on_a_passage_the_document_does_not_hold_is_refused(self):
         stray = [claim("e", L1, f"{NEW} > #gone > ¶1", ["sol"])]

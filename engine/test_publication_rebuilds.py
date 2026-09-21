@@ -22,6 +22,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -406,6 +407,82 @@ class NeitherFlagTest(unittest.TestCase):
         self.assertEqual(hashlib.sha256(raw).hexdigest(), BEFORE)
 
 
+# Run in a fresh interpreter, because this one has long since imported the
+# assessment modules for other tests. It runs the payload builder with neither
+# new flag against a fixture, and prints the digest it wrote and every module of
+# this repository's engine loaded along the way.
+MODULE_PROBE = r"""
+import contextlib, copy, hashlib, importlib.util, io, json, sys, tempfile
+from pathlib import Path
+from unittest import mock
+
+engine, fixture = Path(sys.argv[1]), Path(sys.argv[2])
+given = json.loads(fixture.read_text())
+sys.path.insert(0, str(engine))
+import store
+
+
+class FakeStore:
+    def __init__(self, tables):
+        self.tables = tables
+
+    def select(self, table, params=None):
+        rows = self.tables.get(table, [])
+        for column, condition in (params or {}).items():
+            operator, _, value = condition.partition(".")
+            if operator == "eq":
+                rows = [row for row in rows if str(row.get(column)) == value]
+            elif operator == "in":
+                wanted = {v.strip('"') for v in value[1:-1].split(",")}
+                rows = [row for row in rows if str(row.get(column)) in wanted]
+        return copy.deepcopy(rows)
+
+
+spec = importlib.util.spec_from_file_location(
+    "build_site_data", engine / "panel" / "build_site_data.py")
+builder = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(builder)
+with tempfile.TemporaryDirectory() as scratch:
+    out = Path(scratch) / "payload.json"
+    with mock.patch.object(store.Store, "from_env", return_value=FakeStore(given["tables"])), \
+         contextlib.redirect_stdout(io.StringIO()):
+        builder.main([*given["argv"], f"--out={out}"])
+    digest = hashlib.sha256(out.read_bytes()).hexdigest()
+loaded = sorted(name for name, module in list(sys.modules.items())
+                if Path(getattr(module, "__file__", None) or "/").resolve().is_relative_to(engine))
+print(json.dumps({"digest": digest, "modules": loaded}))
+"""
+# The engine's own modules that probe saw the builder load at 8f0e2b1, run
+# against that commit's engine. The harness is loaded from its file and never
+# registered, so it is not among them.
+LOADED_AT_8F0E2B1 = ["cite", "depth_call", "index_store", "seat_substitutions", "store"]
+
+
+class DefaultImportsTest(unittest.TestCase):
+    """A build that names no assessment run loads the modules it loaded at
+    8f0e2b1, and nothing of the assessment's."""
+
+    def test_the_default_build_does_not_import_assessment_run(self):
+        tables = both_scales()
+        params = BUILD_PARAMS_1919EE6B
+        with tempfile.TemporaryDirectory() as scratch:
+            cells = Path(scratch) / "cells.json"
+            cells.write_text(json.dumps(cells_of(tables)))
+            fixture = Path(scratch) / "fixture.json"
+            fixture.write_text(json.dumps({"tables": tables, "argv": [
+                *publish.BUILDERS["payload"][1], f"--run-date={params['run_date']}",
+                "--behaviours=" + ",".join(params["behaviours"]),
+                f"--panel={params['panel']}", f"--cells={cells}"]}))
+            result = subprocess.run([sys.executable, "-c", MODULE_PROBE, str(HERE), str(fixture)],
+                                    capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        built = json.loads(result.stdout.strip().splitlines()[-1])
+        # The build ran, and wrote what it always wrote.
+        self.assertEqual(built["digest"], BEFORE)
+        self.assertNotIn("assessment_run", built["modules"])
+        self.assertEqual(built["modules"], LOADED_AT_8F0E2B1)
+
+
 DOCUMENT_IDS = ["alibaba--model-spec@2026-04-00", "anthropic--constitution@2026-01-20",
                 "openai--model-spec@2025-12-18", "openai--model-spec@2026-08-18"]
 
@@ -453,14 +530,32 @@ class OutOfTenTest(unittest.TestCase):
     def test_every_document_carries_its_assessment(self):
         assessment = self.payload["assessment"]
         self.assertEqual(list(assessment), DOCUMENT_IDS)
-        for document_id in DOCUMENT_IDS:
+        store = FakeStore(self.tables)
+        for (version_id, *_rest), document_id in zip(DOCUMENTS, DOCUMENT_IDS):
             self.assertEqual(list(assessment[document_id]), ["criteria", "contradictions", "total"])
             claims = assessment[document_id]["contradictions"]["claims"]
             self.assertEqual(len(claims), 3)
+            order = [locator for locator, _text in locators(store, version_id)]
+            placed = [[order.index(p["locator"]) for p in claim["passages"]] for claim in claims]
+            # Each claim's passages, and the claims, in the order the document reads.
+            self.assertTrue(all(first < second for first, second in placed), placed)
+            self.assertEqual(placed, sorted(placed))
             for claim in claims:
-                self.assertTrue(claim["first"].startswith(document_id))
-                self.assertTrue(claim["firstText"] and claim["secondText"])
+                self.assertEqual(list(claim), ["passages", "situation", "why", "readings",
+                                               "confirmed", "absolute", "reviewed"])
+                self.assertTrue(all(p["locator"].startswith(document_id) and p["quote"]
+                                    for p in claim["passages"]))
+                self.assertEqual([r["seat"] for r in claim["readings"]],
+                                 ASSESSMENT_PANELS["contradictions"])
                 self.assertIsNone(claim["reviewed"])
+        cite.reset_registry()
+        # The constitution is the one document whose code point order and
+        # document order part: "Avoiding harm" sorts before "Being honest", and
+        # the table holds this pair the other way round.
+        constitution = assessment["anthropic--constitution@2026-01-20"]["contradictions"]
+        self.assertEqual([p["locator"].split(" > ", 2)[-1] for p in
+                          constitution["claims"][0]["passages"]],
+                         ["Being honest > ¶1", "Avoiding harm > ¶1"])
         alibaba = assessment["alibaba--model-spec@2026-04-00"]
         self.assertEqual(alibaba["criteria"]["reasons"]["judges"]["fable"]["model"], "opus")
         # Two claims confirmed, one of them absolute.

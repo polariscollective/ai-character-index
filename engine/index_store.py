@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "spec-cite"))
 import cite  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "panel"))
-import assessment_call  # noqa: E402
 import depth_call  # noqa: E402
 
 
@@ -378,16 +377,29 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
     """What keeps an assessment run from standing for each document named, one
     sentence per gap, or nothing when it assessed them all.
 
-    A document is assessed when every seat of the run's criteria answered with
-    all four criteria scored, every seat of its contradictions answered, and
-    every confirmation it asked finished. A seat that could not answer and
-    whose substitutes could not either leaves its call in error, and a total
-    built without it would be a mean of fewer judges presented as the panel's.
+    The run must have finished: one left `running` or `error` stopped somewhere,
+    and what it never wrote cannot be told apart from what nobody found. A
+    document is then assessed when every seat of the run's criteria answered
+    with all four criteria scored, every seat of its contradictions answered,
+    every confirmation it asked finished, and every claim written about it
+    carries a reading from every seat of the contradictions, the finders' own
+    readings included. A seat that could not answer and whose substitutes could
+    not either leaves its call in error, and a total built without it would be
+    a mean of fewer judges presented as the panel's; a claim a seat never read
+    would be settled on fewer readings than the rule counts on, and could be
+    left unconfirmed by a reading that was never given.
     """
+    # Imported here rather than at the top, so that a build naming no
+    # assessment run loads only the modules it loaded before assessments existed.
+    import assessment_call  # noqa: E402
     if run is None:
         return [f"there is no assessment run {assessment_run_id}"]
     panels = run.get("panels") or {}
     gaps = []
+    if run.get("status") != "done":
+        names = ", ".join(f"{version['spec_id']}@{version['version']}" for version in versions)
+        gaps.append(f"the run's status is {run.get('status')}, not done, so what it wrote about "
+                    f"{names} may stop short of what it would have written")
     for version in versions:
         name = f"{version['spec_id']}@{version['version']}"
         rows = by_version.get(version["id"]) or {}
@@ -415,12 +427,28 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
         if unfinished:
             gaps.append(f"{name}: the confirmation asked of {', '.join(unfinished)} "
                         "did not finish")
+        # One reading per seat per claim, the table's primary key being (claim,
+        # seat), so a claim is read in full when every seat has a row on it.
+        read_by = {}
+        for verdict in rows.get("verdicts") or []:
+            read_by.setdefault(verdict["claim_id"], set()).add(verdict["seat"])
+        claims = rows.get("claims") or []
+        for seat in panels.get("contradictions", []):
+            unread = [claim for claim in claims if seat not in read_by.get(claim["id"], set())]
+            if unread:
+                gaps.append(f"{name}: {seat} gave no reading of {len(unread)} of its "
+                            f"{len(claims)} claimed contradictions")
     return gaps
 
 
 def assessment(store, assessment_run_id, versions):
     """(run, {version id: rows}) for an assessment run that assessed every
-    document in `versions`, or a refusal naming every gap at once."""
+    document in `versions`, or a refusal naming every gap at once.
+
+    The remedy it names is a new run. An assessment run is not taken up again
+    once it has stopped, and a depth out of ten belongs to the assessment run it
+    was given with, so the depths have to be given again against the new one.
+    """
     run, by_version = assessment_rows(store, assessment_run_id,
                                       [version["id"] for version in versions])
     gaps = assessment_gaps(assessment_run_id, run, by_version, versions)
@@ -428,8 +456,11 @@ def assessment(store, assessment_run_id, versions):
         raise SystemExit(
             f"assessment run {assessment_run_id} does not assess every document this "
             "publication carries:\n  " + "\n  ".join(gaps)
-            + "\nAssess the documents missing, or retry the calls that failed, then "
-            "build again.")
+            + "\nAn assessment run is not taken up again once it has stopped, and depths "
+            "out of ten belong to the run they were given with. Assess these documents in "
+            "a new assessment run (engine/assess.py --documents=... --go), give the depths "
+            "out of ten against it (engine/panel/depth_pass.py --runs=... "
+            "--assessment-run=<new id> --go), then build with --assessment-run=<new id>.")
     return run, by_version
 
 

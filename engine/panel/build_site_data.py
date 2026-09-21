@@ -72,10 +72,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "engine"))
-sys.path.insert(0, str(HERE))
 import seat_substitutions         # noqa: E402
-import assessment_call            # noqa: E402
-import assessment_run             # noqa: E402
 
 MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
                "gpt-mini": "GPT-5 mini", "haiku": "Claude Haiku 4.5", "qwen-small": "Qwen3-32B"}
@@ -268,21 +265,40 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     """Pure: one document's assessment as a whole, as the payload carries it, from
     the rows one assessment run wrote about it.
 
+    `text` is {locator: passage text} in document order, the order h.passages
+    yields and main() fills it in.
+
     `criteria`: each of the four criteria one call scores, with every seat's
     score and rationale, "model" beside them when a declared substitute answered
-    in the seat, and the mean to one decimal. `contradictions`: every claim, in
-    locator order, settled by assessment_run.settle, which is the rule the run
-    itself applies, with both passages' text, and the score assessment_run's
-    confirm_score gives the confirmed ones. Nothing here decides whether a claim
-    holds: a finder's verdict row says only that it found the claim, so the
-    second readings put to `settle` are the other seats' verdicts. A person's
-    reading is not carried yet, so `reviewed` is null. `total`: the four means
-    as shown plus the contradictions score, out of 20, so the figures on the
-    page add up to the total beside them.
+    in the seat, and the mean to one decimal.
+
+    `contradictions`: every claim, in document order of its first passage and
+    then of its second, with the score assessment_run's confirm_score gives the
+    confirmed ones. A claim carries its two passages in document order, each
+    rendered by citation_quote as the coverage's passages are, so one passage
+    reads one way in the whole payload; and one reading per seat of the run's
+    contradictions, in the run's order: whether the seat found the claim,
+    whether it holds, whether it is absolute and why, with "model" when a
+    declared substitute answered the call that gave the reading. A finder's
+    reading comes from its contradictions call and a confirmation from its
+    confirm call, so one seat can read through two models across the claims.
+    `confirmed` and `absolute` are assessment_run.settle's, the rule the run
+    itself applies, fed the other seats' readings: a finder's verdict row says
+    only that it found the claim. A person's reading is not carried yet, so
+    `reviewed` is null.
+
+    `total`: the four unrounded means plus the contradictions score, rounded
+    once, out of 20.
     """
+    # Imported here rather than at the top, so that a build naming no
+    # assessment run loads only the modules it loaded before assessments existed.
+    if str(HERE) not in sys.path:
+        sys.path.insert(0, str(HERE))
+    import assessment_call        # noqa: E402
+    import assessment_run         # noqa: E402
     seat_of = {call["id"]: call for call in calls
                if call["question"] == "criteria" and call["status"] == "done"}
-    criteria = {}
+    criteria, means = {}, []
     for criterion in assessment_call.CRITERIA:
         judges = {}
         for score in scores:
@@ -295,11 +311,12 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
             judges[call["seat"]] = judge
         if not judges:
             sys.exit(f"no judge scored {criterion}: the assessment is not complete")
-        criteria[criterion] = {
-            "mean": round(sum(j["score"] for j in judges.values()) / len(judges), 1),
-            "judges": dict(sorted(judges.items()))}
+        means.append(sum(j["score"] for j in judges.values()) / len(judges))
+        criteria[criterion] = {"mean": round(means[-1], 1),
+                               "judges": dict(sorted(judges.items()))}
 
     seats = run["panels"]["contradictions"]
+    model_of = {call["id"]: call.get("model") for call in calls}
     readings = collections.defaultdict(dict)
     for verdict in verdicts:
         readings[verdict["claim_id"]][verdict["seat"]] = verdict
@@ -309,31 +326,47 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     if unquoted:
         sys.exit("contradictions claimed on passages the document does not hold: "
                  + ", ".join(unquoted))
+    unread = [f"{claim['first_locator']} and {claim['second_locator']}: "
+              + ", ".join(seat for seat in seats if seat not in readings[claim["id"]])
+              for claim in claims if any(seat not in readings[claim["id"]] for seat in seats)]
+    if unread:
+        sys.exit("contradictions not read by every seat of the run:\n  " + "\n  ".join(unread))
+    position = {locator: n for n, locator in enumerate(text)}
+
+    def passage(locator):
+        quote, is_example = citation_quote(text[locator])
+        return {"locator": locator, "quote": quote, "exampleBlock": is_example}
+
+    def reading(seat, found_by, verdict):
+        given = {"seat": seat, "found": seat in found_by, "holds": verdict["holds"],
+                 "absolute": verdict["absolute"], "reason": verdict["reason"]}
+        model = model_of.get(verdict["call_id"])
+        if model and model != seat:
+            given["model"] = model
+        return given
+
     settled = []
-    for claim in sorted(claims, key=lambda c: (c["first_locator"], c["second_locator"])):
+    for claim in claims:
         found_by = list(claim["found_by"])
+        pair = sorted((claim["first_locator"], claim["second_locator"]), key=position.get)
         second_readings = {seat: {0: {"holds": v["holds"], "absolute": v["absolute"],
                                       "reason": v["reason"]}}
                            for seat, v in readings[claim["id"]].items() if seat not in found_by}
         [one] = assessment_run.settle(
             [{"first": 1, "second": 2, "situation": claim["situation"], "why": claim["why"],
               "found_by": found_by}],
-            second_readings, seats,
-            [(claim["first_locator"],), (claim["second_locator"],)])
-        settled.append(one)
-    score = assessment_run.confirm_score(settled)
+            second_readings, seats, [(pair[0],), (pair[1],)])
+        settled.append((tuple(position[locator] for locator in pair), {
+            "passages": [passage(locator) for locator in pair],
+            "situation": one["situation"], "why": one["why"],
+            "readings": [reading(seat, found_by, readings[claim["id"]][seat]) for seat in seats],
+            "confirmed": one["confirmed"], "absolute": one["absolute"], "reviewed": None}))
+    settled.sort(key=lambda entry: entry[0])
+    score = assessment_run.confirm_score([one for _order, one in settled])
     return {
         "criteria": criteria,
-        "contradictions": {
-            "claims": [{"first": one["first"], "second": one["second"],
-                        "situation": one["situation"], "why": one["why"],
-                        "foundBy": one["found_by"], "holds": one["holds"],
-                        "doesNotHold": one["does_not_hold"], "absolute": one["absolute"],
-                        "confirmed": one["confirmed"], "reviewed": None,
-                        "firstText": text[one["first"]], "secondText": text[one["second"]]}
-                       for one in settled],
-            "score": score},
-        "total": round(sum(c["mean"] for c in criteria.values()) + score, 1),
+        "contradictions": {"claims": [one for _order, one in settled], "score": score},
+        "total": round(sum(means) + score, 1),
     }
 
 
