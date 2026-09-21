@@ -907,12 +907,27 @@ async function ensureShownDocuments() {
 }
 ```
 
-Use it at every writer followed by a repaint: the compare toggle handler, whose
-`defaultComparison` pick is never in `urlSpecs()`; `chooseSpec` and
-`setComparePair`, replacing their per-id calls so all three read as one rule;
-and after the two comparison-pair assignments in `openPassageLink`, which writes
-a second document its own Step 5b guard does not cover. `initialize` needs none:
-`loadDocuments` asks for `urlSpecs()`, which is exactly what it writes.
+Use it at every writer followed by a repaint, with no exceptions: the compare
+toggle handler, whose `defaultComparison` pick is never in `urlSpecs()`;
+`chooseSpec` and `setComparePair`, replacing their per-id calls so all three
+read as one rule; after the two comparison-pair assignments in
+`openPassageLink`, which writes a second document its own Step 5b guard does not
+cover; and `initialize`, after its own two writes at the end.
+
+**`initialize` is not safe by construction, and the argument that it was is the
+one this step exists to retire.** `loadDocuments` asks for `urlSpecs()`, but
+`openingDocument` returns the requested id only when the publication carries it,
+and otherwise falls back to the preferred lab's newest document, an id nobody
+asked for. Verified on both halves: `sliceColumn("documents", …)` given a set
+holding only a non-matching id withholds every document, and
+`engine/panel/test_appjs_opening.js` already pins that a bogus id returns the
+Anthropic one. Since a document is `<lab>--<document>@<version>`, a link that
+outlives a version is ordinary rather than exotic, and it paints an unfetched
+document on first load with no interaction. `compare-with` has the same shape at
+the `pair.length === 2` write, which checks no ids against the publication.
+
+The rule is that a writer fetches what it wrote. Any site exempted by an
+argument about what the address contains is the next defect.
 
 `ensureDocument` returns early for a document already held, so calling this on
 every write costs a map lookup when nothing is missing.
