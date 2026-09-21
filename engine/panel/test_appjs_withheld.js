@@ -76,5 +76,63 @@ check("a withheld cell can be walked like any other, and walks over nothing",
 check("a behaviour with no coverage object at all does not throw",
       () => paragraphsOf({}, DOC).passages.length, 0);
 
+/* ---- the sidebar lists what exists, not what arrived ---- */
+var GROUP_TEXTURE = {};
+var state = { payload: null };
+eval(extractFn("function behaviourGroups() {"));
+
+const MIXED = { behaviours: [
+  { id: 1, slug: "a", name: "A", category: "One",
+    coverage: { [DOC]: { depth: { mean: 2 }, passages: [{ locator: "x" }] } } },
+  { id: 2, slug: "b", name: "B", category: "One",
+    coverage: { [DOC]: { depth: { mean: 1 }, passagesWithheld: true } } },
+  { id: 3, slug: "c", name: "C", category: "Two",
+    coverage: { [DOC]: { depth: { mean: 3 }, passagesWithheld: true } } },
+] };
+
+check("every behaviour is listed, whether or not its paragraphs came",
+      () => { state.payload = MIXED;
+              return behaviourGroups().flatMap(g => g.behaviours.map(b => b.slug)); },
+      ["a", "b", "c"]);
+check("and they keep their groups",
+      () => { state.payload = MIXED;
+              return behaviourGroups().map(g => g.name); }, ["One", "Two"]);
+check("a behaviour whose paragraphs were withheld still shows its figure",
+      () => { state.payload = MIXED;
+              const b = behaviourGroups()[0].behaviours[1];
+              return b.coverage[DOC].depth.mean; }, 1);
+
+/* ---- the colour does not depend on what arrived ---- */
+/* behaviourHue draws its slot from indexOf on the loaded array. The design says
+ * this closes by construction, because the array is now always complete and in
+ * publication order, and that it stays fragile. This is the guard that turns
+ * "by construction" into something that fails loudly if a later change makes the
+ * array partial again. */
+var HUE_SLOTS = 12;
+eval(extractFn("function payloadBehaviours() {"));
+eval(extractFn("function behaviourHue(behaviour) {"));
+
+check("each behaviour keeps its own slot, withheld paragraphs or not",
+      () => { state.payload = MIXED;
+              return MIXED.behaviours.map(b => behaviourHue(b)); },
+      ["var(--hue-1)", "var(--hue-2)", "var(--hue-3)"]);
+check("and the slot does not move when a neighbour's paragraphs are withheld",
+      () => { state.payload = { behaviours: MIXED.behaviours.map(b => ({
+                ...b, coverage: { [DOC]: { depth: b.coverage[DOC].depth,
+                                           passagesWithheld: true } } })) };
+              return state.payload.behaviours.map(b => behaviourHue(b)); },
+      ["var(--hue-1)", "var(--hue-2)", "var(--hue-3)"]);
+
+/* The fragility itself, and the reason these checks exist at all. indexOf
+ * returns -1 for a behaviour the loaded array does not hold, and Math.max(0, -1)
+ * turns that into slot 1, which is the first behaviour's own colour. So a
+ * partial array does not fail, it quietly paints two behaviours alike. This
+ * check is what makes that audible if anyone makes the array partial again. */
+check("a behaviour missing from the loaded set takes the first one's colour, which is the trap",
+      () => { state.payload = { behaviours: [MIXED.behaviours[0]] };
+              return [behaviourHue(MIXED.behaviours[0]),
+                      behaviourHue(MIXED.behaviours[2])]; },
+      ["var(--hue-1)", "var(--hue-1)"]);
+
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);
