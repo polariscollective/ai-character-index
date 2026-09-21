@@ -96,6 +96,14 @@ function withheldParagraphs(behaviour) {
   return { ...behaviour, coverage };
 }
 
+/* A document the reader is not looking at: everything the menu needs to name it
+ * and offer it, and none of the 309 KB of `original` or 118 KB of `markdown`
+ * that only the panel on screen reads. */
+function withheldText(document) {
+  const { markdown, original, ...rest } = document;
+  return { ...rest, textWithheld: true };
+}
+
 export function sliceColumn(column, payload, wanted) {
   if (payload === null || payload === undefined) return payload;
   const { documents, behaviours } = wanted;
@@ -112,7 +120,8 @@ export function sliceColumn(column, payload, wanted) {
   if (column === "documents") {
     if (!documents) return payload;
     return { ...payload,
-             documents: (payload.documents || []).filter(d => documents.has(d.id)) };
+             documents: (payload.documents || []).map(d =>
+               documents.has(d.id) ? d : withheldText(d)) };
   }
   if (column === "links") return sliceLinks(payload, wanted);
   return payload;

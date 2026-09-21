@@ -30,10 +30,13 @@ test("the payload keeps every behaviour and withholds those not named", () => {
   assert.deepEqual(out.provenance, { runDate: "2026-09-18" });
 });
 
-test("the documents column keeps only the documents named", () => {
-  const documents = { documents: [{ id: A, markdown: "a" }, { id: B, markdown: "b" }] };
+test("the documents column keeps every document and withholds text from ones not named", () => {
+  const documents = { documents: [{ id: A, markdown: "a", lab: "Anthropic" }, { id: B, markdown: "b", lab: "OpenAI" }] };
   const out = sliceColumn("documents", documents, { documents: new Set([A]), behaviours: null });
-  assert.deepEqual(out.documents, [{ id: A, markdown: "a" }]);
+  assert.equal(out.documents.length, 2, "both documents are listed");
+  assert.deepEqual(out.documents[0], { id: A, markdown: "a", lab: "Anthropic" }, "the one asked for is untouched");
+  assert.equal(out.documents[1].textWithheld, true, "the other is marked withheld");
+  assert.equal("markdown" in out.documents[1], false, "and has no markdown");
 });
 
 test("byLocator keeps the locators of the documents shown", () => {
@@ -219,4 +222,30 @@ test("the citation index still names behaviours whose paragraphs were withheld",
   ] };
   const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
   assert.deepEqual(out.citedBy, { [`${A} > s > ¶1`]: [1, 2], [`${A} > s > ¶2`]: [2] });
+});
+
+test("every document is listed, and only the ones asked for carry their text", () => {
+  const column = { documents: [
+    { id: A, lab: "Anthropic", title: "Claude's Constitution", version: "2026-01-20",
+      markdown: "# a", original: ["a"] },
+    { id: B, lab: "OpenAI", title: "Model Spec", version: "2026-08-18",
+      markdown: "# b", original: ["b"] },
+  ] };
+  const out = sliceColumn("documents", column, { documents: new Set([A]), behaviours: null });
+
+  assert.deepEqual(out.documents.map(d => d.id), [A, B], "both are still listed");
+  assert.equal(out.documents[0].markdown, "# a", "the one on screen keeps its text");
+  assert.equal(out.documents[0].textWithheld, undefined);
+
+  const other = out.documents[1];
+  assert.equal(other.textWithheld, true, "the other says its text was not asked for");
+  assert.equal("markdown" in other, false);
+  assert.equal("original" in other, false);
+  assert.equal(other.lab, "OpenAI", "and keeps the metadata the menu is drawn from");
+  assert.equal(other.version, "2026-08-18");
+});
+
+test("no document parameter still returns the column untouched", () => {
+  const column = { documents: [{ id: A, markdown: "# a" }] };
+  assert.deepEqual(sliceColumn("documents", column, all), column);
 });
