@@ -4722,14 +4722,26 @@ async function ensureDocument(id) {
   return fetching;
 }
 
+/* The documents on screen: state.selectedSpec always, and both halves of the
+ * pair while comparing. Shared by ensureShownDocuments and ensureBehaviours so
+ * the two read the same set by construction, not by two copies kept in step
+ * by hand -- the same kind of drift that once let bands.shown_by_default fall
+ * out of step with the reader's own DEFAULT_BANDS and published a wrong
+ * figure because of it. */
+function shownDocuments() {
+  return [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
+    .filter(Boolean);
+}
+
 /* The documents the reader is about to show, fetched before it shows them.
  * Every place that writes state.selectedSpec or state.comparePair goes through
- * here: guarding the readers of doc.markdown left four writers unguarded, and
- * each one found was followed by another nobody had found yet. */
+ * here: guarding the readers of doc.markdown left the writers unguarded, and
+ * each one found was followed by another nobody had found yet, including
+ * initialize's own, where a stale ?spec= or ?compare-with= makes the server
+ * withhold every document and the client's own fallback settle on one nobody
+ * asked for. */
 async function ensureShownDocuments() {
-  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
-    .filter(Boolean);
-  await Promise.all(shown.map(id => ensureDocument(id).catch(() => {})));
+  await Promise.all(shownDocuments().map(id => ensureDocument(id).catch(() => {})));
 }
 
 async function ensureBehaviours(slugs) {
@@ -4737,8 +4749,7 @@ async function ensureBehaviours(slugs) {
   /* The documents on screen, read live rather than from the arrival URL: this
    * runs again when a document is chosen and when comparison opens, which is
    * the whole reason the links have to be asked for a second time. */
-  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
-    .filter(Boolean);
+  const shown = shownDocuments();
   const missing = slugs.filter(slug => !inFlight.has(slug));
   const missingLinks = slugs.filter(slug => !linksCover(slug, shown));
   if (!missing.length && !missingLinks.length) {
@@ -5244,6 +5255,13 @@ async function initialize() {
     state.comparing = params.get("compare") === "1";
     const pair = (params.get("compare-with") || "").split(",").filter(Boolean);
     if (pair.length === 2) state.comparePair = pair;   // validated by comparePair()
+    /* A stale ?spec= or ?compare-with=, naming a document this publication does
+       not carry, makes the server withhold every document rather than just the
+       one that does not exist, and openingDocument's and comparePair's own
+       fallbacks then settle on a document nobody's fetch ever asked for. This
+       writer is no different from any other: fetch what it just wrote, before
+       anything is drawn. */
+    await ensureShownDocuments();
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
     // A link to a passage chooses the document, a behaviour and a band before
     // anything is drawn, and is followed to the passage once the panels are.
