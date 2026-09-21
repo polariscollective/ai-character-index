@@ -198,6 +198,11 @@ class ScaleOfTenComposeTest(unittest.TestCase):
         self.assertNotIn("—", system)
         self.assertNotIn("–", system)
 
+    def test_the_prompt_of_ten_asks_an_odd_value_to_name_what_it_partly_meets(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("An odd value needs its rationale to name which part of the level "
+                      "above is met", system)
+
     def test_the_scale_of_four_composes_as_it_always_has(self):
         self.assertEqual(
             depth_call.compose("defined-behaviour", self.registry, RETAINED),

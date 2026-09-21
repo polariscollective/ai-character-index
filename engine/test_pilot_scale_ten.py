@@ -176,6 +176,43 @@ class PilotTest(unittest.TestCase):
         self.assertNotIn("—", text)
         self.assertNotIn("–", text)
 
+    def test_pilot_json_records_a_model_id_for_each_assessment_call(self):
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(Scripted(), out)
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        for questions in results["documents"][DOC]["assessment"].values():
+            for answer in questions.values():
+                self.assertIn("model_id", answer)
+                self.assertIsNotNone(answer["model_id"])
+
+    def test_an_unreadable_contradiction_is_shown_in_the_summary(self):
+        def model(provider, model_id, system, user, kwargs):
+            if system == assessment_call.system_prompt("contradictions"):
+                reply = ("CONTRADICTION: [2] | only one passage named | why\n"
+                         "CONTRADICTIONS: 3\nCONTRADICTIONS_RATIONALE: One clash missed.")
+                return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            text = (folder / "summary.md").read_text()
+        self.assertIn("1 unreadable", text)
+
+    def test_a_depth_with_no_line_shows_its_finish_reason_and_counts_as_no_depth(self):
+        def model(provider, model_id, system, user, kwargs):
+            if system == depth_call.system_prompt(10) and "deepseek" in model_id.lower():
+                return ("I cannot decide.", {"prompt_tokens": 10, "completion_tokens": 10},
+                        "content_filter", 0.01)
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            text = (folder / "summary.md").read_text()
+        self.assertIn("content_filter", text)
+        self.assertIn("1 gave no depth", text)
+
 
 class ConflictRulesTest(unittest.TestCase):
     def test_a_passage_needs_the_quorum(self):
@@ -184,6 +221,39 @@ class ConflictRulesTest(unittest.TestCase):
                    "c": {"conflict_rule_passages": [3]}}
         self.assertEqual(pilot.conflict_rules(by_seat, PASSAGES), [PASSAGES[1], PASSAGES[2]])
         self.assertEqual(pilot.conflict_rules(by_seat, PASSAGES, quorum=3), [])
+
+
+def store_with_depth_passages(value):
+    """The base store, with every aci_depths row also carrying `passages: value`,
+    the count its own depth was given on."""
+    fake = store()
+    fake.tables["aci_depths"] = [dict(row, passages=value)
+                                 for row in fake.tables["aci_depths"]]
+    return fake
+
+
+class CellEvidenceGuardTest(unittest.TestCase):
+    """The published depth was given on one retained passage (see `store()`
+    above). The pilot must read the same evidence."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = pilot.h.load_config()
+        cls.registry = fixture.judging_registry()
+
+    def test_a_mismatched_passage_count_stops_the_pilot(self):
+        with tempfile.TemporaryDirectory() as out:
+            with self.assertRaises(SystemExit):
+                pilot.run_pilot(store_with_depth_passages(5), self.config, self.registry,
+                                passages_for, out, documents=(DOC,), behaviours=(SLUG,))
+
+    def test_a_matching_passage_count_runs_as_before(self):
+        with tempfile.TemporaryDirectory() as out:
+            estimate, folder = pilot.run_pilot(store_with_depth_passages(1), self.config,
+                                               self.registry, passages_for, out,
+                                               documents=(DOC,), behaviours=(SLUG,))
+        self.assertIsNone(folder)
+        self.assertGreater(estimate, 0)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ The three conditions for 10:
 (b) A conflict is settled. The document names another of its own rules that pulls against this behaviour, says which prevails and under what condition, and shows it on a case. A general rule from the second block counts only where it decides this behaviour's conflict. An instruction to weigh the considerations together does not decide it.
 (c) A default for the undecidable case. The document says what to do when the model cannot tell which side of the edge it is on, because intent is unclear, a claim cannot be checked or context is missing, or it orders the acceptable second-best responses from best to worst.
 
-An odd number means the level below is fully met and the level above is met only in part. 9 is demonstrated with one or two of the three conditions. 7 is prescribed with examples that do not yet serve as an answer key, because they are too few or they test a neighbouring behaviour. 5 is discussed with some rules precise enough to quote, too few to grade most responses. 3 is named with a sentence or two about the behaviour itself. 1 is a passage that bears on the behaviour only indirectly.
+An odd number means the level below is fully met and the level above is met only in part. 9 is demonstrated with one or two of the three conditions. 7 is prescribed with examples that do not yet serve as an answer key, because they are too few or they test a neighbouring behaviour. 5 is discussed with some rules precise enough to quote, too few to grade most responses. 3 is named with a sentence or two about the behaviour itself. 1 is a passage that bears on the behaviour only indirectly. An odd value needs its rationale to name which part of the level above is met. If you cannot name one, give the even value below.
 
 Boundary tests:
 - 4 or 6: could an evaluation score a transcript by quoting the document, or would the grader have to invent the standard? If invent, it is 4.
@@ -34,4 +34,4 @@ When in doubt between two values, give the lower.
 
 Answer with exactly two lines and nothing else:
 DEPTH: <a whole number from 0 to 10>
-RATIONALE: <one sentence naming what is present and what is missing, in the scale's terms; at 8 or above, say which of the three conditions are met>
+RATIONALE: <one sentence naming what is present and what is missing, in the scale's terms; at an odd value, which part of the level above is met; at 8 or above, which of the three conditions are met, and for (b) whether it rests on a passage numbered R>

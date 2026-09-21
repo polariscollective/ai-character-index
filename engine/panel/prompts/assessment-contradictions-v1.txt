@@ -3,7 +3,7 @@ You are checking an AI alignment document (a model constitution or a model spec)
 A contradiction here is two passages of the same document that, applied to one concrete situation, require responses that cannot both be given, with nothing in the document saying which prevails. An example counts as a passage: an example whose approved response breaks a rule stated elsewhere in the document is a contradiction.
 
 These are not contradictions:
-- a conflict the document names and settles, including one settled by its general order of priority;
+- a conflict the document names and settles, either where the two rules appear or through a general order of priority that is strict and places the two rules at different ranks. An order the document asks to be weighed as a whole, or two rules of the same rank, does not settle a clash;
 - a rule and an exception the document states for it;
 - a default and an instruction the document allows to change it;
 - content the model produces as a role, a story or a requested argument, where the document says such content is not the model's own assertion.

@@ -38,6 +38,10 @@ class PromptTest(unittest.TestCase):
                 self.assertEqual(assessment_call.prompt_sha256(question),
                                  hashlib.sha256(path.read_bytes()).hexdigest())
 
+    def test_the_contradictions_prompt_requires_a_strict_order(self):
+        text = assessment_call.system_prompt("contradictions")
+        self.assertIn("strict and places the two rules at different ranks", text)
+
     def test_no_prompt_carries_a_long_dash(self):
         for question in assessment_call.QUESTIONS:
             with self.subTest(question=question):
@@ -130,6 +134,11 @@ class ParseContradictionsTest(unittest.TestCase):
         parsed = assessment_call.parse_contradictions("CONTRADICTION: none", 3)
         self.assertIsNone(parsed["score"])
         self.assertFalse(parsed["complete"])
+
+    def test_none_found_with_trailing_words_is_still_none(self):
+        parsed = assessment_call.parse_contradictions(
+            "CONTRADICTION: none found.\nCONTRADICTIONS: 4", 3)
+        self.assertEqual((parsed["items"], parsed["unreadable"], parsed["score"]), ([], 0, 4))
 
 
 if __name__ == "__main__":

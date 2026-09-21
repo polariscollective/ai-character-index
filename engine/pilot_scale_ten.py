@@ -85,7 +85,11 @@ def cell_evidence(store, publication_id, slug, version_id, passages):
 
     The retained passages are chosen as batch_job.pending_depths chooses them,
     from the published run's parsed judgements, so the new depth reads the same
-    evidence the published one did."""
+    evidence the published one did. Every done aci_depths row records `passages`,
+    the count its own depth was given on; where that count is known and differs
+    from what is retained here, the pilot would be reading different evidence
+    than the published depth did, and stops rather than publish a comparison of
+    unlike things."""
     selected = store.select("aci_publication_cells", {
         "publication_id": f"eq.{publication_id}", "behaviour_slug": f"eq.{slug}",
         "spec_version_id": f"eq.{version_id}"})
@@ -103,22 +107,30 @@ def cell_evidence(store, publication_id, slug, version_id, passages):
         if row.get("parsed", True):
             votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
     shown = set(bands.shown_by_default(votes))
-    old = {model_of[row["call_id"]]: row["depth"]
-           for row in store.select("aci_depths", {"call_id": ids})
-           if row.get("status") == "done"}
-    return ([passage for passage in passages if passage[0] in shown],
-            sorted(calls, key=lambda call: call["model"]), old)
+    retained = [passage for passage in passages if passage[0] in shown]
+    depth_rows = store.select("aci_depths", {"call_id": ids})
+    done_depths = [row for row in depth_rows if row.get("status") == "done"]
+    old = {model_of[row["call_id"]]: row["depth"] for row in done_depths}
+    published_counts = {row["passages"] for row in done_depths
+                        if row.get("passages") is not None}
+    if published_counts and published_counts != {len(retained)}:
+        raise SystemExit(
+            f"{slug} on {version_id}: {len(retained)} passages retained here, but the "
+            f"published depth was given {sorted(published_counts)}; the pilot would not "
+            "read the same evidence")
+    return (retained, sorted(calls, key=lambda call: call["model"]), old)
 
 
 def ask(tag, system, user, config, call_model):
     """One call, and what it cost. A refusal is raised to the caller, which
     records it and goes on."""
     provider, model_id = h.resolve(tag, config)
+    kwargs = whole_doc.judge_kwargs(tag, model_id, config)
     reply, usage, finish_reason, seconds = call_model(
-        provider=provider, model_id=model_id, system=system, user=user,
-        kwargs=whole_doc.judge_kwargs(tag, model_id, config))
+        provider=provider, model_id=model_id, system=system, user=user, kwargs=kwargs)
     return {"reply": reply or "", "usage": usage, "finish_reason": finish_reason,
-            "seconds": seconds, "cost_usd": batch_job.cost_of(tag, usage, config)}
+            "seconds": seconds, "cost_usd": batch_job.cost_of(tag, usage, config),
+            "provider": provider, "model_id": model_id, "kwargs": kwargs}
 
 
 def priced(tag, system, user, output_tokens, config):
@@ -171,6 +183,10 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
                                OUTPUT_TOKENS["depth"], config)
     estimate = round(estimate, 2)
     if not go:
+        for (document, slug), (retained, calls, _old) in evidence.items():
+            judges = ", ".join(sorted(call["model"] for call in calls))
+            print(f"  {document} {slug}: {len(retained)} passages retained, "
+                  f"judged by {judges}")
         return estimate, None
     call_model = call_model or batch_job.call_openrouter
 
@@ -188,6 +204,7 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
         here = folder / document.replace("@", "_")
         here.mkdir(exist_ok=True)
         text = passages[document]
+        by_locator = {locator: passage_text for locator, _section, passage_text in text}
         record = results["documents"][document] = {"assessment": {}, "cells": {}}
         criteria_by_seat = {}
         for seat in seats:
@@ -214,9 +231,17 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
                              second=text[item["second"] - 1][0])
                         for item in parsed["items"]])
                 record["assessment"][seat][question] = dict(
-                    parsed, cost_usd=answer["cost_usd"], finish_reason=answer["finish_reason"])
+                    parsed, cost_usd=answer["cost_usd"], finish_reason=answer["finish_reason"],
+                    provider=answer["provider"], model_id=answer["model_id"],
+                    kwargs=answer["kwargs"])
         rules = conflict_rules(criteria_by_seat, text)
         record["conflict_rules"] = [locator for locator, _section, _text in rules]
+        passage_text = {locator: by_locator.get(locator) for locator in record["conflict_rules"]}
+        for seat_answers in record["assessment"].values():
+            for item in seat_answers.get("contradictions", {}).get("items", []):
+                passage_text[item["first"]] = by_locator.get(item["first"])
+                passage_text[item["second"]] = by_locator.get(item["second"])
+        record["passage_text"] = passage_text
 
         for slug in behaviours:
             retained, calls, old = evidence[(document, slug)]
@@ -241,7 +266,13 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
                 depth, rationale = depth_call.parse(answer["reply"], scale=10)
                 cell["new"][tag] = {"depth": depth, "rationale": rationale,
                                     "cost_usd": answer["cost_usd"],
-                                    "finish_reason": answer["finish_reason"]}
+                                    "finish_reason": answer["finish_reason"],
+                                    "provider": answer["provider"], "model_id": answer["model_id"],
+                                    "kwargs": answer["kwargs"]}
+
+        (folder / "pilot.json").write_text(json.dumps(results, indent=2, ensure_ascii=False),
+                                           encoding="utf-8")
+        (folder / "summary.md").write_text(summary(results), encoding="utf-8")
 
     results["finished_at"] = now()
     results["cost_usd"] = round(sum(_costs(results)), 6)
@@ -265,19 +296,73 @@ def _cell_text(value):
     return str(value).replace("|", "/").replace("\n", " ")
 
 
+def _cut(text, limit=300):
+    return (text or "")[:limit]
+
+
+def _calls_lines(record):
+    """One line per seat and question: for criteria, finish_reason and whether
+    the reply was complete; for contradictions, items listed, items unreadable,
+    score and finish_reason. An error shows its message."""
+    lines = []
+    for seat, answers in record["assessment"].items():
+        for question, answer in answers.items():
+            if "error" in answer:
+                lines.append(f"- {seat} {question}: {answer['error']}")
+            elif question == "contradictions":
+                lines.append(
+                    f"- {seat} {question}: {len(answer.get('items', []))} items listed, "
+                    f"{answer.get('unreadable', 0)} unreadable, score {answer.get('score')}, "
+                    f"finish_reason={answer.get('finish_reason')}")
+            else:
+                complete = "complete" if answer.get("complete") else "incomplete"
+                lines.append(f"- {seat} {question}: finish_reason="
+                             f"{answer.get('finish_reason')}, {complete}")
+    return lines
+
+
+def _rationales_lines(record):
+    """Per criterion, each seat's rationale, contradictions included."""
+    lines = []
+    for criterion in ("conflict_rules", "contradictions", "rule_force", "reasons",
+                      "situations"):
+        question = "contradictions" if criterion == "contradictions" else "criteria"
+        for seat, answers in record["assessment"].items():
+            answer = answers.get(question, {})
+            rationale = (answer.get("rationale") if criterion == "contradictions"
+                        else answer.get("rationales", {}).get(criterion))
+            if rationale:
+                lines.append(f"- {LABELS[criterion]}, {seat}: {rationale}")
+    return lines
+
+
 def summary(results):
     """The pilot, for a person to read: per document, the five criteria by
-    judge, the general conflict rules, every contradiction listed, and each
-    depth out of ten beside the published depth out of four, doubled."""
+    judge, the calls behind them, the general conflict rules with their text,
+    every contradiction listed with its rationale and its passages' text, and
+    each depth out of ten beside the published depth out of four, doubled.
+
+    finished_at and cost_usd are absent from a write made mid-run; the header
+    then says the run is not finished and gives the cost run up so far."""
+    finished_at = results.get("finished_at")
+    cost = results.get("cost_usd")
+    if cost is None:
+        cost = round(sum(_costs(results)), 6)
+    if finished_at:
+        status = (f"finished {finished_at}. Priced at {results['estimate_usd']} dollars, "
+                  f"cost {cost} dollars.")
+    else:
+        status = (f"not finished. Priced at {results['estimate_usd']} dollars, cost {cost} "
+                  "dollars so far.")
     lines = ["# Pilot: depth out of ten, and the document as a whole", "",
              f"Publication read: `{results['publication']}`. Started "
-             f"{results['started_at']}, finished {results['finished_at']}. Priced at "
-             f"{results['estimate_usd']} dollars, cost {results['cost_usd']} dollars.", "",
+             f"{results['started_at']}, {status}", "",
              "Prompts: " + ", ".join(f"{name} `{sha[:8]}`"
                                     for name, sha in results["prompts"].items()) + "."]
-    odd = given_count = 0
+    odd = given_count = no_depth = 0
     for document, record in results["documents"].items():
         seats = list(record["assessment"])
+        passage_text = record.get("passage_text", {})
         lines += ["", f"## {document}", "", "### The document as a whole", "",
                   "| Criterion | " + " | ".join(seats) + " |",
                   "|---|" + "---|" * len(seats)]
@@ -286,14 +371,23 @@ def summary(results):
             lines.append(f"| {LABELS[criterion]} | "
                          + " | ".join(_score_of(record["assessment"][seat], criterion)
                                       for seat in seats) + " |")
-        rules = ", ".join(f"`{locator}`" for locator in record["conflict_rules"]) or "none"
-        lines += ["", f"General rules for conflicts, cited by at least two judges: {rules}.",
-                  "", "### Contradictions listed", ""]
-        listed = [f"- {seat}: `{item['first']}` against `{item['second']}`. "
-                  f"{item['situation']} {item['why']}"
-                  for seat in seats
-                  for item in record["assessment"][seat].get("contradictions", {})
-                                                        .get("items", [])]
+        lines += ["", "### Calls", ""] + _calls_lines(record)
+        lines += ["", "### Rationales", ""] + (_rationales_lines(record) or ["None."])
+        lines += ["", "General rules for conflicts, cited by at least two judges:", ""]
+        if record["conflict_rules"]:
+            lines += [f"- `{locator}`: {_cut(passage_text.get(locator))}"
+                      for locator in record["conflict_rules"]]
+        else:
+            lines += ["None."]
+        lines += ["", "### Contradictions listed", ""]
+        listed = []
+        for seat in seats:
+            for item in record["assessment"][seat].get("contradictions", {}).get("items", []):
+                listed.append(f"- {seat}: `{item['first']}` against `{item['second']}`. "
+                              f"{item['situation']} {item['why']}")
+                listed.append(f"  - `{item['first']}`: {_cut(passage_text.get(item['first']))}")
+                listed.append(
+                    f"  - `{item['second']}`: {_cut(passage_text.get(item['second']))}")
         lines += listed or ["None."]
         lines += ["", "### Depth out of ten", "",
                   "| Behaviour | Judge | Out of four, doubled | Out of ten | Rationale |",
@@ -306,12 +400,20 @@ def summary(results):
                 if new is not None:
                     given_count += 1
                     odd += new % 2
-                reason = given.get("rationale") or given.get("error") or ""
+                    reason = given.get("rationale") or ""
+                else:
+                    if tag in cell["new"]:
+                        no_depth += 1
+                    if "error" in given:
+                        reason = given["error"]
+                    else:
+                        reason = f"no depth (finish_reason={given.get('finish_reason')})"
                 lines.append(f"| {slug} | {tag} | "
                              f"{'no answer' if old is None else old * 2} | "
                              f"{'no answer' if new is None else new} | "
                              f"{_cell_text(reason)} |")
-    lines += ["", f"Odd values: {odd} of {given_count} depths out of ten."]
+    lines += ["", f"Odd values: {odd} of {given_count} depths out of ten. {no_depth} gave no "
+                  "depth."]
     return "\n".join(lines) + "\n"
 
 

@@ -1452,6 +1452,8 @@ Claude-Session: https://claude.ai/code/session_01SyUZkS2ecDtKxgjs1CxSG7
 EOF
 ```
 
+After the whole-branch review, the prompts, the summary and the evidence check changed; see the commit that follows ce54918. The code blocks above are the version first reviewed.
+
 ---
 
 ### Task 4: Price the pilot, then run it
@@ -1495,15 +1497,21 @@ for doc, rec in r["documents"].items():
         for q, a in qs.items():
             if "error" in a or not a.get("complete"):
                 print("ASSESSMENT", doc, seat, q, a.get("error", "incomplete"))
+            if a.get("unreadable", 0) > 0:
+                print("UNREADABLE", doc, seat, q, a["unreadable"])
+            if a.get("finish_reason") not in (None, "stop"):
+                print("FINISH", doc, seat, q, a["finish_reason"])
     for slug, cell in rec["cells"].items():
         for tag, g in cell["new"].items():
             if g.get("depth") is None:
                 print("DEPTH", doc, slug, tag, g.get("error", "no DEPTH line"))
+            if g.get("finish_reason") not in (None, "stop"):
+                print("FINISH", doc, tag, slug, g["finish_reason"])
 print("cost", r["cost_usd"], "estimate", r["estimate_usd"])
 EOF
 ```
 
-Expected: only the `cost ... estimate ...` line. Any other line names a failed or incomplete call; read its `.reply.txt` before deciding whether to re-run that call alone (with `--documents` and `--behaviours` narrowed to it) or to report it as a finding.
+Expected: only the `cost ... estimate ...` line. Any other line names a failed, incomplete or unusual call; read its `.reply.txt`. A narrowed re-run with `--documents` and `--behaviours` re-assesses the whole document first, six whole-document calls, before giving any depth, so it costs most of that document's share of the pilot: prefer recording a single failure as a finding. A seat refused on a whole document stays empty in this pilot, because the declared substitutes are not seated here.
 
 ---
 

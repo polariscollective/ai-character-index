@@ -93,8 +93,10 @@ bars of the first five levels keep their wording and move to the even numbers.
 **Odd values.** An odd value means the level below is fully met and the level
 above is met in part. A 9 is demonstrated with one or two of the three
 conditions for 10. A 5 is discussed with some rules precise enough to quote,
-too few to grade most responses. When in doubt between two values, the judge
-gives the lower, as it does today.
+too few to grade most responses. An odd value's rationale names which part of
+the level above is met; a judge that cannot name one gives the even value
+below. When in doubt between two values, the judge gives the lower, as it does
+today.
 
 **The three conditions for 10.**
 

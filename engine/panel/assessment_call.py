@@ -116,7 +116,7 @@ def parse_contradictions(reply, passage_count):
     score = rationale = None
     for label, value in _labelled(reply):
         if label == "CONTRADICTION":
-            if value.lower().rstrip(".") == "none":
+            if value.lower().startswith("none"):
                 continue
             parts = [part.strip() for part in value.split("|")]
             numbers = (_passage_numbers(parts[0], passage_count)
