@@ -347,6 +347,97 @@ runs:
   document written for a product the list does not foresee is scored against it
   anyway.
 
+## What the pilot showed
+
+Run on 21 September 2026, `artefacts/2026-09-21T14-29-29-pilot-scale-ten` (not
+committed). Priced at 6.06 dollars, it cost 6.38. It read the constitution and
+the model spec of August 2026, four behaviours on each, from publication
+`1919ee6b`. The retained passages matched the published depths' evidence in all
+eight cells.
+
+**The top of the scale is not rare.** `sol` gave 10 to six cells of eight, and
+`fable` to four of the seven it judged. Only sycophancy stayed low on both
+documents, at 6 or 7.
+
+| Cell | Published, out of 4 | sol | fable (opus in its seat on the last row) | deepseek |
+|---|---|---|---|---|
+| constitution, honesty | 3.7 | 10 | 10 | no depth |
+| constitution, sycophancy | 2.7 | 6 | 7 | no depth |
+| constitution, instruction hierarchy | 3.7 | 10 | 10 | 8 |
+| constitution, harm to third parties | 3.7 | 10 | 10 | no depth |
+| model spec, honesty | 3.7 | 10 | 9 | no depth |
+| model spec, sycophancy | 3.0 | 6 | 7 | no depth |
+| model spec, instruction hierarchy | 3.7 | 10 | 10 | no depth |
+| model spec, harm to third parties | 3.3 | 10 | 8 | 8 |
+
+Reading the rationales, the judges were mostly right on the letter of the
+three conditions. Each condition is met by one instance: the constitution's
+knife-whittling pair shows an edge for harm to third parties, its vaccine
+research case settles a conflict with helpfulness, and "if in doubt, don't" is a
+default. The rules block made condition (b) easier still, since the general
+rules for conflicts between instructions settle something for any behaviour
+that touches instructions. As written, 10 rewards a document that shows one
+edge, one settled conflict and one default, which rich sections of both
+documents do.
+
+**Odd values were not used to hedge.** Three depths of eighteen were odd (7, 7
+and 9), and each rationale named the part of the level above that was met.
+
+**deepseek answered DEPTH: -1 six times in eight.** Its rationales describe a
+level ("placing it at level 6; it meets part of level 8"), so it is the format
+failure recorded in this repository before, four times in 156 on the scale of
+four, now triggered by the new prompt. The answer line of `depth-v1.txt` lists
+every allowed value; the new one says "a whole number from 0 to 10".
+
+**The contradictions of two judges hold up, those of the third do not.** `sol`
+listed three on the model spec, and each is a real clash the document leaves
+open: the red-line promise never to facilitate biological weapons against the
+transformation exception, which allows translating user-provided restricted
+content; the rule that customisation never overrides principles above guideline
+level against the example where a user switches off balanced perspectives; and
+the ban on political persuasion tailored to an individual against the example
+that answers a father of two daughters with arguments aimed at his interests.
+`fable` listed two on the constitution, both real: behaving the same whether or
+not tested against the permission to exploit a broken training environment,
+and sharing genuine assessments of hard moral dilemmas against professional
+reticence on abortion. `deepseek` listed ten across both documents, and on
+reading none holds: each is a conflict the document settles in the next
+sentence, or no conflict at all. No pair was found by two judges. `fable` was
+refused by a content filter on the model spec's contradictions call, and `sol`
+found none in the constitution.
+
+**Two criteria of the whole-document assessment need work.**
+
+- Conflict rules scored 4 from every judge on both documents. The judges read
+  "weigh holistically" and "follow the spirit of the document" as a rule for two
+  rules of the same rank, so the criterion does not separate a strict order
+  from a holistic one.
+- Force of each rule under-reads the model spec, and this is a defect of the
+  pipeline rather than of the judges. `h.passages` gives a section path without
+  its heading attributes, so 78 of the model spec's 79 sections reached the
+  judges without their `authority=` label. Two judges said the labels were
+  missing.
+
+Reasons given and situations covered separated the documents as expected: the
+constitution scored higher on reasons, and it has no rules of its own for
+images, audio and video.
+
+**Recommendation.** Do not go on to the full run as designed. Before a second
+pilot on the same eight cells:
+
+1. Make 10 rare by making it about the whole behaviour. The three conditions
+   hold for every facet the behaviour's brief names (its definition and
+   clarifications), not for one instance, and a conflict counts only when this
+   behaviour's own passages settle it on a case. The rules block stays as
+   evidence of what the general rules say and no longer satisfies (b) alone.
+2. List every allowed value in the depth answer line, as `depth-v1.txt` does.
+3. Keep a contradiction only when a second reading confirms it: each listed
+   pair is put back to the other judges, and the score counts confirmed pairs.
+4. Tighten the conflict-rules anchors: an order to be weighed holistically, or
+   an appeal to the document's spirit, is at most 2.
+5. Show the judges each section's heading attributes.
+6. Seat `fable`'s declared substitute when it is refused on a whole document.
+
 Sources:
 [arXiv 2510.07686](https://arxiv.org/abs/2510.07686),
 [arXiv 2605.24229](https://arxiv.org/html/2605.24229v1),
