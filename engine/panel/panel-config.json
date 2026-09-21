@@ -280,6 +280,19 @@
     }
   },
   "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. Which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
+  "assessment": {
+    "criteria": [
+      "sol",
+      "fable",
+      "deepseek"
+    ],
+    "contradictions": [
+      "sol",
+      "fable",
+      "kimi"
+    ]
+  },
+  "_assessment_note": "The seats of the assessment of a document as a whole (engine/assess.py), per question. The criteria are scored by frontier_fast's seats. The contradictions are found, and confirmed on a second reading, by sol, fable and kimi: kimi sits in deepseek's place for those two questions (owner, 21 September 2026). A seat that cannot answer is taken by its declared substitutes from frontier_fast's substitutes block, skipping any substitute already seated for the same question.",
   "rubric": "v5",
   "specs": [
     "anthropic--constitution",

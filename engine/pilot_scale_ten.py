@@ -51,11 +51,15 @@ sys.path.insert(0, str(HERE / "panel"))
 sys.path.insert(0, str(HERE / "spec-cite"))
 
 import assessment_call           # noqa: E402
+import assessment_run            # noqa: E402
 import bands                     # noqa: E402
 import batch_job                 # noqa: E402
 import depth_call                # noqa: E402
+import depth_ladder              # noqa: E402
 import index_store               # noqa: E402
-import whole_doc                 # noqa: E402
+from assessment_run import (     # noqa: E402
+    CONFIRM_CLAIMS_CHARS, CONFIRM_OUTPUT_TOKENS, conflict_rules)
+from seat_call import priced     # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "panel" / "harness.py")
 h = importlib.util.module_from_spec(_spec)
@@ -65,17 +69,10 @@ DOCUMENTS = ("anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-1
 BEHAVIOURS = ("honesty-and-non-deception", "no-sycophancy",
               "instruction-hierarchy-conformance", "harm-avoidance-to-third-parties")
 PANEL = "frontier_fast"
-QUORUM = 2
-CHARS_PER_TOKEN = 4
-# Output allowances for the price, generous because sol's reasoning is billed as
-# output, and a price that comes in low is the one that surprises.
-OUTPUT_TOKENS = {"criteria": 4000, "contradictions": 8000, "depth": 1000}
+# The assessment's output allowances, and one for a depth call.
+OUTPUT_TOKENS = dict(assessment_run.OUTPUT_TOKENS, depth=1000)
 # The rules block a depth call will carry, priced before anyone has cited it.
 RULES_ALLOWANCE_CHARS = 4000
-# A confirmation call is priced per seat, whether or not it turns out to be
-# needed: how many claims a seat will have to confirm is only known at run time.
-CONFIRM_CLAIMS_CHARS = 3000
-CONFIRM_OUTPUT_TOKENS = 1500
 LABELS = {"conflict_rules": "Conflict rules", "contradictions": "Unresolved contradictions",
           "rule_force": "Force of each rule", "reasons": "Reasons given",
           "situations": "Situations covered"}
@@ -88,17 +85,6 @@ def now():
 def split_document(document_id):
     spec_id, _, version = document_id.partition("@")
     return spec_id, version
-
-
-def conflict_rules(criteria_by_seat, passages, quorum=QUORUM):
-    """The passages at least `quorum` seats cited as the document's general
-    rules for conflicts, in document order. A seat whose criteria call failed
-    cited nothing, so it cannot help a passage reach the quorum."""
-    counts = {}
-    for parsed in criteria_by_seat.values():
-        for number in set(parsed.get("conflict_rule_passages") or []):
-            counts[number] = counts.get(number, 0) + 1
-    return [passages[number - 1] for number in sorted(counts) if counts[number] >= quorum]
 
 
 def cell_evidence(store, publication_id, slug, version_id, passages):
@@ -142,160 +128,41 @@ def cell_evidence(store, publication_id, slug, version_id, passages):
     return (retained, sorted(calls, key=lambda call: call["model"]), old)
 
 
-def ask(tag, system, user, config, call_model):
-    """One call, and what it cost. A refusal is raised to the caller, which
-    records it and goes on."""
-    provider, model_id = h.resolve(tag, config)
-    kwargs = whole_doc.judge_kwargs(tag, model_id, config)
-    reply, usage, finish_reason, seconds = call_model(
-        provider=provider, model_id=model_id, system=system, user=user, kwargs=kwargs)
-    return {"reply": reply or "", "usage": usage, "finish_reason": finish_reason,
-            "seconds": seconds, "cost_usd": batch_job.cost_of(tag, usage, config),
-            "provider": provider, "model_id": model_id, "kwargs": kwargs}
-
-
-def priced(tag, system, user, output_tokens, config):
-    usage = {"prompt_tokens": (len(system) + len(user)) // CHARS_PER_TOKEN,
-             "completion_tokens": output_tokens}
-    return batch_job.cost_of(tag, usage, config) or 0.0
-
-
-def _candidates(seat, panel, config):
-    """`seat`, then its declared substitutes in order, for one whole-document
-    call. A seat with no declared substitutes is asked alone, as before."""
-    return [seat] + config.get("substitutes", {}).get(panel, {}).get(seat, [])
-
-
-def ask_with_substitutes(seat, question, system, user, config, call_model, panel, here):
-    """Ask `seat`'s own model, then its declared substitutes in order, until
-    one answers.
-
-    A candidate fails when the call raises, when it comes back
-    content-filtered, or when its reply is empty once stripped. Returns
-    (tag, answer, substituted): `tag` and `answer` are the candidate that
-    answered and `ask`'s dict for it, or (None, None) when every candidate
-    failed. `substituted` lists {"model", "reason", "cost_usd",
-    "finish_reason", "model_id"} for every candidate that failed before the
-    one returned, in the order tried; the last three are None when the
-    candidate raised before answering, since it was never billed. A refused
-    candidate's reply, when it has any text, is saved to
-    `<seat>.<question>.<candidate>.refused.txt` beside the other replies."""
-    substituted = []
-    for tag in _candidates(seat, panel, config):
-        try:
-            answer = ask(tag, system, user, config, call_model)
-        except Exception as refused:                      # noqa: BLE001
-            substituted.append({"model": tag, "reason": str(refused)[:300],
-                                "cost_usd": None, "finish_reason": None, "model_id": None})
-            continue
-        if answer["finish_reason"] == "content_filter":
-            reason = "finish_reason=content_filter"
-        elif not answer["reply"].strip():
-            reason = f"empty reply, finish_reason={answer['finish_reason']}"
-        else:
-            return tag, answer, substituted
-        substituted.append({"model": tag, "reason": reason, "cost_usd": answer["cost_usd"],
-                            "finish_reason": answer["finish_reason"],
-                            "model_id": answer["model_id"]})
-        if answer["reply"]:
-            (here / f"{seat}.{question}.{tag}.refused.txt").write_text(answer["reply"],
-                                                                       encoding="utf-8")
-    return None, None, substituted
+def _ask_seat(seat, question, system, user, config, call_model, panel, here, seated):
+    """`assessment_run.ask_with_substitutes`, with every refused candidate's
+    reply that has any text saved to `<seat>.<question>.<candidate>.refused.txt`
+    beside the other replies. Returns (tag, answer, substituted)."""
+    tag, answer, substituted, refused = assessment_run.ask_with_substitutes(
+        seat, system, user, config, call_model, panel, seated=seated)
+    for candidate, reply in refused:
+        (here / f"{seat}.{question}.{candidate}.refused.txt").write_text(reply, encoding="utf-8")
+    return tag, answer, substituted
 
 
 def depth_with_ladder(slug, judge, system, user, config, call_model, panel, here):
-    """One judge's depth out of ten, given by `judge`'s own model first, then
-    asked again with each of `depth_call.REMINDERS_OF_TEN` in turn when a reply
-    gives no depth, and finally by `judge`'s declared substitutes in order, each
-    tried with the plain user message and, if that fails too, one reminder. The
-    first attempt that parses to a depth answers.
+    """One judge's depth out of ten, given through `depth_ladder.give`, with
+    every reply it came back with saved to `<slug>.<model>.depth.<n>.reply.txt`,
+    `n` counting from 1 for that model; an attempt that raised has no reply and
+    no file.
 
-    Returns the cell's entry for `judge`: `depth`, `rationale`, `model` (the
-    model that answered, `judge` itself unless a substitute did), `attempts`
-    (every call made, in order, each `{"model", "reminder", "finish_reason",
-    "cost_usd", "parsed"}`), and `substituted` (present only once a substitute
-    answered). When nothing answers, `depth` and `rationale` are None and
-    `attempts` still holds every call made. An exception from a call is
-    recorded as an attempt that did not parse, with no cost and no
-    finish_reason, and the ladder moves on to its next step.
-
-    Every attempt with a reply, parsed or not, is saved to
-    `<slug>.<model>.depth.<n>.reply.txt`, `n` counting from 1 for that model."""
-    attempts = []
+    Returns the cell's entry for `judge` as pilot.json has always carried it:
+    `depth`, `rationale`, `model` (the model that answered, `judge` itself
+    unless a substitute did), `attempts` (every call made, in order), and
+    `substituted` (present only once a substitute answered)."""
+    given = depth_ladder.give(judge, system, user, config, call_model, panel=panel)
     counters = {}
-
-    def try_once(tag, reminder):
-        this_user = user if reminder == 0 else depth_call.retry_user(user, reminder)
-        try:
-            answer = ask(tag, system, this_user, config, call_model)
-        except Exception:                              # noqa: BLE001
-            attempts.append({"model": tag, "reminder": reminder, "finish_reason": None,
-                             "cost_usd": None, "parsed": False})
-            return None
-        n = counters.get(tag, 0) + 1
-        counters[tag] = n
-        (here / f"{slug}.{tag}.depth.{n}.reply.txt").write_text(answer["reply"],
-                                                                 encoding="utf-8")
-        depth, rationale = depth_call.parse(answer["reply"], scale=10)
-        attempts.append({"model": tag, "reminder": reminder,
-                         "finish_reason": answer["finish_reason"],
-                         "cost_usd": answer["cost_usd"], "parsed": depth is not None})
-        return None if depth is None else (depth, rationale)
-
-    for reminder in (0, 1, 2):
-        result = try_once(judge, reminder)
-        if result is not None:
-            depth, rationale = result
-            return {"depth": depth, "rationale": rationale, "model": judge,
-                    "attempts": attempts}
-
-    for substitute in config.get("substitutes", {}).get(panel, {}).get(judge, []):
-        for reminder in (0, 1):
-            result = try_once(substitute, reminder)
-            if result is not None:
-                depth, rationale = result
-                return {"depth": depth, "rationale": rationale, "model": substitute,
-                        "attempts": attempts,
-                        "substituted": {"model": substitute,
-                                       "reason": "off-scale reply after two reminders"}}
-
-    return {"depth": None, "rationale": None, "model": judge, "attempts": attempts}
-
-
-def _pool_claims(contradictions_by_seat, seats):
-    """The pooled claims, one per distinct unordered pair of passage numbers,
-    in the order first found: {"first", "second", "situation", "why",
-    "found_by"}, `first` and `second` still 1-based passage numbers.
-
-    `contradictions_by_seat` holds each seat's parsed items before their
-    numbers are turned into locators. The first seat to list a pair keeps its
-    situation and reason; every seat that lists it, including later ones,
-    joins `found_by`."""
-    by_pair = {}
-    order = []
-    for seat in seats:
-        for item in contradictions_by_seat.get(seat, []):
-            pair = frozenset((item["first"], item["second"]))
-            if pair not in by_pair:
-                by_pair[pair] = {"first": item["first"], "second": item["second"],
-                                 "situation": item["situation"], "why": item["why"],
-                                 "found_by": []}
-                order.append(pair)
-            if seat not in by_pair[pair]["found_by"]:
-                by_pair[pair]["found_by"].append(seat)
-    return [by_pair[pair] for pair in order]
-
-
-def _confirm_score(claims):
-    """4 when no claim is confirmed, 2 when one or two are and none is
-    absolute, 0 when three or more are confirmed or any confirmed claim is
-    absolute."""
-    confirmed = [claim for claim in claims if claim["confirmed"]]
-    if not confirmed:
-        return 4
-    if any(claim["absolute"] for claim in confirmed) or len(confirmed) >= 3:
-        return 0
-    return 2
+    for attempt, reply in zip(given["attempts"], given["replies"]):
+        if reply is None:
+            continue
+        n = counters[attempt["model"]] = counters.get(attempt["model"], 0) + 1
+        (here / f"{slug}.{attempt['model']}.depth.{n}.reply.txt").write_text(reply,
+                                                                             encoding="utf-8")
+    entry = {"depth": given["depth"], "rationale": given["rationale"], "model": given["model"],
+             "attempts": given["attempts"]}
+    if given["substitution_reason"] is not None:
+        entry["substituted"] = {"model": given["model"],
+                                "reason": given["substitution_reason"]}
+    return entry
 
 
 def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, config,
@@ -303,29 +170,20 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
     """Put every contradiction one seat found to the seats that did not find
     it, settle which are confirmed, and return (contradictions, score) for
     `record`. A seat with nothing left to confirm is not called."""
-    pooled = _pool_claims(contradictions_by_seat, seats)
-    holds = [[] for _ in pooled]
-    does_not_hold = [[] for _ in pooled]
-    # A claim every seat already found is never put to anyone, so its
-    # absoluteness is unasked rather than false.
-    absolute = [None if len(claim["found_by"]) >= len(seats) else False for claim in pooled]
-    reasons = [{} for _ in pooled]
-
+    pooled = assessment_run.pool_claims(contradictions_by_seat, seats)
+    verdicts_by_seat = {}
     for seat in seats:
-        to_confirm = [(i, claim) for i, claim in enumerate(pooled)
-                      if seat not in claim["found_by"]]
+        to_confirm = assessment_run.claims_to_confirm(pooled, seat)
         if not to_confirm:
             continue
         print(f"  {seat} confirming {len(to_confirm)} contradictions ...", flush=True)
-        claims = [{"first": claim["first"], "second": claim["second"],
-                  "situation": claim["situation"], "why": claim["why"]}
-                 for _i, claim in to_confirm]
+        claims = [claim for _i, claim in to_confirm]
         system, user = assessment_call.compose_confirm(prompt_passages, claims)
-        tag, answer, substituted = ask_with_substitutes(seat, "confirm", system, user, config,
-                                                         call_model, panel, here)
+        tag, answer, substituted = _ask_seat(seat, "confirm", system, user, config, call_model,
+                                             panel, here, seats)
         if answer is None:
             record["assessment"][seat]["confirm"] = {
-                "error": substituted[-1]["reason"], "substituted": substituted}
+                "error": assessment_run.last_failure(substituted), "substituted": substituted}
             continue
         (here / f"{seat}.confirm.reply.txt").write_text(answer["reply"], encoding="utf-8")
         verdicts = assessment_call.parse_confirm(answer["reply"], len(claims))
@@ -334,22 +192,9 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
             cost_usd=answer["cost_usd"], finish_reason=answer["finish_reason"],
             provider=answer["provider"], model_id=answer["model_id"], kwargs=answer["kwargs"],
             claims_asked=len(claims))
-        for position, verdict in verdicts.items():
-            i, _claim = to_confirm[position - 1]
-            reasons[i][seat] = verdict["reason"]
-            (holds if verdict["holds"] else does_not_hold)[i].append(seat)
-            if verdict["absolute"]:
-                absolute[i] = True
-
-    contradictions = []
-    for i, claim in enumerate(pooled):
-        confirmed = len(claim["found_by"]) + len(holds[i]) >= 2
-        contradictions.append({
-            "first": text[claim["first"] - 1][0], "second": text[claim["second"] - 1][0],
-            "situation": claim["situation"], "why": claim["why"],
-            "found_by": claim["found_by"], "holds": holds[i], "does_not_hold": does_not_hold[i],
-            "absolute": absolute[i], "confirmed": confirmed, "reasons": reasons[i]})
-    return contradictions, _confirm_score(contradictions)
+        verdicts_by_seat[seat] = assessment_run.by_claim(to_confirm, verdicts)
+    contradictions = assessment_run.settle(pooled, verdicts_by_seat, seats, text)
+    return contradictions, assessment_run.confirm_score(contradictions)
 
 
 def _costs(results):
@@ -450,11 +295,12 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
             for question in assessment_call.QUESTIONS:
                 print(f"  {seat} assessing {document}: {question} ...", flush=True)
                 system, user = assessment_call.compose(question, labelled)
-                tag, answer, substituted = ask_with_substitutes(
-                    seat, question, system, user, config, call_model, panel, here)
+                tag, answer, substituted = _ask_seat(
+                    seat, question, system, user, config, call_model, panel, here, seats)
                 if answer is None:
                     record["assessment"][seat][question] = {
-                        "error": substituted[-1]["reason"], "substituted": substituted}
+                        "error": assessment_run.last_failure(substituted),
+                        "substituted": substituted}
                     continue
                 (here / f"{seat}.{question}.reply.txt").write_text(answer["reply"],
                                                                   encoding="utf-8")
