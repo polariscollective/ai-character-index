@@ -1024,9 +1024,21 @@ for u in "payload?publication=$P&behavior=" "documents?publication=$P&spec=" \
 done
 ```
 
-Expected: payload about 66 KB, documents about 1 KB, behaviours about 15 KB,
-links about 88 KB. Around 170 KB in all, against the 2062 KB the page pulls
+Expected: payload about 134 KB, documents about 1 KB, behaviours about 15 KB,
+links about 88 KB. Around 238 KB in all, against the 2062 KB the page pulls
 today.
+
+The payload figure is 134 and not the 66 this plan first predicted, and the
+difference is worth knowing rather than absorbing. `sliceColumn` attaches a
+`citedBy` citation index whenever a behaviour set is present, so the response is
+behaviours at 67 KB plus `citedBy` at 67 KB. `citedBy` exists so a `?passage=`
+link can find a behaviour the address never named, which is the reader's need
+and not this page's: the string does not appear in `site/overview.js` at all.
+
+So the grid is sent 67 KB it never reads, and this step does not fix that. No
+parameter distinguishes a caller that wants the citation index, so suppressing
+it is a design change rather than an adjustment, and it is recorded for the
+final whole-branch review to weigh.
 
 - [ ] **Step 4: Look at the page**
 
