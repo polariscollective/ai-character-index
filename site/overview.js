@@ -521,7 +521,7 @@ async function initialize() {
      * listed with its heading and its figures, and none of them carries the
      * paragraphs or the document text this page never reads. Measured on
      * 9b7ce377: the payload falls from 888 KB to 131 and the documents from
-     * 1161 KB to 1. Of that 131, about half is a citedBy index this page never
+     * 1069 KB to 1. Of that 131, about half is a citedBy index this page never
      * reads, which sliceColumn attaches whenever a behaviour set is present. */
     loadJSON(`/api/reader/payload${PINNED ? `${PINNED}&` : "?"}behavior=`, null),
     loadJSON(`/api/reader/documents${PINNED ? `${PINNED}&` : "?"}spec=`, null),
