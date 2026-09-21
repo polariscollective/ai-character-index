@@ -390,7 +390,9 @@ class TestAppJSWithheld(unittest.TestCase):
         out = subprocess.run(["node", str(self.HARNESS)],
                              capture_output=True, text=True, timeout=120)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("0 failures", out.stdout)
+        # Exit status alone cannot tell "every check holds" from "the harness
+        # stopped asserting"; pin the count the way the sibling harnesses do.
+        self.assertIn("6 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestLinkParagraphCells(unittest.TestCase):

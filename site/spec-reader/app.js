@@ -3664,8 +3664,15 @@ function updatePanelMeta(panel, doc) {
 
   // Counted from the published set, not from what resolved: a passage that failed to
   // anchor is an unresolved-anchor warning, not an absence of coverage.
-  const published = selectedBehaviours()
-    .reduce((total, behaviour) => total + paragraphsOf(behaviour, doc.id).passages.length, 0);
+  // Withheld is not zero. A cell whose paragraphs this page never asked for
+  // must not be reported as a specification saying nothing, which is the one
+  // claim the index must never make by accident.
+  let published = 0, withheld = false;
+  selectedBehaviours().forEach(behaviour => {
+    const cell = paragraphsOf(behaviour, doc.id);
+    if (cell.withheld) withheld = true;
+    else published += cell.passages.length;
+  });
   if (tracking && published === 0) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
@@ -3673,13 +3680,18 @@ function updatePanelMeta(panel, doc) {
     // "Not judged yet" is selected by the document's own `judged` flag. Only a
     // documents payload built with judged_version_ids carries it, and publish
     // builds none today, so a published document always takes one of the other
-    // two branches; the reader fixture is what reaches this one.
+    // branches; the reader fixture is what reaches this one.
     panel.querySelector(".document-body").insertAdjacentHTML(
       "afterbegin",
       doc.judged === false
         ? `<div class="zero-coverage" role="note">
             <strong>Not judged yet.</strong>
             <span>No panel has scored this document, so it shows no passages. That is not a finding about the document.</span>
+          </div>`
+        : withheld
+        ? `<div class="zero-coverage" role="note">
+            <strong>Passages not loaded.</strong>
+            <span>The passages for the selected behaviours have not been loaded for this document. That is not a statement about the specification.</span>
           </div>`
         : filtered > 0
         ? `<div class="zero-coverage" role="note">
