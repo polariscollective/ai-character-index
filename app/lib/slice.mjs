@@ -83,14 +83,31 @@ export function citationIndex(payload) {
   return index;
 }
 
+/* A behaviour nobody asked for, with its heading and its figures and none of its
+ * text. The cell says so rather than reading as empty: an empty passages array
+ * is the index saying this document is silent on this behaviour, which is the
+ * one claim it must never make by accident. */
+function withheldParagraphs(behaviour) {
+  const coverage = {};
+  for (const [id, cell] of Object.entries(behaviour.coverage || {})) {
+    const { passages, ...rest } = cell;
+    coverage[id] = { ...rest, passagesWithheld: true };
+  }
+  return { ...behaviour, coverage };
+}
+
 export function sliceColumn(column, payload, wanted) {
   if (payload === null || payload === undefined) return payload;
   const { documents, behaviours } = wanted;
   if (column === "payload") {
     if (!behaviours) return payload;
+    /* citationIndex reads the paragraphs of every behaviour, so it is built from
+     * the whole column before anything is taken out of it. */
+    const citedBy = citationIndex(payload);
     return { ...payload,
-             behaviours: (payload.behaviours || []).filter(b => behaviours.has(b.slug)),
-             citedBy: citationIndex(payload) };
+             behaviours: (payload.behaviours || []).map(b =>
+               behaviours.has(b.slug) ? b : withheldParagraphs(b)),
+             citedBy };
   }
   if (column === "documents") {
     if (!documents) return payload;

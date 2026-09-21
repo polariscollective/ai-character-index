@@ -21,11 +21,12 @@ test("a null set means everything for links too, and links carrying no notes sta
   assert.deepEqual(sliceColumn("links", links, all), links);
 });
 
-test("the payload keeps only the behaviours named, and its other keys", () => {
+test("the payload keeps every behaviour and withholds those not named", () => {
   const payload = { provenance: { runDate: "2026-09-18" },
-                    behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] };
+                    behaviours: [{ slug: "helpfulness", coverage: { [A]: { depth: { mean: 1 }, passages: [] } } },
+                                 { slug: "no-sycophancy", coverage: { [A]: { depth: { mean: 2 }, passages: [] } } }] };
   const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
-  assert.deepEqual(out.behaviours, [{ slug: "helpfulness" }]);
+  assert.deepEqual(out.behaviours.map(b => b.slug), ["helpfulness", "no-sycophancy"]);
   assert.deepEqual(out.provenance, { runDate: "2026-09-18" });
 });
 
@@ -80,20 +81,23 @@ test("the depth and standing paragraphs travel whole, being 87 KB in all", () =>
 /* Absent and empty are different answers, and the whole reader rests on the
  * difference: an address that names no behaviour has asked for none, where an
  * address that carries no such parameter has asked for all of them. A reader
- * that unticks every behaviour writes the empty form, and must not come back
- * with one ticked. */
-test("a set that is present and empty keeps nothing, which is not what a null set means", () => {
+ * that unticks every behaviour withholds all paragraphs but keeps every behaviour
+ * marked as withheld. */
+test("a set that is present and empty withholds all paragraphs, which is not what a null set means", () => {
   const none = { documents: null, behaviours: new Set() };
-  const payload = { behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] };
-  assert.deepEqual(sliceColumn("payload", payload, none).behaviours, []);
+  const payload = { behaviours: [{ slug: "helpfulness", coverage: { [A]: { depth: { mean: 1 }, passages: [] } } },
+                                 { slug: "no-sycophancy", coverage: { [A]: { depth: { mean: 2 }, passages: [] } } }] };
+  const out = sliceColumn("payload", payload, none);
+  assert.equal(out.behaviours.length, 2, "both behaviours are listed");
+  assert.equal(out.behaviours[0].coverage[A].passagesWithheld, true, "with paragraphs withheld");
   assert.deepEqual(sliceColumn("payload", payload, all), payload);
 
   const links = { byLocator: { [`${A} > s > ¶1`]: [{ behaviours: ["helpfulness"] }] },
                   comparisons: { [`helpfulness\n${A}\n${B}`]: { text: "yes" } },
                   notes: { passage: {}, depth: {}, standing: {} } };
-  const out = sliceColumn("links", links, none);
-  assert.deepEqual(out.byLocator, {});
-  assert.deepEqual(out.comparisons, {});
+  const out_links = sliceColumn("links", links, none);
+  assert.deepEqual(out_links.byLocator, {});
+  assert.deepEqual(out_links.comparisons, {});
 });
 
 test("the payload carries an index of which behaviours cite which locator", () => {
@@ -104,7 +108,7 @@ test("the payload carries an index of which behaviours cite which locator", () =
       coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }, { locator: `${A} > s > ¶2` }] } } },
   ] };
   const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
-  assert.deepEqual(out.behaviours.map(b => b.slug), ["helpfulness"]);
+  assert.deepEqual(out.behaviours.map(b => b.slug), ["helpfulness", "no-sycophancy"]);
   assert.deepEqual(out.citedBy, { [`${A} > s > ¶1`]: [1, 2], [`${A} > s > ¶2`]: [2] });
 });
 
@@ -153,4 +157,66 @@ test("the slicer never writes into the column it was given", () => {
                           { documents: new Set([A]), behaviours: new Set(["helpfulness"]) });
   assert.deepEqual(Object.keys(out.byLocator), [`${A} > s > ¶1`], "the slice really narrowed");
   assert.equal(JSON.stringify(links), before, "the held column was modified in place");
+});
+
+/* Three states, and the whole design rests on telling them apart. A behaviour
+ * nobody asked for keeps its heading and its figures and loses its paragraphs,
+ * which is not the same as a document it does not cover (no entry at all) and
+ * not the same as a document it covers with nothing (an empty array). */
+test("a behaviour nobody asked for keeps its coverage and loses its paragraphs", () => {
+  const payload = { behaviours: [
+    { id: 1, slug: "helpfulness", name: "Helpfulness", definition: "d1",
+      coverage: { [A]: { depth: { mean: 2.7 }, substitutions: [{ seat: "fable" }],
+                         passages: [{ locator: `${A} > s > ¶1` }] } } },
+    { id: 2, slug: "no-sycophancy", name: "No sycophancy", definition: "d2",
+      coverage: { [A]: { depth: { mean: 1.0 }, passages: [{ locator: `${A} > s > ¶2` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
+
+  assert.deepEqual(out.behaviours.map(b => b.slug), ["helpfulness", "no-sycophancy"],
+                   "every behaviour is still listed");
+
+  const asked = out.behaviours[0].coverage[A];
+  assert.equal(asked.passages.length, 1, "the behaviour asked for keeps its paragraphs");
+  assert.equal(asked.passagesWithheld, undefined, "and is not marked withheld");
+
+  const withheld = out.behaviours[1].coverage[A];
+  assert.equal(withheld.passagesWithheld, true, "the others are marked withheld");
+  assert.equal("passages" in withheld, false, "and carry no passages key at all");
+  assert.deepEqual(withheld.depth, { mean: 1.0 }, "the figure survives, which is the point");
+});
+
+test("a withheld cell keeps its recorded substitutions, which are a claim the index makes", () => {
+  const payload = { behaviours: [
+    { id: 1, slug: "helpfulness", name: "Helpfulness",
+      coverage: { [A]: { depth: { mean: 2 }, substitutions: [{ seat: "fable", substitute: "opus" }],
+                         passages: [{ locator: `${A} > s > ¶1` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set() });
+  assert.deepEqual(out.behaviours[0].coverage[A].substitutions, [{ seat: "fable", substitute: "opus" }]);
+});
+
+test("an empty behaviour set withholds every paragraph and still lists everyone", () => {
+  const payload = { behaviours: [
+    { id: 1, slug: "helpfulness", name: "Helpfulness",
+      coverage: { [A]: { depth: { mean: 2 }, passages: [{ locator: `${A} > s > ¶1` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set() });
+  assert.equal(out.behaviours.length, 1);
+  assert.equal(out.behaviours[0].coverage[A].passagesWithheld, true);
+});
+
+/* citationIndex is what lets a ?passage= link find a behaviour the address never
+ * named. It has to read the paragraphs of every behaviour, so it must run before
+ * any of them are removed. Built afterwards it would index only what was asked
+ * for, which is exactly the case it exists to cover. */
+test("the citation index still names behaviours whose paragraphs were withheld", () => {
+  const payload = { behaviours: [
+    { id: 1, slug: "helpfulness", name: "Helpfulness",
+      coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }] } } },
+    { id: 2, slug: "no-sycophancy", name: "No sycophancy",
+      coverage: { [A]: { passages: [{ locator: `${A} > s > ¶1` }, { locator: `${A} > s > ¶2` }] } } },
+  ] };
+  const out = sliceColumn("payload", payload, { documents: null, behaviours: new Set(["helpfulness"]) });
+  assert.deepEqual(out.citedBy, { [`${A} > s > ¶1`]: [1, 2], [`${A} > s > ¶2`]: [2] });
 });
