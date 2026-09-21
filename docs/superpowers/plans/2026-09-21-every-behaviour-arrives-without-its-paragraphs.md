@@ -564,8 +564,10 @@ git commit -m "feat: the reader can tell a withheld cell from an empty one"
 ### Task 4: The sidebar lists every behaviour
 
 **Files:**
-- Modify: `site/spec-reader/app.js:1216-1228` (`behaviourGroups`)
-- Modify: `engine/panel/test_appjs_withheld.js`
+- Modify: `engine/panel/test_appjs_withheld.js` (the only file this task changes)
+- Read, do not modify: `site/spec-reader/app.js:1216-1228` (`behaviourGroups`)
+  and `app.js:592-595` (`behaviourHue`), which are extracted as text by the
+  harness and must stay exactly as they are
 
 **Interfaces:**
 - Consumes: `paragraphsOf` from Task 3, and a payload carrying every behaviour
