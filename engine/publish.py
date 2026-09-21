@@ -84,7 +84,7 @@ def panel_seats(config, name):
     return sorted(seats)
 
 
-def require_depths(store, cells, panel, prompt_sha256=None):
+def require_depths(store, cells, panel, assessment_run_id=None):
     """Refuse a publication any of whose cells lacks a depth from every judge of
     its run, naming them all at once.
 
@@ -92,9 +92,10 @@ def require_depths(store, cells, panel, prompt_sha256=None):
     not a depth from its substitute: the cell's verdicts are the substitute's, so
     its depth must be too.
 
-    `prompt_sha256` names the depth rows read, the scale-of-four digest by
-    default: the prompt every publication built so far was judged on."""
-    given = index_store.cell_depths(store, cells, prompt_sha256)
+    `assessment_run_id` names the assessment run to read depths out of ten
+    from; without it, depths come from the scale of four, the prompt every
+    publication built so far was judged on."""
+    given = index_store.cell_depths(store, cells, assessment_run_id)
     recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
 
@@ -156,22 +157,32 @@ def require_declared_substitutes(store, cells, config, panel_name, panel):
             + "\n  ".join(problems))
 
 
-def _depth_complete_keys(store, matched, prompt_sha256=None):
-    """The keys of `matched` whose every done call also carries a done depth of
-    `prompt_sha256`, the scale-of-four digest by default.
+def _depth_complete_keys(store, matched, assessment_run_id=None):
+    """The keys of `matched` whose every done call also carries a done depth.
 
     Read with the store's filtered selects, scoped to exactly the calls the
     candidate runs hold -- a publication's candidate set is a handful of
     cells, not the whole history of judge calls, so nothing here reads a
     table whole.
+
+    With no assessment run this reads `aci_depths`, the scale of four, exactly
+    as today. With one it reads `aci_depths_out_of_ten` instead, for that
+    assessment run and the current prompt of ten
+    (`depth_call.prompt_sha256(10)`).
     """
     ids = sorted({call["id"] for calls in matched.values() for call in calls})
     if not ids:
         return set()
-    prompt_sha256 = prompt_sha256 or depth_call.prompt_sha256(4)
-    params = {"call_id": "in.(" + ",".join(f'"{i}"' for i in ids) + ")",
-              "status": "eq.done", "prompt_sha256": f"eq.{prompt_sha256}"}
-    done_depths = {row["call_id"] for row in store.select("aci_depths", params)}
+    call_ids = "in.(" + ",".join(f'"{i}"' for i in ids) + ")"
+    if assessment_run_id is None:
+        table = "aci_depths"
+        params = {"call_id": call_ids, "status": "eq.done"}
+    else:
+        table = "aci_depths_out_of_ten"
+        params = {"call_id": call_ids, "status": "eq.done",
+                  "assessment_run_id": f"eq.{assessment_run_id}",
+                  "prompt_sha256": f"eq.{depth_call.prompt_sha256(10)}"}
+    done_depths = {row["call_id"] for row in store.select(table, params)}
     return {key for key, calls in matched.items()
             if all(call["id"] in done_depths for call in calls)}
 

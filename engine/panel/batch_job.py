@@ -53,12 +53,6 @@ _spec.loader.exec_module(h)
 # container's CPU.
 PER_PROVIDER = 3
 
-# A run composes on the scale of four, and this job only ever gives that depth:
-# the scale of ten is a separate pass over already-judged runs. A depth row is
-# keyed by its prompt, so every read and write here names this one, and leaves
-# a row of another prompt for the same call alone.
-DEPTH_PROMPT_SHA256 = depth_call.prompt_sha256(4)
-
 
 def now():
     return datetime.now(timezone.utc).isoformat()
@@ -302,8 +296,7 @@ def pending_depths(store, run_id, passages_for, versions):
     parsed judgements: every banded passage, related included, because that is
     what the reader opens on."""
     calls = [c for c in store.select("aci_judge_calls") if c["run_id"] == run_id]
-    depths = {d["call_id"]: d for d in store.select(
-        "aci_depths", {"prompt_sha256": f"eq.{DEPTH_PROMPT_SHA256}"})}
+    depths = {d["call_id"]: d for d in store.select("aci_depths")}
     cells = {}
     for call in calls:
         cells.setdefault((call["behaviour_slug"], call["spec_version_id"]), []).append(call)
@@ -331,7 +324,7 @@ def pending_depths(store, run_id, passages_for, versions):
 def one_depth(store, call, registry, retained, call_model, config, report, lock):
     """One judge's depth for its call's cell. A cell with nothing retained is
     depth 0 without a call; a reply with no DEPTH line keeps its text and fails."""
-    match = {"call_id": call["id"], "prompt_sha256": DEPTH_PROMPT_SHA256}
+    match = {"call_id": call["id"]}
     store.update("aci_depths", match, {"status": "running", "started_at": now()})
     if not retained:
         store.update("aci_depths", match, {

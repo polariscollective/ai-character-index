@@ -242,27 +242,33 @@ def runlog_rows(store, run_id):
     return rows
 
 
-def cell_depths(store, cells, prompt_sha256=None):
+def cell_depths(store, cells, assessment_run_id=None):
     """The depth of each cell a publication carries, from its own run.
 
     {(behaviour_slug, spec_version_id): {"mean": float, "judges": {model: {"depth",
-    "rationale"}}}}. A cell any of whose done calls has no done depth of the named
-    prompt is left out: the caller decides whether that refuses a publication.
+    "rationale"}}}}. A cell any of whose done calls has no done depth is left out:
+    the caller decides whether that refuses a publication.
 
-    A depth row belongs to its prompt: `prompt_sha256` says which rows to read,
-    the scale-of-four digest when left out, which is the prompt every publication
-    so far was built from. A judge's entry gains "model" and "substitution_reason"
-    only when a substitute gave that row. The cell's entry gains "scale" only when
-    every row read is of the scale of ten; a cell whose rows disagree on scale is
-    refused rather than averaged across two different questions.
+    With no assessment run, this reads `aci_depths`, the scale of four, exactly
+    as every publication built so far was. With one, it reads
+    `aci_depths_out_of_ten` instead, for that assessment run and the current
+    prompt of ten (`depth_call.prompt_sha256(10)`); a row of another assessment
+    run or another prompt digest is not read. The cell's entry then gains
+    "scale": 10, and a judge's entry gains "model" and "substitution_reason"
+    when a declared substitute gave that depth.
     """
-    prompt_sha256 = prompt_sha256 or depth_call.prompt_sha256(4)
     wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
     calls = [c for c in _rows(store, "aci_judge_calls")
              if (c["run_id"], c["behaviour_slug"], c["spec_version_id"]) in wanted
              and c["status"] == "done"]
-    depths = {d["call_id"]: d for d in _rows(store, "aci_depths")
-              if d.get("prompt_sha256") == prompt_sha256}
+
+    if assessment_run_id is None:
+        depths = {d["call_id"]: d for d in _rows(store, "aci_depths")}
+    else:
+        prompt_sha256 = depth_call.prompt_sha256(10)
+        depths = {d["call_id"]: d for d in _rows(store, "aci_depths_out_of_ten")
+                  if d.get("assessment_run_id") == assessment_run_id
+                  and d.get("prompt_sha256") == prompt_sha256}
 
     by_cell = {}
     for call in calls:
@@ -273,10 +279,6 @@ def cell_depths(store, cells, prompt_sha256=None):
         given = [depths.get(call["id"]) for call in cell]
         if any(d is None or d["status"] != "done" for d in given):
             continue
-        scales = {d.get("scale", 4) for d in given}
-        if len(scales) > 1:
-            raise SystemExit(f"{key}: depth rows of {prompt_sha256} disagree on "
-                             f"scale: {sorted(scales)}")
         judges = {}
         for call, d in zip(cell, given):
             entry = {"depth": d["depth"], "rationale": d.get("rationale") or ""}
@@ -284,11 +286,11 @@ def cell_depths(store, cells, prompt_sha256=None):
                 entry["model"] = d["model"]
                 entry["substitution_reason"] = d.get("substitution_reason")
             judges[call["model"]] = entry
-        entry = {"mean": round(sum(j["depth"] for j in judges.values()) / len(judges), 1),
-                "judges": dict(sorted(judges.items()))}
-        if scales == {10}:
-            entry["scale"] = 10
-        out[key] = entry
+        cell_entry = {"mean": round(sum(j["depth"] for j in judges.values()) / len(judges), 1),
+                     "judges": dict(sorted(judges.items()))}
+        if assessment_run_id is not None:
+            cell_entry["scale"] = 10
+        out[key] = cell_entry
     return out
 
 

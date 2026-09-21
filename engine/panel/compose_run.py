@@ -118,12 +118,8 @@ def plan(store, behaviours, documents, panel_name=None, rubric="v5", config=None
 
 
 def depth_rows(calls):
-    """A pending depth for every call: each judge of a cell also gives its depth,
-    on the scale of four, the scale a run composes on. A depth row is keyed by its
-    prompt, so this names the one it will be given under."""
-    digest = depth_call.prompt_sha256(4)
-    return [{"call_id": call["id"], "status": "pending", "scale": 4,
-             "prompt_sha256": digest} for call in calls]
+    """A pending depth for every call: each judge of a cell also gives its depth."""
+    return [{"call_id": call["id"], "status": "pending"} for call in calls]
 
 
 def seat_cost(seat, tokens_in, tokens_out, config):
