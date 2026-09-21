@@ -77,8 +77,13 @@ def unparseable(**kwargs):
             "stop", 0.1)
 
 
-def depth_row(n, status="pending"):
-    return {"call_id": f"call-{n}", "status": status, "cost_usd": None}
+FOUR = batch_job.depth_call.prompt_sha256(4)
+TEN = batch_job.depth_call.prompt_sha256(10)
+
+
+def depth_row(n, status="pending", prompt_sha256=FOUR, scale=4):
+    return {"call_id": f"call-{n}", "status": status, "cost_usd": None,
+            "scale": scale, "prompt_sha256": prompt_sha256}
 
 
 def zero_reply(passage_count):
@@ -350,6 +355,36 @@ class DepthTest(unittest.TestCase):
         finished = [p for t, m, p in store.updates
                     if t == "aci_runs" and p.get("status") == "done"]
         self.assertEqual(finished[-1]["cost_usd"], expected)
+
+    def test_a_depth_of_a_different_prompt_is_left_untouched(self):
+        """The job gives only the scale-of-four depth. A row of the scale of ten
+        for the same call -- given by a separate pass -- is not its business."""
+        ten_row = dict(depth_row(1, status="done", prompt_sha256=TEN, scale=10),
+                       depth=7, rationale="already assessed out of ten.")
+        store = self.store([call_row(1, "sol"), call_row(2, "fable")],
+                           [depth_row(1), depth_row(2), ten_row])
+        model, asked = self.replying()
+        self.go(store, model)
+        self.assertEqual(len(asked), 2)
+        by_seat = {row["call_id"]: row for row in store.tables["aci_depths"]
+                  if row["prompt_sha256"] == TEN}
+        self.assertEqual(by_seat["call-1"]["rationale"], "already assessed out of ten.")
+        self.assertEqual(by_seat["call-1"]["depth"], 7)
+
+    def test_the_run_cost_sums_depths_of_every_prompt(self):
+        """Both scales were paid for, so a run's summed cost must not drop the
+        scale of ten because batch_job only gives the scale of four."""
+        store = self.store(
+            [call_row(1, "sol", status="done", cost_usd=0.01)],
+            [dict(depth_row(1, status="done"), depth=3, rationale="r", cost_usd=0.02),
+             dict(depth_row(1, status="done", prompt_sha256=TEN, scale=10),
+                  depth=7, rationale="r", cost_usd=0.03)])
+        model, asked = self.replying()
+        self.go(store, model)
+        self.assertEqual(asked, [], "both depths of this cell are already done")
+        finished = [p for t, m, p in store.updates
+                    if t == "aci_runs" and p.get("status") == "done"]
+        self.assertEqual(finished[-1]["cost_usd"], 0.06)
 
 
 class CallSettingsTest(unittest.TestCase):

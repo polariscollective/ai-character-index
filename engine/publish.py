@@ -41,9 +41,11 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
+sys.path.insert(0, str(HERE / "panel"))
 
 import index_store               # noqa: E402
 import seat_substitutions        # noqa: E402
+import depth_call                # noqa: E402
 from store import Store          # noqa: E402
 
 # How each builder serialises, which is what its digest describes. They differ,
@@ -82,14 +84,17 @@ def panel_seats(config, name):
     return sorted(seats)
 
 
-def require_depths(store, cells, panel):
+def require_depths(store, cells, panel, prompt_sha256=None):
     """Refuse a publication any of whose cells lacks a depth from every judge of
     its run, naming them all at once.
 
     Every judge means the panel as the cell was seated. A depth from the seat is
     not a depth from its substitute: the cell's verdicts are the substitute's, so
-    its depth must be too."""
-    given = index_store.cell_depths(store, cells)
+    its depth must be too.
+
+    `prompt_sha256` names the depth rows read, the scale-of-four digest by
+    default: the prompt every publication built so far was judged on."""
+    given = index_store.cell_depths(store, cells, prompt_sha256)
     recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
 
@@ -151,8 +156,9 @@ def require_declared_substitutes(store, cells, config, panel_name, panel):
             + "\n  ".join(problems))
 
 
-def _depth_complete_keys(store, matched):
-    """The keys of `matched` whose every done call also carries a done depth.
+def _depth_complete_keys(store, matched, prompt_sha256=None):
+    """The keys of `matched` whose every done call also carries a done depth of
+    `prompt_sha256`, the scale-of-four digest by default.
 
     Read with the store's filtered selects, scoped to exactly the calls the
     candidate runs hold -- a publication's candidate set is a handful of
@@ -162,8 +168,9 @@ def _depth_complete_keys(store, matched):
     ids = sorted({call["id"] for calls in matched.values() for call in calls})
     if not ids:
         return set()
+    prompt_sha256 = prompt_sha256 or depth_call.prompt_sha256(4)
     params = {"call_id": "in.(" + ",".join(f'"{i}"' for i in ids) + ")",
-              "status": "eq.done"}
+              "status": "eq.done", "prompt_sha256": f"eq.{prompt_sha256}"}
     done_depths = {row["call_id"] for row in store.select("aci_depths", params)}
     return {key for key, calls in matched.items()
             if all(call["id"] in done_depths for call in calls)}

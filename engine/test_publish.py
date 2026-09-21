@@ -23,6 +23,9 @@ sys.path.insert(0, str(HERE / "spec-cite"))
 
 import publish                     # noqa: E402
 
+FOUR = publish.depth_call.prompt_sha256(4)
+TEN = publish.depth_call.prompt_sha256(10)
+
 
 class FakeStore:
     """Tables in memory. The two PostgREST filters the engine sends, `eq.` and
@@ -220,8 +223,9 @@ def call_ids(rows):
     return [row["id"] for row in rows]
 
 
-def depth_rows(call_ids, status="done"):
-    return [{"call_id": call_id, "status": status, "depth": 2, "rationale": ""}
+def depth_rows(call_ids, status="done", prompt_sha256=FOUR, scale=4):
+    return [{"call_id": call_id, "status": status, "depth": 2, "rationale": "",
+             "scale": scale, "prompt_sha256": prompt_sha256}
             for call_id in call_ids]
 
 
@@ -354,11 +358,13 @@ class PanelTest(unittest.TestCase):
 class DepthsTest(unittest.TestCase):
     CELL = {"run_id": "r1", "behaviour_slug": "helpfulness", "spec_version_id": "v1"}
 
-    def store(self, depth_statuses, models=PANEL, substitutions=()):
+    def store(self, depth_statuses, models=PANEL, substitutions=(),
+             prompt_sha256=FOUR, scale=4):
         return FakeStore(
             aci_judge_calls=[{**calls("r1", "helpfulness", "v1", [m])[0], "id": f"c-{m}"}
                              for m in models],
-            aci_depths=[{"call_id": f"c-{m}", "status": s, "depth": 2, "rationale": ""}
+            aci_depths=[{"call_id": f"c-{m}", "status": s, "depth": 2, "rationale": "",
+                        "scale": scale, "prompt_sha256": prompt_sha256}
                         for m, s in zip(models, depth_statuses)],
             aci_spec_versions=[V1, V2],
             aci_seat_substitutions=list(substitutions))
@@ -389,6 +395,41 @@ class DepthsTest(unittest.TestCase):
             publish.require_depths(
                 self.store(["done", "done", "done"], PANEL, recorded), [self.CELL], PANEL)
         self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+    def test_require_depths_reads_the_prompt_it_is_given(self):
+        """A cell whose only rows are of the scale of ten has no depth on the
+        scale of four, and a cell whose only rows are of the scale of four has
+        none on the scale of ten. require_depths checks whichever it is asked."""
+        ten_store = self.store(["done", "done", "done"], prompt_sha256=TEN, scale=10)
+        with self.assertRaises(SystemExit):
+            publish.require_depths(ten_store, [self.CELL], PANEL)
+        publish.require_depths(ten_store, [self.CELL], PANEL, TEN)
+
+
+class DepthCompleteKeysTest(unittest.TestCase):
+    """`_depth_complete_keys` reads only the depth rows of the digest it is
+    given, the scale-of-four digest by default."""
+
+    def matched(self):
+        run_calls = calls("r1", "helpfulness", "v1", PANEL)
+        return {("r1", "helpfulness", "v1"): run_calls}, run_calls
+
+    def test_the_default_reads_the_scale_of_four_row(self):
+        matched, run_calls = self.matched()
+        s = FakeStore(aci_depths=depth_rows(call_ids(run_calls)))
+        self.assertEqual(publish._depth_complete_keys(s, matched),
+                         {("r1", "helpfulness", "v1")})
+
+    def test_a_row_of_a_different_prompt_does_not_complete_the_default(self):
+        matched, run_calls = self.matched()
+        s = FakeStore(aci_depths=depth_rows(call_ids(run_calls), prompt_sha256=TEN, scale=10))
+        self.assertEqual(publish._depth_complete_keys(s, matched), set())
+
+    def test_the_named_digest_reads_its_own_row(self):
+        matched, run_calls = self.matched()
+        s = FakeStore(aci_depths=depth_rows(call_ids(run_calls), prompt_sha256=TEN, scale=10))
+        self.assertEqual(publish._depth_complete_keys(s, matched, TEN),
+                         {("r1", "helpfulness", "v1")})
 
 
 class BuildTest(unittest.TestCase):

@@ -83,6 +83,15 @@ class PlanTest(unittest.TestCase):
         self.assertEqual([row["call_id"] for row in rows], [call["id"] for call in calls])
         self.assertTrue(all(row["status"] == "pending" for row in rows))
 
+    def test_a_depth_row_names_its_prompt_on_the_scale_of_four(self):
+        """A run composes on the scale of four: every depth row it writes names
+        that prompt, so batch_job's scale-of-four filter finds it."""
+        _run, calls = self.plan(FakeStore())
+        rows = compose_run.depth_rows(calls)
+        self.assertTrue(all(row["scale"] == 4 for row in rows))
+        self.assertTrue(all(row["prompt_sha256"] == compose_run.depth_call.prompt_sha256(4)
+                            for row in rows))
+
     def test_the_depth_calls_are_priced(self):
         dear = dict(CONFIG, models={k: dict(v, price_per_mtok=[1000.0, 2000.0])
                                     for k, v in CONFIG["models"].items()})

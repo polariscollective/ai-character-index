@@ -9,6 +9,9 @@ sys.path.insert(0, str(HERE / "spec-cite"))
 import cite
 import index_store
 
+FOUR = index_store.depth_call.prompt_sha256(4)
+TEN = index_store.depth_call.prompt_sha256(10)
+
 
 class FakeStore:
     def __init__(self, tables):
@@ -310,7 +313,8 @@ class CellDepthTest(unittest.TestCase):
 
     def depth(self, model, value, status="done"):
         return {"call_id": f"call-{model}", "status": status, "depth": value,
-                "rationale": f"{model} says {value}."}
+                "rationale": f"{model} says {value}.", "scale": 4,
+                "prompt_sha256": FOUR}
 
     def test_a_cell_carries_the_mean_and_every_judge(self):
         got = index_store.cell_depths(self.store(
@@ -331,6 +335,77 @@ class CellDepthTest(unittest.TestCase):
             [self.depth("sol", 3), self.depth("fable", 3),
              self.depth("deepseek", None, status="error")]), [self.CELL])
         self.assertEqual(got, {})
+
+
+class CellDepthByPromptTest(unittest.TestCase):
+    """A depth row belongs to its prompt: a call can carry a row of four and a
+    row of ten side by side, and the digest passed in says which is read."""
+    CELL = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+
+    def store(self):
+        calls = [{"id": f"call-{m}", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": m, "status": "done"}
+                 for m in ("sol", "fable", "deepseek")]
+        depths = []
+        for model, value in (("sol", 3), ("fable", 3), ("deepseek", 2)):
+            depths.append({"call_id": f"call-{model}", "status": "done", "depth": value,
+                           "rationale": f"{model} says {value} out of four.",
+                           "scale": 4, "prompt_sha256": FOUR})
+            depths.append({"call_id": f"call-{model}", "status": "done", "depth": value * 2,
+                           "rationale": f"{model} says {value * 2} out of ten.",
+                           "scale": 10, "prompt_sha256": TEN})
+        return FakeStore({"aci_judge_calls": calls, "aci_depths": depths})
+
+    def test_with_no_digest_the_row_of_four_reads_exactly_as_today(self):
+        got = index_store.cell_depths(self.store(), [self.CELL])
+        entry = got[("helpfulness", "row-1")]
+        self.assertEqual(entry, {
+            "mean": 2.7,
+            "judges": {
+                "deepseek": {"depth": 2, "rationale": "deepseek says 2 out of four."},
+                "fable": {"depth": 3, "rationale": "fable says 3 out of four."},
+                "sol": {"depth": 3, "rationale": "sol says 3 out of four."},
+            }})
+
+    def test_the_digest_of_ten_reads_the_row_of_ten_with_its_scale(self):
+        got = index_store.cell_depths(self.store(), [self.CELL], TEN)
+        entry = got[("helpfulness", "row-1")]
+        self.assertEqual(entry, {
+            "mean": 5.3,
+            "scale": 10,
+            "judges": {
+                "deepseek": {"depth": 4, "rationale": "deepseek says 4 out of ten."},
+                "fable": {"depth": 6, "rationale": "fable says 6 out of ten."},
+                "sol": {"depth": 6, "rationale": "sol says 6 out of ten."},
+            }})
+
+    def test_a_row_naming_its_substitute_carries_it(self):
+        calls = [{"id": "call-sol", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "sol", "status": "done"}]
+        depths = [{"call_id": "call-sol", "status": "done", "depth": 6,
+                   "rationale": "kimi says 6 out of ten.", "scale": 10,
+                   "prompt_sha256": TEN, "model": "kimi",
+                   "substitution_reason": "sol was refused on input."}]
+        got = index_store.cell_depths(
+            FakeStore({"aci_judge_calls": calls, "aci_depths": depths}), [self.CELL], TEN)
+        entry = got[("helpfulness", "row-1")]["judges"]["sol"]
+        self.assertEqual(entry, {"depth": 6, "rationale": "kimi says 6 out of ten.",
+                                 "model": "kimi",
+                                 "substitution_reason": "sol was refused on input."})
+
+    def test_a_cell_whose_rows_disagree_on_scale_is_refused(self):
+        calls = [{"id": "call-sol", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "sol", "status": "done"},
+                 {"id": "call-fable", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "fable", "status": "done"}]
+        depths = [{"call_id": "call-sol", "status": "done", "depth": 3,
+                   "rationale": "", "scale": 4, "prompt_sha256": "mixed"},
+                  {"call_id": "call-fable", "status": "done", "depth": 6,
+                   "rationale": "", "scale": 10, "prompt_sha256": "mixed"}]
+        with self.assertRaises(SystemExit):
+            index_store.cell_depths(
+                FakeStore({"aci_judge_calls": calls, "aci_depths": depths}),
+                [self.CELL], "mixed")
 
 
 if __name__ == "__main__":
