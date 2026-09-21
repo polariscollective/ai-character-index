@@ -3493,6 +3493,7 @@ function renderDocument(doc, side = 0) {
     const panel = elements.template.content.firstElementChild.cloneNode(true);
     panel.querySelector(".document-body").textContent =
       "This specification's text has not loaded. Reload the page to try again.";
+    panel.dataset.documentId = doc.id;
     return panel;
   }
   const panel = elements.template.content.firstElementChild.cloneNode(true);
@@ -3839,7 +3840,7 @@ async function chooseSpec(panel, id) {
    * Unconditional, as setSelection's is: state.selectedSpec is written above
    * whether or not this succeeds, so a rejection must not skip the repaint. */
   await Promise.all([
-    ensureDocument(id).catch(() => {}),
+    ensureShownDocuments(),
     ensureBehaviours(state.selectedSlugs).catch(() => {}),
   ]);
   rebuildReader();
@@ -3880,7 +3881,7 @@ async function setComparePair(side, id) {
    * together, so the pair just changed has neither the counterpart's bubbles
    * nor the paragraph comparing the two until they are asked for as a pair. */
   await Promise.all([
-    ...next.filter(Boolean).map(docId => ensureDocument(docId).catch(() => {})),
+    ensureShownDocuments(),
     ensureBehaviours(state.selectedSlugs).catch(() => {}),
   ]);
   rebuildReader();
@@ -4429,8 +4430,12 @@ elements.compareToggle.addEventListener("click", async () => {
   syncURL();
   /* Entering comparison puts a second document on screen, and its bubbles and
    * the paragraph comparing the pair were never fetched: the links held name
-   * one document. */
-  await ensureBehaviours(state.selectedSlugs).catch(() => {});
+   * one document. Its text was never fetched either, if it was not the one on
+   * screen already. */
+  await Promise.all([
+    ensureShownDocuments(),
+    ensureBehaviours(state.selectedSlugs).catch(() => {}),
+  ]);
   rebuildReader();
 });
 
@@ -4717,6 +4722,16 @@ async function ensureDocument(id) {
   return fetching;
 }
 
+/* The documents the reader is about to show, fetched before it shows them.
+ * Every place that writes state.selectedSpec or state.comparePair goes through
+ * here: guarding the readers of doc.markdown left four writers unguarded, and
+ * each one found was followed by another nobody had found yet. */
+async function ensureShownDocuments() {
+  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
+    .filter(Boolean);
+  await Promise.all(shown.map(id => ensureDocument(id).catch(() => {})));
+}
+
 async function ensureBehaviours(slugs) {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   /* The documents on screen, read live rather than from the arrival URL: this
@@ -4829,11 +4844,17 @@ async function openPassageLink(locator) {
     if (!known) return { locator, resolved: false };
     state.selectedSpec = doc.id;
     if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
+    // The pair just written may name a document the address never asked for,
+    // exactly like the target this function already fetched above.
+    await ensureShownDocuments();
     return { locator, blockLocator, documentId: doc.id, resolved: true, uncited: true };
   }
 
   state.selectedSpec = doc.id;
   if (state.comparing) state.comparePair = [doc.id, defaultComparison(doc.id)];
+  // Same reason as the branch above: openPassageLink does not repaint itself,
+  // but its caller does, and the pair it just wrote must be fetched first.
+  await ensureShownDocuments();
   if (!citing.some(behaviour => state.selectedSlugs.includes(behaviour.slug))) {
     const chosen = new Set([...state.selectedSlugs, citing[0].slug]);
     /* From the registry, as setSelection orders: state.payload.behaviours is built
