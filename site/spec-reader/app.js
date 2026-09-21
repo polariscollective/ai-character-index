@@ -366,6 +366,24 @@ function closeComparisonDialog() {
 /* Shown for a document when no behaviour is under test. */
 const NO_COVERAGE = { passages: [] };
 
+/* A cell whose paragraphs this page never asked for. It carries an empty array
+ * so that anything walking paragraphs walks over nothing instead of throwing,
+ * and a flag so that anything COUNTING or REPORTING them can tell this apart
+ * from a panel that cited nothing. The two are different claims: one is the
+ * index saying a document is silent on a behaviour, the other is this page
+ * saying it did not ask. */
+const WITHHELD = { passages: [], withheld: true };
+
+/* What a cell says about its paragraphs. Three answers, not two, and every
+ * reader of paragraphs goes through here so the difference cannot be forgotten
+ * at one call site and honoured at another. */
+function paragraphsOf(behaviour, documentId) {
+  const coverage = behaviour?.coverage?.[documentId];
+  if (!coverage) return NO_COVERAGE;
+  if (coverage.passagesWithheld) return WITHHELD;
+  return coverage;
+}
+
 /* Behaviour colours live in the stylesheet, one --hue-N per slot and one set per
  * surface, so a palette switch repaints every highlight without re-annotating. */
 const HUE_SLOTS = 12;
@@ -1596,10 +1614,19 @@ function paddedNumber(behaviour) {
   return String(behaviour.id).padStart(2, "0");
 }
 
+/* Counts only what it can count. A withheld cell holds an unknown number of
+ * paragraphs, not zero, so the hint says so rather than printing a total that
+ * quietly leaves out most of the publication. */
 function selectedPassageTotal() {
-  return selectedBehaviours().reduce((total, behaviour) => total
-    + (state.payload?.documents || []).reduce(
-      (count, doc) => count + (behaviour.coverage?.[doc.id]?.passages.length || 0), 0), 0);
+  let total = 0, unknown = false;
+  selectedBehaviours().forEach(behaviour => {
+    (state.payload?.documents || []).forEach(doc => {
+      const cell = paragraphsOf(behaviour, doc.id);
+      if (cell.withheld) unknown = true;
+      else total += cell.passages.length;
+    });
+  });
+  return { total, unknown };
 }
 
 function updateExportControl() {
@@ -1614,11 +1641,14 @@ function updateExportControl() {
     elements.downloadHint.textContent = "Tick a behaviour to export its passages.";
     return;
   }
-  const passages = selectedPassageTotal();
+  const { total, unknown } = selectedPassageTotal();
   const documents = state.payload?.documents || [];
+  /* The middle clause is dropped rather than guessed when any selected cell had
+   * its paragraphs withheld: a number that silently leaves most of the
+   * publication out is worse than no number. */
   elements.downloadHint.textContent =
     `${behaviours.length} ${behaviours.length === 1 ? "behaviour" : "behaviours"}`
-    + `, ${passages} ${passages === 1 ? "passage" : "passages"}`
+    + (unknown ? "" : `, ${total} ${total === 1 ? "passage" : "passages"}`)
     + `, ${documents.length} ${documents.length === 1 ? "document" : "documents"}`;
 }
 
@@ -1665,11 +1695,15 @@ function passagesMarkdown() {
     lines.push("", `**Definition.** ${behaviour.definition}`);
 
     documents.forEach(doc => {
-      const coverage = behaviour.coverage?.[doc.id] || NO_COVERAGE;
+      const coverage = paragraphsOf(behaviour, doc.id);
       lines.push("", `### ${doc.lab} · ${doc.title} (${doc.version})`);
       lines.push("", `Source: ${doc.sourceUrl}`);
       // Coverage notes are curation-era prose; the reader ships passage sets only
       // (removed from the export per Andres 2026-08-17 -- stale beside re-run panel data).
+      if (coverage.withheld) {
+        lines.push("", "Paragraphs not exported: this reader did not load them.");
+        return;
+      }
       if (!coverage.passages.length) {
         lines.push(
           "",
@@ -2914,7 +2948,7 @@ function annotatePassages(panel, doc) {
   // Collected for every ticked behaviour before anything is painted: the labels this pass
   // inserts would otherwise sit inside the text the next behaviour's quote is matched against.
   selectedBehaviours().forEach(behaviour => {
-    const coverage = behaviour.coverage?.[doc.id] || NO_COVERAGE;
+    const coverage = paragraphsOf(behaviour, doc.id);
     coverage.passages.forEach(passage => {
       const found = findPassageBlocks(body, passage);
       if (!found) {
@@ -3631,7 +3665,7 @@ function updatePanelMeta(panel, doc) {
   // Counted from the published set, not from what resolved: a passage that failed to
   // anchor is an unresolved-anchor warning, not an absence of coverage.
   const published = selectedBehaviours()
-    .reduce((total, behaviour) => total + (behaviour.coverage?.[doc.id]?.passages.length || 0), 0);
+    .reduce((total, behaviour) => total + paragraphsOf(behaviour, doc.id).passages.length, 0);
   if (tracking && published === 0) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()

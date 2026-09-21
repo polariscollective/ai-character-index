@@ -373,6 +373,26 @@ class TestAppJSTiers(unittest.TestCase):
         self.assertIn("72 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSWithheld(unittest.TestCase):
+    """A cell can say three things about its paragraphs, and the reader must tell
+    them apart: no coverage for this document, coverage the panel cited nothing
+    for, and coverage whose paragraphs this page never asked for. Reading the
+    third as the second would have the index claim a specification is silent on
+    a behaviour, which is the one claim it must never make by accident."""
+
+    HARNESS = HERE / "test_appjs_withheld.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_the_reader_tells_the_three_states_apart(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("0 failures", out.stdout)
+
+
 class TestLinkParagraphCells(unittest.TestCase):
     """Which passages get a paragraph of their own, and what it is told about.
 
