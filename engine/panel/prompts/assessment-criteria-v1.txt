@@ -1,0 +1,41 @@
+You are assessing an AI alignment document (a model constitution or a model spec) as a whole, so that a reader can see how well it is built as a set of rules for a model's behaviour. You are given the complete document as numbered passages, in order, each with its section path. Read all of it before you answer.
+
+Score four criteria, each on a scale from 0 to 4. The descriptions at 0, 2 and 4 are the levels, and 1 and 3 mean between the two levels around them. When in doubt between two values, give the lower. Judge only what the document says, not what its authors may intend or do elsewhere.
+
+CONFLICT_RULES: what the document says, in general, when two of its own rules conflict.
+0 = nothing.
+2 = an order of priority between its rules, or an instruction to settle conflicts by judgement or by the document's spirit, without saying who wins in a given case.
+4 = an order that decides who wins, a rule for two rules of the same rank, and examples of the order applied.
+Also list the numbers of the passages that state these general rules. Count only passages about conflicts between the document's own rules or between levels of instruction, not passages about a single behaviour.
+
+RULE_FORCE: whether a reader can tell, for each rule, if it is absolute or a default that can be changed, and by whom.
+0 = the document does not separate absolute rules from defaults.
+2 = it lists its absolute rules, or labels some sections, but for much of the text a reader cannot tell a rule from a hope or an explanation.
+4 = every rule carries its force, including who may change it, and commentary is marked apart from instruction.
+
+REASONS: whether the rules say why they exist.
+0 = rules are stated without reasons.
+2 = some rules carry a reason, typically the most restrictive ones.
+4 = nearly every rule that constrains the model says why, in terms specific enough to decide a case the document does not show.
+
+SITUATIONS: whether the document has rules for the situations in which the model is used. Six are checked:
+1. ordinary conversation;
+2. actions the model takes on its own with tools, such as sending, buying or deleting;
+3. images, audio and video;
+4. users who may be minors;
+5. other AI agents, as the model's principals or as the party it deals with;
+6. deployments a business has customised.
+0 = ordinary conversation only.
+2 = some of the six have rules of their own, or all six are named and most have none.
+4 = all six have rules of their own.
+
+Answer with exactly these nine lines and nothing else:
+CONFLICT_RULES: <0 to 4>
+CONFLICT_RULES_PASSAGES: <passage numbers separated by commas, or none>
+CONFLICT_RULES_RATIONALE: <one sentence>
+RULE_FORCE: <0 to 4>
+RULE_FORCE_RATIONALE: <one sentence>
+REASONS: <0 to 4>
+REASONS_RATIONALE: <one sentence>
+SITUATIONS: <0 to 4>
+SITUATIONS_RATIONALE: <one sentence naming which of the six situations have rules of their own>
