@@ -78,7 +78,7 @@ class Scripted:
     def __call__(self, provider, model_id, system, user, kwargs):
         self.asked.append((model_id, system, user))
         if system == assessment_call.system_prompt("criteria"):
-            if any(tag in model_id for tag in self.refuse):
+            if any(tag.lower() in model_id.lower() for tag in self.refuse):
                 raise RuntimeError("content_filter")
             reply = ("CONFLICT_RULES: 2\nCONFLICT_RULES_PASSAGES: 1\n"
                      "CONFLICT_RULES_RATIONALE: An order, weighed.\n"
@@ -163,9 +163,117 @@ class PilotTest(unittest.TestCase):
             _estimate, folder = self.go(Scripted(refuse=("fable",)), out)
             results = __import__("json").loads((folder / "pilot.json").read_text())
         record = results["documents"][DOC]
-        self.assertIn("content_filter", record["assessment"]["fable"]["criteria"]["error"])
+        criteria = record["assessment"]["fable"]["criteria"]
+        # fable's own model refused, so its declared substitute, opus, answered instead.
+        self.assertEqual(criteria["model"], "opus")
+        self.assertEqual(len(criteria["substituted"]), 1)
+        self.assertEqual(criteria["substituted"][0]["model"], "fable")
+        self.assertIn("content_filter", criteria["substituted"][0]["reason"])
         # Two seats still cited the first passage, which is the quorum.
         self.assertEqual(record["conflict_rules"], [PASSAGES[0][0]])
+
+    def test_every_declared_substitute_refusing_records_an_error(self):
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(Scripted(refuse=("fable", "opus", "kimi")), out)
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        record = results["documents"][DOC]
+        criteria = record["assessment"]["fable"]["criteria"]
+        self.assertIn("content_filter", criteria["error"])
+        self.assertEqual([item["model"] for item in criteria["substituted"]],
+                         ["fable", "opus", "kimi"])
+        # sol and deepseek still cite the first passage, which is the quorum.
+        self.assertEqual(record["conflict_rules"], [PASSAGES[0][0]])
+
+    def test_a_refused_contradictions_call_falls_to_its_substitute(self):
+        def model(provider, model_id, system, user, kwargs):
+            if (system == assessment_call.system_prompt("contradictions")
+                    and "fable" in model_id.lower()):
+                return "", {"prompt_tokens": 10, "completion_tokens": 0}, "content_filter", 0.01
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        contradictions = results["documents"][DOC]["assessment"]["fable"]["contradictions"]
+        self.assertEqual(contradictions["model"], "opus")
+        self.assertEqual(contradictions["substituted"][0]["model"], "fable")
+        self.assertIn("content_filter", contradictions["substituted"][0]["reason"])
+
+    def test_heading_attributes_reach_whole_document_calls_not_depth_calls(self):
+        fake = store()
+        fake.tables["aci_spec_versions"][0]["markdown"] = "## B {#b authority=user}\n\ntext"
+        model = Scripted()
+        with tempfile.TemporaryDirectory() as out:
+            pilot.run_pilot(fake, self.config, self.registry, passages_for, out,
+                            call_model=model, go=True, documents=(DOC,), behaviours=(SLUG,))
+        criteria_users = [user for _m, system, user in model.asked
+                          if system == assessment_call.system_prompt("criteria")]
+        depth_users = [user for _m, system, user in model.asked
+                      if system == depth_call.system_prompt(10)]
+        self.assertTrue(criteria_users)
+        self.assertTrue(depth_users)
+        for user in criteria_users:
+            self.assertIn("{authority=user}", user)
+        for user in depth_users:
+            self.assertNotIn("{authority=user}", user)
+
+    def test_confirmed_and_unconfirmed_contradictions_score_and_summarise(self):
+        def model(provider, model_id, system, user, kwargs):
+            mid = model_id.lower()
+            if system == assessment_call.system_prompt("contradictions"):
+                if "sol" in mid:
+                    reply = ("CONTRADICTION: [2] [3] | A user asks what the operator said. "
+                             "| Honesty and privacy clash.\n"
+                             "CONTRADICTIONS: 2\nCONTRADICTIONS_RATIONALE: One clash.")
+                elif "deepseek" in mid:
+                    reply = ("CONTRADICTION: [1] [2] | A user asks to break a rule for safety. "
+                             "| Safety and honesty clash.\n"
+                             "CONTRADICTIONS: 2\nCONTRADICTIONS_RATIONALE: One clash.")
+                else:
+                    reply = "CONTRADICTIONS: 4\nCONTRADICTIONS_RATIONALE: None found."
+                return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+            if system == assessment_call.system_prompt("confirm"):
+                if "sol" in mid:
+                    reply = "ITEM 1: does not hold | absolute: no | Not persuasive."
+                elif "fable" in mid:
+                    reply = ("ITEM 1: holds | absolute: no | Matches.\n"
+                             "ITEM 2: does not hold | absolute: no | Not persuasive.")
+                elif "deepseek" in mid:
+                    reply = "ITEM 1: holds | absolute: no | Matches."
+                else:
+                    reply = ""
+                return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
+            return Scripted()(provider, model_id, system, user, kwargs)
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = pilot.run_pilot(store(), self.config, self.registry,
+                                                passages_for, out, call_model=model, go=True,
+                                                documents=(DOC,), behaviours=(SLUG,))
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+            text = (folder / "summary.md").read_text()
+        record = results["documents"][DOC]
+        contradictions = {frozenset((c["first"], c["second"])): c
+                          for c in record["contradictions"]}
+        pair_23 = contradictions[frozenset((PASSAGES[1][0], PASSAGES[2][0]))]
+        pair_12 = contradictions[frozenset((PASSAGES[0][0], PASSAGES[1][0]))]
+        self.assertTrue(pair_23["confirmed"])
+        self.assertFalse(pair_12["confirmed"])
+        self.assertEqual(record["contradictions_score"], 2)
+        self.assertEqual(results["prompts"]["confirm"], assessment_call.prompt_sha256("confirm"))
+        self.assertIn("confirmed", text)
+        self.assertIn("not confirmed", text)
+        self.assertIn("Score from confirmed contradictions: 2.", text)
+
+    def test_every_seat_finding_the_same_contradiction_needs_no_confirmation(self):
+        model = Scripted()
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(model, out)
+            results = __import__("json").loads((folder / "pilot.json").read_text())
+        record = results["documents"][DOC]
+        self.assertEqual(len(record["contradictions"]), 1)
+        self.assertTrue(record["contradictions"][0]["confirmed"])
+        self.assertNotIn(assessment_call.system_prompt("confirm"),
+                         [system for _m, system, _u in model.asked])
 
     def test_the_summary_has_no_long_dash(self):
         with tempfile.TemporaryDirectory() as out:
