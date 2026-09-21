@@ -168,5 +168,92 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(depth_call.parse(reply)[0], 3)
 
 
+RULES = [("rule-1", "X > Y", "A higher rule prevails.")]
+
+
+class ScaleOfTenComposeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        fixture.install_spec()
+        cls.registry = fixture.judging_registry()
+
+    @classmethod
+    def tearDownClass(cls):
+        cite.reset_registry()
+
+    def test_the_scale_of_ten_has_its_own_prompt_and_digest(self):
+        path = HERE / "prompts" / "depth-v2.txt"
+        system, _user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10)
+        self.assertEqual(system, path.read_text())
+        self.assertEqual(depth_call.prompt_sha256(10),
+                         hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertNotEqual(depth_call.prompt_sha256(10), depth_call.prompt_sha256())
+
+    def test_the_prompt_of_ten_names_the_new_level_and_keeps_the_authority_note(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("10 = BOUNDED", system)
+        self.assertIn("An odd number means", system)
+        self.assertIn("Depth is independent of authority level", system)
+        self.assertNotIn("—", system)
+        self.assertNotIn("–", system)
+
+    def test_the_scale_of_four_composes_as_it_always_has(self):
+        self.assertEqual(
+            depth_call.compose("defined-behaviour", self.registry, RETAINED),
+            depth_call.compose("defined-behaviour", self.registry, RETAINED, scale=4))
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           conflict_rules=RULES)
+        self.assertNotIn("general rules for conflicts", user)
+        self.assertTrue(user.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+
+    def test_the_rules_block_follows_the_passages_on_the_scale_of_ten(self):
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10, conflict_rules=RULES)
+        self.assertIn("general rules for conflicts between its own rules (1):\n"
+                      "[R1] (§ X > Y) A higher rule prevails.", user)
+        self.assertLess(user.index("[2] (§ A > C)"), user.index("[R1]"))
+        self.assertTrue(user.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+
+    def test_an_empty_rules_block_says_so(self):
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10)
+        self.assertIn("(0):\n(none were identified)", user)
+
+
+class ParseOutOfTenTest(unittest.TestCase):
+    def test_every_whole_number_to_ten_is_a_depth(self):
+        for n in range(11):
+            with self.subTest(n=n):
+                self.assertEqual(depth_call.parse(f"DEPTH: {n}\nRATIONALE: x", scale=10),
+                                 (n, "x"))
+
+    def test_eleven_and_a_half_step_are_not_depths(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 11", scale=10)[0])
+        self.assertIsNone(depth_call.parse("DEPTH: 7.5", scale=10)[0])
+
+    def test_the_denominator_of_ten_and_the_words_of_the_scale_still_answer(self):
+        for line, n in (("DEPTH: 10/10", 10), ("DEPTH: 8 of 10", 8),
+                        ("DEPTH: 10, bounded.", 10), ("DEPTH: 9 (two conditions met)", 9)):
+            with self.subTest(line=line):
+                self.assertEqual(depth_call.parse(line, scale=10)[0], n)
+
+    def test_a_judge_still_counting_out_of_four_is_not_read_as_answering(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 3/4", scale=10)[0])
+        self.assertIsNone(depth_call.parse("DEPTH: 3 of 4", scale=10)[0])
+
+    def test_roman_numerals_to_ten(self):
+        for numeral, n in (("X", 10), ("IX", 9), ("VIII", 8), ("VII", 7), ("VI", 6),
+                           ("V", 5), ("IV", 4), ("I", 1)):
+            with self.subTest(numeral=numeral):
+                self.assertEqual(depth_call.parse(f"DEPTH: {numeral}", scale=10)[0], n)
+        self.assertIsNone(depth_call.parse("DEPTH: XI", scale=10)[0])
+
+    def test_the_scale_of_four_is_unchanged_by_default(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 9")[0])
+        self.assertIsNone(depth_call.parse("DEPTH: V")[0])
+        self.assertEqual(depth_call.parse("DEPTH: 3/4")[0], 3)
+
+
 if __name__ == "__main__":
     unittest.main()
