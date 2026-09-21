@@ -685,11 +685,24 @@ git commit -m "test: the sidebar lists every behaviour, withheld paragraphs or n
 
 **Interfaces:**
 - Consumes: `sliceParams(pinned, { behaviours, specs })` already exists at
-  `app.js:50` and already builds `spec=` from a list.
-- Produces: `loadDocuments` asks for `?spec=<the documents on screen>`.
+  `app.js:50` and already builds `spec=` from a list. `ensureBehaviours`
+  (`app.js:4624`) is the pattern the new loader mirrors.
+- Produces: `loadDocuments` asks for `?spec=<the documents on screen>`, and
+  `ensureDocument(id)` fetches a withheld document's text when the reader opens
+  it.
 
 This is the whole of the saving: 1070 KB down to 186. The other three loaders
 already pass their slice; this one was missed when they were written.
+
+**Read this before you start.** Passing the slice is not enough on its own, and
+the plan said so too late. Measured against `9b7ce377`: asking for one document
+returns four, of which **three come back withheld** carrying no `markdown`.
+`loadDocuments()` is called from exactly one place, inside `initialize()`, and
+nothing refetches it. Five sites read `doc.markdown`, and `renderDocument`
+(`app.js:3451`) builds a heading index from it and renders the body with it. So
+Step 3 alone would make the reader draw nothing, or throw, the moment anyone
+switches document. Steps 4 and 5 are what keep that from happening, and this
+task is not done without them.
 
 - [ ] **Step 1: Write the failing check**
 
@@ -735,26 +748,131 @@ async function loadDocuments() {
 }
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [ ] **Step 4: Teach the reader to fetch a document's text when it opens one**
+
+Step 3 means three of the four documents now arrive with no `markdown`. Nothing
+refetches them, so this is what makes switching document work at all.
+
+Add beside `ensureBehaviours` in `site/spec-reader/app.js`, mirroring its shape:
+
+```javascript
+/* A document whose text was withheld, fetched when the reader opens it. The
+ * documents column is sliced like the payload now, so the panel is handed the
+ * metadata of every document and the text of the ones it was showing at the
+ * time. Keyed by id and held, like inFlight beside it: opening a document twice
+ * costs one request, and a fetch in flight is not raced by its own repeat. */
+const documentsInFlight = new Map();
+
+async function ensureDocument(id) {
+  if (!id) return;
+  const held = (state.payload?.documents || []).find(doc => doc.id === id);
+  if (held && !held.textWithheld) return;
+  if (documentsInFlight.has(id)) return documentsInFlight.get(id);
+
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const fetching = (async () => {
+    const answered = await loadJSON(
+      `${DOCUMENTS_URL}${sliceParams(pinned, { specs: [id] })}`);
+    const text = (answered.documents || []).find(doc => doc.id === id);
+    if (!text || text.textWithheld) return;
+    state.payload.documents = (state.payload.documents || [])
+      .map(doc => (doc.id === id ? text : doc));
+  })();
+  // A failed fetch is not a fact worth remembering: drop the id so a retry can
+  // ask again, guarded by identity so a slower rejection cannot delete an entry
+  // a fresher call has since taken over.
+  fetching.catch(() => {
+    if (documentsInFlight.get(id) === fetching) documentsInFlight.delete(id);
+  });
+  documentsInFlight.set(id, fetching);
+  return fetching;
+}
+```
+
+Then await it where a document is opened. In `chooseSpec`, after
+`state.selectedSpec = id;` and `syncURL();`, beside the existing
+`ensureBehaviours` await:
+
+```javascript
+  await Promise.all([
+    ensureDocument(id).catch(() => {}),
+    ensureBehaviours(state.selectedSlugs).catch(() => {}),
+  ]);
+```
+
+And in `setComparePair`, replacing its `ensureBehaviours` await, so both halves
+of the pair are fetched:
+
+```javascript
+  await Promise.all([
+    ...next.filter(Boolean).map(docId => ensureDocument(docId).catch(() => {})),
+    ensureBehaviours(state.selectedSlugs).catch(() => {}),
+  ]);
+```
+
+Both stay unconditional and both swallow rejections, for the reason already
+written beside them: the state is changed before the await, so a failure must
+not skip the repaint that follows.
+
+- [ ] **Step 5: Make the panel refuse to draw text it has not got**
+
+`renderDocument` (`site/spec-reader/app.js:3451`) calls
+`buildHeadingIndex(doc.markdown)` and `renderMarkdown(doc.markdown, ...)`. A
+withheld document has no `markdown` at all, so both break. Step 4 means this
+should not happen, and this step is what makes it visible rather than a blank
+panel if it ever does.
+
+At the top of `renderDocument`, before the `markdownContext` is built:
+
+```javascript
+  /* Step 4 fetches a document's text before it is shown, so reaching here
+     without it means that fetch failed or was skipped. Say so in the panel
+     rather than rendering `undefined`, which is how a reader would otherwise
+     be shown an empty specification and have no idea why. */
+  if (doc.textWithheld || typeof doc.markdown !== "string") {
+    const panel = elements.template.content.firstElementChild.cloneNode(true);
+    panel.querySelector(".document-body").textContent =
+      "This specification's text has not loaded. Reload the page to try again.";
+    return panel;
+  }
+```
+
+- [ ] **Step 6: Run the fall-through harness and watch it pass**
 
 Run: `node engine/panel/test_appjs_fallthrough.js`
 
 Expected: every check PASS, and the closing line
 `app.js payload resolution: PASS (...)`.
 
-- [ ] **Step 5: Run the harness set and the python driver**
+- [ ] **Step 7: Run the harness set and the python driver**
 
 Run: `node --test engine/panel/test_appjs_*.js`
-Expected: 12 pass, 0 fail.
+Expected: 12 files, 12 pass, 0 fail.
 
 Run: `python3 -m unittest discover -s engine/panel -p "test_*.py"`
-Expected: `OK`.
+Expected: `OK`, with its `Ran N tests` line at or above 236. A discover run that
+finds nothing also exits 0, so read the count and not the exit code.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Look at it in a browser, because no harness covers this**
+
+The harnesses extract pure functions as text and none of them renders a panel,
+so Steps 4 and 5 have no automated cover. Serve the reader and switch documents
+by hand:
+
+```bash
+npm run dev -- -p 4641
+```
+
+Open `/spec-reader/?publication=9b7ce377-d2eb-452e-a8fc-4552a7801487&spec=anthropic--constitution@2026-01-20`,
+then use the document picker to switch to each of the other three in turn, and
+press compare. Every one must render its text. If any panel shows the "has not
+loaded" sentence from Step 5, Step 4 is not working. Stop the server when done.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add site/spec-reader/app.js engine/panel/test_appjs_fallthrough.js
-git commit -m "fix: the reader asks for the document it is showing"
+git commit -m "fix: the reader asks for the document it is showing, and fetches one it opens"
 ```
 
 ---
