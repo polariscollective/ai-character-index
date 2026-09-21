@@ -846,6 +846,12 @@ At the top of `renderDocument`, before the `markdownContext` is built:
      be shown an empty specification and have no idea why. */
   if (doc.textWithheld || typeof doc.markdown !== "string") {
     const panel = elements.template.content.firstElementChild.cloneNode(true);
+    /* The panel still has to say which document it is. rebuildReader's scroll
+       restore, revealPassageLink's panel lookup, the compare toggle's read of
+       the document being read, and three focus and translation state keys all
+       find a panel by this attribute, and without it those last three key
+       their state under the string "undefined". */
+    panel.dataset.documentId = doc.id;
     panel.querySelector(".document-body").textContent =
       "This specification's text has not loaded. Reload the page to try again.";
     return panel;
@@ -879,6 +885,37 @@ Re-resolve after awaiting, because `ensureDocument` replaces the entry in
 shape this function already returns for a locator it cannot place, which
 `revealPassageLink` already handles, so a failed fetch degrades instead of
 throwing. If `doc` is `const`, make it `let` rather than adding a second name.
+
+- [ ] **Step 5c: Every writer of the shown-document state fetches what it wrote**
+
+Steps 4, 5 and 5b guard the readers of `doc.markdown`. That is the wrong axis
+and it was short three times running. The defect lives in the writers: there are
+five writers of `state.comparePair` and five of `state.selectedSpec`, and
+guarding readers leaves most of them unfetched.
+
+Add one helper beside `ensureDocument`:
+
+```javascript
+/* The documents the reader is about to show, fetched before it shows them.
+ * Every place that writes state.selectedSpec or state.comparePair goes through
+ * here: guarding the readers of doc.markdown left four writers unguarded, and
+ * each one found was followed by another nobody had found yet. */
+async function ensureShownDocuments() {
+  const shown = [...new Set([state.selectedSpec, ...(state.comparing ? comparePair() : [])])]
+    .filter(Boolean);
+  await Promise.all(shown.map(id => ensureDocument(id).catch(() => {})));
+}
+```
+
+Use it at every writer followed by a repaint: the compare toggle handler, whose
+`defaultComparison` pick is never in `urlSpecs()`; `chooseSpec` and
+`setComparePair`, replacing their per-id calls so all three read as one rule;
+and after the two comparison-pair assignments in `openPassageLink`, which writes
+a second document its own Step 5b guard does not cover. `initialize` needs none:
+`loadDocuments` asks for `urlSpecs()`, which is exactly what it writes.
+
+`ensureDocument` returns early for a document already held, so calling this on
+every write costs a map lookup when nothing is missing.
 
 - [ ] **Step 6: Run the fall-through harness and watch it pass**
 
