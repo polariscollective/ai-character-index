@@ -653,6 +653,15 @@ need no change: Task 1 is what makes the array complete, and these assert it.
 Passing on the first run is the expected outcome here and is not a reason to
 skip the step, because the checks are the regression guard rather than the fix.
 
+**And one thing the harness will now fail on, which is not a bug.** Task 3's
+review required `engine/panel/test_panel.py` to pin this harness's exact check
+count, the way its eleven sibling classes do, because a bare `0 failures` also
+passes on a harness that stopped asserting. So `TestAppJSWithheld` currently
+reads `self.assertIn("6 checks, 0 failures", out.stdout, out.stdout)`. Adding
+these checks changes that total, so the python class fails until you update the
+number to whatever the harness now prints. Update it, do not weaken it back to
+`0 failures`, and do not delete the assertion.
+
 The only way this step fails is `not found in app.js: function behaviourGroups() {`,
 which means a header no longer matches character for character. That kills the
 harness as it loads rather than failing a check by name, so read the error, not
