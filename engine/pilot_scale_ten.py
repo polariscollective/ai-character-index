@@ -97,7 +97,7 @@ def cell_evidence(store, publication_id, slug, version_id, passages):
     if not calls:
         raise SystemExit(f"the published run of {slug} on {version_id} has no done call")
     model_of = {call["id"]: call["model"] for call in calls}
-    ids = f"in.({','.join(model_of)})"
+    ids = "in.(" + ",".join(f'"{call_id}"' for call_id in model_of) + ")"
     votes = {}
     for row in store.select("aci_judgements", {"call_id": ids}):
         if row.get("parsed", True):
