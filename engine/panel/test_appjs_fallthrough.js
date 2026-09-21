@@ -78,6 +78,10 @@ eval(consts + "\n" +
      load, which is how it fell silent rather than failing by name. */
   extractFn("function sliceParams(pinned, { behaviours, specs } = {})") + "\n" +
   extractFn("function urlSlugs()") + "\n" +
+  /* loadDocuments asks for the documents named by ?spec= and ?compare-with=
+     now, via urlSpecs(), so the sandbox needs it extracted the same way
+     urlSlugs() already is for loadBehaviours(). */
+  extractFn("function urlSpecs()") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
   extractOrThrowing("async function loadDocuments()") + "\n" +
   "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; initialParams = new URLSearchParams(search); state.payloadSource = undefined; return loadBehaviours(); };\n" +
@@ -86,6 +90,7 @@ eval(consts + "\n" +
   "readSource = () => state.payloadSource;");
 
 const PINNED_ID = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
+const SPEC_A = "anthropic--constitution@2026-01-20";
 const CURRENT_URL = "/api/reader/payload";
 const PINNED_URL = `${CURRENT_URL}?publication=${PINNED_ID}`;
 const PIN = { behaviours: ["PIN"] };
@@ -177,6 +182,14 @@ function check(ok, label, detail) {
     check(docs.documents[0] === "CURRENT"
           && readAsked().every(url => !url.includes("behaviours-v5-reader")),
           "a malformed pin reads the current documents and never asks for its own",
+          docs.error || JSON.stringify(readAsked()));
+  }
+  {
+    const DOCS_SPEC_URL = `${DOCS_CURRENT_URL}?spec=${encodeURIComponent(SPEC_A)}`;
+    const docs = await readDocuments(`?spec=${SPEC_A}`, {
+      [CURRENT_URL]: CURRENT, [DOCS_SPEC_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "CURRENT",
+          "the documents request names the document the address asks for",
           docs.error || JSON.stringify(readAsked()));
   }
 

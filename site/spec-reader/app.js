@@ -189,10 +189,12 @@ async function loadBehaviourNotes() {
  * which is what fetching them unpinned did. Read after loadBehaviours and from
  * state.payloadSource rather than from the URL, so a pin that fell back reads
  * the current publication's documents with its payload. */
+/* Sliced like the payload and the links beside it. The documents column is
+ * 1161 KB for four documents and the panel shows one, or two when comparing;
+ * every other loader already said which it wanted and this one did not. */
 async function loadDocuments() {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
-  return loadJSON(
-    pinned ? `${DOCUMENTS_URL}?publication=${encodeURIComponent(pinned)}` : DOCUMENTS_URL);
+  return loadJSON(`${DOCUMENTS_URL}${sliceParams(pinned, { specs: urlSpecs() })}`);
 }
 
 /* The note a reader opens beside a behaviour. It answers the question an
@@ -3483,6 +3485,16 @@ function renderProviderTabs(panel, doc, side = 0) {
 /* `side` is the panel's position, 0 on the left, which is what names a control
  * when two panels carry the same ones. */
 function renderDocument(doc, side = 0) {
+  /* Step 4 fetches a document's text before it is shown, so reaching here
+     without it means that fetch failed or was skipped. Say so in the panel
+     rather than rendering `undefined`, which is how a reader would otherwise
+     be shown an empty specification and have no idea why. */
+  if (doc.textWithheld || typeof doc.markdown !== "string") {
+    const panel = elements.template.content.firstElementChild.cloneNode(true);
+    panel.querySelector(".document-body").textContent =
+      "This specification's text has not loaded. Reload the page to try again.";
+    return panel;
+  }
   const panel = elements.template.content.firstElementChild.cloneNode(true);
   const markdownContext = {
     headings: buildHeadingIndex(doc.markdown),
@@ -3826,7 +3838,10 @@ async function chooseSpec(panel, id) {
    * fetched, so a document just chosen carries none of its bubbles yet.
    * Unconditional, as setSelection's is: state.selectedSpec is written above
    * whether or not this succeeds, so a rejection must not skip the repaint. */
-  await ensureBehaviours(state.selectedSlugs).catch(() => {});
+  await Promise.all([
+    ensureDocument(id).catch(() => {}),
+    ensureBehaviours(state.selectedSlugs).catch(() => {}),
+  ]);
   rebuildReader();
 }
 
@@ -3864,7 +3879,10 @@ async function setComparePair(side, id) {
   /* A comparison is returned only when both of its documents are named
    * together, so the pair just changed has neither the counterpart's bubbles
    * nor the paragraph comparing the two until they are asked for as a pair. */
-  await ensureBehaviours(state.selectedSlugs).catch(() => {});
+  await Promise.all([
+    ...next.filter(Boolean).map(docId => ensureDocument(docId).catch(() => {})),
+    ensureBehaviours(state.selectedSlugs).catch(() => {}),
+  ]);
   rebuildReader();
 }
 
@@ -4665,6 +4683,38 @@ function mergeCells(into, extra) {
   if (!into) return { cells: { ...(extra || {}) } };
   Object.assign(into.cells, extra || {});
   return into;
+}
+
+/* A document whose text was withheld, fetched when the reader opens it. The
+ * documents column is sliced like the payload now, so the panel is handed the
+ * metadata of every document and the text of the ones it was showing at the
+ * time. Keyed by id and held, like inFlight beside it: opening a document twice
+ * costs one request, and a fetch in flight is not raced by its own repeat. */
+const documentsInFlight = new Map();
+
+async function ensureDocument(id) {
+  if (!id) return;
+  const held = (state.payload?.documents || []).find(doc => doc.id === id);
+  if (held && !held.textWithheld) return;
+  if (documentsInFlight.has(id)) return documentsInFlight.get(id);
+
+  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+  const fetching = (async () => {
+    const answered = await loadJSON(
+      `${DOCUMENTS_URL}${sliceParams(pinned, { specs: [id] })}`);
+    const text = (answered.documents || []).find(doc => doc.id === id);
+    if (!text || text.textWithheld) return;
+    state.payload.documents = (state.payload.documents || [])
+      .map(doc => (doc.id === id ? text : doc));
+  })();
+  // A failed fetch is not a fact worth remembering: drop the id so a retry can
+  // ask again, guarded by identity so a slower rejection cannot delete an entry
+  // a fresher call has since taken over.
+  fetching.catch(() => {
+    if (documentsInFlight.get(id) === fetching) documentsInFlight.delete(id);
+  });
+  documentsInFlight.set(id, fetching);
+  return fetching;
 }
 
 async function ensureBehaviours(slugs) {
