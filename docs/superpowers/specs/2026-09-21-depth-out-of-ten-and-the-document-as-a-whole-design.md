@@ -438,6 +438,75 @@ pilot on the same eight cells:
 5. Show the judges each section's heading attributes.
 6. Seat `fable`'s declared substitute when it is refused on a whole document.
 
+## What the second pilot showed
+
+Run on 21 September 2026 on the model spec of August 2026 alone,
+`artefacts/2026-09-21T15-57-56-pilot-scale-ten` (not committed), after the six
+changes above were made in `280f0b3`, `f8640c2` and `e5abbcb`. Priced at 4.49
+dollars, it cost 5.86: `fable` was refused by a content filter on both its
+contradictions call and its confirmation call, each refusal was billed, and
+`opus`, its declared substitute, answered both. The price counts each seat's
+own model only, so a seat known to be refused on a document should be priced
+with its substitute next time.
+
+**Ten has become rare.** No depth of ten reached 10. The three behaviours that
+reached 10 in the first pilot now sit at 9, and every rationale names the
+facets that fall short: for honesty, non-manipulation and faithful visible
+reasoning have no edge and no case; for the instruction hierarchy, no competing
+rule is settled on a case; for harm to third parties, no conflict is settled on
+a case. Sycophancy stays at 6 or 7.
+
+| Behaviour | sol | fable (opus in its seat on the last row) | deepseek |
+|---|---|---|---|
+| honesty | 9 | 9 | 9 |
+| sycophancy | 7 | 7 | 6 |
+| instruction hierarchy | 9 | 9 | no depth |
+| harm to third parties | 9 | 8 | no depth |
+
+Eight depths of ten were odd, and each names the part of the level above that
+is met, so the odd values read as intended.
+
+**deepseek still fails the format on half its calls.** It answered `DEPTH: -1`
+twice, both times saying no passage bears on the behaviour, on cells where it
+was shown 55 and 20 passages. The listed values and the reminder in the user
+message halved the failures and did not end them.
+
+**The labels reached the judges.** Force of each rule rose from 2, 3 and 4 to
+3, 4 and 4, and `fable` wrote that every section header carries an authority
+label. Conflict rules stayed at 4 from every judge, which fits a document whose
+order of authority is strict; the tightened anchor is untested on the
+constitution, whose order is holistic.
+
+**The second reading removes the noise and confirms the wrong things.** Sixteen
+distinct claims were pooled, three from `sol`, five from `opus` in `fable`'s
+seat and eight from `deepseek`. All eight of `deepseek`'s were rejected by both
+other readers, each with a reason that holds on reading. Three claims were
+confirmed, each found by `opus` and confirmed by `deepseek`, with `sol`
+rejecting it. On reading, `sol` is right on two of the three: one pairs a rule on
+sexual content with a rule on self-harm, which do not govern the same request,
+and another treats the teen-safety rules, which are root rules themselves, as if
+they could not justify a refusal under the chain of command. The third, never
+asking a user to clarify intent against erring on the side of caution with
+teens, is weak at best. Meanwhile the strongest finding of the first pilot, the
+red-line promise on biological weapons against the transformation exception,
+was not found this time. Finding is not repeatable from one run to the next,
+and a quorum of two in which one reader is `deepseek` confirms its errors.
+
+**Recommendation.**
+
+1. The depth scale of ten, with its three conditions required for every facet,
+   does what the design asked of it. Keep it.
+2. Seat a declared substitute for `deepseek` when its depth reply is off the
+   scale, recorded as every substitution is, instead of changing the panel.
+3. Do not score contradictions from the judges alone. They find and cross-check
+   candidates, and a person decides which ones the published list carries, as
+   the governance view's scores are decided by hand. The score is computed from
+   that list.
+4. Price a seat with its substitute when the seat is known to be refused on the
+   document.
+5. Check the tightened conflict-rules anchor on the constitution in the full
+   run before publishing its figure.
+
 Sources:
 [arXiv 2510.07686](https://arxiv.org/abs/2510.07686),
 [arXiv 2605.24229](https://arxiv.org/html/2605.24229v1),
