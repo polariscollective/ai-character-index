@@ -27,6 +27,8 @@ The user manifest (`specs/user/specs.json`, `SPEC_CITE_USER_SPECS`) went with th
 
 The judging pipeline: prompt composition and verdict parsing (`harness.py`, `judge_call.py`, `depth_call.py`), composing a run (`compose_run.py`), executing it (`batch_job.py`), the reader's tier bands (`bands.py`) and the behaviour payload builder (`build_site_data.py`). The index judges with one panel, `frontier_fast`, under rubric v5 (`panel/prompts/v5.txt`), and each judge gives every cell a 0 to 4 depth (`panel/prompts/depth-v1.txt`). See [`panel/README.md`](panel/README.md); `python3 engine/panel/test_panel.py` runs its offline tests (no network, no keys).
 
+`pilot_scale_ten.py` is the pilot of depth out of ten and of the assessment of a whole document (`panel/assessment_call.py`), from `docs/superpowers/plans/2026-09-21-depth-out-of-ten-pilot.md`. It reads the public publication, writes nothing to the database, and prices itself unless given `--go`.
+
 ## job.py, publish.py and local_run.py
 
 `job.py` is what the judging image runs. It reads its own `aci_jobs` row and dispatches on `ACI_JOB_MODE`: `compose` prices a run and writes its calls, `judge` executes them through `panel/batch_job.py`, and `publish` builds a publication through `publish.py`, as a draft that is not public. The portal starts it as a Cloud Run job through `polaris-batch-trigger`, or as a local subprocess when `ACI_PYTHON` is set outside production. As of September 2026 jobs are run locally, because `deploy-runner.yml` has not once succeeded: it fails at Google Cloud authentication.

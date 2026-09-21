@@ -1,0 +1,353 @@
+#!/usr/bin/env python3
+"""A pilot of depth out of ten, and of the assessment of a document as a whole.
+
+    python3 engine/pilot_scale_ten.py         # prices it, spends nothing
+    python3 engine/pilot_scale_ten.py --go    # spends
+
+It reads the database and writes nothing to it. Everything lands in artefacts/,
+in a folder of its own: every reply as it came back, what was made of it in
+pilot.json, and a summary.md a person can read in one sitting. The design it
+tests is
+docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md,
+and it answers the design's two questions: whether judges use odd values as a
+way of not choosing, and whether the contradictions they list hold up.
+
+Each document is assessed in full first, because a depth on the new scale is
+given with its document's general rules for conflicts, and those are the
+passages at least two judges cited as such. Then each behaviour gets a depth out
+of ten from the judges of its cell's published run, over the passages that run
+retained, so the new figure reads beside the old one.
+"""
+
+import argparse
+import importlib.util
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "panel"))
+sys.path.insert(0, str(HERE / "spec-cite"))
+
+import assessment_call           # noqa: E402
+import bands                     # noqa: E402
+import batch_job                 # noqa: E402
+import depth_call                # noqa: E402
+import index_store               # noqa: E402
+import whole_doc                 # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("h", HERE / "panel" / "harness.py")
+h = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(h)
+
+DOCUMENTS = ("anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18")
+BEHAVIOURS = ("honesty-and-non-deception", "no-sycophancy",
+              "instruction-hierarchy-conformance", "harm-avoidance-to-third-parties")
+PANEL = "frontier_fast"
+QUORUM = 2
+CHARS_PER_TOKEN = 4
+# Output allowances for the price, generous because sol's reasoning is billed as
+# output, and a price that comes in low is the one that surprises.
+OUTPUT_TOKENS = {"criteria": 4000, "contradictions": 8000, "depth": 1000}
+# The rules block a depth call will carry, priced before anyone has cited it.
+RULES_ALLOWANCE_CHARS = 4000
+LABELS = {"conflict_rules": "Conflict rules", "contradictions": "Unresolved contradictions",
+          "rule_force": "Force of each rule", "reasons": "Reasons given",
+          "situations": "Situations covered"}
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def split_document(document_id):
+    spec_id, _, version = document_id.partition("@")
+    return spec_id, version
+
+
+def conflict_rules(criteria_by_seat, passages, quorum=QUORUM):
+    """The passages at least `quorum` seats cited as the document's general
+    rules for conflicts, in document order. A seat whose criteria call failed
+    cited nothing, so it cannot help a passage reach the quorum."""
+    counts = {}
+    for parsed in criteria_by_seat.values():
+        for number in set(parsed.get("conflict_rule_passages") or []):
+            counts[number] = counts.get(number, 0) + 1
+    return [passages[number - 1] for number in sorted(counts) if counts[number] >= quorum]
+
+
+def cell_evidence(store, publication_id, slug, version_id, passages):
+    """(retained passages, the cell's done calls, their depths out of four by model).
+
+    The retained passages are chosen as batch_job.pending_depths chooses them,
+    from the published run's parsed judgements, so the new depth reads the same
+    evidence the published one did."""
+    selected = store.select("aci_publication_cells", {
+        "publication_id": f"eq.{publication_id}", "behaviour_slug": f"eq.{slug}",
+        "spec_version_id": f"eq.{version_id}"})
+    if not selected:
+        raise SystemExit(f"the public publication carries no cell {slug} on {version_id}")
+    calls = store.select("aci_judge_calls", {
+        "run_id": f"eq.{selected[0]['run_id']}", "behaviour_slug": f"eq.{slug}",
+        "spec_version_id": f"eq.{version_id}", "status": "eq.done"})
+    if not calls:
+        raise SystemExit(f"the published run of {slug} on {version_id} has no done call")
+    model_of = {call["id"]: call["model"] for call in calls}
+    ids = f"in.({','.join(model_of)})"
+    votes = {}
+    for row in store.select("aci_judgements", {"call_id": ids}):
+        if row.get("parsed", True):
+            votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
+    shown = set(bands.shown_by_default(votes))
+    old = {model_of[row["call_id"]]: row["depth"]
+           for row in store.select("aci_depths", {"call_id": ids})
+           if row.get("status") == "done"}
+    return ([passage for passage in passages if passage[0] in shown],
+            sorted(calls, key=lambda call: call["model"]), old)
+
+
+def ask(tag, system, user, config, call_model):
+    """One call, and what it cost. A refusal is raised to the caller, which
+    records it and goes on."""
+    provider, model_id = h.resolve(tag, config)
+    reply, usage, finish_reason, seconds = call_model(
+        provider=provider, model_id=model_id, system=system, user=user,
+        kwargs=whole_doc.judge_kwargs(tag, model_id, config))
+    return {"reply": reply or "", "usage": usage, "finish_reason": finish_reason,
+            "seconds": seconds, "cost_usd": batch_job.cost_of(tag, usage, config)}
+
+
+def priced(tag, system, user, output_tokens, config):
+    usage = {"prompt_tokens": (len(system) + len(user)) // CHARS_PER_TOKEN,
+             "completion_tokens": output_tokens}
+    return batch_job.cost_of(tag, usage, config) or 0.0
+
+
+def _costs(results):
+    for record in results["documents"].values():
+        for questions in record["assessment"].values():
+            for answer in questions.values():
+                if answer.get("cost_usd") is not None:
+                    yield answer["cost_usd"]
+        for cell in record["cells"].values():
+            for given in cell["new"].values():
+                if given.get("cost_usd") is not None:
+                    yield given["cost_usd"]
+
+
+def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
+              go=False, documents=DOCUMENTS, behaviours=BEHAVIOURS, panel=PANEL):
+    """Price the pilot and, with `go`, run it. Returns (the price in dollars, the
+    folder written, or None when nothing was run)."""
+    seats = config["panels"][panel]
+    publication = index_store.current_publication(store)
+    if publication is None:
+        raise SystemExit("no public publication to take the cells from")
+    versions = {f"{row['spec_id']}@{row['version']}": row
+                for row in store.select("aci_spec_versions")}
+    missing = [document for document in documents if document not in versions]
+    if missing:
+        raise SystemExit(f"no such document: {', '.join(missing)}")
+
+    passages = {document: passages_for(*split_document(document)) for document in documents}
+    evidence = {(document, slug): cell_evidence(store, publication["id"], slug,
+                                                versions[document]["id"], passages[document])
+                for document in documents for slug in behaviours}
+
+    estimate = 0.0
+    for document in documents:
+        for question in assessment_call.QUESTIONS:
+            system, user = assessment_call.compose(question, passages[document])
+            estimate += sum(priced(seat, system, user, OUTPUT_TOKENS[question], config)
+                            for seat in seats)
+    for (_document, slug), (retained, calls, _old) in evidence.items():
+        system, user = depth_call.compose(slug, registry, retained, scale=10)
+        for call in calls:
+            estimate += priced(call["model"], system, user + " " * RULES_ALLOWANCE_CHARS,
+                               OUTPUT_TOKENS["depth"], config)
+    estimate = round(estimate, 2)
+    if not go:
+        return estimate, None
+    call_model = call_model or batch_job.call_openrouter
+
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+    folder = Path(out_dir) / f"{stamp}-pilot-scale-ten"
+    folder.mkdir(parents=True, exist_ok=True)
+    results = {"started_at": now(), "publication": publication["id"],
+               "estimate_usd": estimate,
+               "prompts": {"depth": depth_call.prompt_sha256(10),
+                           **{question: assessment_call.prompt_sha256(question)
+                              for question in assessment_call.QUESTIONS}},
+               "documents": {}}
+
+    for document in documents:
+        here = folder / document.replace("@", "_")
+        here.mkdir(exist_ok=True)
+        text = passages[document]
+        record = results["documents"][document] = {"assessment": {}, "cells": {}}
+        criteria_by_seat = {}
+        for seat in seats:
+            record["assessment"][seat] = {}
+            for question in assessment_call.QUESTIONS:
+                print(f"  {seat} assessing {document}: {question} ...", flush=True)
+                system, user = assessment_call.compose(question, text)
+                try:
+                    answer = ask(seat, system, user, config, call_model)
+                except Exception as refused:          # noqa: BLE001
+                    record["assessment"][seat][question] = {"error": str(refused)[:1000]}
+                    continue
+                (here / f"{seat}.{question}.reply.txt").write_text(answer["reply"],
+                                                                  encoding="utf-8")
+                if question == "criteria":
+                    parsed = assessment_call.parse_criteria(answer["reply"], len(text))
+                    criteria_by_seat[seat] = parsed
+                    parsed = dict(parsed, conflict_rule_passages=[
+                        text[number - 1][0] for number in parsed["conflict_rule_passages"]])
+                else:
+                    parsed = assessment_call.parse_contradictions(answer["reply"], len(text))
+                    parsed = dict(parsed, items=[
+                        dict(item, first=text[item["first"] - 1][0],
+                             second=text[item["second"] - 1][0])
+                        for item in parsed["items"]])
+                record["assessment"][seat][question] = dict(
+                    parsed, cost_usd=answer["cost_usd"], finish_reason=answer["finish_reason"])
+        rules = conflict_rules(criteria_by_seat, text)
+        record["conflict_rules"] = [locator for locator, _section, _text in rules]
+
+        for slug in behaviours:
+            retained, calls, old = evidence[(document, slug)]
+            cell = record["cells"][slug] = {"passages": len(retained), "old": old, "new": {}}
+            if not retained:
+                cell["new"] = {call["model"]: {"depth": 0,
+                                               "rationale": depth_call.NOTHING_RETAINED}
+                               for call in calls}
+                continue
+            system, user = depth_call.compose(slug, registry, retained, scale=10,
+                                              conflict_rules=rules)
+            for call in calls:
+                tag = call["model"]
+                print(f"  {tag} giving {slug} on {document} a depth out of ten ...", flush=True)
+                try:
+                    answer = ask(tag, system, user, config, call_model)
+                except Exception as refused:          # noqa: BLE001
+                    cell["new"][tag] = {"error": str(refused)[:1000]}
+                    continue
+                (here / f"{slug}.{tag}.depth.reply.txt").write_text(answer["reply"],
+                                                                   encoding="utf-8")
+                depth, rationale = depth_call.parse(answer["reply"], scale=10)
+                cell["new"][tag] = {"depth": depth, "rationale": rationale,
+                                    "cost_usd": answer["cost_usd"],
+                                    "finish_reason": answer["finish_reason"]}
+
+    results["finished_at"] = now()
+    results["cost_usd"] = round(sum(_costs(results)), 6)
+    (folder / "pilot.json").write_text(json.dumps(results, indent=2, ensure_ascii=False),
+                                       encoding="utf-8")
+    (folder / "summary.md").write_text(summary(results), encoding="utf-8")
+    return estimate, folder
+
+
+def _score_of(answers, criterion):
+    question = "contradictions" if criterion == "contradictions" else "criteria"
+    answer = answers.get(question, {})
+    if "error" in answer:
+        return "error"
+    value = (answer.get("score") if criterion == "contradictions"
+             else answer.get("scores", {}).get(criterion))
+    return "no answer" if value is None else str(value)
+
+
+def _cell_text(value):
+    return str(value).replace("|", "/").replace("\n", " ")
+
+
+def summary(results):
+    """The pilot, for a person to read: per document, the five criteria by
+    judge, the general conflict rules, every contradiction listed, and each
+    depth out of ten beside the published depth out of four, doubled."""
+    lines = ["# Pilot: depth out of ten, and the document as a whole", "",
+             f"Publication read: `{results['publication']}`. Started "
+             f"{results['started_at']}, finished {results['finished_at']}. Priced at "
+             f"{results['estimate_usd']} dollars, cost {results['cost_usd']} dollars.", "",
+             "Prompts: " + ", ".join(f"{name} `{sha[:8]}`"
+                                    for name, sha in results["prompts"].items()) + "."]
+    odd = given_count = 0
+    for document, record in results["documents"].items():
+        seats = list(record["assessment"])
+        lines += ["", f"## {document}", "", "### The document as a whole", "",
+                  "| Criterion | " + " | ".join(seats) + " |",
+                  "|---|" + "---|" * len(seats)]
+        for criterion in ("conflict_rules", "contradictions", "rule_force", "reasons",
+                          "situations"):
+            lines.append(f"| {LABELS[criterion]} | "
+                         + " | ".join(_score_of(record["assessment"][seat], criterion)
+                                      for seat in seats) + " |")
+        rules = ", ".join(f"`{locator}`" for locator in record["conflict_rules"]) or "none"
+        lines += ["", f"General rules for conflicts, cited by at least two judges: {rules}.",
+                  "", "### Contradictions listed", ""]
+        listed = [f"- {seat}: `{item['first']}` against `{item['second']}`. "
+                  f"{item['situation']} {item['why']}"
+                  for seat in seats
+                  for item in record["assessment"][seat].get("contradictions", {})
+                                                        .get("items", [])]
+        lines += listed or ["None."]
+        lines += ["", "### Depth out of ten", "",
+                  "| Behaviour | Judge | Out of four, doubled | Out of ten | Rationale |",
+                  "|---|---|---|---|---|"]
+        for slug, cell in record["cells"].items():
+            for tag in sorted(set(cell["old"]) | set(cell["new"])):
+                old = cell["old"].get(tag)
+                given = cell["new"].get(tag, {})
+                new = given.get("depth")
+                if new is not None:
+                    given_count += 1
+                    odd += new % 2
+                reason = given.get("rationale") or given.get("error") or ""
+                lines.append(f"| {slug} | {tag} | "
+                             f"{'no answer' if old is None else old * 2} | "
+                             f"{'no answer' if new is None else new} | "
+                             f"{_cell_text(reason)} |")
+    lines += ["", f"Odd values: {odd} of {given_count} depths out of ten."]
+    return "\n".join(lines) + "\n"
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--go", action="store_true",
+                        help="spend: without it the pilot is priced and nothing is called")
+    parser.add_argument("--documents", default=",".join(DOCUMENTS),
+                        help="document ids, comma-separated")
+    parser.add_argument("--behaviours", default=",".join(BEHAVIOURS),
+                        help="behaviour slugs, comma-separated")
+    parser.add_argument("--out", default=str(ROOT / "artefacts"),
+                        help="where the results go (default: artefacts/)")
+    args = parser.parse_args(argv)
+
+    from store import Store
+    store = Store.from_env()
+    index_store.install_registry(store)
+    registry = index_store.judging_registry(store)
+    config = h.load_config()
+    if args.go and os.environ.get("ANTHROPIC_API_KEY"):
+        print("note: ANTHROPIC_API_KEY is set, so fable is called on Anthropic's own "
+              "API. The repository's .env has carried a stale key that answers 401; "
+              "unset it to go through OpenRouter, as the container does.", file=sys.stderr)
+    estimate, folder = run_pilot(store, config, registry, h.passages, args.out, go=args.go,
+                                 documents=tuple(args.documents.split(",")),
+                                 behaviours=tuple(args.behaviours.split(",")))
+    if folder is None:
+        print(f"Priced at about {estimate} dollars. Nothing was spent; run again with --go.")
+        return 0
+    print(f"\nWritten to {folder}")
+    print("  summary.md       read this first")
+    print("  pilot.json       everything, parsed")
+    print("  */*.reply.txt    every reply exactly as it came back")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
