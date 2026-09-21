@@ -2568,19 +2568,30 @@ console.log("== Every page: the feedback bubble ==");
 
   const atTop = await captureReaderShot();
 
-  const scrolledBy = await page.evaluate(() => {
-    const column = [...document.querySelectorAll("*")]
-      .find(node => node.scrollHeight > node.clientHeight + 400
-                 && getComputedStyle(node).overflowY !== "visible");
-    if (!column) return 0;
-    // The column scrolls smoothly (CSS scroll-behavior), so setting scrollTop
-    // animates it and reading it back straight away would still see the value
-    // from before the scroll. Read directly here by making this one assignment
-    // instant, which is a property of the measurement and not of the reader.
-    column.style.scrollBehavior = "auto";
-    column.scrollTop = 800;
-    return column.scrollTop;
-  });
+  /* Scrolled the way a reader scrolls it, and the column left exactly as the
+   * stylesheet made it.
+   *
+   * This check used to set scroll-behavior to auto first, on the grounds that
+   * a smooth scroll cannot be read back on the spot, and called that a
+   * property of the measurement rather than of the reader. It was neither: it
+   * was the one condition under which the capture worked. The clone inherits
+   * that inline style, and a clone whose column scrolls instantly takes the
+   * offset the capture gives it, where a clone that kept smooth silently
+   * ignored it and photographed the top of the document. The test had built
+   * the thing it was meant to catch.
+   *
+   * So it waits for the animation instead: ask, then poll until it settles. */
+  const column = page.locator(".document-scroll").first();
+  const found = await column.count();
+  if (found) {
+    await column.evaluate(node => { node.scrollTop = 900; });
+    await page.waitForFunction(
+      () => document.querySelector(".document-scroll").scrollTop > 700,
+      undefined, { timeout: 5000 }).catch(() => {});
+  }
+  const scrolledBy = found
+    ? await column.evaluate(node => node.scrollTop)
+    : 0;
   check(scrolledBy > 0, "the reader has a column that scrolls inside the page",
     String(scrolledBy));
 

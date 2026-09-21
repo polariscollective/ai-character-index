@@ -400,7 +400,15 @@ at once and back inside one synchronous block.
 An element that scrolls inside the page is drawn from its own top. The doc
 reader scrolls its column rather than the window, so `window.scrollY` stayed at
 zero however far down somebody had read and the capture came back showing the
-top of the document. Every inner scroll offset is carried into the clone.
+top of the document. Every inner scroll offset is carried into the clone, and
+carried instantly: the reader's column asks for `scroll-behavior: smooth`, the
+clone inherits it, and a smooth programmatic scroll does not take effect on
+the spot, so the offset was silently dropped and the capture still showed the
+top. That survived a first fix and its tests because every test set
+`scroll-behavior` to auto in order to position the column, and the clone
+inherited that too: the tests had built the one condition under which the bug
+could not appear. The walker scrolls the way a reader does now, and the check
+fails when the line that forces instant scrolling in the clone is taken out.
 
 A pop-up open at the moment of capture is not in the clone's top layer, where a
 popover is back to `display: none`. Measuring it and forcing it back was the

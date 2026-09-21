@@ -355,6 +355,16 @@ function rescroll(clone) {
     } catch {
       continue;
     }
+    /* Instantly, and this is the whole of the fix rather than a nicety. The
+     * reader asks for `scroll-behavior: smooth` on its document column, which
+     * the clone inherits, and a smooth programmatic scroll does not take
+     * effect on the spot: the clone is painted before the animation has run,
+     * so the assignment silently landed on zero and the capture came back
+     * showing the top of the document. Every test that ever passed here had
+     * set scroll-behavior to auto on the live element in order to position
+     * it, and the clone inherited that too, so the tests had built the one
+     * condition under which the bug could not appear. */
+    node.style.scrollBehavior = "auto";
     node.scrollTop = to.top;
     node.scrollLeft = to.left;
   }
