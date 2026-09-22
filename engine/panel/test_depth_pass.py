@@ -13,6 +13,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import httpx
+import openai
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -294,6 +297,8 @@ class RefusedAsThePublicationWouldTest(unittest.TestCase):
         self.assertIn("status is running", message)
         self.assertIn("scored no situations", message)
         self.assertIn("new assessment run", message)
+        self.assertIn(f"--resume={ASSESSMENT_RUN}", message)
+        self.assertNotIn("not taken up again", message)
 
 
 class OneModelOneDepthTest(unittest.TestCase):
@@ -460,6 +465,67 @@ class InterruptedTest(unittest.TestCase):
         self.assertEqual(len(row["attempts"]), 1)
         self.assertEqual(row["cost_usd"], row["attempts"][0]["cost_usd"])
         self.assertIsNotNone(row["cost_usd"])
+
+
+REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+
+
+def cut():
+    """What the openai client raises when the connection is gone."""
+    return openai.APIConnectionError(request=REQUEST)
+
+
+class UnreachableTest(unittest.TestCase):
+    """A network cut that outlasts every wait stops the pass with the row it
+    was giving written error, and the same command run again gives it."""
+
+    def main(self, fake, model):
+        argv = [f"--runs={RUN}", f"--assessment-run={ASSESSMENT_RUN}", "--go"]
+        with mock.patch.object(depth_pass, "Store", type("S", (), {"from_env": staticmethod(
+                    lambda: fake)})), \
+                mock.patch.object(depth_pass.index_store, "install_registry", lambda s: None), \
+                mock.patch.object(depth_pass.index_store, "judging_registry",
+                                  lambda s: REGISTRY), \
+                mock.patch.object(depth_pass.h, "passages", passages_for), \
+                mock.patch.object(depth_pass.batch_job, "call_openrouter", model), \
+                mock.patch.object(seat_call, "sleep", lambda seconds: None), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            code = depth_pass.main(argv)
+        return code, stderr.getvalue()
+
+    def test_the_row_is_left_error_with_its_bill_and_the_same_command_gives_it(self):
+        fake = store()
+        # fable's plain attempt comes back off the scale and is billed; its
+        # first reminder never reaches the model.
+        code, stderr = self.main(fake, Scripted(fable=["DEPTH: -1"] + [cut()] * 6))
+        self.assertNotEqual(code, 0)
+        rows = {r["call_id"]: r for r in fake.tables["aci_depths_out_of_ten"]}
+        fable = rows["call-fable"]
+        self.assertEqual(fable["status"], "error")
+        self.assertTrue(fable["error"].startswith("unreachable: fable"), fable["error"])
+        self.assertIn("APIConnectionError", fable["error"])
+        billed = batch_job.cost_of("fable", {"prompt_tokens": 1000, "completion_tokens": 100},
+                                   CONFIG)
+        self.assertEqual([(a["model"], a["reminder"], a["cost_usd"]) for a in fable["attempts"]],
+                         [("fable", 0, billed)])
+        self.assertEqual(fable["cost_usd"], billed)
+        self.assertEqual(rows["call-sol"]["status"], "done")
+        self.assertEqual(rows["call-deepseek"]["status"], "pending", "never reached")
+        self.assertIn("the same command", stderr)
+
+        again = Scripted()
+        code, _stderr = self.main(fake, again)
+        self.assertEqual(code, 0)
+        self.assertEqual([tag for tag, _user in again.asked], ["fable", "deepseek"],
+                         "only the depths not done are given")
+        rows = {r["call_id"]: r for r in fake.tables["aci_depths_out_of_ten"]}
+        self.assertTrue(all(row["status"] == "done" for row in rows.values()))
+        fable = rows["call-fable"]
+        self.assertEqual(len(fable["attempts"]), 2, "the earlier billed attempt is kept")
+        self.assertAlmostEqual(fable["cost_usd"], 2 * billed)
+        self.assertIsNone(fable["error"])
+        self.assertEqual(len(fake.tables["aci_depths_out_of_ten"]), 3, "no second row")
 
 
 class GiveTest(unittest.TestCase):

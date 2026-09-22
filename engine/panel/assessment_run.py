@@ -63,11 +63,15 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(
 
     `substituted` may be a list the caller passes in, filled in place as
     candidates fail or are skipped rather than only built and returned. A
-    `KeyboardInterrupt` or a `SystemExit` raised while asking a candidate is
-    not treated as that candidate failing: it propagates straight out of this
-    call, before the candidate itself is billed, but the caller's list still
-    holds every earlier candidate's attempt, billed or not, because it is the
-    same list this function has been appending to rather than a copy.
+    `KeyboardInterrupt`, a `SystemExit` or a `seat_call.Unreachable` raised
+    while asking a candidate is not treated as that candidate failing: it
+    propagates straight out of this call, no later candidate is asked, and
+    nothing is appended for the candidate it stopped, which was not billed as
+    far as anyone can know. The caller's list still holds every earlier
+    candidate's attempt, billed or not, because it is the same list this
+    function has been appending to rather than a copy. A model that could not
+    be reached is the network failing, not the model: handing its seat to a
+    substitute would record a substitution nothing called for.
 
     Returns (tag, answer, substituted, refused):
 
@@ -89,6 +93,8 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(
             continue
         try:
             answer = seat_call.ask(tag, system, user, config, call_model)
+        except seat_call.Unreachable:
+            raise
         except Exception as failed:                      # noqa: BLE001
             substituted.append({"model": tag, "reason": str(failed)[:300],
                                 "cost_usd": None, "finish_reason": None, "model_id": None,
@@ -215,19 +221,50 @@ def conflict_rules(criteria_by_seat, passages, quorum=QUORUM):
     return [passages[number - 1] for number in sorted(counts) if counts[number] >= quorum]
 
 
+# The order the calls of one document are priced in, question by question.
+PRICE_ORDER = assessment_call.QUESTIONS + ("confirm",)
+
+
+def fresh_calls(panels):
+    """Every call assessing one document can make when nothing of it is known
+    yet, as (question, seat, claims): each seat of each question, then a
+    confirmation per contradictions seat, whose claims are not known (None)."""
+    return ([(question, seat, None) for question in assessment_call.QUESTIONS
+             for seat in panels[question]]
+            + [("confirm", seat, None) for seat in panels["contradictions"]])
+
+
+def call_messages(question, labelled, claims=None):
+    """The system and user messages one call is priced on. A confirmation
+    whose claims are known is priced on them; one whose claims are not known
+    yet carries the whole document and an allowance of CONFIRM_CLAIMS_CHARS in
+    their place."""
+    if question != "confirm":
+        return assessment_call.compose(question, labelled)
+    system, user = assessment_call.compose_confirm(labelled, claims or [])
+    return system, (user if claims is not None else user + "x" * CONFIRM_CLAIMS_CHARS)
+
+
+def output_allowance(question):
+    return CONFIRM_OUTPUT_TOKENS if question == "confirm" else OUTPUT_TOKENS[question]
+
+
+def price_calls(labelled, calls, config):
+    """What the calls `calls`, (question, seat, claims) as `fresh_calls` gives
+    them, would cost on one labelled document: each at its seat's own model,
+    with its question's output allowance."""
+    estimate = 0.0
+    for question in PRICE_ORDER:
+        estimate += sum(seat_call.priced(seat, *call_messages(question, labelled, claims),
+                                         output_allowance(question), config)
+                        for asked, seat, claims in calls if asked == question)
+    return estimate
+
+
 def price_document(labelled, panels, config):
     """What assessing one document would cost: every seat of each question
     reading the whole labelled document, with the question's output allowance,
     and a confirmation per contradictions seat, which carries the whole
     document too, plus an allowance for the claims. A seat is priced at its own
     model; a substitute that has to answer for it costs more."""
-    estimate = 0.0
-    for question in assessment_call.QUESTIONS:
-        system, user = assessment_call.compose(question, labelled)
-        estimate += sum(seat_call.priced(seat, system, user, OUTPUT_TOKENS[question], config)
-                        for seat in panels[question])
-    system, user = assessment_call.compose_confirm(labelled, [])
-    estimate += sum(seat_call.priced(seat, system, user + "x" * CONFIRM_CLAIMS_CHARS,
-                                     CONFIRM_OUTPUT_TOKENS, config)
-                    for seat in panels["contradictions"])
-    return estimate
+    return price_calls(labelled, fresh_calls(panels), config)

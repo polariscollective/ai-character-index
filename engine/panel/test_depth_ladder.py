@@ -2,10 +2,16 @@
 
 Nothing touches a network and nothing is written anywhere: `give` returns every
 reply for its caller to keep."""
+import contextlib
+import io
 import os
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import httpx
+import openai
 
 HERE = Path(__file__).resolve().parent
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -17,6 +23,7 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 import batch_job                 # noqa: E402
 import depth_call                # noqa: E402
 import depth_ladder              # noqa: E402
+import seat_call                 # noqa: E402
 
 SYSTEM = depth_call.system_prompt(10)
 USER = "The behaviour, its passages, and the rules."
@@ -227,6 +234,67 @@ class GiveTest(unittest.TestCase):
         self.assertIsNone(given["prompt_tokens"])
         self.assertIsNone(given["completion_tokens"])
         self.assertIsNone(given["seconds"])
+
+
+REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+
+
+def cut():
+    """What the openai client raises when the connection is gone."""
+    return openai.APIConnectionError(request=REQUEST)
+
+
+class NetworkTest(unittest.TestCase):
+    """A network error is not an attempt that failed: it is waited out, and
+    after the last wait it stops the ladder, and no substitute is asked."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = depth_ladder.h.load_config()
+
+    def give(self, model, attempts=None):
+        waits = []
+        with mock.patch.object(seat_call, "sleep", waits.append), \
+                contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return depth_ladder.give("deepseek", SYSTEM, USER, self.config, model,
+                                         attempts=attempts), waits
+            except seat_call.Unreachable as raised:
+                return raised, waits
+
+    def test_a_transport_error_twice_then_an_answer_is_one_attempt(self):
+        model = Scripted(deepseek=[cut(), cut(), ANSWER])
+        given, waits = self.give(model)
+        self.assertEqual(given["depth"], 7)
+        self.assertEqual(given["model"], "deepseek")
+        self.assertEqual(given["attempts"], [
+            {"model": "deepseek", "reminder": 0, "finish_reason": "stop",
+             "cost_usd": batch_job.cost_of("deepseek", USAGE, self.config), "parsed": True}])
+        self.assertEqual(waits, [30, 60])
+        self.assertEqual(model.asked, [("deepseek", USER)] * 3, "nothing else is asked")
+
+    def test_a_transport_error_on_every_wait_stops_the_ladder_before_any_substitute(self):
+        model = Scripted(deepseek=["DEPTH: -1"] + [cut()] * 6)
+        held = []
+        raised, waits = self.give(model, attempts=held)
+        self.assertIsInstance(raised, seat_call.Unreachable)
+        self.assertEqual(waits, [30, 60, 120, 240, 480])
+        self.assertNotIn("glm", [tag for tag, _user in model.asked])
+        self.assertNotIn("kimi", [tag for tag, _user in model.asked])
+        # The billed off-scale reply is held; the unreachable attempt is not.
+        self.assertEqual([(a["model"], a["reminder"], a["parsed"]) for a in held],
+                         [("deepseek", 0, False)])
+        self.assertEqual(held[0]["cost_usd"], batch_job.cost_of("deepseek", USAGE, self.config))
+
+    def test_a_status_error_that_is_not_transport_is_an_attempt_that_raised(self):
+        bad = openai.BadRequestError("input refused", body=None,
+                                     response=httpx.Response(400, request=REQUEST))
+        model = Scripted(deepseek=[bad] * 3, glm=[ANSWER])
+        given, waits = self.give(model)
+        self.assertEqual(waits, [])
+        self.assertEqual(given["model"], "glm", "the seat passes to its substitute")
+        self.assertEqual(given["substitution_reason"],
+                         "the seat's model raised on every attempt: BadRequestError: input refused")
 
 
 if __name__ == "__main__":

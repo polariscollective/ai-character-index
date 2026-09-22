@@ -85,9 +85,12 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
     this and must go on behaving.
 
     `attempts` may be a list the caller holds, filled in place as each call
-    comes back or raises, so a `KeyboardInterrupt` or a `SystemExit`, which is
-    not caught here and propagates at once, still leaves the caller holding
-    every attempt already billed. Omitted, a list of its own is used.
+    comes back or raises, so a `KeyboardInterrupt`, a `SystemExit` or a
+    `seat_call.Unreachable`, which are not caught here and propagate at once,
+    still leave the caller holding every attempt already billed. Omitted, a
+    list of its own is used. A model that could not be reached through every
+    wait is not an attempt that failed: nothing is appended for it, and no
+    later attempt or substitute is asked.
 
     Returns {"depth", "rationale", "model", "substitution_reason", "attempts",
     "replies", "prompt_tokens", "completion_tokens", "seconds"}:
@@ -114,6 +117,8 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
     def try_once(model, reminder):
         try:
             answer = seat_call.ask(model, system, user_for(user, reminder), config, call_model)
+        except seat_call.Unreachable:
+            raise
         except Exception as raised:                    # noqa: BLE001
             attempts.append({"model": model, "reminder": reminder, "finish_reason": None,
                              "cost_usd": None, "parsed": False,

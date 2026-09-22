@@ -480,22 +480,30 @@ def assessment(store, assessment_run_id, versions):
     """(run, {version id: rows}) for an assessment run that assessed every
     document in `versions`, or a refusal naming every gap at once.
 
-    The remedy it names is a new run. An assessment run is not taken up again
-    once it has stopped, and a depth out of ten belongs to the assessment run it
-    was given with, so the depths have to be given again against the new one.
+    The remedy it names is to take the run up where it stopped, which asks only
+    the calls not done and says when a document can only be assessed in a new
+    assessment run instead; with no run of that id, a new run. A depth out of
+    ten belongs to the assessment run it was given with, so the depths are
+    given against the run that stands.
     """
     run, by_version = assessment_rows(store, assessment_run_id,
                                       [version["id"] for version in versions])
     gaps = assessment_gaps(assessment_run_id, run, by_version, versions)
     if gaps:
+        if run is None:
+            first = ("Assess these documents in a new assessment run (engine/assess.py "
+                     "--documents=... --go)")
+        else:
+            first = (f"Take the run up where it stopped (engine/assess.py "
+                     f"--resume={assessment_run_id} --documents=... --go), which asks only the "
+                     "calls not done and says when a document can only be assessed in a new "
+                     "assessment run instead")
         raise SystemExit(
             f"assessment run {assessment_run_id} does not assess every document this "
             "publication carries:\n  " + "\n  ".join(gaps)
-            + "\nAn assessment run is not taken up again once it has stopped, and depths "
-            "out of ten belong to the run they were given with. Assess these documents in "
-            "a new assessment run (engine/assess.py --documents=... --go), give the depths "
-            "out of ten against it (engine/panel/depth_pass.py --runs=... "
-            "--assessment-run=<new id> --go), then build with --assessment-run=<new id>.")
+            + f"\n{first}, and depths out of ten belong to the run they were given with: give "
+            "them against the run that stands (engine/panel/depth_pass.py --runs=... "
+            "--assessment-run=<id> --go), then build with --assessment-run=<id>.")
     return run, by_version
 
 

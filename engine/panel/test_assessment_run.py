@@ -1,10 +1,16 @@
 """The assessment of a document as a whole, as pure functions: calling a seat
 with its substitutes, pooling and confirming the contradictions, and the
 general conflict rules. Nothing touches a network, a store or a file."""
+import contextlib
+import io
 import os
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import httpx
+import openai
 
 HERE = Path(__file__).resolve().parent
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -15,6 +21,7 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 
 import assessment_call           # noqa: E402
 import assessment_run            # noqa: E402
+import batch_job                 # noqa: E402
 import seat_call                 # noqa: E402
 
 DOC = "lab--spec@2026-01-01"
@@ -146,6 +153,85 @@ class AskWithSubstitutesTest(unittest.TestCase):
         self.assertEqual([item["model"] for item in substituted], ["fable"])
         self.assertEqual(substituted[0]["reason"], "finish_reason=content_filter")
         self.assertGreater(substituted[0]["cost_usd"], 0)
+
+
+REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+
+
+def cut():
+    """What the openai client raises when the connection is gone."""
+    return openai.APIConnectionError(request=REQUEST)
+
+
+class InSequence(Scripted):
+    """As Scripted, except that a tag scripted with a list takes its items in
+    order, one per call, and answers "an answer" once they run out."""
+
+    def __call__(self, provider, model_id, system, user, kwargs):
+        tag = tag_of(model_id)
+        if isinstance(self.script.get(tag), list):
+            items = self.script[tag]
+            self.asked.append(tag)
+            scripted = items.pop(0) if items else ("an answer", "stop")
+            if isinstance(scripted, BaseException):
+                raise scripted
+            reply, finish_reason = scripted
+            return reply, dict(USAGE), finish_reason, 0.5
+        return super().__call__(provider, model_id, system, user, kwargs)
+
+
+class NetworkTest(unittest.TestCase):
+    """A network error is not the seat's model failing: it is waited out, and
+    after the last wait it stops the seat, and no substitute is asked."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = seat_call.h.load_config()
+
+    def ask(self, model, substituted=None):
+        waits = []
+        with mock.patch.object(seat_call, "sleep", waits.append), \
+                contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return assessment_run.ask_with_substitutes(
+                    "fable", "system", "user", self.config, model, "frontier_fast",
+                    substituted=substituted), waits
+            except seat_call.Unreachable as raised:
+                return raised, waits
+
+    def test_a_transport_error_twice_then_an_answer_is_the_seat_answering_once(self):
+        model = InSequence(fable=[cut(), cut()])
+        (tag, answer, substituted, refused), waits = self.ask(model)
+        self.assertEqual(tag, "fable")
+        self.assertEqual((substituted, refused), ([], []))
+        self.assertEqual(answer["cost_usd"], batch_job.cost_of("fable", USAGE, self.config),
+                         "one call billed")
+        self.assertEqual(waits, [30, 60])
+        self.assertEqual(model.asked, ["fable", "fable", "fable"], "nothing else is asked")
+
+    def test_a_transport_error_on_every_wait_stops_the_seat_with_no_substitute_asked(self):
+        model = InSequence(fable=[("", "content_filter")], opus=[cut()] * 6)
+        substituted = []
+        raised, waits = self.ask(model, substituted=substituted)
+        self.assertIsInstance(raised, seat_call.Unreachable)
+        self.assertEqual(waits, [30, 60, 120, 240, 480])
+        self.assertEqual(model.asked, ["fable"] + ["opus"] * 6,
+                         "kimi and glm, fable's later substitutes, are never asked")
+        # fable's billed refusal is still in the caller's list, and nothing was
+        # appended for opus, which was never billed as far as anyone can know.
+        self.assertEqual([entry["model"] for entry in substituted], ["fable"])
+        self.assertGreater(substituted[0]["cost_usd"], 0)
+
+    def test_a_status_error_that_is_not_transport_still_passes_the_seat_on(self):
+        bad = openai.BadRequestError("input refused", body=None,
+                                     response=httpx.Response(400, request=REQUEST))
+        model = InSequence(fable=[bad])
+        (tag, answer, substituted, _refused), waits = self.ask(model)
+        self.assertEqual(tag, "opus")
+        self.assertEqual(answer["reply"], "an answer")
+        self.assertEqual(waits, [])
+        self.assertEqual(substituted[0]["model"], "fable")
+        self.assertEqual(substituted[0]["reason"], "input refused")
 
 
 def item(first, second, situation="s", why="w"):

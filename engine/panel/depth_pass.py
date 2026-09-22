@@ -30,6 +30,13 @@ per judge, writing each row `done` or `error` by its own id, never by its
 call id, since a call can carry more than one row across assessment runs and
 prompts. A pass interrupted mid-depth writes that row `error` with every
 attempt already billed before the interruption goes on.
+
+A model that cannot be reached is waited for (`seat_call.RETRY_WAITS`), and if
+it still cannot be, the pass stops the same way: the row it was giving is
+written `error`, `unreachable: ...`, with every attempt already billed, and the
+command exits 1. Running the same command again takes it up where it stopped:
+a row already done is left alone, and one in error is given again in place,
+its earlier attempts and cost kept.
 """
 
 import argparse
@@ -91,9 +98,14 @@ def require_assessed(store, assessment_run_id, version_ids, versions):
             f"assessment run {assessment_run_id} does not assess every document these runs "
             f"judged ({names}) as a publication requires, so no depth given against it "
             "could be published:\n  " + "\n  ".join(gaps)
-            + "\nNothing was priced or written. An assessment run is not taken up again once "
-            "it has stopped: assess these documents in a new assessment run (engine/assess.py "
-            "--documents=... --go) and give the depths against it.")
+            + "\nNothing was priced or written. "
+            + ("Assess these documents in a new assessment run (engine/assess.py "
+               "--documents=... --go)" if run is None else
+               f"Take the assessment run up where it stopped (engine/assess.py "
+               f"--resume={assessment_run_id} --documents=... --go), which asks only the calls "
+               "not done and says when a document can only be assessed in a new assessment "
+               "run instead")
+            + ", then give the depths against the run that stands.")
     return by_version
 
 
@@ -233,9 +245,11 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
     again costs.
 
     Anything that stops this depth once the ladder has started, a
-    `KeyboardInterrupt` or a final write that fails, writes the row `error`
-    with every attempt already billed and its cost, then goes on being raised:
-    the attempts are the list `depth_ladder.give` was filling in place."""
+    `KeyboardInterrupt`, a model that could not be reached
+    (`seat_call.Unreachable`, recorded as `unreachable: ...`) or a final write
+    that fails, writes the row `error` with every attempt already billed and
+    its cost, then goes on being raised: the attempts are the list
+    `depth_ladder.give` was filling in place."""
     row_id = row["id"]
     match = {"id": row_id}
     store.update("aci_depths_out_of_ten", match, {"status": "running", "started_at": now()})
@@ -285,7 +299,7 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
         store.update("aci_depths_out_of_ten", match, patch)
     except BaseException as stopped:
         stopped_patch = {
-            "status": "error", "error": str(stopped)[:1000] or type(stopped).__name__,
+            "status": "error", "error": seat_call.stop_error(stopped),
             "attempts": (row.get("attempts") or []) + billed,
             "cost_usd": _sum([row.get("cost_usd"),
                               _sum(attempt.get("cost_usd") for attempt in billed)]),
@@ -383,8 +397,15 @@ def main(argv=None):
     run_ids = parse_run_ids(args.runs, store)
     if args.go and os.environ.get("ANTHROPIC_API_KEY"):
         print(seat_call.ANTHROPIC_KEY_NOTE, file=sys.stderr)
-    _estimate, report = give_pass(store, config, run_ids, assessment_run_id, h.passages,
-                                  go=args.go)
+    try:
+        _estimate, report = give_pass(store, config, run_ids, assessment_run_id, h.passages,
+                                      go=args.go)
+    except seat_call.Unreachable as stopped:
+        print(f"The depth pass stopped: {stopped}. The depth it was giving is written error "
+              "with every attempt it had billed. Once the connection is back, run the same "
+              "command again to take it up where it stopped: it gives every depth that is "
+              "not done, and keeps what each has already billed.", file=sys.stderr)
+        return 1
     if not args.go:
         print("Nothing was written; run again with --go.")
         return 0

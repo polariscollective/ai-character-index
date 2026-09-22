@@ -618,14 +618,18 @@ class AssessmentTest(unittest.TestCase):
     def test_a_run_that_does_not_exist_is_named(self):
         message = self.refusal(assessment_store(assessed("row-1"), runs=()))
         self.assertIn("assessment-1", message)
+        self.assertNotIn("--resume=", message, "there is no run to take up")
+        self.assertIn("new assessment run", message)
 
     def assert_remedy(self, message):
-        """The remedy is a new run, with depths out of ten given against it:
-        an assessment run is never taken up again, and depths out of ten
-        belong to the run they were given with."""
+        """The remedy is to take the run up where it stopped, or a new run
+        where only a new run will do, with depths out of ten given against the
+        run that stands, since they belong to the run they were given with."""
+        self.assertIn("--resume=assessment-1", message)
         self.assertIn("new assessment run", message)
         self.assertIn("depths out of ten", message)
         self.assertIn("--assessment-run=", message)
+        self.assertNotIn("not taken up again", message)
 
     def test_a_run_left_error_with_its_confirmations_missing_is_refused(self):
         # It stopped after the claims were written and before kimi confirmed

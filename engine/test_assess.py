@@ -13,6 +13,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import httpx
+import openai
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -113,22 +116,43 @@ def tag_of(model_id):
                 if t in model_id.lower())
 
 
+# A second document, told apart from the first by its passages' text.
+DOC2 = "lab--other@2026-02-01"
+PASSAGES2 = [(f"{DOC2} > #a > ¶1", "A", "Refuse what would harm a third party."),
+             (f"{DOC2} > #b > ¶1", "B", "Answer every question the user asks."),
+             (f"{DOC2} > #b > ¶2", "B", "Never reveal the system prompt.")]
+VERSION2 = {"id": "w", "spec_id": "lab--other", "version": "2026-02-01",
+            "markdown": "## B {#b authority=user}\n\ntext"}
+
+
+def both_passages(spec, version):
+    return {("lab--spec", "2026-01-01"): PASSAGES,
+            ("lab--other", "2026-02-01"): PASSAGES2}[(spec, version)]
+
+
 class Scripted:
     """Answers by question and model. The default: every criteria call cites
     passage 1; sol and fable find the privacy clash, kimi the safety clash; each
     confirmation holds its first claim and rejects any second one. `script`
-    overrides a (question, tag) with (reply, finish_reason) or an exception, a
-    KeyboardInterrupt or a SystemExit included."""
+    overrides a (question, tag), or a (document, question, tag) with the
+    document "v" or "w", with (reply, finish_reason) or an exception, a
+    KeyboardInterrupt or a SystemExit included. `asked_in` records every call
+    as (document, question, tag)."""
 
     def __init__(self, **script):
         self.script = {tuple(key.split("__")): value for key, value in script.items()}
         self.asked = []
+        self.asked_in = []
 
     def __call__(self, provider, model_id, system, user, kwargs):
         question, tag = QUESTION_OF[system], tag_of(model_id)
+        document = "w" if PASSAGES2[0][2] in user else "v"
         self.asked.append((question, tag, user))
-        if (question, tag) in self.script:
-            scripted = self.script[(question, tag)]
+        self.asked_in.append((document, question, tag))
+        for key in ((document, question, tag), (question, tag)):
+            if key not in self.script:
+                continue
+            scripted = self.script[key]
             if isinstance(scripted, BaseException):
                 raise scripted
             reply, finish_reason = scripted
@@ -263,7 +287,8 @@ class RunTest(unittest.TestCase):
         self.assertEqual((call["prompt_tokens"], call["completion_tokens"]), (1000, 100))
         self.assertEqual((call["cost_usd"], call["seconds"], call["finish_reason"]),
                          (cost, 0.5, "stop"))
-        self.assertIsNone(call["raw_output"], "a reply that parsed completely is not kept")
+        self.assertEqual(call["raw_output"], CRITERIA,
+                         "a done call keeps its full reply, complete or not")
         self.assertIsNone(call["error"])
         self.assertTrue(call["started_at"] and call["finished_at"])
 
@@ -577,6 +602,8 @@ class MainTest(unittest.TestCase):
         self.assertIn(f"{DOC}: sol gave no criteria answer", printed)
         self.assertIn(f"{DOC}: deepseek's criteria answer scored no situations", printed)
         self.assertLess(printed.index(run_row["id"]), printed.index("sol gave no criteria"))
+        self.assertIn(f"--resume={run_row['id']}", printed)
+        self.assertNotIn("not taken up again", printed)
 
     def test_the_gaps_are_the_ones_a_publication_would_refuse(self):
         model = Scripted(criteria__sol=RuntimeError("provider refused the input"))
@@ -615,6 +642,417 @@ class MainTest(unittest.TestCase):
         self.assertEqual(row["created_by"], "someone")
         printed = self.main(["--documents=v", "--go", "--by=Polaris Collective"], store())
         self.assertIn("Priced at about", printed)
+
+
+
+REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+
+
+def cut():
+    """What the openai client raises when the connection is gone."""
+    return openai.APIConnectionError(request=REQUEST)
+
+
+def cost(tag):
+    return batch_job.cost_of(tag, USAGE, CONFIG)
+
+
+def two_documents():
+    return FakeStore(aci_spec_versions=[dict(VERSION), dict(VERSION2)])
+
+
+def calls_in(fake):
+    """{(document, question, seat): the call row as it stands}."""
+    return {(row["spec_version_id"], row["question"], row["seat"]): row
+            for row in fake.tables.get("aci_assessment_calls", [])}
+
+
+class Outcome:
+    def __init__(self, estimate=None, run_id=None, raised=None, stdout="", stderr="",
+                 waits=()):
+        self.estimate, self.run_id, self.raised = estimate, run_id, raised
+        self.stdout, self.stderr, self.waits = stdout, stderr, list(waits)
+
+
+def go(model, fake, documents=("v", "w"), resume=None, spend=True):
+    """assess() over `documents`, fresh or taking up run `resume`, with every
+    wait recorded rather than slept. What it raised is returned, not raised."""
+    waits = []
+    with mock.patch.object(seat_call, "sleep", waits.append), \
+            contextlib.redirect_stdout(io.StringIO()) as out, \
+            contextlib.redirect_stderr(io.StringIO()) as err:
+        try:
+            taken_up = None if resume is None else assess.resumable(fake, resume)
+            estimate, run_id = assess.assess(fake, CONFIG, list(documents), both_passages,
+                                             call_model=model, go=spend, created_by="tester",
+                                             resume=taken_up)
+        except BaseException as raised:                   # noqa: BLE001
+            return Outcome(raised=raised, stdout=out.getvalue(), stderr=err.getvalue(),
+                           waits=waits)
+    return Outcome(estimate, run_id, None, out.getvalue(), err.getvalue(), waits)
+
+
+def cut_during_the_second_documents_contradictions(fake):
+    """A run of both documents stopped by a network cut: on the second
+    document, fable's contradictions are refused by a content filter, then
+    opus, its first substitute, cannot be reached through any wait."""
+    model = Scripted(w__contradictions__fable=("", "content_filter"),
+                     w__contradictions__opus=cut())
+    stopped = go(model, fake)
+    [run_row] = fake.tables["aci_assessment_runs"]
+    return stopped, run_row["id"]
+
+
+class UnreachableTest(unittest.TestCase):
+    def test_a_network_cut_leaves_the_call_error_with_its_billed_attempts(self):
+        fake = two_documents()
+        stopped, run_id = cut_during_the_second_documents_contradictions(fake)
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        self.assertEqual(stopped.waits, [30, 60, 120, 240, 480])
+        calls = calls_in(fake)
+        call = calls[("w", "contradictions", "fable")]
+        self.assertEqual(call["status"], "error")
+        self.assertTrue(call["error"].startswith("unreachable: opus"), call["error"])
+        self.assertIn("APIConnectionError", call["error"])
+        self.assertEqual(call["attempts"], [
+            {"model": "fable", "finish_reason": "content_filter", "cost_usd": cost("fable"),
+             "reason": "finish_reason=content_filter"}])
+        self.assertEqual(call["cost_usd"], cost("fable"))
+        self.assertNotIn(("w", "contradictions", "kimi"), calls, "the run stopped there")
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertEqual(run_row["status"], "error")
+        self.assertTrue(run_row["error"].startswith("unreachable: opus"))
+        self.assertEqual(run_row["cost_usd"],
+                         round(sum(row["cost_usd"] for row in calls.values()), 6))
+        # The command says how to take it up again, naming the run.
+        self.assertIn(f"--resume={run_id} --documents=v,w --go", stopped.stderr)
+
+    def test_the_command_stops_non_zero_and_says_how_to_take_it_up_again(self):
+        fake = two_documents()
+        model = Scripted(w__contradictions__fable=("", "content_filter"),
+                         w__contradictions__opus=cut())
+        with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
+                    lambda: fake)})), \
+                mock.patch.object(assess.index_store, "install_registry", lambda s: None), \
+                mock.patch.object(assess.h, "passages", both_passages), \
+                mock.patch.object(assess.batch_job, "call_openrouter", model), \
+                mock.patch.object(seat_call, "sleep", lambda seconds: None), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            code = assess.main(["--documents=v,w", "--go"])
+        self.assertEqual(code, 1)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertIn(f"--resume={run_row['id']}", err.getvalue())
+
+
+class ResumeTest(unittest.TestCase):
+    def test_a_stopped_run_is_taken_up_asking_only_the_calls_not_done(self):
+        fake = two_documents()
+        _stopped, run_id = cut_during_the_second_documents_contradictions(fake)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        earlier_cost, started_at = run_row["cost_usd"], run_row["started_at"]
+        stopped_row = dict(calls_in(fake)[("w", "contradictions", "fable")])
+        writes_before = len(fake.writes)
+
+        again = Scripted()
+        resumed = go(again, fake, resume=run_id)
+        self.assertIsNone(resumed.raised)
+        self.assertEqual(resumed.run_id, run_id)
+        self.assertEqual(again.asked_in, [
+            ("w", "contradictions", "fable"), ("w", "contradictions", "kimi"),
+            ("w", "confirm", "sol"), ("w", "confirm", "fable"), ("w", "confirm", "kimi")])
+
+        # The stopped call is asked again in its own row, its bill kept.
+        calls = calls_in(fake)
+        self.assertEqual(len(calls), 18, "one row per document, question and seat")
+        call = calls[("w", "contradictions", "fable")]
+        self.assertEqual(call["id"], stopped_row["id"])
+        self.assertEqual((call["status"], call["model"], call["error"]), ("done", "fable", None))
+        self.assertEqual(call["attempts"], stopped_row["attempts"] + [
+            {"model": "fable", "finish_reason": "stop", "cost_usd": cost("fable"),
+             "reason": None}])
+        self.assertAlmostEqual(call["cost_usd"], 2 * cost("fable"))
+        self.assertEqual((call["prompt_tokens"], call["completion_tokens"]),
+                         (2 * USAGE["prompt_tokens"], 2 * USAGE["completion_tokens"]))
+        statuses = [write[3]["status"] for write in fake.writes[writes_before:]
+                    if write[0] == "update" and write[1] == "aci_assessment_calls"
+                    and write[2] == {"id": call["id"]}]
+        self.assertEqual(statuses, ["running", "done"])
+
+        # Nothing written twice.
+        claims = fake.tables["aci_assessment_claims"]
+        self.assertEqual(len({(c["run_id"], c["spec_version_id"], c["first_locator"],
+                               c["second_locator"]) for c in claims}), len(claims))
+        self.assertEqual(len(claims), 4, "two claims on each document")
+        verdicts = fake.tables["aci_assessment_verdicts"]
+        self.assertEqual(len({(v["claim_id"], v["seat"]) for v in verdicts}), len(verdicts))
+        self.assertEqual(len(verdicts), 4 * 3, "every claim read once by every seat")
+        scores = fake.tables["aci_assessment_scores"]
+        self.assertEqual(len({(r["call_id"], r["criterion"]) for r in scores}), len(scores))
+        self.assertEqual(len(scores), 2 * (3 * 4 + 3))
+
+        # The run went back to running, kept its start, and closed done with
+        # the earlier cost and this resume's together.
+        [run_row] = fake.tables["aci_assessment_runs"]
+        reopened = next(write[3] for write in fake.writes[writes_before:]
+                        if write[0] == "update" and write[1] == "aci_assessment_runs")
+        self.assertEqual(reopened["status"], "running")
+        self.assertIsNone(reopened["error"])
+        self.assertNotIn("started_at", reopened)
+        self.assertEqual((run_row["status"], run_row["error"], run_row["started_at"]),
+                         ("done", None, started_at))
+        this_resume = (cost("fable") + cost("kimi")
+                       + cost("sol") + cost("fable") + cost("kimi"))
+        self.assertAlmostEqual(run_row["cost_usd"], earlier_cost + this_resume, places=6)
+        self.assertAlmostEqual(run_row["cost_usd"],
+                               sum(row["cost_usd"] for row in calls.values()), places=6)
+        self.assertEqual(assess.gaps(fake, run_id, ["v", "w"]), [])
+
+    def test_a_substitute_seated_before_the_stop_is_still_seated_on_resuming(self):
+        # On the first document fable's criteria were answered by kimi, and
+        # then the run stopped. On resuming, deepseek's own model and glm are
+        # refused: kimi, already seated for this question, must not be asked.
+        fake = two_documents()
+        first = Scripted(criteria__fable=("", "content_filter"),
+                         criteria__opus=("", "content_filter"),
+                         v__criteria__deepseek=cut())
+        stopped = go(first, fake)
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertEqual(calls_in(fake)[("v", "criteria", "fable")]["model"], "kimi")
+        again = Scripted(criteria__deepseek=("", "content_filter"),
+                         criteria__glm=("", "content_filter"),
+                         criteria__fable=("", "content_filter"),
+                         criteria__opus=("", "content_filter"))
+        go(again, fake, resume=run_row["id"])
+        call = calls_in(fake)[("v", "criteria", "deepseek")]
+        self.assertEqual(call["status"], "error")
+        self.assertIn(("kimi", "already seated"),
+                      [(a["model"], a["reason"]) for a in call["attempts"]])
+        self.assertNotIn(("v", "criteria", "kimi"), again.asked_in)
+
+    def test_the_price_of_a_resume_counts_only_the_calls_it_will_ask(self):
+        fake = two_documents()
+        _stopped, run_id = cut_during_the_second_documents_contradictions(fake)
+        writes_before = len(fake.writes)
+        model = Scripted()
+        priced = go(model, fake, resume=run_id, spend=False)
+        self.assertIsNone(priced.raised)
+        self.assertEqual(len(fake.writes), writes_before, "a price writes nothing")
+        self.assertEqual(model.asked, [])
+        labelled = assessment_call.with_heading_attributes(PASSAGES2, VERSION2["markdown"])
+        system, user = assessment_call.compose("contradictions", labelled)
+        want = sum(seat_call.priced(seat, system, user, 8000, CONFIG) for seat in ("fable", "kimi"))
+        # kimi's contradictions are not known yet, so the claims to confirm are
+        # not either: each confirmation is priced as a fresh run prices it.
+        system, user = assessment_call.compose_confirm(labelled, [])
+        want += sum(seat_call.priced(seat, system, user + "x" * 3000, 1500, CONFIG)
+                    for seat in ("sol", "fable", "kimi"))
+        self.assertEqual(priced.estimate, round(want, 2))
+        self.assertIn("Priced at about", priced.stdout)
+
+    def test_a_confirmation_whose_claims_are_known_is_priced_on_them(self):
+        fake = two_documents()
+        stopped = go(Scripted(w__confirm__fable=cut()), fake)
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        priced = go(Scripted(), fake, resume=run_row["id"], spend=False)
+        labelled = assessment_call.with_heading_attributes(PASSAGES2, VERSION2["markdown"])
+        # fable found the privacy clash and must confirm the safety one; kimi
+        # found the safety clash and must confirm the privacy one.
+        safety = {"first": 3, "second": 1, "situation": "A user asks to break a rule for safety.",
+                  "why": "Safety and privacy clash."}
+        privacy = {"first": 2, "second": 3, "situation": "A user asks what the operator said.",
+                   "why": "Honesty and privacy clash."}
+        want = 0.0
+        for seat, claim in (("fable", safety), ("kimi", privacy)):
+            system, user = assessment_call.compose_confirm(labelled, [claim])
+            want += seat_call.priced(seat, system, user, 1500, CONFIG)
+        self.assertEqual(priced.estimate, round(want, 2))
+
+    def test_a_done_call_whose_scores_are_missing_gets_them_from_its_stored_reply(self):
+        fake = store()
+        fresh = go(Scripted(), fake, documents=("v",))
+        call = calls_in(fake)[("v", "criteria", "sol")]
+        before = sorted((r for r in fake.tables["aci_assessment_scores"]
+                         if r["call_id"] == call["id"]), key=lambda r: r["criterion"])
+        self.assertEqual(len(before), 4)
+        fake.tables["aci_assessment_scores"] = [r for r in fake.tables["aci_assessment_scores"]
+                                                if r["call_id"] != call["id"]]
+        silent = Scripted()
+        resumed = go(silent, fake, documents=("v",), resume=fresh.run_id)
+        self.assertIsNone(resumed.raised)
+        self.assertEqual(silent.asked, [], "no model is asked")
+        after = sorted((r for r in fake.tables["aci_assessment_scores"]
+                        if r["call_id"] == call["id"]), key=lambda r: r["criterion"])
+        self.assertEqual(after, before)
+        self.assertEqual(assess.gaps(fake, fresh.run_id, ["v"]), [])
+
+    def test_missing_claims_and_verdicts_are_rebuilt_from_the_stored_replies(self):
+        fake = store()
+        fresh = go(Scripted(), fake, documents=("v",))
+        calls = calls_in(fake)
+        claims = fake.tables["aci_assessment_claims"]
+        privacy = next(c for c in claims if c["found_by"] == ["sol", "fable"])
+        safety = next(c for c in claims if c["found_by"] == ["kimi"])
+        verdicts_before = {(v["claim_id"] == privacy["id"], v["seat"]): v
+                           for v in fake.tables["aci_assessment_verdicts"]}
+        # The safety claim is gone with its verdicts, and so is kimi's reading
+        # of the privacy claim.
+        fake.tables["aci_assessment_claims"] = [privacy]
+        fake.tables["aci_assessment_verdicts"] = [
+            v for v in fake.tables["aci_assessment_verdicts"]
+            if v["claim_id"] == privacy["id"] and v["seat"] != "kimi"]
+        silent = Scripted()
+        go(silent, fake, documents=("v",), resume=fresh.run_id)
+        self.assertEqual(silent.asked, [])
+        claims = fake.tables["aci_assessment_claims"]
+        self.assertEqual(len(claims), 2)
+        self.assertIn(privacy, claims, "a claim already written keeps its id")
+        rebuilt = next(c for c in claims if c["id"] != privacy["id"])
+        self.assertEqual({k: rebuilt[k] for k in rebuilt if k != "id"},
+                         {k: safety[k] for k in safety if k != "id"})
+        verdicts = {(v["claim_id"] == privacy["id"], v["seat"]): v
+                    for v in fake.tables["aci_assessment_verdicts"]}
+        self.assertEqual(set(verdicts), set(verdicts_before))
+        for key, verdict in verdicts.items():
+            self.assertEqual({k: verdict[k] for k in ("call_id", "seat", "holds", "absolute",
+                                                     "reason")},
+                             {k: verdicts_before[key][k] for k in ("call_id", "seat", "holds",
+                                                                   "absolute", "reason")})
+        self.assertEqual(verdicts[(True, "kimi")]["call_id"], calls[("v", "confirm", "kimi")]["id"])
+        self.assertEqual(assess.gaps(fake, fresh.run_id, ["v"]), [])
+
+    def test_a_run_left_running_is_taken_as_the_operators_word(self):
+        # A run whose process was killed: the run and one of its calls are
+        # left running, the call with nothing recorded.
+        fake = two_documents()
+        _stopped, run_id = cut_during_the_second_documents_contradictions(fake)
+        fake.tables["aci_assessment_runs"][0].update(status="running", error=None)
+        crit = calls_in(fake)[("w", "criteria", "deepseek")]
+        crit.update(status="running", model=None, attempts=[], cost_usd=None,
+                    prompt_tokens=None, completion_tokens=None, raw_output=None)
+        fake.tables["aci_assessment_scores"] = [r for r in fake.tables["aci_assessment_scores"]
+                                                if r["call_id"] != crit["id"]]
+        again = Scripted()
+        resumed = go(again, fake, resume=run_id)
+        self.assertIsNone(resumed.raised)
+        self.assertIn("nothing else is running it", resumed.stdout)
+        self.assertEqual(again.asked_in[0], ("w", "criteria", "deepseek"))
+        self.assertEqual(calls_in(fake)[("w", "criteria", "deepseek")]["id"], crit["id"])
+        self.assertEqual(assess.gaps(fake, run_id, ["v", "w"]), [])
+
+
+class ResumeRefusedTest(unittest.TestCase):
+    """A resume that would mix two configurations, or leave out a document the
+    run has begun, is refused before anything is asked or written."""
+
+    def done_run(self, documents=("v", "w")):
+        fake = two_documents()
+        fresh = go(Scripted(), fake, documents=documents)
+        return fake, fresh.run_id
+
+    def refused(self, fake, run_id, documents=("v", "w")):
+        writes_before = len(fake.writes)
+        model = Scripted()
+        outcome = go(model, fake, documents=documents, resume=run_id)
+        self.assertIsInstance(outcome.raised, SystemExit)
+        self.assertEqual(len(fake.writes), writes_before, "a refused resume wrote something")
+        self.assertEqual(model.asked, [], "a refused resume asked a model")
+        return str(outcome.raised)
+
+    def test_a_changed_prompt_digest_is_refused_naming_it(self):
+        fake, run_id = self.done_run()
+        fake.tables["aci_assessment_runs"][0]["prompts"]["confirm"] = "0" * 64
+        message = self.refused(fake, run_id)
+        self.assertIn("prompts.confirm", message)
+        self.assertIn("0" * 64, message)
+        self.assertIn(assessment_call.prompt_sha256("confirm"), message)
+        self.assertNotIn("prompts.criteria", message)
+
+    def test_a_changed_panel_is_refused_naming_it(self):
+        fake, run_id = self.done_run()
+        fake.tables["aci_assessment_runs"][0]["panels"]["criteria"] = ["sol", "fable", "glm"]
+        message = self.refused(fake, run_id)
+        self.assertIn("panels.criteria", message)
+        self.assertNotIn("panels.contradictions", message)
+
+    def test_changed_substitutes_are_refused_naming_each_difference(self):
+        fake, run_id = self.done_run()
+        recorded = fake.tables["aci_assessment_runs"][0]["config"]["substitutes"]
+        recorded["frontier_fast"]["fable"] = ["opus", "kimi"]
+        recorded["frontier_fast"]["sol"] = ["kimi"]
+        message = self.refused(fake, run_id)
+        self.assertIn("substitutes.frontier_fast.fable", message)
+        self.assertIn("substitutes.frontier_fast.sol", message)
+        self.assertNotIn("substitutes.frontier_fast.deepseek", message)
+
+    def test_a_document_the_run_has_begun_must_be_named(self):
+        fake, run_id = self.done_run()
+        message = self.refused(fake, run_id, documents=("v",))
+        self.assertIn(DOC2, message)
+        self.assertIn("w", message)
+        self.assertNotIn(f"{DOC}", message)
+
+    def resume_main(self, argv, fake, model=None):
+        # install_registry reads a table here, so a store call made before the
+        # run is looked up shows in what the store was asked.
+        with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
+                    lambda: fake)})), \
+                mock.patch.object(assess.index_store, "install_registry",
+                                  lambda s: s.select("aci_specs")), \
+                mock.patch.object(assess.h, "passages", both_passages), \
+                mock.patch.object(assess.batch_job, "call_openrouter", model or Scripted()), \
+                contextlib.redirect_stdout(io.StringIO()) as out, \
+                contextlib.redirect_stderr(io.StringIO()):
+            return assess.main(argv), out.getvalue()
+
+    def test_a_short_id_is_refused_before_the_store_is_opened(self):
+        fake, run_id = self.done_run()
+        with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
+                    mock.Mock(side_effect=AssertionError("the store was opened")))})), \
+                self.assertRaises(SystemExit) as refused:
+            assess.main(["--documents=v,w", f"--resume={run_id[:8]}", "--go"])
+        self.assertIn(f"--resume={run_id[:8]}", str(refused.exception))
+        self.assertIn("uuid", str(refused.exception))
+
+    def test_an_unknown_id_is_refused_before_any_other_store_call(self):
+        class Recording(FakeStore):
+            def select(self, table, params=None):
+                self.selected = getattr(self, "selected", []) + [table]
+                return super().select(table, params)
+        fake = Recording(aci_spec_versions=[dict(VERSION), dict(VERSION2)])
+        unknown = "00000000-0000-4000-8000-000000000000"
+        with self.assertRaises(SystemExit) as refused:
+            self.resume_main(["--documents=v,w", f"--resume={unknown}", "--go"], fake)
+        self.assertIn(unknown, str(refused.exception))
+        self.assertEqual(fake.selected, ["aci_assessment_runs"])
+        self.assertEqual(fake.writes, [])
+
+    def test_a_document_with_claims_and_a_silent_contradictions_seat_needs_a_new_run(self):
+        # kimi has no declared substitute, so on the second document its
+        # contradictions call ends in error; the claims sol and fable found
+        # are written, and read by every seat, kimi included.
+        fake = two_documents()
+        fresh = go(Scripted(w__contradictions__kimi=RuntimeError("provider refused the input")),
+                   fake)
+        self.assertEqual(calls_in(fake)[("w", "contradictions", "kimi")]["status"], "error")
+        self.assertTrue([c for c in fake.tables["aci_assessment_claims"]
+                         if c["spec_version_id"] == "w"])
+        writes_before = len(fake.writes)
+        model = Scripted()
+        code, printed = self.resume_main(
+            ["--documents=v,w", f"--resume={fresh.run_id}", "--go"], fake, model)
+        self.assertEqual(code, 1)
+        self.assertEqual(model.asked, [], "nothing is asked of either document")
+        self.assertIn(DOC2, printed)
+        self.assertIn("new run", printed)
+        self.assertIn(f"{DOC2}: kimi gave no contradictions answer", printed)
+        self.assertNotIn(f"--resume={fresh.run_id}", printed.split("gave no contradictions")[-1],
+                         "a gap only a new run can fix is not sent back to --resume")
+        new_writes = fake.writes[writes_before:]
+        self.assertFalse([w for w in new_writes if w[1] != "aci_assessment_runs"],
+                         "only the run row is reopened and closed")
 
 
 if __name__ == "__main__":
