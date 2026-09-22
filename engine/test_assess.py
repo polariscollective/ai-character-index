@@ -50,6 +50,15 @@ class ConfigTest(unittest.TestCase):
                                             "deepseek": ["glm", "kimi"],
                                             "opus": ["glm"]}})
 
+    def test_kimi_and_glm_may_write_a_list_as_long_as_their_providers_allow(self):
+        # Assessment run e2c00b2e lost two finding calls to our cap, not to the
+        # providers': kimi stopped at 65536 tokens and glm at the 32768 a model
+        # with no cap is sent with, where OpenRouter allows 943718 and 131072.
+        for tag in ("kimi", "glm"):
+            with self.subTest(tag=tag):
+                self.assertEqual(CONFIG["models"][tag]["max_output"], 131072)
+                self.assertEqual(seat_call.max_output(tag, CONFIG), 131072)
+
     def test_the_notes_say_why_and_when(self):
         for note in ("_assessment_note", "_substitutes_note"):
             with self.subTest(note=note):

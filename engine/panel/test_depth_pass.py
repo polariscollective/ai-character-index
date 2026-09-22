@@ -403,8 +403,8 @@ class CeilingTest(unittest.TestCase):
                 + sum(at_most("opus", system, depth_ladder.user_for(user, r)) for r in (0, 1))
                 + sum(at_most("kimi", system, depth_ladder.user_for(user, r)) for r in (0, 1))
                 + sum(at_most("glm", system, depth_ladder.user_for(user, r)) for r in (0, 1)))
-        self.assertEqual(CONFIG["models"]["kimi"]["max_output"], 65536)
-        self.assertNotIn("max_output", CONFIG["models"]["glm"])
+        self.assertEqual(CONFIG["models"]["kimi"]["max_output"], 131072)
+        self.assertEqual(CONFIG["models"]["glm"]["max_output"], 131072)
         _estimate, out = self.printed(store(aci_judge_calls=[dict(CALLS[1])]))
         self.assertIn(f"ceiling of {round(want, 2)} dollars", out)
 
@@ -417,7 +417,7 @@ class CeilingTest(unittest.TestCase):
         self.assertIn("the most this pass can cost", out)
 
     def test_the_largest_output_is_the_cap_each_call_is_sent_with(self):
-        for tag in ("sol", "fable", "opus", "kimi", "deepseek"):
+        for tag in ("sol", "fable", "opus", "kimi", "deepseek", "glm"):
             _provider, model_id = seat_call.h.resolve(tag, CONFIG)
             kwargs = seat_call.whole_doc.judge_kwargs(tag, model_id, CONFIG)
             cap = kwargs.get("max_tokens", kwargs.get("max_completion_tokens"))
