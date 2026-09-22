@@ -113,11 +113,15 @@ class JobDispatchTest(unittest.TestCase):
         seen = {}
         original = job_module.publish_mode
         job_module.publish_mode = type("P", (), {"publish": staticmethod(
-            lambda *args: seen.update(args=args) or ({"id": "pub-1"}, []))})
+            lambda *args, **named: seen.update(args=args, named=named)
+            or ({"id": "pub-1"}, []))})
         self.addCleanup(lambda: setattr(job_module, "publish_mode", original))
         job_module.run_publish(store, {"behaviours": ["b"], "documents": ["v-1"],
                                        "created_by": "Polaris Collective"})
         self.assertEqual(seen["args"][1:4], (["b"], ["v-1"], "v5"))
+        # A publication names the link runs it was built with, and a job that
+        # names none publishes none rather than every run in the table.
+        self.assertEqual(seen["named"], {"link_runs": ()})
         # published_by is whatever the params carried under created_by -- this
         # file never reads an operator's e-mail, so it cannot write one. The
         # portal is what must never put one in params in the first place.
