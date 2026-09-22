@@ -69,9 +69,16 @@ class ConfigTest(unittest.TestCase):
                 self.assertNotIn("–", CONFIG[note])
 
 
+# The only columns of a claim the database lets the engine update: a person's
+# reading of it (the grants of 20260921180000 in polaris-supabase).
+REVIEW_COLUMNS = {"reviewed_verdict", "reviewed_by", "reviewed_at"}
+
+
 class FakeStore:
     """Tables in memory, honouring `eq.` filters, with every write recorded in
-    order: ("insert", table, rows) and ("update", table, match, patch)."""
+    order: ("insert", table, rows) and ("update", table, match, patch). An
+    update of a claim's columns other than its review is refused, as the
+    database's grants refuse it."""
 
     def __init__(self, **tables):
         self.tables = tables
@@ -91,6 +98,10 @@ class FakeStore:
         return copy.deepcopy(rows) if returning else None
 
     def update(self, table, match, patch):
+        if table == "aci_assessment_claims" and set(patch) - REVIEW_COLUMNS:
+            raise store_module.StoreError(
+                "PATCH aci_assessment_claims: permission denied for "
+                f"{', '.join(sorted(set(patch) - REVIEW_COLUMNS))}")
         self.writes.append(("update", table, dict(match), copy.deepcopy(patch)))
         for row in self.tables.get(table, []):
             if all(row.get(k) == v for k, v in match.items()):
@@ -1428,22 +1439,21 @@ class ReplayTest(unittest.TestCase):
              "reason": None}])
         self.assertAlmostEqual(call["cost_usd"], 2 * cost("kimi"))
 
-        # A pair already claimed keeps its row, kimi joining its finders and
-        # nothing else changing; a new pair is a new claim on every version
+        # A pair already claimed keeps its row exactly as written, since a
+        # claim is never updated; a new pair is a new claim on every version
         # where its two passages read the same, here both.
         claims = self.claims(fake)
         self.assertEqual(len(claims), 4)
         safety = {}
         for version_id in ("v", "b"):
             kept = claims[self.pair(version_id, "#b > ¶1", "#b > ¶2")]
-            self.assertEqual(kept, dict(privacy[version_id], found_by=["sol", "kimi"]))
+            self.assertEqual(kept, privacy[version_id])
             safety[version_id] = claims[self.pair(version_id, "#a > ¶1", "#b > ¶2")]
             self.assertEqual({k: safety[version_id][k] for k in ("situation", "why", "found_by")},
                              {"situation": "A user asks to break a rule for safety.",
                               "why": "Safety and privacy clash.", "found_by": ["kimi"]})
-        updates = [write for write in fake.writes[writes_before:]
-                   if write[:2] == ("update", "aci_assessment_claims")]
-        self.assertEqual([write[3] for write in updates], [{"found_by": ["sol", "kimi"]}] * 2)
+        self.assertFalse([write for write in fake.writes[writes_before:]
+                          if write[:2] == ("update", "aci_assessment_claims")])
 
         # Every seat reads the new claim of each version, as that version
         # numbers it, and nothing else.
@@ -1490,13 +1500,28 @@ class ReplayTest(unittest.TestCase):
         self.assertEqual(row["status"], "done")
         self.assertEqual(row["config"]["substitutes"], CONFIG["substitutes"])
         [record] = row["config"]["replays"]
-        self.assertEqual(sorted(record), ["at", "by", "calls", "groups", "note"])
+        self.assertEqual(sorted(record),
+                         ["also_found", "at", "by", "calls", "groups", "note", "outcomes"])
         self.assertEqual((record["by"], record["groups"], record["calls"]),
                          ("tester", ["lab--spec"], [failed["id"]]))
         self.assertTrue(record["at"])
+        self.assertEqual(record["outcomes"], {"lab--spec": "answered"})
+        # kimi found again the pair sol had found, carried to both versions:
+        # that is said here, the claims' rows being never updated.
+        self.assertEqual(record["also_found"], [
+            {"seat": "kimi", "version_id": version_id, "claim_id": privacy[version_id]["id"]}
+            for version_id in ("v", "b")])
+        self.assertIn("lab--spec: answered", record["note"])
         self.assertIn("not exactly what a fresh run would give", record["note"])
         for dash in ("\u2014", "\u2013", " -- "):
             self.assertNotIn(dash, record["note"])
+        # Who found a claim is its found_by and what the replays add to it.
+        on_v = {tuple(p["locator"] for p in claim["passages"]): claim["readings"]
+                for claim in payload(fake, run_id, "v", PASSAGES)["contradictions"]["claims"]}
+        self.assertEqual([r["found"] for r in on_v[(PASSAGES[1][0], PASSAGES[2][0])]],
+                         [True, False, True])
+        self.assertEqual([r["found"] for r in on_v[(PASSAGES[0][0], PASSAGES[2][0])]],
+                         [False, False, True])
         self.assertAlmostEqual(row["cost_usd"], earlier_cost + cost("kimi")
                                + 2 * sum(cost(seat) for seat in SEATS), places=6)
         self.assertEqual(assess.gaps(fake, run_id, ["v", "b"]), [])
@@ -1517,12 +1542,18 @@ class ReplayTest(unittest.TestCase):
         writes = fake.writes[writes_before:]
         last = max(n for n, write in enumerate(writes)
                    if write[:3] == ("update", "aci_assessment_calls", {"id": call["id"]}))
-        self.assertEqual([write[1] for write in writes[last + 1:]], ["aci_assessment_runs"],
-                         "after its own row, only the run row is closed")
+        # After its own row, only the run row: how the replay ended, then its close.
+        after = writes[last + 1:]
+        self.assertEqual([write[1] for write in after], ["aci_assessment_runs"] * 2)
+        self.assertEqual(list(after[0][3]), ["config"])
+        self.assertEqual(after[1][3]["status"], "done")
         self.assertEqual({table: fake.tables[table] for table in kept}, kept)
-        # The record says it was asked again, and the gap stays.
+        # The record says it was asked again and failed again, and the gap stays.
         [record] = run_row(fake, run_id)["config"]["replays"]
         self.assertEqual(record["calls"], [call["id"]])
+        self.assertEqual((record["outcomes"], record["also_found"]),
+                         ({"lab--spec": "failed again"}, []))
+        self.assertIn("lab--spec: failed again", record["note"])
         self.assertEqual(assess.gaps(fake, run_id, ["v", "b"]),
                          ["lab--spec@2026-06-01: kimi gave no contradictions answer"])
         self.assertIn("nothing more is asked or written for them", replayed.stdout)
@@ -1556,6 +1587,90 @@ class ReplayTest(unittest.TestCase):
         self.assertEqual(len([a for a in row["attempts"] if "claim_ids" in a]), 1)
         self.assertEqual(len(fake.tables["aci_assessment_verdicts"]), 4 * 3)
         self.assertEqual(assess.gaps(fake, run_id, ["v", "b"]), [])
+
+    def test_a_replay_stopped_before_its_finding_answered_says_it_was_not_asked(self):
+        fake, run_id = self.read_without_kimi_on_b()
+        _model, stopped = self.replay(fake, run_id, Replaying(b__contradictions__kimi=cut()))
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        [record] = run_row(fake, run_id)["config"]["replays"]
+        self.assertEqual(record["outcomes"], {"lab--spec": "not asked"})
+        self.assertIn("lab--spec: not asked", record["note"])
+
+    def test_a_document_with_two_failed_findings_stops_at_the_first_that_fails_again(self):
+        fake = FakeStore(aci_spec_versions=[dict(VERSION), dict(VERSION_B)])
+        fresh = go(Versions(), fake, documents=("v", "b"), passages=three_versions)
+        self.assertIsNone(fresh.raised)
+        opus = failed_after_the_readings(fake, "v", "opus")
+        kimi = copy.deepcopy(failed_after_the_readings(fake, "b", "kimi"))
+        refused = RuntimeError("provider refused the input")
+        model, replayed = self.replay(fake, fresh.run_id, Replaying(
+            v__contradictions__opus=refused, v__contradictions__glm=refused))
+        self.assertIsNone(replayed.raised)
+        self.assertEqual([(d, q, t) for d, q, t, _user in model.asked],
+                         [("v", "contradictions", "opus"), ("v", "contradictions", "glm")])
+        self.assertEqual(calls_in(fake)[("b", "contradictions", "kimi")], kimi,
+                         "the second failed finding is not asked")
+        self.assertIn("kimi on lab--spec@2026-06-01 is not asked", replayed.stdout)
+        [record] = run_row(fake, fresh.run_id)["config"]["replays"]
+        self.assertEqual((record["calls"], record["outcomes"]),
+                         ([opus["id"]], {"lab--spec": "failed again"}))
+
+    def refused_replay(self, fake, run_id):
+        """A replay of run `run_id` that must be refused before anything is
+        asked or written, priced and with --go: what each printed."""
+        said = []
+        for spend in (False, True):
+            writes_before = len(fake.writes)
+            model, outcome = self.replay(fake, run_id, spend=spend)
+            self.assertIsNone(outcome.raised)
+            self.assertEqual(model.asked, [], "a refused replay asked a model")
+            self.assertFalse([write for write in fake.writes[writes_before:]
+                              if write[1] != "aci_assessment_runs"],
+                             "only the run row is reopened and closed")
+            self.assertNotIn("replays", run_row(fake, run_id)["config"])
+            self.assertIn("are left as they are", outcome.stdout)
+            said.append(outcome.stdout)
+        return said
+
+    def test_a_replay_whose_claims_the_findings_no_longer_give_is_refused(self):
+        fake, run_id = self.read_without_kimi_on_b()
+        # The claim sol's finding gives on the first version is gone.
+        gone = next(c for c in fake.tables["aci_assessment_claims"] if c["spec_version_id"] == "v")
+        fake.tables["aci_assessment_claims"].remove(gone)
+        fake.tables["aci_assessment_verdicts"] = [
+            v for v in fake.tables["aci_assessment_verdicts"] if v["claim_id"] != gone["id"]]
+        for printed in self.refused_replay(fake, run_id):
+            self.assertIn(f"on {DOC}, the findings pool 1 claim and 0 are written", printed)
+            self.assertIn(f"{PASSAGES[1][0]} and {PASSAGES[2][0]} is pooled and not written",
+                          printed)
+
+    def test_a_replay_whose_first_reading_no_longer_reads_as_stored_is_refused(self):
+        fake, run_id = self.read_without_kimi_on_b()
+        claim = next(c for c in fake.tables["aci_assessment_claims"] if c["spec_version_id"] == "b")
+        stored = next(v for v in fake.tables["aci_assessment_verdicts"]
+                      if (v["claim_id"], v["seat"]) == (claim["id"], "opus"))
+        stored["holds"] = False
+        for printed in self.refused_replay(fake, run_id):
+            self.assertIn("on lab--spec@2026-06-01, opus's first reading, read against that "
+                          "pool, gives 1 verdict unlike the one stored", printed)
+            self.assertIn(f"{claim['first_locator']} and {claim['second_locator']}", printed)
+
+    def test_the_first_pool_is_checked_again_before_the_first_paid_call(self):
+        fake, run_id = self.read_without_kimi_on_b()
+        documents = assess.load_documents(fake, ["v", "b"], three_versions)
+        _run, rows = assess.index_store.assessment_run_rows(fake, run_id, ["v", "b"])
+        rows = copy.deepcopy(rows)
+        rows["b"]["verdicts"][0]["reason"] = "Not what it said."
+        model = Replaying()
+        taking = assessment_store.Assessment(fake, CONFIG, CONFIG["assessment"], model,
+                                             run=assess.resumable(fake, run_id), existing=rows,
+                                             replay=True)
+        writes_before = len(fake.writes)
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as refused:
+            taking.group(documents)
+        self.assertIn("on lab--spec@2026-06-01", str(refused.exception))
+        self.assertEqual(model.asked, [])
+        self.assertEqual(len(fake.writes), writes_before)
 
     def test_a_replay_is_priced_first_and_spends_nothing_without_go(self):
         fake, run_id = self.read_without_kimi_on_b()
@@ -1682,11 +1797,7 @@ class ReplayInTheMiddleSeatTest(unittest.TestCase):
         return model
 
     def payload(self, fake, run_id):
-        run, rows = assess.index_store.assessment_rows(fake, run_id, ["v"])
-        rows = rows["v"]
-        return build_site_data().document_assessment(
-            run, rows["calls"], rows["scores"], rows["claims"], rows["verdicts"],
-            {locator: text for locator, _section, text in PASSAGES})
+        return payload(fake, run_id, "v", PASSAGES)
 
     def test_the_claims_it_shares_keep_their_rows_and_the_new_one_is_read_alone(self):
         fake, run_id = self.read_without_opus()
@@ -1706,8 +1817,12 @@ class ReplayInTheMiddleSeatTest(unittest.TestCase):
         self.assertEqual(len(claims), 3)
         privacy, safety = (LOCATORS[1], LOCATORS[2]), (LOCATORS[0], LOCATORS[2])
         self.assertEqual(claims[privacy], before[privacy], "glm did not find it")
-        # glm's words would come first in a pool of every finding; kimi's stay.
-        self.assertEqual(claims[safety], dict(before[safety], found_by=["opus", "kimi"]))
+        # glm's words would come first in a pool of every finding; kimi's stay,
+        # and the row is not updated: the replay record says opus found it.
+        self.assertEqual(claims[safety], before[safety])
+        [record] = run_row(fake, run_id)["config"]["replays"]
+        self.assertEqual(record["also_found"], [
+            {"seat": "opus", "version_id": "v", "claim_id": claims[safety]["id"]}])
         new = claims[(LOCATORS[0], LOCATORS[1])]
         self.assertEqual({k: new[k] for k in ("situation", "why", "found_by")},
                          {"situation": NEW_CLAIM["situation"], "why": NEW_CLAIM["why"],
@@ -1767,6 +1882,16 @@ class ReplayInTheMiddleSeatTest(unittest.TestCase):
 def build_site_data():
     import build_site_data as bs  # noqa: E402
     return bs
+
+
+def payload(fake, run_id, version_id, passages):
+    """One version's assessment as the payload carries it, from what run
+    `run_id` wrote."""
+    run, rows = assess.index_store.assessment_rows(fake, run_id, [version_id])
+    rows = rows[version_id]
+    return build_site_data().document_assessment(
+        run, rows["calls"], rows["scores"], rows["claims"], rows["verdicts"],
+        {locator: text for locator, _section, text in passages})
 
 
 def run_row(fake, run_id):

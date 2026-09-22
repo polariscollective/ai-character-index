@@ -291,6 +291,20 @@ def supplementary_readings(attempts):
             and attempt.get("reply") is not None]
 
 
+def finders(claim, run):
+    """Every seat that proposed `claim`, a claim row of assessment run `run`,
+    in the run's panel order: its `found_by`, and every seat a replay of the
+    run recorded as finding it again after it was written
+    (`config["replays"][]["also_found"]`), since a claim's row is never
+    updated. Who found a claim decides nothing: `settle` does not read it."""
+    again = [entry["seat"] for record in ((run or {}).get("config") or {}).get("replays") or []
+             for entry in record.get("also_found") or [] if entry["claim_id"] == claim["id"]]
+    together = list(dict.fromkeys(list(claim["found_by"]) + again))
+    seats = ((run or {}).get("panels") or {}).get("contradictions") or []
+    return ([seat for seat in seats if seat in together]
+            + [seat for seat in together if seat not in seats])
+
+
 def reading_model(call, claim_id):
     """The model that gave reading call `call`'s reading of claim `claim_id`:
     the model of the supplementary reading that answered about it, if one

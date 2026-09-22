@@ -7,6 +7,8 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
+import hashlib
+
 import cite
 import index_store
 
@@ -852,6 +854,20 @@ class PooledVersionsTest(unittest.TestCase):
         self.assertNotIn("aci_spec_versions", [table for table, _params in store.selects])
         self.assertEqual({key for each in rows.values() for key in each},
                          {"calls", "scores", "claims", "verdicts"})
+
+    def test_a_run_of_the_first_method_pooled_each_version_on_its_own(self):
+        prompts = HERE / "panel" / "prompts"
+        first = dict(ASSESSMENT_RUN, prompts={"contradictions": hashlib.sha256(
+            (prompts / "assessment-contradictions-v1.txt").read_bytes()).hexdigest()})
+        documents = with_finder([assessed("row-1"), assessed("row-2")], "row-2", "kimi", "error")
+        store = assessment_store(*documents, runs=(first,), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [])
+        self.assertNotIn("aci_spec_versions", [table for table, _params in store.selects])
+        # The same rows under the second method's prompt are pooled.
+        second = dict(ASSESSMENT_RUN, prompts={"contradictions": hashlib.sha256(
+            (prompts / "assessment-contradictions-v2.txt").read_bytes()).hexdigest()})
+        store = assessment_store(*documents, runs=(second,), versions=[V1, V2])
+        self.assertEqual(len(self.gaps(store, [V1])), 1)
 
     def test_a_run_that_takes_its_criteria_names_the_run_its_pool_is_in(self):
         store = assessment_store(

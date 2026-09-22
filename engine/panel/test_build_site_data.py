@@ -282,6 +282,17 @@ class DocumentAssessmentTest(unittest.TestCase):
         self.assertEqual([[r["seat"] for r in each] for each in readings.values()],
                          [RUN["panels"]["contradictions"]] * 3)
 
+    def test_a_seat_a_replay_recorded_as_finding_a_claim_found_it(self):
+        # Replayed, sol found again the claim b that kimi found: the claim's
+        # row is never updated, so the run's replay record says so.
+        run = dict(RUN, config={"replays": [{"also_found": [
+            {"seat": "sol", "version_id": "v-new", "claim_id": "b"}]}]})
+        readings = {tuple(p["locator"] for p in c["passages"]): c["readings"] for c in
+                    bs.document_assessment(run, CALLS, SCORES, CLAIMS, VERDICTS,
+                                           PASSAGE_TEXT)["contradictions"]["claims"]}
+        self.assertEqual([r["found"] for r in readings[(L1, L3)]], [True, False, True])
+        self.assertEqual([r["found"] for r in readings[(L1, L2)]], [True, True, False])
+
     def test_a_supplementary_reading_names_the_model_that_gave_it(self):
         # kimi's reading call read c again after a replay, through glm, and
         # recorded it among its attempts: that reading is glm's, the call's

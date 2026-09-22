@@ -31,11 +31,16 @@ that rule did in assessment run e2c00b2e. The failed finding is asked again in
 its row; what it finds is pooled with the claims already written; and every
 contradictions seat reads only the claims that are new, in a supplementary
 reading recorded on its reading call for the version, which the table allows
-once per run, version and seat. The run's config records each replay
-(`replays`). The finding calls named there are left out of the pool a reading
-call's first reading is rebuilt from, so a resume reads each reading apart:
-the first from `raw_output`, each supplementary one from its attempt, by the
-claim ids it answered.
+once per run, version and seat. A claim already written is never updated, as
+the database's grants require: a pair the finding found again is listed in the
+replay's record instead (`also_found`). The run's config records each replay
+(`replays`), and how it ended for each document (`outcomes`, `note`). The
+finding calls named there are left out of the pool a reading call's first
+reading is rebuilt from, so a resume reads each reading apart: the first from
+`raw_output`, each supplementary one from its attempt, by the claim ids it
+answered. Before a replay is priced, and again before its first call, that
+pool must still give the claims written and their first readings as stored
+(`replay_refusal`).
 
 Ids are made here rather than returned by the database, as compose_run makes
 its own, so a verdict can name its claim and its call without reading either
@@ -59,17 +64,31 @@ import seat_call                 # noqa: E402
 # The panel whose declared substitutes stand in for a seat of the assessment.
 PANEL = "frontier_fast"
 PROMPTS = ("criteria", "contradictions", "confirm")
-# What a replay's record in the run's config says of it.
-REPLAY_NOTE = (
-    "The finding calls named had failed after this run had written the claims of the "
-    "documents named and every contradictions seat had read them. Each was asked again "
-    "in its own row. What it found was pooled with the claims already written: a pair "
-    "already claimed kept its row and gained the seat in found_by, and a new pair became "
-    "a new claim on every version where its two passages read the same. Every "
-    "contradictions seat then read only the new claims, in a supplementary reading "
-    "recorded among the attempts of its reading call, whose raw_output keeps the first "
-    "reading. A fresh run pools every finding before any reading, so this is not exactly "
-    "what a fresh run would give.")
+# How a replay ended for one document, as its record's note says it. Each
+# document's finding had failed after the run had written its claims and every
+# contradictions seat had read them.
+OUTCOMES = {
+    "answered": (
+        "Its finding was asked again in its own row and answered. What it found was pooled "
+        "with the claims already written: a pair already claimed kept its row, which is "
+        "never updated, and is listed in also_found; a new pair became a new claim on every "
+        "version where its two passages read the same. Every contradictions seat then read "
+        "only the new claims, in a supplementary reading recorded among the attempts of its "
+        "reading call, whose raw_output keeps the first reading. A fresh run pools every "
+        "finding before any reading, so this is not exactly what a fresh run would give."),
+    "failed again": (
+        "Its finding was asked again in its own row and failed again, so nothing more was "
+        "asked or written for it and its gap stays."),
+    "not asked": (
+        "Its finding had not answered when this was written: the replay had not reached "
+        "it, or stopped before it answered."),
+}
+
+
+def replay_note(groups, outcomes):
+    """What a replay's record says of how it ended, document by document."""
+    return " ".join(f"{spec_id}: {outcomes.get(spec_id, 'not asked')}. "
+                    f"{OUTCOMES[outcomes.get(spec_id, 'not asked')]}" for spec_id in groups)
 
 
 def now():
@@ -377,6 +396,84 @@ def verdict_rows(verdicts, claim_ids, call_id, seat):
             for position, verdict in verdicts.items()]
 
 
+def counted(number, noun):
+    return f"{number} {noun}" + ("" if number == 1 else "s")
+
+
+def first_readings_differ(documents, rows, panels, replayed=frozenset()):
+    """Where the claims written about `documents`, the versions of one
+    document, and their first readings can no longer be told apart again
+    from the findings they came from: one sentence per version and seat, or
+    none.
+
+    The pool rebuilt from the done finding calls, less those asked again
+    after the readings (`replayed`), must give exactly the locator pairs of
+    the claims written for each version, and each done reading call's first
+    reading, its `raw_output` read against that pool, must give exactly the
+    verdicts stored for its seat on those claims. A replay reads the new
+    claims against that pool and a resume rebuilds each first reading from
+    it, so were either to differ, the claims taken for new, or the verdicts
+    rebuilt, would be the wrong ones."""
+    seats = panels["contradictions"]
+    held = {d["version"]["id"]: rows.get(d["version"]["id"]) or empty_rows() for d in documents}
+    found = {}
+    for document in documents:
+        done = done_calls(held[document["version"]["id"]])
+        found[document["version"]["id"]] = {
+            seat: parse_contradictions(document["passages"])(
+                done[("contradictions", seat)]["raw_output"])[0]["items"]
+            for seat in seats if ("contradictions", seat) in done}
+    first = pooled_claims(documents, first_found(documents, found, held, replayed), seats)
+    problems = []
+    for document in documents:
+        version_id, passages = document["version"]["id"], document["passages"]
+        name, version_rows = name_of(document["version"]), held[version_id]
+        pairs = [locator_pair(claim, passages) for claim in first[version_id]]
+        written = {(row["first_locator"], row["second_locator"]): row
+                   for row in version_rows["claims"]}
+        differ = ([f"{first_} and {second} is pooled and not written"
+                   for first_, second in pairs if (first_, second) not in written]
+                  + [f"{first_} and {second} is written and not pooled"
+                     for first_, second in written if (first_, second) not in set(pairs)])
+        if differ:
+            problems.append(f"on {name}, the findings pool {counted(len(pairs), 'claim')} and "
+                            f"{len(written)} {'is' if len(written) == 1 else 'are'} written: "
+                            + "; ".join(differ))
+            continue
+        ids = [written[pair]["id"] for pair in pairs]
+        pair_of = {row["id"]: pair for pair, row in written.items()}
+        done = done_calls(version_rows)
+        for seat in seats:
+            call = done.get(("confirm", seat))
+            if call is None:
+                continue
+            given = {ids[position - 1]: (v["holds"], v["absolute"], v["reason"])
+                     for position, v in assessment_call.parse_confirm(
+                         call["raw_output"], len(ids)).items()}
+            stored = {v["claim_id"]: (v["holds"], v["absolute"], v["reason"])
+                      for v in version_rows["verdicts"]
+                      if v["seat"] == seat and v["call_id"] == call["id"]}
+            unlike = [claim_id for claim_id in ids if given.get(claim_id) != stored.get(claim_id)]
+            if unlike:
+                problems.append(
+                    f"on {name}, {seat}'s first reading, read against that pool, gives "
+                    f"{counted(len(unlike), 'verdict')} unlike "
+                    f"{'the one' if len(unlike) == 1 else 'those'} stored, on "
+                    + "; ".join(" and ".join(pair_of[claim_id]) for claim_id in unlike))
+    return problems
+
+
+def replay_refusal(documents, rows, panels, replayed=frozenset()):
+    """Why a replay of `documents` is refused before anything is asked
+    (`first_readings_differ`), or None when it can be given."""
+    problems = first_readings_differ(documents, rows, panels, replayed)
+    if not problems:
+        return None
+    return ("its claims and their first readings no longer follow from the findings they "
+            "were pooled from, so a replay could not tell which claims are new: "
+            + "; and ".join(problems))
+
+
 def to_ask(documents, rows, panels, criteria=True, replayed=frozenset()):
     """{version id: [(question, seat, claims)]} for every call assessing
     `documents`, the versions of one document the run is asked to assess, can
@@ -457,6 +554,9 @@ class Assessment:
         # Each call row as this asking last wrote it, by id, for a
         # supplementary reading to add its bill and attempts to.
         self.rows_now = {}
+        # Within a replayed document: once a finding asked again fails again,
+        # no call that is not done is asked (`ask`), and those passed over.
+        self.halt_on_silence, self.halted, self.passed_over = False, False, []
         self.run_id = run["id"] if run is not None else None
         # Whether the run row exists, so a stop can name it.
         self.written = run is not None
@@ -521,13 +621,49 @@ class Assessment:
         per replay, appended to its config's `replays`. It is written first so
         that a replay stopped part way still says which findings its first
         readings did not read."""
+        outcomes = {spec_id: "not asked" for spec_id in groups}
         config = dict((self.run or {}).get("config") or {})
         config["replays"] = list(config.get("replays") or []) + [{
             "at": now(), "by": by, "groups": list(groups), "calls": list(calls),
-            "note": REPLAY_NOTE}]
+            "outcomes": outcomes, "also_found": [], "note": replay_note(groups, outcomes)}]
+        self.write_config(config)
+        self.replayed |= set(calls)
+
+    def write_config(self, config):
         self.store.update("aci_assessment_runs", {"id": self.run_id}, {"config": config})
         self.run = dict(self.run or {}, config=config)
-        self.replayed |= set(calls)
+
+    def settle_replay(self, spec_id, outcome, also_found=(), unasked=()):
+        """Say, in the latest replay record naming document `spec_id`, how its
+        replay ended: `outcome` ("answered" or "failed again"), the pairs its
+        finding found again that were already claims (`also_found`, each
+        {"seat", "version_id", "claim_id"}), which a claim's row, never
+        updated, cannot say, and, dropped from its `calls`, the finding calls
+        it did not ask after all (`unasked`). It is written once the finding
+        has answered or failed again, before any reading, and again only for
+        what a later resume adds; a run no replay touched is not written."""
+        config = dict((self.run or {}).get("config") or {})
+        records = [dict(record) for record in config.get("replays") or []]
+        latest = next((n for n in range(len(records) - 1, -1, -1)
+                       if spec_id in (records[n].get("groups") or [])), None)
+        if latest is None:
+            return
+        record = records[latest]
+        known = {(entry["seat"], entry["version_id"], entry["claim_id"])
+                 for each in records for entry in each.get("also_found") or []}
+        new = [entry for entry in also_found
+               if (entry["seat"], entry["version_id"], entry["claim_id"]) not in known]
+        calls = [call_id for call_id in record.get("calls") or [] if call_id not in unasked]
+        outcomes = dict(record.get("outcomes") or {})
+        if not new and outcomes.get(spec_id) == outcome and calls == record.get("calls"):
+            return
+        outcomes[spec_id] = outcome
+        record.update(calls=calls, outcomes=outcomes,
+                      also_found=list(record.get("also_found") or []) + new,
+                      note=replay_note(record.get("groups") or [], outcomes))
+        records[latest] = record
+        config["replays"] = records
+        self.write_config(config)
 
     def finish(self, stopped=None):
         """Close the run, its cost what it had billed before (`earlier_cost`)
@@ -657,7 +793,12 @@ class Assessment:
         they are searched, nothing more is asked or written for any of them:
         no claim is written and nobody reads, and the document is a gap until
         the finding is asked again. In a replay that finding was the one asked
-        again, and the claims already written stay as they were read.
+        again: the first that fails again stops the document there, no other
+        call of it that is not done being asked, and the claims already
+        written stay as they were read. A replay is refused before its first
+        call when its first pool no longer gives the claims written and their
+        readings (`replay_refusal`), and says how it ended
+        (`settle_replay`).
 
         Within each question and version, `seated` starts at the question's
         configured seats, and the model of every call of it the run already
@@ -670,48 +811,87 @@ class Assessment:
         loop. A group `only_a_new_run` names is refused."""
         held = {d["version"]["id"]: self.existing.get(d["version"]["id"]) or empty_rows()
                 for d in documents}
-        refusal = only_a_new_run([(d["version"], held[d["version"]["id"]]) for d in documents],
-                                 self.panels, replay=self.replay)
+        members = [(d["version"], held[d["version"]["id"]]) for d in documents]
+        names = ", ".join(name_of(d["version"]) for d in documents)
+        refusal = only_a_new_run(members, self.panels, replay=self.replay)
+        if refusal is None and self.replay and replayable(members, self.panels):
+            refusal = replay_refusal(documents, held, self.panels, self.replayed)
         if refusal is not None:
-            names = ", ".join(name_of(d["version"]) for d in documents)
             raise SystemExit(f"{names} cannot be taken up again: {refusal}. "
                              "Assess them in a new run.")
+        spec_id = documents[0]["version"]["spec_id"]
+        replaying = any(rows["claims"] for rows in held.values())
+        self.halt_on_silence, self.halted, self.passed_over = replaying, False, []
         found = {d["version"]["id"]: self.search(d, held[d["version"]["id"]]) for d in documents}
+        self.halt_on_silence, self.halted = False, False
         seats = self.panels["contradictions"]
         silent = [(d["version"], seat) for d in documents for seat in seats
                   if seat not in found[d["version"]["id"]]]
         if silent:
+            if replaying:
+                self.settle_replay(spec_id, "failed again", unasked={
+                    call_id for _version, question, _seat, call_id in self.passed_over
+                    if question == "contradictions"})
             self.leave(documents, held, silent)
             return
         first = pooled_claims(documents, first_found(documents, found, held, self.replayed),
                               seats)
         pooled = pooled_claims(documents, found, seats)
+        if replaying:
+            self.settle_replay(spec_id, "answered", [
+                {"seat": seat, "version_id": d["version"]["id"], "claim_id": row["id"]}
+                for d in documents
+                for claim, row in self.written_claims(d, held[d["version"]["id"]],
+                                                      pooled[d["version"]["id"]])
+                for seat in claim["found_by"] if seat not in row["found_by"]])
         for d in documents:
             self.read(d, held[d["version"]["id"]], pooled[d["version"]["id"]],
                       first[d["version"]["id"]])
 
+    @staticmethod
+    def written_claims(document, rows, claims):
+        """[(pooled claim, its row)] for every claim of `claims`, one version's
+        pool, that the run had already written."""
+        written = {(row["first_locator"], row["second_locator"]): row for row in rows["claims"]}
+        return [(claim, written[locator_pair(claim, document["passages"])]) for claim in claims
+                if locator_pair(claim, document["passages"]) in written]
+
     def leave(self, documents, held, silent):
         """Say that the versions `documents` are left unread, since the seats of
-        `silent`, [(version row, seat)], gave no contradictions answer."""
+        `silent`, [(version row, seat)], gave no contradictions answer, or, in
+        a replay, were passed over once one had failed again."""
         names = ", ".join(name_of(d["version"]) for d in documents)
         several = len(documents) > 1
         it = "them" if several else "it"
-        who = " and ".join(f"{seat} on {name_of(version)}" if several else seat
-                           for version, seat in silent)
+
+        def who(pairs):
+            return " and ".join(f"{seat} on {name_of(version)}" if several else seat
+                                for version, seat in pairs)
         if any(rows["claims"] for rows in held.values()):
-            print(f"  {names}: {who} gave no contradictions answer again, so nothing more is "
-                  f"asked or written for {it}: the claims already written stay as they were "
-                  "read, and the gap stays.", flush=True)
+            passed = {(version["id"], seat) for version, question, seat, _call_id
+                      in self.passed_over if question == "contradictions"}
+            failed = [(v, seat) for v, seat in silent if (v["id"], seat) not in passed]
+            skipped = [(v, seat) for v, seat in silent if (v["id"], seat) in passed]
+            not_asked = (f"; {who(skipped)} {'is' if len(skipped) == 1 else 'are'} not asked"
+                         if skipped else "")
+            print(f"  {names}: {who(failed)} gave no contradictions answer again, so nothing "
+                  f"more is asked or written for {it}{not_asked}: the claims already written "
+                  "stay as they were read, and the gap stays.", flush=True)
         else:
-            print(f"  {names}: {who} gave no contradictions answer, so no claim of {it} is "
-                  f"written and nobody reads {it}; taking the run up again asks that finding "
-                  "again first.", flush=True)
+            print(f"  {names}: {who(silent)} gave no contradictions answer, so no claim of "
+                  f"{it} is written and nobody reads {it}; taking the run up again asks that "
+                  "finding again first.", flush=True)
 
     def ask(self, version, rows, question, seat, system, user, parse, seated):
         """`call`, for the call of `question` and `seat` about `version`,
-        whose rows are `rows`, adding the model that answered to `seated`."""
+        whose rows are `rows`, adding the model that answered to `seated`. A
+        replayed document halted by a finding that failed again asks nothing
+        not done: the call is passed over, and gives nothing."""
         existing = next((call for call in rows["calls"]
                          if (call["question"], call["seat"]) == (question, seat)), None)
+        if self.halted and (existing is None or existing["status"] != "done"):
+            self.passed_over.append((version, question, seat, (existing or {}).get("id")))
+            return None, None
         call_id, parsed, tag = self.call(version, question, seat, system, user, parse,
                                          seated, existing)
         if tag is not None:
@@ -744,15 +924,17 @@ class Assessment:
                                         parse_contradictions(passages), seated)
             if parsed is not None:
                 found[seat] = parsed["items"]
+            elif self.halt_on_silence:
+                self.halted = True
         return found
 
     def read(self, document, rows, claims, first=None):
         """One version's claims, written, then read by every contradictions
         seat, each reading every claim, the ones it found included. A version
         with no claim is read by nobody. A claim the run already wrote keeps
-        its id, and gains in `found_by` any seat the pool now says proposed it,
-        nothing else of its row changing; a reading already written is not
-        written twice.
+        its id and its row as written, since a claim is never updated (a
+        replay lists the seats that found it again in its record instead); a
+        reading already written is not written twice.
 
         `first` are the claims each seat's first reading reads: the claims
         pooled without the findings asked again after the readings, which on a
@@ -770,14 +952,6 @@ class Assessment:
         pairs = [locator_pair(claim, passages) for claim in claims]
         id_of = {pair: written[pair]["id"] if pair in written else str(uuid.uuid4())
                  for pair in pairs}
-        for claim, pair in zip(claims, pairs):
-            row = written.get(pair)
-            if row is None or set(claim["found_by"]) <= set(row["found_by"]):
-                continue
-            joined = [seat for seat in seats
-                      if seat in row["found_by"] or seat in claim["found_by"]]
-            joined += [seat for seat in row["found_by"] if seat not in joined]
-            self.store.update("aci_assessment_claims", {"id": row["id"]}, {"found_by": joined})
         self.insert_new("aci_assessment_claims",
                         claim_rows(self.run_id, version["id"], claims,
                                    [id_of[pair] for pair in pairs], passages),

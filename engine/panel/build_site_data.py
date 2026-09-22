@@ -282,7 +282,8 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     confirmed ones. A claim carries its two passages in document order, each
     rendered by citation_quote as the coverage's passages are, so one passage
     reads one way in the whole payload; and one reading per seat of the run's
-    contradictions, in the run's order: whether the seat found the claim,
+    contradictions, in the run's order: whether the seat found the claim
+    (assessment_run.finders, a replay's findings of it included),
     whether it holds, whether it is absolute and why, with "model" when a
     declared substitute answered the call that gave the reading, or gave the
     supplementary reading of it a replay recorded on that call
@@ -356,6 +357,9 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     settled = []
     for claim in claims:
         found_by = list(claim["found_by"])
+        # Who found it, a replay's findings of it included: the payload's
+        # `found`, which settling does not read.
+        found = assessment_run.finders(claim, run)
         pair = sorted((claim["first_locator"], claim["second_locator"]), key=position.get)
         every_reading = {seat: {0: {"holds": v["holds"], "absolute": v["absolute"],
                                     "reason": v["reason"]}}
@@ -367,7 +371,7 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
         settled.append((tuple(position[locator] for locator in pair), {
             "passages": [passage(locator) for locator in pair],
             "situation": one["situation"], "why": one["why"],
-            "readings": [reading(seat, found_by, readings[claim["id"]][seat]) for seat in seats],
+            "readings": [reading(seat, found, readings[claim["id"]][seat]) for seat in seats],
             "confirmed": one["confirmed"], "absolute": one["absolute"], "reviewed": None}))
     settled.sort(key=lambda entry: entry[0])
     score = assessment_run.confirm_score([one for _order, one in settled])

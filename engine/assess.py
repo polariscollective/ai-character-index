@@ -76,18 +76,24 @@ will ask, and spends only with --go.
 owner allowed on 22 September 2026 while the method is being settled, knowing
 the result is not exactly what a fresh run would give. The finding call that
 failed is asked again in its own row, through the seat's usual candidates; if
-it fails again, nothing more is asked or written for that document and the gap
-stays. If it answers, what it finds is pooled across the document's versions as
-usual: a pair already claimed keeps its row and gains the seat in `found_by`,
-and a new pair becomes a new claim on every version where both passages read
-the same. Every contradictions seat then reads only the new claims of each
-version, in a supplementary reading recorded on its reading call for that
-version: appended to its attempts with its reply and the claims it answered,
-its bill added, and its first reply kept in `raw_output`. The run's config
-records the replay under `replays`. A replay is priced first like any resume,
-the findings at their allowances and each supplementary reading as a reading
-whose claims are not known yet, and spends only with --go. On a run with no
-such document it is a resume and nothing else.
+it fails again, nothing more is asked or written for that document, a second
+failed finding of it included, and the gap stays. If it answers, what it finds
+is pooled across the document's versions as usual: a pair already claimed
+keeps its row as written, since a claim is never updated, and is listed in the
+replay's record (`also_found`), which is where the payload reads that the seat
+found it; a new pair becomes a new claim on every version where both passages
+read the same. Every contradictions seat then reads only the new claims of
+each version, in a supplementary reading recorded on its reading call for
+that version: appended to its attempts with its reply and the claims it
+answered, its bill added, and its first reply kept in `raw_output`. The run's
+config records the replay under `replays`, with how it ended for each
+document. A replay is refused, before it is priced and again before its first
+call, when the findings its first readings read no longer give the claims
+written, or those readings no longer give the verdicts stored. It is priced
+first like any resume, the findings at their allowances and each
+supplementary reading as a reading whose claims are not known yet, and spends
+only with --go. On a run with no such document it is a resume and nothing
+else.
 """
 
 import argparse
@@ -394,6 +400,8 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
         refusal = assessment_store.only_a_new_run(members, panels, replay=replay)
         again = assessment_store.replayable(members, panels) if replay and not refusal else []
         if again:
+            refusal = assessment_store.replay_refusal(group, rows, panels, replayed)
+        if again and refusal is None:
             replays.append((group, again))
         asked = ({} if refusal else
                  assessment_store.to_ask(group, rows, panels, criteria=earlier is None,
@@ -415,7 +423,9 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
             print(f"  {names} {left}, since {refusal}. Only a new run can assess {it}: "
                   + command([document["version"]["id"] for document in group],
                             criteria_from=criteria_from))
-            if not replay and assessment_store.replayable(members, panels):
+            rows = {version["id"]: version_rows for version, version_rows in members}
+            if not replay and assessment_store.replayable(members, panels) \
+                    and assessment_store.replay_refusal(group, rows, panels, replayed) is None:
                 print("  " + replay_offer(names, resume["id"], version_ids))
     version_of = {document["version"]["id"]: document["version"] for document in documents}
     for group, again in replays:

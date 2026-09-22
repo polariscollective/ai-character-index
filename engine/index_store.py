@@ -392,12 +392,12 @@ def criteria_run_id(store, assessment_run_id):
     return _criteria_from(_assessment_run(store, assessment_run_id)) or assessment_run_id
 
 
-def _run_rows(store, assessment_run_id, wanted, claims=True):
+def _run_rows(store, assessment_run_id, wanted, claims=True, pooled=True):
     """{version id: {"calls", "scores", "claims", "verdicts"}}, what run
     `assessment_run_id` wrote about the versions `wanted`, its claims and
-    verdicts left unread unless `claims`. With `claims`, a version the run
-    pooled with versions it holds calls on and `wanted` leaves out also
-    carries them (`_pooled_with`)."""
+    verdicts left unread unless `claims`. With `claims` and `pooled`, a
+    version the run pooled with versions it holds calls on and `wanted` leaves
+    out also carries them (`_pooled_with`)."""
     by_version = {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
                   for version_id in wanted}
 
@@ -427,9 +427,18 @@ def _run_rows(store, assessment_run_id, wanted, claims=True):
         by_version[version_of_call[score["call_id"]]]["scores"].append(score)
     for verdict in verdicts:
         by_version[version_of_claim[verdict["claim_id"]]]["verdicts"].append(verdict)
-    if claims:
+    if claims and pooled:
         _pooled_with(store, by_version, every_call)
     return by_version
+
+
+def _pools_versions(run):
+    """Whether assessment run `run` pooled the findings of a document's
+    versions together, as the second method does. The first method, told by
+    its contradictions prompt, pooled each version on its own, so no version
+    of one of its runs stands on another's finders."""
+    import assessment_call  # noqa: E402
+    return not assessment_call.of_the_first_method((run or {}).get("prompts"))
 
 
 def _pooled_with(store, by_version, calls):
@@ -437,10 +446,11 @@ def _pooled_with(store, by_version, calls):
     `by_version` leaves out, `pooled_with`: [{"name", "calls"}], one per such
     version, `name` its `<spec id>@<version>` and `calls` its finding calls.
 
-    An assessment run pools the findings of every version of one document it
-    assesses, and writes their claims only once every contradictions seat
-    has answered on all of them; so a version named alone stands on the
-    finders of versions it does not name. Nothing is read, and the rows keep
+    An assessment run of the second method pools the findings of every
+    version of one document it assesses, and writes their claims only once
+    every contradictions seat has answered on all of them; so a version named
+    alone stands on the finders of versions it does not name. A run of the
+    first method is not given it (`_pools_versions`). Nothing is read, and the rows keep
     their shape, when every version the run holds a call on is named."""
     others = {call["spec_version_id"] for call in calls} - set(by_version)
     if not others:
@@ -475,7 +485,7 @@ def assessment_run_rows(store, assessment_run_id, spec_version_ids):
     if run is None:
         return None, {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
                       for version_id in wanted}
-    return run, _run_rows(store, assessment_run_id, wanted)
+    return run, _run_rows(store, assessment_run_id, wanted, pooled=_pools_versions(run))
 
 
 def assessment_rows(store, assessment_run_id, spec_version_ids):
@@ -601,11 +611,11 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
     total built without it would be a mean of fewer judges presented as the
     panel's; a claim a seat never read would be settled on fewer readings than
     the rule counts on, and could be left unconfirmed by a reading that was
-    never given. A version's claims are pooled with those of every other
-    version of its document the run assessed, so it is held to the finders of
-    those versions too, named or not (`pooled_with`): a version whose claims
-    were never written because a finder failed on another version reads
-    exactly like one with none.
+    never given. In a run of the second method, a version's claims are pooled
+    with those of every other version of its document the run assessed, so it
+    is held to the finders of those versions too, named or not
+    (`pooled_with`): a version whose claims were never written because a
+    finder failed on another version reads exactly like one with none.
 
     A run that takes its criteria from an earlier run (`assessment_rows` gives
     its row a `criteria_run`) is held to each half in its own run: the

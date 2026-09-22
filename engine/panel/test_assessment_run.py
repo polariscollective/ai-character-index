@@ -492,6 +492,24 @@ class SupplementaryReadingTest(unittest.TestCase):
         self.assertEqual(assessment_run.reading_model({"id": "x", "model": "sol"}, "c1"), "sol")
 
 
+class FindersTest(unittest.TestCase):
+    """Who found a claim: its `found_by`, and every seat a replay recorded as
+    finding it again after it was written, since a claim is never updated."""
+    RUN = {"panels": {"contradictions": ["sol", "opus", "kimi"]},
+           "config": {"replays": [
+               {"also_found": [{"seat": "kimi", "version_id": "v", "claim_id": "c1"}]},
+               {"also_found": [{"seat": "opus", "version_id": "v", "claim_id": "c1"},
+                               {"seat": "opus", "version_id": "v", "claim_id": "c2"}]}]}}
+
+    def test_found_by_and_the_seats_the_replays_add_in_panel_order(self):
+        self.assertEqual(assessment_run.finders({"id": "c1", "found_by": ["kimi", "sol"]},
+                                                self.RUN), ["sol", "opus", "kimi"])
+        self.assertEqual(assessment_run.finders({"id": "c3", "found_by": ["sol"]}, self.RUN),
+                         ["sol"])
+        self.assertEqual(assessment_run.finders({"id": "c3", "found_by": ["sol"]},
+                                                {"panels": {}}), ["sol"])
+
+
 class ScoreTest(unittest.TestCase):
     def claims(self, *specs):
         return [{"confirmed": confirmed, "absolute": absolute} for confirmed, absolute in specs]

@@ -69,6 +69,19 @@ def prompt_sha256(question):
     return hashlib.sha256(PROMPTS[question].read_bytes()).hexdigest()
 
 
+# The first method's contradictions prompt, by which a run of it is told.
+FIRST_METHOD_CONTRADICTIONS = HERE / "prompts" / "assessment-contradictions-v1.txt"
+
+
+def of_the_first_method(prompts):
+    """Whether a run whose recorded prompt digests are `prompts` found its
+    contradictions by the first method, under the v1 prompt, which pooled
+    each version of a document on its own. Any other run pools a document's
+    versions together, as the second method does."""
+    return ((prompts or {}).get("contradictions")
+            == hashlib.sha256(FIRST_METHOD_CONTRADICTIONS.read_bytes()).hexdigest())
+
+
 def _numbered_document(passages):
     """The whole document, numbered in order, as both compose and compose_confirm
     open their user message: 'The complete document, as N numbered passages in
