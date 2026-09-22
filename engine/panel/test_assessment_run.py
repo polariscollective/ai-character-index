@@ -222,6 +222,37 @@ class NetworkTest(unittest.TestCase):
         self.assertEqual([entry["model"] for entry in substituted], ["fable"])
         self.assertGreater(substituted[0]["cost_usd"], 0)
 
+    def test_a_rate_limit_twice_then_an_answer_is_the_seat_answering_once(self):
+        limited = openai.RateLimitError("Error code: 429 - rate limited", body=None,
+                                        response=httpx.Response(429, request=REQUEST))
+        model = InSequence(fable=[limited, limited])
+        (tag, answer, substituted, refused), waits = self.ask(model)
+        self.assertEqual(tag, "fable")
+        self.assertEqual((substituted, refused), ([], []))
+        self.assertEqual(answer["cost_usd"], batch_job.cost_of("fable", USAGE, self.config),
+                         "one call billed")
+        self.assertEqual(waits, [30, 60])
+        self.assertEqual(model.asked, ["fable", "fable", "fable"], "nothing else is asked")
+
+    def test_a_server_error_through_every_wait_passes_the_seat_to_its_substitute(self):
+        # A provider that answers 502 was reached: its seat is not stopped for
+        # good, it goes to the next declared substitute, as any failure does.
+        bad_gateway = [openai.InternalServerError(
+            "Error code: 502 - Bad gateway", body=None,
+            response=httpx.Response(502, request=REQUEST)) for _ in range(6)]
+        model = InSequence(fable=bad_gateway)
+        substituted = []
+        outcome, waits = self.ask(model, substituted=substituted)
+        self.assertNotIsInstance(outcome, seat_call.Unreachable)
+        tag, answer, _substituted, _refused = outcome
+        self.assertEqual((tag, answer["reply"]), ("opus", "an answer"))
+        self.assertEqual(waits, [30, 60, 120, 240, 480])
+        self.assertEqual(model.asked, ["fable"] * 6 + ["opus"])
+        self.assertEqual(substituted, [
+            {"model": "fable", "reason": "Error code: 502 - Bad gateway", "cost_usd": None,
+             "finish_reason": None, "model_id": None, "prompt_tokens": None,
+             "completion_tokens": None}])
+
     def test_a_status_error_that_is_not_transport_still_passes_the_seat_on(self):
         bad = openai.BadRequestError("input refused", body=None,
                                      response=httpx.Response(400, request=REQUEST))

@@ -182,12 +182,6 @@ class StoreTest(unittest.TestCase):
         self.assertEqual(len(t.calls), 8)
         self.assertEqual(sleeps, [2, 4, 8, 16, 30, 60, 120])
 
-    def test_the_commands_that_pay_between_writes_open_a_patient_store(self):
-        for path in (HERE / "assess.py", HERE / "panel" / "depth_pass.py"):
-            with self.subTest(path=path.name):
-                self.assertIn("Store.from_env(backoff=PATIENT_BACKOFF_SECONDS)",
-                              path.read_text())
-
     def test_a_retry_log_line_carries_no_key_or_header_value(self):
         t = FakeTransport([urllib.error.URLError("Connection refused"),
                            (200, b"[]")])

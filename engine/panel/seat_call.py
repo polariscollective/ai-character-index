@@ -6,9 +6,14 @@ need to know what each call cost. The model call is injected, so everything
 built on this runs against a script in the tests.
 
 A network error is not the model refusing. A call that cannot reach its model
-(`TRANSPORT_ERRORS`) is asked again after each of `RETRY_WAITS`, and after the
+(`CONNECTION_ERRORS`) is asked again after each of `RETRY_WAITS`, and after the
 last one it raises `Unreachable`, which stops whatever asked rather than handing
 the seat to a substitute whose own model was never the problem.
+
+A rate limit or a server error (`STATUS_ERRORS`) is an answer from a provider
+that was reached. It is asked again after the same waits, in case it passes,
+and after the last one the error is raised as itself: the candidate has failed,
+as any other error fails it, and the seat goes to its next declared substitute.
 """
 
 import http.client
@@ -33,14 +38,17 @@ try:
 except ImportError:              # a publication build reads this module and calls no model
     openai = None
 
-# What a call raises when it never reached the model, or the model's provider
-# could not answer it for now: the connection, the name lookup, a timeout, a
-# rate limit or the provider's own server error. An `HTTPError` is also a
-# `URLError`, and is not one of these (`is_transport`): it is an answer.
-TRANSPORT_ERRORS = ((openai.APIConnectionError, openai.RateLimitError,
-                     openai.InternalServerError) if openai is not None else ()) + (
+# What a call raises when it never reached the model: the connection, the name
+# lookup, a timeout. An `HTTPError` is also a `URLError`, and is not one of
+# these (`is_connection`): it is an answer.
+CONNECTION_ERRORS = ((openai.APIConnectionError, openai.APITimeoutError)
+                     if openai is not None else ()) + (
     ConnectionError, TimeoutError, socket.gaierror, http.client.HTTPException,
     urllib.error.URLError)
+# What a provider that was reached answers when it cannot answer for now: a
+# rate limit, or its own server error.
+STATUS_ERRORS = ((openai.RateLimitError, openai.InternalServerError)
+                 if openai is not None else ())
 # Seconds waited before each new try, eight minutes for the last: a laptop's
 # connection that drops for minutes at a time comes back inside them.
 RETRY_WAITS = (30, 60, 120, 240, 480)
@@ -57,11 +65,16 @@ class Unreachable(Exception):
     already billed, and lets this propagate, as it does a KeyboardInterrupt."""
 
 
-def is_transport(error):
-    """Whether `error` says the call did not reach an answer, rather than that
-    the provider answered it with a refusal."""
-    return (isinstance(error, TRANSPORT_ERRORS)
+def is_connection(error):
+    """Whether `error` says the call never reached the model's provider."""
+    return (isinstance(error, CONNECTION_ERRORS)
             and not isinstance(error, urllib.error.HTTPError))
+
+
+def is_status(error):
+    """Whether `error` is a provider that was reached saying it cannot answer
+    for now: worth asking again, never a reason to stop the run."""
+    return isinstance(error, STATUS_ERRORS)
 
 
 def described(error):
@@ -94,11 +107,14 @@ def ask(tag, system, user, config, call_model):
     panel gives it, and what it cost. A refusal the call raises is raised to the
     caller, which records it and goes on.
 
-    A transport error is not a refusal: the same call is made again after each
-    of RETRY_WAITS, one line on stderr per wait, and once the last wait has
-    failed too, `Unreachable` is raised from the last error, naming the model
-    and the error. Only the call that answers is returned, so only it is
-    billed: a call that never reached the model has nothing to bill."""
+    A connection error or a status error (a rate limit, a server error) is
+    not a refusal yet: the same call is made again after each of RETRY_WAITS,
+    one line on stderr per wait, both kinds sharing the one set of waits. Once
+    the last wait has failed too, the last error decides. A connection error
+    raises `Unreachable` from it, naming the model and the error; a status
+    error is raised as itself, since the provider was reached, and the caller
+    records it as it records any refusal. Only the call that answers is
+    returned, so only it is billed: a call that raised has nothing to bill."""
     provider, model_id = h.resolve(tag, config)
     kwargs = whole_doc.judge_kwargs(tag, model_id, config)
     waits = RETRY_WAITS
@@ -109,14 +125,19 @@ def ask(tag, system, user, config, call_model):
                 kwargs=kwargs)
             break
         except Exception as error:                   # noqa: BLE001
-            if not is_transport(error):
+            reached = is_status(error)
+            if not reached and not is_connection(error):
                 raise
             if tried == len(waits):
+                if reached:
+                    raise
                 raise Unreachable(
                     f"{tag} ({model_id}) could not be reached in {tried + 1} tries over "
                     f"{sum(waits)} s of waiting: {described(error)}") from error
-            print(f"{tag} could not be reached ({described(error)}); trying again in "
-                  f"{waits[tried]} s", file=sys.stderr, flush=True)
+            what = (f"{tag}'s provider could not answer for now" if reached
+                    else f"{tag} could not be reached")
+            print(f"{what} ({described(error)}); trying again in {waits[tried]} s",
+                  file=sys.stderr, flush=True)
             sleep(waits[tried])
     return {"reply": reply or "", "usage": usage, "finish_reason": finish_reason,
             "seconds": seconds, "cost_usd": batch_job.cost_of(tag, usage, config),

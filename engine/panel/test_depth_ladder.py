@@ -286,6 +286,39 @@ class NetworkTest(unittest.TestCase):
                          [("deepseek", 0, False)])
         self.assertEqual(held[0]["cost_usd"], batch_job.cost_of("deepseek", USAGE, self.config))
 
+    def test_a_rate_limit_twice_then_an_answer_is_one_attempt(self):
+        limited = openai.RateLimitError("Error code: 429 - rate limited", body=None,
+                                        response=httpx.Response(429, request=REQUEST))
+        model = Scripted(deepseek=[limited, limited, ANSWER])
+        given, waits = self.give(model)
+        self.assertEqual(given["depth"], 7)
+        self.assertEqual(given["model"], "deepseek")
+        self.assertEqual(given["attempts"], [
+            {"model": "deepseek", "reminder": 0, "finish_reason": "stop",
+             "cost_usd": batch_job.cost_of("deepseek", USAGE, self.config), "parsed": True}])
+        self.assertEqual(waits, [30, 60])
+        self.assertEqual(model.asked, [("deepseek", USER)] * 3, "nothing else is asked")
+
+    def test_a_server_error_through_every_wait_is_an_attempt_that_raised(self):
+        # Each of the seat's three attempts meets a 502 on every wait: the
+        # provider was reached, so each is an attempt that raised, and the seat
+        # passes to its substitute rather than stopping the ladder.
+        def bad_gateway():
+            return openai.InternalServerError("Error code: 502 - Bad gateway", body=None,
+                                              response=httpx.Response(502, request=REQUEST))
+        model = Scripted(deepseek=[bad_gateway() for _ in range(18)], glm=[ANSWER])
+        given, waits = self.give(model)
+        self.assertIsInstance(given, dict, "no Unreachable")
+        self.assertEqual(waits, [30, 60, 120, 240, 480] * 3)
+        self.assertEqual(given["model"], "glm")
+        self.assertEqual(given["depth"], 7)
+        self.assertEqual(given["substitution_reason"],
+                         "the seat's model raised on every attempt: "
+                         "InternalServerError: Error code: 502 - Bad gateway")
+        self.assertEqual([(a["model"], a["reminder"], a.get("error")) for a in given["attempts"]],
+                         [("deepseek", reminder, "InternalServerError: Error code: 502 - Bad gateway")
+                          for reminder in (0, 1, 2)] + [("glm", 0, None)])
+
     def test_a_status_error_that_is_not_transport_is_an_attempt_that_raised(self):
         bad = openai.BadRequestError("input refused", body=None,
                                      response=httpx.Response(400, request=REQUEST))

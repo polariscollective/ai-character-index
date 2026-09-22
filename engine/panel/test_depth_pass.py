@@ -29,6 +29,7 @@ import depth_call                # noqa: E402
 import depth_ladder              # noqa: E402
 import depth_pass                # noqa: E402
 import seat_call                 # noqa: E402
+import store as store_module     # noqa: E402
 
 CONFIG = json.loads((HERE / "panel-config.json").read_text())
 
@@ -748,8 +749,13 @@ class GiveTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def main(self, argv, fake):
+        opened = []
+
+        def from_env(**kwargs):
+            opened.append(kwargs)
+            return fake
         with mock.patch.object(depth_pass, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda **_kwargs: fake)})), \
+                    from_env)})), \
                 mock.patch.object(depth_pass.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(depth_pass.index_store, "judging_registry",
                                   lambda s: REGISTRY), \
@@ -757,6 +763,10 @@ class MainTest(unittest.TestCase):
                 mock.patch.object(depth_pass.batch_job, "call_openrouter", Scripted()), \
                 contextlib.redirect_stdout(io.StringIO()) as printed:
             code = depth_pass.main(argv)
+        # A cut between a paid call and the write of its reply is waited out
+        # for minutes, not the thirty seconds a store waits by default.
+        self.assertEqual([kwargs.get("backoff") for kwargs in opened],
+                         [store_module.PATIENT_BACKOFF_SECONDS])
         return code, printed.getvalue()
 
     def test_without_go_it_prints_the_price_and_writes_nothing(self):

@@ -32,14 +32,19 @@ each of `seat_call.RETRY_WAITS`, up to eight minutes, and if the model still
 cannot be reached the run stops: the call is written `error`, `unreachable:
 ...`, with every attempt already billed, the run is closed `error`, and the
 command exits 1, naming the `--resume` that takes it up again. Any other stop,
-an interrupt included, names it too.
+an interrupt included, names it too. A rate limit or a server error is waited
+out the same way, but its provider was reached, so if it lasts through every
+wait the seat goes to its next declared substitute and the run goes on.
 
 `--resume=<run id>` takes a run up where it stopped. `--documents` names the
 documents again, in the order to assess them, and must name every document the
 run already has a call for. A done call is not asked again, and any rows its
 stored reply gives that are missing are written from it; a call in any other
 status is asked again in its own row, its earlier bill kept and added to; a
-document the run has not begun is assessed as in a fresh run. The run must have
+document the run has not begun is assessed as in a fresh run. A seat asked
+again starts from its own model and goes through its substitutes in order, as
+it did the first time, so a refusal billed before the stop is billed again, and
+so is a reply that came back but was not written done. The run must have
 been started under the seats, prompts and substitutes it is taken up with. A
 document whose claimed contradictions are written while one of its
 contradictions seats never answered is left as it is, since asking that seat
@@ -312,7 +317,9 @@ def main(argv=None):
     parser.add_argument("--by", default=os.environ.get("USER", "assess.py"),
                         help="who launched the run (default: the user name)")
     parser.add_argument("--resume", metavar="RUN_ID",
-                        help="take up assessment run RUN_ID, its full id, where it stopped")
+                        help="take up assessment run RUN_ID, its full id, where it stopped. "
+                             "A seat asked again starts from its own model, so a refusal "
+                             "billed before the stop is billed again")
     args = parser.parse_args(argv)
     # Before the store is opened: an id that is not one is refused by name.
     resume_id = (None if args.resume is None

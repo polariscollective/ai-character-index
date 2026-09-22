@@ -59,7 +59,10 @@ def ask_with_substitutes(seat, system, user, config, call_model, panel, seated=(
     `seated`.
 
     A candidate fails when the call raises, when it comes back
-    content-filtered, or when its reply is empty once stripped.
+    content-filtered, or when its reply is empty once stripped. A rate limit
+    or a server error that outlasts `seat_call.RETRY_WAITS` is the call
+    raising: its provider was reached, so the candidate fails and the next is
+    asked.
 
     `substituted` may be a list the caller passes in, filled in place as
     candidates fail or are skipped rather than only built and returned. A

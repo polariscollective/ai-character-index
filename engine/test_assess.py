@@ -30,6 +30,7 @@ import assessment_run            # noqa: E402
 import assessment_store          # noqa: E402
 import batch_job                 # noqa: E402
 import seat_call                 # noqa: E402
+import store as store_module     # noqa: E402
 
 CONFIG = json.loads((HERE / "panel" / "panel-config.json").read_text())
 
@@ -572,14 +573,23 @@ class RunTest(unittest.TestCase):
 
 class MainTest(unittest.TestCase):
     def main(self, argv, fake, model=None, code=0, environ=None):
+        opened = []
+
+        def from_env(**kwargs):
+            opened.append(kwargs)
+            return fake
         with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda **_kwargs: fake)})), \
+                    from_env)})), \
                 mock.patch.object(assess.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(assess.h, "passages", passages_for), \
                 mock.patch.object(assess.batch_job, "call_openrouter", model or Scripted()), \
                 mock.patch.dict(os.environ, {"USER": "someone", **(environ or {})}), \
                 contextlib.redirect_stdout(io.StringIO()) as printed:
             self.assertEqual(assess.main(argv), code)
+        # A cut between a paid call and the write of its reply is waited out
+        # for minutes, not the thirty seconds a store waits by default.
+        self.assertEqual([kwargs.get("backoff") for kwargs in opened],
+                         [store_module.PATIENT_BACKOFF_SECONDS])
         return printed.getvalue()
 
     def test_a_run_that_assessed_every_document_exits_zero_and_names_no_gap(self):
@@ -941,6 +951,158 @@ class ResumeTest(unittest.TestCase):
         self.assertEqual(again.asked_in[0], ("w", "criteria", "deepseek"))
         self.assertEqual(calls_in(fake)[("w", "criteria", "deepseek")]["id"], crit["id"])
         self.assertEqual(assess.gaps(fake, run_id, ["v", "w"]), [])
+
+
+class FailsOnDone(FakeStore):
+    """A store whose write marking one call done raises `stop`, once, the call
+    named (document, question, seat). With `and_error`, the write marking that
+    call error, which follows, fails too, once."""
+
+    def __init__(self, target, stop, and_error=False, **tables):
+        super().__init__(**tables)
+        self.target, self.stop, self.and_error = target, stop, and_error
+        self.failed = []
+
+    def update(self, table, match, patch):
+        if table == "aci_assessment_calls" and patch.get("status") in ("done", "error"):
+            row = next(r for r in self.tables[table] if r["id"] == match.get("id"))
+            if (row["spec_version_id"], row["question"], row["seat"]) == self.target:
+                if patch["status"] == "done" and not self.failed:
+                    self.failed.append("done")
+                    raise self.stop
+                if patch["status"] == "error" and self.and_error and self.failed == ["done"]:
+                    self.failed.append("error")
+                    raise store_module.StoreError("PATCH aci_assessment_calls: connection reset")
+        return super().update(table, match, patch)
+
+
+def billed(*models):
+    """What every call the scripted `models` were asked cost, all of them
+    billed at USAGE."""
+    return sum(cost(tag) for model in models for _document, _question, tag in model.asked_in)
+
+
+class StoppedWhileWritingTest(unittest.TestCase):
+    """A stop during the write that marks a call done comes after its reply
+    was paid for: the row keeps the reply and its bill, and a resume neither
+    loses nor lowers what the run has spent."""
+
+    def test_a_stop_while_a_reply_is_marked_done_keeps_the_reply_and_its_bill(self):
+        for stop in (KeyboardInterrupt(),
+                     store_module.StoreError("PATCH aci_assessment_calls: 503 unavailable")):
+            with self.subTest(stop=type(stop).__name__):
+                fake = FailsOnDone(("v", "criteria", "fable"), stop,
+                                   aci_spec_versions=[dict(VERSION)])
+                first = Scripted()
+                stopped = go(first, fake, documents=("v",))
+                self.assertIs(stopped.raised, stop)
+                call = calls_in(fake)[("v", "criteria", "fable")]
+                self.assertEqual(call["status"], "error")
+                self.assertEqual(call["error"], seat_call.stop_error(stop))
+                self.assertEqual(call["attempts"], [{"model": "fable", "finish_reason": "stop",
+                                                     "cost_usd": cost("fable"), "reason": None}])
+                self.assertEqual(call["cost_usd"], cost("fable"))
+                self.assertEqual((call["prompt_tokens"], call["completion_tokens"]),
+                                 (USAGE["prompt_tokens"], USAGE["completion_tokens"]))
+                self.assertEqual(call["raw_output"], CRITERIA, "the paid reply is kept")
+                [run_row] = fake.tables["aci_assessment_runs"]
+                self.assertEqual(run_row["status"], "error")
+                self.assertAlmostEqual(run_row["cost_usd"], billed(first), places=6)
+
+                again = Scripted()
+                resumed = go(again, fake, documents=("v",), resume=run_row["id"])
+                self.assertIsNone(resumed.raised)
+                self.assertEqual(again.asked_in[0], ("v", "criteria", "fable"),
+                                 "the seat is asked again, in its own row")
+                call = calls_in(fake)[("v", "criteria", "fable")]
+                self.assertEqual(call["status"], "done")
+                self.assertEqual([a["model"] for a in call["attempts"]], ["fable", "fable"])
+                self.assertAlmostEqual(call["cost_usd"], 2 * cost("fable"))
+                [run_row] = fake.tables["aci_assessment_runs"]
+                # Everything billed, both of that seat's attempts included.
+                self.assertAlmostEqual(run_row["cost_usd"], billed(first, again), places=6)
+                self.assertEqual(assess.gaps(fake, run_row["id"], ["v"]), [])
+
+    def test_a_resume_never_lowers_the_run_s_cost_below_what_its_row_recorded(self):
+        # The done write fails, and so does the error write after it: the row
+        # is left running with nothing on it, while the run row, closed after,
+        # carries that call's cost. The calls' own sum is then too low.
+        fake = FailsOnDone(("v", "criteria", "fable"), KeyboardInterrupt(), and_error=True,
+                           aci_spec_versions=[dict(VERSION)])
+        first = Scripted()
+        stopped = go(first, fake, documents=("v",))
+        self.assertIsInstance(stopped.raised, store_module.StoreError)
+        call = calls_in(fake)[("v", "criteria", "fable")]
+        self.assertEqual((call["status"], call.get("cost_usd")), ("running", None))
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertAlmostEqual(run_row["cost_usd"], billed(first), places=6)
+        self.assertLess(sum(row.get("cost_usd") or 0 for row in calls_in(fake).values()),
+                        run_row["cost_usd"])
+
+        again = Scripted()
+        resumed = go(again, fake, documents=("v",), resume=run_row["id"])
+        self.assertIsNone(resumed.raised)
+        [run_row] = fake.tables["aci_assessment_runs"]
+        self.assertAlmostEqual(run_row["cost_usd"], billed(first, again), places=6)
+
+    def test_a_resume_counts_its_calls_when_the_run_row_recorded_less(self):
+        # A process killed outright never closes its run row, while its calls
+        # carry their bill: the larger of the two is what was spent before.
+        fake = store()
+        first = Scripted(criteria__deepseek=cut())
+        stopped = go(first, fake, documents=("v",))
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        fake.tables["aci_assessment_runs"][0].update(status="running", cost_usd=None,
+                                                     error=None, finished_at=None)
+        self.assertEqual(first.asked_in, [("v", "criteria", "sol"), ("v", "criteria", "fable")]
+                         + [("v", "criteria", "deepseek")] * 6)
+        again = Scripted()
+        go(again, fake, documents=("v",), resume=fake.tables["aci_assessment_runs"][0]["id"])
+        [run_row] = fake.tables["aci_assessment_runs"]
+        # sol and fable answered before the stop; deepseek's six tries never
+        # reached a model, so none of them was billed.
+        self.assertAlmostEqual(run_row["cost_usd"], cost("sol") + cost("fable") + billed(again),
+                               places=6)
+
+
+class ConfirmationsTest(unittest.TestCase):
+    """The claims a resume prices a confirmation on are the claims it asks
+    about, both read through one helper."""
+
+    def test_the_pool_and_each_seat_s_claims_come_from_one_helper(self):
+        found = {"sol": [{"first": 2, "second": 3, "situation": "s", "why": "w"}],
+                 "fable": [{"first": 3, "second": 2, "situation": "t", "why": "x"}],
+                 "kimi": [{"first": 1, "second": 3, "situation": "u", "why": "y"}]}
+        seats = ["sol", "fable", "kimi"]
+        pooled, to_confirm = assessment_store.confirmations(found, seats, PASSAGES)
+        self.assertEqual(pooled, assessment_store.distinct_claims(
+            assessment_run.pool_claims(found, seats), PASSAGES))
+        self.assertEqual(to_confirm, {
+            "sol": [(1, {"first": 1, "second": 3, "situation": "u", "why": "y"})],
+            "fable": [(1, {"first": 1, "second": 3, "situation": "u", "why": "y"})],
+            "kimi": [(0, {"first": 2, "second": 3, "situation": "s", "why": "w"})]})
+        # A seat that found every claim has nothing to confirm, and is not listed.
+        _pooled, to_confirm = assessment_store.confirmations(
+            {"sol": found["sol"], "fable": found["fable"]}, ["sol", "fable"], PASSAGES)
+        self.assertEqual(to_confirm, {})
+
+    def test_the_confirmations_priced_are_the_confirmations_asked(self):
+        fake = two_documents()
+        stopped = go(Scripted(w__confirm__fable=cut()), fake)
+        self.assertIsInstance(stopped.raised, seat_call.Unreachable)
+        document = assess.load_documents(fake, ["w"], both_passages)[0]
+        _run, by_version = assess.index_store.assessment_rows(
+            fake, fake.tables["aci_assessment_runs"][0]["id"], ["w"])
+        priced = [(seat, claims) for question, seat, claims in assessment_store.to_ask(
+            document, by_version["w"], CONFIG["assessment"]) if question == "confirm"]
+        self.assertEqual([seat for seat, _claims in priced], ["fable", "kimi"])
+        again = Scripted()
+        go(again, fake, resume=fake.tables["aci_assessment_runs"][0]["id"])
+        asked = [(tag, user) for (document_id, question, tag), (_q, _t, user)
+                 in zip(again.asked_in, again.asked) if (document_id, question) == ("w", "confirm")]
+        self.assertEqual(asked, [
+            (seat, assessment_call.compose_confirm(document["labelled"], claims)[1])
+            for seat, claims in priced])
 
 
 class ResumeRefusedTest(unittest.TestCase):

@@ -1,8 +1,10 @@
 """One call to one seat's model, against a model that answers from a script.
 
 A network error is not a refusal: it is waited out and tried again, and after
-the last wait it stops whatever asked, as `seat_call.Unreachable`. Nothing here
-touches a network and nothing sleeps: the waits are recorded, not slept."""
+the last wait it stops whatever asked, as `seat_call.Unreachable`. A rate limit
+or a server error is waited out the same way, and after the last wait it is
+raised as itself, a candidate failing. Nothing here touches a network and
+nothing sleeps: the waits are recorded, not slept."""
 import contextlib
 import http.client
 import io
@@ -123,10 +125,9 @@ class AskTest(unittest.TestCase):
         self.assertEqual(line, "fable could not be reached (ConnectionError: " + "x" * 200
                          + "); trying again in 30 s")
 
-    def test_every_transport_error_is_waited_out(self):
-        for error in (openai.APITimeoutError(request=REQUEST),
-                      status_error(openai.RateLimitError, 429),
-                      status_error(openai.InternalServerError, 503),
+    def test_every_connection_error_is_waited_out(self):
+        for error in (openai.APIConnectionError(request=REQUEST),
+                      openai.APITimeoutError(request=REQUEST),
                       ConnectionResetError("reset"), TimeoutError("timed out"),
                       socket.gaierror(8, "nodename nor servname provided"),
                       http.client.RemoteDisconnected("closed"),
@@ -136,6 +137,58 @@ class AskTest(unittest.TestCase):
                 answer, waits, _printed = self.ask(Sequenced(error, "the reply"))
                 self.assertEqual(answer["reply"], "the reply")
                 self.assertEqual(waits, [30])
+
+    def test_a_rate_limit_or_a_server_error_is_waited_out_too(self):
+        for error in (status_error(openai.RateLimitError, 429),
+                      status_error(openai.InternalServerError, 500),
+                      status_error(openai.InternalServerError, 502),
+                      status_error(openai.InternalServerError, 503)):
+            with self.subTest(code=error.status_code):
+                answer, waits, _printed = self.ask(Sequenced(error, "the reply"))
+                self.assertEqual(answer["reply"], "the reply")
+                self.assertEqual(waits, [30])
+
+    def test_a_rate_limit_twice_then_an_answer_is_one_call_billed(self):
+        limited = status_error(openai.RateLimitError, 429, "Error code: 429 - rate limited")
+        model = Sequenced(limited, limited, "the reply")
+        waits = Waits()
+        with mock.patch.object(seat_call, "sleep", waits), \
+                contextlib.redirect_stderr(io.StringIO()) as printed:
+            answer = seat_call.ask("fable", "system", "user", self.config, model)
+        self.assertEqual(answer["reply"], "the reply")
+        self.assertEqual(answer["cost_usd"], batch_job.cost_of("fable", USAGE, self.config))
+        self.assertEqual(waits.asked, [30, 60])
+        self.assertEqual(len(model.asked), 3)
+        # The provider was reached, so the line does not say it could not be.
+        lines = [line for line in printed.getvalue().splitlines() if "trying again" in line]
+        self.assertEqual(lines, [
+            "fable's provider could not answer for now (RateLimitError: Error code: 429 - "
+            "rate limited); trying again in 30 s",
+            "fable's provider could not answer for now (RateLimitError: Error code: 429 - "
+            "rate limited); trying again in 60 s"])
+
+    def test_a_server_error_on_every_wait_is_raised_as_itself(self):
+        errors = [status_error(openai.InternalServerError, 502, "Error code: 502 - Bad gateway")
+                  for _ in range(6)]
+        model = Sequenced(*errors, "never reached")
+        raised, waits, _printed = self.ask(model)
+        self.assertIs(raised, errors[-1], "a provider that answered was reached")
+        self.assertNotIsInstance(raised, seat_call.Unreachable)
+        self.assertEqual(waits, [30, 60, 120, 240, 480])
+        self.assertEqual(len(model.asked), 6, "the first try and one after each wait")
+
+    def test_the_last_error_decides_whether_the_model_was_reached(self):
+        bad_gateway = status_error(openai.InternalServerError, 502)
+        # The connection came back for the last try, and the provider answered 502.
+        raised, waits, _printed = self.ask(Sequenced(*[cut() for _ in range(5)], bad_gateway))
+        self.assertIs(raised, bad_gateway)
+        self.assertEqual(waits, [30, 60, 120, 240, 480], "one set of waits for both kinds")
+        # The provider answered 502, then the connection went for the last try.
+        last = cut()
+        raised, _waits, _printed = self.ask(Sequenced(*[status_error(
+            openai.InternalServerError, 502) for _ in range(5)], last))
+        self.assertIsInstance(raised, seat_call.Unreachable)
+        self.assertIs(raised.__cause__, last)
 
     def test_any_other_error_is_raised_at_once(self):
         for error in (status_error(openai.BadRequestError, 400),

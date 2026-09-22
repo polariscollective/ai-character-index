@@ -66,6 +66,12 @@ def summed(costs):
     return round(sum(known), 6) if known else None
 
 
+def larger(*costs):
+    """The largest of the costs known, or None when none is."""
+    known = [cost for cost in costs if cost is not None]
+    return max(known) if known else None
+
+
 def summed_tokens(field, substituted, answer):
     """A call's `field` ("prompt_tokens" or "completion_tokens"), summed over
     every billed attempt: a refused candidate's, the same way its cost already
@@ -128,6 +134,24 @@ def distinct_claims(pooled, passages):
     """The pooled claims whose two passages resolve to different locators: the
     only ones `claim_rows` writes, so the only ones read, confirmed or priced."""
     return [claim for claim in pooled if len(set(locator_pair(claim, passages))) == 2]
+
+
+def confirmations(found, seats, passages):
+    """(the pooled claims, {seat: [(index into the pool, claim)]}) from
+    `found`, each contradictions seat's parsed items: the pool as
+    `claim_rows` writes it, and for each seat with something to confirm, in
+    seat order, the claims it did not find, as
+    `assessment_run.claims_to_confirm` gives them.
+
+    Pricing a confirmation (`to_ask`) and asking it (`Assessment.document`)
+    both read it from here, so the claims priced are the claims asked about."""
+    pooled = distinct_claims(assessment_run.pool_claims(found, seats), passages)
+    to_confirm = {}
+    for seat in seats:
+        claims = assessment_run.claims_to_confirm(pooled, seat)
+        if claims:
+            to_confirm[seat] = claims
+    return pooled, to_confirm
 
 
 def claim_rows(run_id, version_id, pooled, claim_ids, passages):
@@ -219,12 +243,9 @@ def to_ask(document, rows, panels):
     parse = parse_contradictions(passages)
     found = {seat: parse(done[("contradictions", seat)]["raw_output"])[0]["items"]
              for seat in seats}
-    pooled = distinct_claims(assessment_run.pool_claims(found, seats), passages)
-    for seat in seats:
-        claims = [claim for _i, claim in assessment_run.claims_to_confirm(pooled, seat)]
-        if claims and ("confirm", seat) not in done:
-            asked.append(("confirm", seat, claims))
-    return asked
+    _pooled, to_confirm = confirmations(found, seats, passages)
+    return asked + [("confirm", seat, [claim for _i, claim in claims])
+                    for seat, claims in to_confirm.items() if ("confirm", seat) not in done]
 
 
 class Assessment:
@@ -244,11 +265,15 @@ class Assessment:
         # Whether the run row exists, so a stop can name it.
         self.written = run is not None
         self.existing = existing or {}
-        # What the run's calls had already billed, read from the calls rather
-        # than from the run row, whose cost a process killed outright never
-        # wrote. This asking's costs are `costs`.
-        self.earlier_cost = summed(call.get("cost_usd") for rows in self.existing.values()
-                                   for call in rows["calls"])
+        # What the run had already billed: the larger of the run row's cost and
+        # its calls' costs summed. A process killed outright never writes the
+        # run row's cost, while its calls carry theirs; a call whose own writes
+        # failed carries nothing, while the run row closed after it counts it.
+        # This asking's costs are `costs`.
+        self.earlier_cost = larger(
+            (run or {}).get("cost_usd"),
+            summed(call.get("cost_usd") for rows in self.existing.values()
+                   for call in rows["calls"]))
         self.costs = []
 
     def start(self, created_by, estimate):
@@ -289,8 +314,8 @@ class Assessment:
                 raise
 
     def finish(self, stopped=None):
-        """Close the run, its cost what its calls had billed before and what
-        this asking billed, together."""
+        """Close the run, its cost what it had billed before (`earlier_cost`)
+        and what this asking billed, together."""
         patch = {"status": "done", "cost_usd": summed([self.earlier_cost] + self.costs),
                  "finished_at": now()}
         if stopped is not None:
@@ -313,7 +338,9 @@ class Assessment:
         A done call stores its reply in `raw_output` in full, whether it
         parsed completely or not, which is what lets a run taken up again
         rebuild the rows it gave. A call nobody answered keeps the last text a
-        refused candidate gave, if one gave any.
+        refused candidate gave, if one gave any. A call stopped after its reply
+        came back, while that reply was parsed or written done, keeps the
+        reply too, although it is left error and asked again on resuming.
 
         `seated` is passed straight to `ask_with_substitutes`: every model that
         must not answer this question for this document a second time. The
@@ -324,11 +351,12 @@ class Assessment:
         The call's cost and tokens are every billed attempt's, a refused one
         included; its seconds and finish reason are the answering reply's. A
         `KeyboardInterrupt`, a `SystemExit` or a `seat_call.Unreachable`
-        raised mid-call still leaves the call `error` with whatever attempts
-        were already billed, and their cost in the run's total, because
-        `substituted` is the same list `ask_with_substitutes` was filling in
-        place when it was stopped. A model that could not be reached is
-        recorded as `unreachable: ` and why."""
+        raised mid-call, or a store failure while the call is written done,
+        still leaves the call `error` with whatever attempts were already
+        billed, and their cost in the run's total, because `substituted` is
+        the same list `ask_with_substitutes` was filling in place when it was
+        stopped. A model that could not be reached is recorded as
+        `unreachable: ` and why."""
         if existing is not None and existing["status"] == "done":
             parsed, _complete = parse(existing["raw_output"])
             return existing["id"], parsed, existing["model"]
@@ -377,18 +405,24 @@ class Assessment:
                     "finished_at": now()})
                 return call_id, None, None
             parsed, _complete = parse(answer["reply"])
+            # Inside the block: a stop during this write comes after the reply
+            # was paid for, so it is handled as any other stop after billing.
+            self.store.update("aci_assessment_calls", match, {
+                "status": "done", "model": tag, **meter, "raw_output": answer["reply"],
+                "finish_reason": answer["finish_reason"], "seconds": answer["seconds"],
+                "error": None, "finished_at": now()})
         except BaseException as stopped:
             if not billed:
                 cost, meter = metered(attempt_rows(None, None, substituted), substituted, None)
                 self.costs.append(cost)
-            self.store.update("aci_assessment_calls", match, {
-                "status": "error", "error": seat_call.stop_error(stopped), **meter,
-                "finished_at": now()})
+            patch = {"status": "error", "error": seat_call.stop_error(stopped), **meter,
+                     "finished_at": now()}
+            if answer is not None:
+                # A reply paid for and not yet marked done: kept, although the
+                # row is error and a resume asks the seat again.
+                patch["raw_output"] = answer["reply"]
+            self.store.update("aci_assessment_calls", match, patch)
             raise
-        self.store.update("aci_assessment_calls", match, {
-            "status": "done", "model": tag, **meter, "raw_output": answer["reply"],
-            "finish_reason": answer["finish_reason"], "seconds": answer["seconds"],
-            "error": None, "finished_at": now()})
         return call_id, parsed, tag
 
     def insert(self, table, rows):
@@ -464,7 +498,7 @@ class Assessment:
         # counted as unreadable on the finder's call), so it is dropped before
         # anything else: no verdict or confirmation is asked about a claim
         # nothing was written for. A claim the run already wrote keeps its id.
-        pooled = distinct_claims(assessment_run.pool_claims(found, seats), passages)
+        pooled, to_confirm = confirmations(found, seats, passages)
         claim_ids = [written.get(locator_pair(claim, passages)) or str(uuid.uuid4())
                      for claim in pooled]
         self.insert_new("aci_assessment_claims",
@@ -477,11 +511,8 @@ class Assessment:
             read, ("claim_id", "seat"))
 
         seated = seated_at_start("confirm", seats, rows)
-        for seat in seats:
-            to_confirm = assessment_run.claims_to_confirm(pooled, seat)
-            if not to_confirm:
-                continue
-            claims = [claim for _i, claim in to_confirm]
+        for seat, indexed in to_confirm.items():
+            claims = [claim for _i, claim in indexed]
             system, user = assessment_call.compose_confirm(labelled, claims)
             call_id, verdicts = ask("confirm", seat, system, user, parse_confirm(claims), seated)
             if verdicts is None:
@@ -490,5 +521,5 @@ class Assessment:
                 {"claim_id": claim_ids[i], "call_id": call_id, "seat": seat,
                  "holds": verdict["holds"], "absolute": verdict["absolute"],
                  "reason": verdict["reason"]}
-                for i, verdict in assessment_run.by_claim(to_confirm, verdicts).items()],
+                for i, verdict in assessment_run.by_claim(indexed, verdicts).items()],
                 read, ("claim_id", "seat"))

@@ -90,7 +90,9 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
     still leave the caller holding every attempt already billed. Omitted, a
     list of its own is used. A model that could not be reached through every
     wait is not an attempt that failed: nothing is appended for it, and no
-    later attempt or substitute is asked.
+    later attempt or substitute is asked. A rate limit or a server error that
+    outlasts every wait is: its provider was reached, so it is an attempt that
+    raised, and the ladder goes on.
 
     Returns {"depth", "rationale", "model", "substitution_reason", "attempts",
     "replies", "prompt_tokens", "completion_tokens", "seconds"}:
