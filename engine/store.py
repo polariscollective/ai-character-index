@@ -52,7 +52,6 @@ def _urllib_transport(method, url, headers, body):
 IDEMPOTENT_METHODS = {"GET", "PATCH", "DELETE"}
 RETRYABLE_STATUSES = {502, 503, 504}
 RETRY_BACKOFF_SECONDS = (2, 4, 8, 16)
-MAX_RETRIES = len(RETRY_BACKOFF_SECONDS)
 # For a command that pays for a model call between two writes (engine/assess.py
 # and engine/panel/depth_pass.py): the same first waits, then up to eight
 # minutes more each time, about sixteen minutes in all, so a laptop's internet

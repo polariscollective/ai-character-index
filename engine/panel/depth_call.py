@@ -23,8 +23,6 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PROMPTS = {4: HERE / "prompts" / "depth-v1.txt",
            10: HERE / "prompts" / "depth-v2.txt"}
-# The prompt of the scale of four, under the name it has always had.
-PROMPT = PROMPTS[4]
 
 _spec = importlib.util.spec_from_file_location("h", HERE / "harness.py")
 h = importlib.util.module_from_spec(_spec)
@@ -49,7 +47,6 @@ NUMBER_RE = re.compile(r"^(\d+(?:\.\d+)?)")
 # of four, V is not read as an answer at all.
 ROMAN = {4: re.compile(r"^(IV|III|II|I)\b", re.IGNORECASE),
          10: re.compile(r"^(VIII|VII|VI|IX|IV|V|X|III|II|I)\b", re.IGNORECASE)}
-ROMAN_RE = ROMAN[4]
 ROMAN_DEPTHS = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7,
                 "VIII": 8, "IX": 9, "X": 10}
 SCALE_WORDS = {4: "absent|named|discussed|prescribed|demonstrated",
@@ -74,7 +71,6 @@ def _answer_suffix(scale):
 
 
 ANSWER_SUFFIX = {scale: _answer_suffix(scale) for scale in PROMPTS}
-ANSWER_SUFFIX_RE = ANSWER_SUFFIX[4]
 
 # What a cell with no retained passage records, without a call: nothing was
 # found to grade, which is depth 0 by the scale's own definition.
