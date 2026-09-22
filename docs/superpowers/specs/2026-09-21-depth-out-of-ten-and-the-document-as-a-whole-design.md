@@ -326,21 +326,41 @@ runs:
 
 ## Order of work
 
-1. The pilot: the constitution and the model spec of August 2026 assessed in
-   full, then depths on the new scale for four behaviours on both (honesty,
-   sycophancy, instruction hierarchy and harm to third parties), eight cells in
-   all, read by a person. It answers two questions: whether judges use odd
-   values as a way of not choosing, and whether the contradictions they list
-   hold up.
-2. The migration in `polaris-supabase`, on its own branch and pull request.
-3. The engine: prompts, parsers, the assessment job, depths keyed by digest,
-   `publish.py` and the payload builder.
-4. The runs: the four documents assessed, then new depths for the three runs.
-5. The depth notes and comparison paragraphs written again, or left out of the
-   first publication on the new scale.
-6. The site: the scale read from the payload, the ramp, the legend, the new row,
-   the MCP server and the copy.
-7. A draft publication, read, then made public.
+Written before any of it was done, and marked here with what became of each
+step as of 22 September 2026.
+
+1. **Done, twice.** The pilot: the constitution and the model spec of August
+   2026 assessed in full, then depths on the new scale for four behaviours on
+   both (honesty, sycophancy, instruction hierarchy and harm to third parties),
+   eight cells in all, read by a person. It answered the two questions it was
+   for, and a second pilot answered the six changes it recommended. Both are
+   recorded below.
+2. **Done, and not merged.** The migration is
+   `20260921180000_aci_depth_out_of_ten_and_the_document_as_a_whole.sql` in
+   `polaris-supabase`, on `aci-depth-out-of-ten`. Its tables hold the two
+   assessment runs and the 168 depths; its pull request, #37, is still open.
+3. **Done.** The engine: prompts, parsers, the assessment job and its replay,
+   depths keyed by digest and their retry ladder, `publish.py` and the payload
+   builder.
+4. **Done.** `b4acc896` assessed the four documents, `e2c00b2e` gave their
+   contradictions again under the second method, and the depth pass gave 168
+   depths out of ten against `b4acc896` for the three runs a publication
+   selects from.
+5. **Not done.** The depth notes and the comparison paragraphs are still the
+   ones written for the scale of four; nothing has been written since 17
+   September 2026.
+6. **Begun.** The site: the display decisions were taken with the owner on 22
+   September 2026 and a prototype exists, in the worktree
+   `ai-character-index-depth-to-ten-site` on `feat/depth-to-ten-site`. The
+   scale read from the payload, the ramp, the legend, the new row, the MCP
+   server and the copy are not written.
+7. **Not done.** No publication carries an assessment run, so none has been
+   built on the new scale, read or made public.
+
+One step is missing from the list as it was written, and the second pilot added
+it: a person reads the contradictions and decides which ones a publication
+carries. `aci_assessment_claims` has the columns for it and nothing has been
+written to them.
 
 ## What is not settled
 
@@ -577,6 +597,220 @@ criteria and the depths to be given again,
 contradictions and their reading, and records the earlier run in its config. A publication that
 names the new run carries the earlier run's criteria and the depths given
 against it, with the new run's contradictions.
+
+## What the full run showed (22 September 2026)
+
+### The four documents assessed
+
+Run `b4acc896`, begun on 22 September 2026, read the constitution (374
+passages), the OpenAI Model Spec of December 2025 (589) and of August 2026
+(592), and the Alibaba Model Spec (247). Criteria by `sol`, `fable` and
+`deepseek`; contradictions and their confirmation by `sol`, `fable` and `kimi`,
+under the first method. Priced at 14.95 dollars, it cost 17.30. The difference
+is the refusals: the price counts each seat's own model once, and a refused
+attempt is billed before its substitute answers.
+
+| Document | Conflict rules | Force of each rule | Reasons given | Situations covered | Contradictions | Out of 20 |
+|---|---|---|---|---|---|---|
+| `anthropic--constitution@2026-01-20` | 2.3 | 2.7 | 3.7 | 2.7 | 0 | 11.3 |
+| `openai--model-spec@2025-12-18` | 4.0 | 3.3 | 3.3 | 4.0 | 2 | 16.7 |
+| `openai--model-spec@2026-08-18` | 4.0 | 3.7 | 3.3 | 4.0 | 4 | 19.0 |
+| `alibaba--model-spec@2026-04-00` | 4.0 | 3.7 | 2.3 | 3.7 | 0 | 13.7 |
+
+The contradictions column is not a score any seat gave. It is `confirm_score`
+over the claims `settle` settles, the one rule, which reads a first-method
+finder's row as a reading that holds.
+
+The tightened conflict-rules anchor, which the second pilot could not test on a
+document whose order of authority is holistic, did what was asked of it: the
+constitution scored 2, 3 and 2 where every judge gave 4 to all three model
+specs. The other criteria separated the documents the way the first pilot
+expected. The constitution is highest of the four on reasons given, 3.7, and
+lowest on situations covered, 2.7; the Alibaba Model Spec is lowest on reasons,
+2.3.
+
+**`fable` was refused on the contradictions question of every document.** The
+call came back empty with `finish_reason=content_filter` on all four, and
+nothing beyond that finish reason is recorded, so what the filter objected to
+is not in the record. `opus`, its declared substitute, answered on the
+constitution and on both OpenAI versions. On the Alibaba Model Spec `fable` was
+refused on all three questions and `opus` on two of them, which is the
+refusal on input this repository has recorded before for every Anthropic model
+on that document; `kimi` took the criteria seat there and `glm` the
+contradictions seat.
+
+The cost of a refusal depends on where it falls. Refused on input, it is billed
+nothing, which is what the Alibaba refusals cost. Refused after the model has
+read the document, it is billed the input: `fable`'s three refusals on the
+constitution and the two OpenAI versions cost 1.21, 1.17 and 1.21 dollars, 3.60
+in all, for no output.
+
+**`deepseek` scored force of each rule in Roman numerals.** On the Alibaba Model
+Spec it answered `RULE_FORCE: III`, as it has given depths before, the criteria
+parser read no score at all, and the run finished with a gap that would have
+refused a depth pass and a publication alike. The parser reads `I` to `IV`
+standing alone now (`5a8b699`), the stored reply was read again on the resume
+with no model called, and the 3 in the table above is that answer.
+
+### The depths out of ten
+
+`depth_pass.py` gave 168 depths against `b4acc896`, fourteen behaviours over the
+four documents, 56 cells of three judges each, all of them done, all under the
+one depth prompt `d856c646`. Priced at 6.22 dollars, they cost 8.35; the
+difference is the ladder, which asks a depth again when the reply does not
+parse.
+
+The distribution is one 1, two 2s, two 4s, twelve 5s, twenty-six 6s, twenty-five
+7s, thirty-five 8s, sixty-four 9s and a single 10. Nobody gave 0 and nobody gave
+3. Nine is the commonest depth by a distance, 64 of 168, and 9 with 8 under it
+is 99 of them.
+
+**Exactly one depth of ten was given**, by `deepseek` on
+`honesty-and-non-deception` against the constitution, where `sol` and `fable`
+both gave 9. That cell's mean, 9.3, is the highest of the 56, so no cell reached
+ten. What the second pilot changed, that the three conditions must hold for
+every facet the behaviour's brief names, holds at four times the scale and over
+fourteen behaviours rather than four.
+
+**`glm` answered ten depths in `deepseek`'s seat**, each recorded with the
+reason `off-scale reply after two reminders`: the ladder asked again with a
+format reminder, then with a one-shot example, and seated the declared
+substitute only when both had failed. Ten of `deepseek`'s 56 depths went that
+way, on all four documents, and they are the only substitutions in the pass.
+
+### The contradictions under the second method
+
+Run `e2c00b2e` took its criteria from `b4acc896` and asked only the
+contradictions and their reading. Each seat read each document whole and listed
+every contradiction it found, however minor, with no score; the candidates were
+pooled by their pair of passages across the versions of one document and carried
+to a version only where both passages read the same word for word; then every
+seat read every claim of every version, the ones it found included, saying
+whether the claim holds and whether it involves a rule the document calls
+absolute. A claim is confirmed when two of the three readings say it holds, and
+absolute when two say both. `opus` took `fable`'s seat, with `glm` declared
+behind it. The run was priced at 7.30 dollars and cost 11.78 in all, the two
+replays below included.
+
+| Document | Claims, first method | Confirmed | Score | Claims, second method | Confirmed | Score |
+|---|---|---|---|---|---|---|
+| `anthropic--constitution@2026-01-20` | 8 | 3 | 0 | 8 | 2 | 2 |
+| `openai--model-spec@2025-12-18` | 8 | 2 | 2 | 18 | 2 | 2 |
+| `openai--model-spec@2026-08-18` | 9 | 0 | 4 | 19 | 0 | 4 |
+| `alibaba--model-spec@2026-04-00` | 4 | 3 | 0 | 4 | 0 | 4 |
+
+Listing exhaustively more than doubled the claims on the two OpenAI versions, 29
+across the run becoming 49, and left the constitution and the Alibaba Model Spec
+at the counts they had. What moved the scores is the reading rather than the
+finding. Under the first method a seat that found a claim counted as a holding
+reading of it, so a pair two seats proposed was confirmed with no second reader
+at all; under the second nobody votes for what they found, and three of the
+constitution's eight claims became two, and three of the Alibaba Model Spec's
+four became none.
+
+The Alibaba figure of 4 rests on `glm`, in `opus`'s seat, answering
+`CONTRADICTION: none` for the whole document, and on four claims from `sol` and
+`kimi` that no second reader held. The whole-document totals move with the
+column: the Alibaba Model Spec from 13.7 to 17.7 and the constitution from 11.3
+to 13.3, on the same four criteria rows underneath. Both OpenAI versions keep
+16.7 and 19.0.
+
+### What went wrong, and what it cost
+
+Two finding calls ran out of output length, and in both the cap was ours rather
+than the provider's. `kimi`, listing the contradictions of the OpenAI Model Spec
+of August 2026, stopped at the 65536 tokens `panel-config.json` allowed it,
+where OpenRouter allows 943718; the attempt came back empty with
+`finish_reason=length` and was billed 1.18 dollars. `glm`, standing in for
+`opus` on the Alibaba Model Spec after two content-filter refusals, had no cap
+of its own and was sent with the 32768 a model without one gets, where
+OpenRouter allows 131072; that attempt cost 0.06.
+
+The code then went on as though nothing had happened. It wrote each version's
+claims and had every seat read them, on a pool short of one seat's findings, and
+those readings were paid for: 1.27 dollars on the August OpenAI spec, 1.26 on
+the December one and 0.49 on the Alibaba Model Spec, 3.01 in all. The
+completeness check caught it afterwards and said the three documents could only
+be assessed again in a new run. Of the 10.15 dollars the run had cost before any
+replay, 7.87 was spent on those three, about four fifths of it, and the
+constitution, whose three finders all answered, was the only document left
+standing.
+
+Two fixes. Both caps are 131072 now (`13bcadf`), written beside the file and
+swapped in atomically, since a paid depth pass was reading it at the time. And a
+document stops before its readings when a finder has failed (`c91f1ca`): no
+claim is written and nobody reads one, because what that seat would have found
+could change them, the run goes on with the next document, and a resume asks the
+finding again.
+
+### The replay
+
+`engine/assess.py --resume --replay` is for a run already left in the state this
+one was. It asks the failed finding again in its own row, pools what it finds
+with the claims already written, and asks each seat a supplementary reading of
+the new claims alone, recorded among the attempts of its existing reading call.
+A written claim is never updated, because the grants forbid it: a pair the
+replayed seat found that was already claimed goes into the run's config as
+`also_found`. Before it spends, it rebuilds the pool the first readings were
+given on and refuses if that pool no longer gives the claims written and the
+verdicts stored against them.
+
+Here it added one contradiction and nothing else. `kimi` answered on the second
+asking, at 0.55 dollars, with one pair nobody had claimed:
+`#assume_objective_pov ¶8` against `#red_line_principles ¶8` on the OpenAI Model
+Spec of August 2026, the red-line rule that customisation never overrides
+principles above guideline level set against the passage that lets user and
+developer customisation override the objective point of view. The pair is not
+carried to the December version, whose passages do not read the same, and of the
+three supplementary readings only `sol` held it, so it is not confirmed and that
+document's score stays 4. On the Alibaba Model Spec `opus` was refused twice
+more and `glm` answered `CONTRADICTION: none`, so nothing was added and its four
+claims stand as they were. The two replays were priced at 3.04 and 1.75 dollars,
+the first interrupted part way and the second finishing it.
+
+A replayed group is not what a fresh run would have given, and the run says so
+itself rather than leaving it to be remembered. Each replay writes a record in
+`config.replays` naming the calls it asked, the groups it touched and how each
+one ended, with a note that finishes "A fresh run pools every finding before any
+reading, so this is not exactly what a fresh run would give." The readings of
+the two OpenAI versions were given on a list that grew afterwards, and the
+supplementary readings saw the new claim by itself rather than beside the
+others.
+
+### What is still open
+
+**Two versions of one document settle differently, although the claims are now
+shared.** Sixteen pairs are carried to both OpenAI versions, which means both
+passages read the same word for word in each. Two of the sixteen are confirmed
+on the December version and neither on the August one: `#assume_objective_pov
+¶17` against `¶18`, held by `opus` and `sol` on December and by nobody on
+August, and `#no_topic_off_limits ¶4` against `#refusal_style ¶3`, held by
+`kimi` and `sol` on December and by `sol` alone on August. Pooling fixed what
+each seat happened to find. It did not fix what a seat says about the same words
+read twice, and the two versions score 2 and 4 on that.
+
+**No person has reviewed any contradiction.** `reviewed_verdict` is null on all
+78 claims of the two runs. The second pilot's recommendation was that the judges
+find and cross-check candidates and a person decides which ones a published list
+carries, as the governance view's scores are decided by hand. The column is in
+the table and nothing is in it, so every contradictions figure above is the
+panel's alone.
+
+**The score of a document as a whole moves by several points on that one
+column.** Between two runs whose other four criteria are literally the same
+rows, the Alibaba Model Spec moved 4 points out of 20 and the constitution 2.
+Contradictions is worth 4 of the 20 and it is the only one of the five that can
+swing its whole range on what three models happen to notice in one reading; the
+other four did not move, because they were not asked again.
+
+**The independence problem is what it was, and the full run carries it into
+every figure.** `sol` is OpenAI's model and it read both versions of the OpenAI
+Model Spec, on every question of both runs. The constitution's criteria were
+scored by `fable`, its contradictions listed by `opus` in `fable`'s seat and
+confirmed by `fable` in `b4acc896`, and both listed and confirmed by `opus` in
+`e2c00b2e`: every one of those is an Anthropic model reading Anthropic's
+document. Nothing in these runs was arranged to avoid that, and nothing in the
+figures corrects for it.
 
 Sources:
 [arXiv 2510.07686](https://arxiv.org/abs/2510.07686),
