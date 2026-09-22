@@ -57,7 +57,7 @@ import depth_call                # noqa: E402
 import depth_ladder              # noqa: E402
 import index_store               # noqa: E402
 import seat_call                 # noqa: E402
-from store import Store          # noqa: E402
+from store import PATIENT_BACKOFF_SECONDS, Store  # noqa: E402
 
 h = batch_job.h
 
@@ -391,7 +391,7 @@ def main(argv=None):
     # Before the store is opened: an id that is not one is refused by name.
     assessment_run_id = index_store.assessment_run_id(args.assessment_run)
 
-    store = Store.from_env()
+    store = Store.from_env(backoff=PATIENT_BACKOFF_SECONDS)
     index_store.install_registry(store)
     config = h.load_config()
     run_ids = parse_run_ids(args.runs, store)

@@ -66,7 +66,7 @@ import batch_job                 # noqa: E402
 import index_store               # noqa: E402
 import seat_call                 # noqa: E402
 from assessment_store import PANEL, name_of  # noqa: E402
-from store import Store          # noqa: E402
+from store import PATIENT_BACKOFF_SECONDS, Store  # noqa: E402
 
 h = batch_job.h
 
@@ -318,7 +318,7 @@ def main(argv=None):
     resume_id = (None if args.resume is None
                  else index_store.assessment_run_id(args.resume, flag="--resume"))
 
-    store = Store.from_env()
+    store = Store.from_env(backoff=PATIENT_BACKOFF_SECONDS)
     resume = None if resume_id is None else resumable(store, resume_id)
     index_store.install_registry(store)
     config = h.load_config()

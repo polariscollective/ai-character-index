@@ -53,23 +53,33 @@ IDEMPOTENT_METHODS = {"GET", "PATCH", "DELETE"}
 RETRYABLE_STATUSES = {502, 503, 504}
 RETRY_BACKOFF_SECONDS = (2, 4, 8, 16)
 MAX_RETRIES = len(RETRY_BACKOFF_SECONDS)
+# For a command that pays for a model call between two writes (engine/assess.py
+# and engine/panel/depth_pass.py): the same first waits, then up to eight
+# minutes more each time, about sixteen minutes in all, so a laptop's internet
+# can drop for several minutes without a paid reply being lost before it is
+# written.
+PATIENT_BACKOFF_SECONDS = RETRY_BACKOFF_SECONDS + (30, 60, 120, 240, 480)
 
 
 class Store:
-    def __init__(self, url, key, transport=None, sleep=None):
+    def __init__(self, url, key, transport=None, sleep=None, backoff=RETRY_BACKOFF_SECONDS):
         self.url = url.rstrip("/")
         self.key = key
         self.transport = transport or _urllib_transport
         self.sleep = sleep or time.sleep
+        # The waits before each retry. A command that spends money between two
+        # writes passes a longer schedule, so a cut of several minutes does not
+        # lose a reply that was already paid for.
+        self.backoff = tuple(backoff)
 
     @classmethod
-    def from_env(cls):
+    def from_env(cls, backoff=RETRY_BACKOFF_SECONDS):
         url = os.environ.get("SUPABASE_URL")
         key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         if not url or not key:
             sys.exit("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set "
                      "(a gitignored .env at the root of this repo is the usual place)")
-        return cls(url, key)
+        return cls(url, key, backoff=backoff)
 
     def _headers(self, extra=None):
         headers = {"apikey": self.key,
@@ -78,11 +88,10 @@ class Store:
         headers.update(extra or {})
         return headers
 
-    @staticmethod
-    def _log_retry(method, table, attempt, reason):
+    def _log_retry(self, method, table, attempt, reason):
         # Never a header or a key: only the method, the table, the attempt
         # number and a short reason.
-        print(f"store retry: {method} {table} attempt {attempt}/{MAX_RETRIES}: "
+        print(f"store retry: {method} {table} attempt {attempt}/{len(self.backoff)}: "
               f"{reason}", file=sys.stderr)
 
     def _call_transport(self, method, table, url, headers, body):
@@ -96,26 +105,26 @@ class Store:
             except urllib.error.HTTPError as e:
                 status, payload = e.code, e.read()
             except urllib.error.URLError as e:
-                if attempt >= MAX_RETRIES:
+                if attempt >= len(self.backoff):
                     raise
                 attempt += 1
                 self._log_retry(method, table, attempt, f"{type(e).__name__}: {e}")
-                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                self.sleep(self.backoff[attempt - 1])
                 continue
             except (TimeoutError, http.client.RemoteDisconnected,
                     ConnectionResetError) as e:
-                if method not in IDEMPOTENT_METHODS or attempt >= MAX_RETRIES:
+                if method not in IDEMPOTENT_METHODS or attempt >= len(self.backoff):
                     raise
                 attempt += 1
                 self._log_retry(method, table, attempt, f"{type(e).__name__}: {e}")
-                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                self.sleep(self.backoff[attempt - 1])
                 continue
 
             if (status in RETRYABLE_STATUSES and method in IDEMPOTENT_METHODS
-                    and attempt < MAX_RETRIES):
+                    and attempt < len(self.backoff)):
                 attempt += 1
                 self._log_retry(method, table, attempt, f"HTTP {status}")
-                self.sleep(RETRY_BACKOFF_SECONDS[attempt - 1])
+                self.sleep(self.backoff[attempt - 1])
                 continue
             return status, payload
 

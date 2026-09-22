@@ -573,7 +573,7 @@ class RunTest(unittest.TestCase):
 class MainTest(unittest.TestCase):
     def main(self, argv, fake, model=None, code=0, environ=None):
         with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda: fake)})), \
+                    lambda **_kwargs: fake)})), \
                 mock.patch.object(assess.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(assess.h, "passages", passages_for), \
                 mock.patch.object(assess.batch_job, "call_openrouter", model or Scripted()), \
@@ -732,7 +732,7 @@ class UnreachableTest(unittest.TestCase):
         model = Scripted(w__contradictions__fable=("", "content_filter"),
                          w__contradictions__opus=cut())
         with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda: fake)})), \
+                    lambda **_kwargs: fake)})), \
                 mock.patch.object(assess.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(assess.h, "passages", both_passages), \
                 mock.patch.object(assess.batch_job, "call_openrouter", model), \
@@ -998,7 +998,7 @@ class ResumeRefusedTest(unittest.TestCase):
         # install_registry reads a table here, so a store call made before the
         # run is looked up shows in what the store was asked.
         with mock.patch.object(assess, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda: fake)})), \
+                    lambda **_kwargs: fake)})), \
                 mock.patch.object(assess.index_store, "install_registry",
                                   lambda s: s.select("aci_specs")), \
                 mock.patch.object(assess.h, "passages", both_passages), \

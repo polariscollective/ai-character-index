@@ -482,7 +482,7 @@ class UnreachableTest(unittest.TestCase):
     def main(self, fake, model):
         argv = [f"--runs={RUN}", f"--assessment-run={ASSESSMENT_RUN}", "--go"]
         with mock.patch.object(depth_pass, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda: fake)})), \
+                    lambda **_kwargs: fake)})), \
                 mock.patch.object(depth_pass.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(depth_pass.index_store, "judging_registry",
                                   lambda s: REGISTRY), \
@@ -749,7 +749,7 @@ class GiveTest(unittest.TestCase):
 class MainTest(unittest.TestCase):
     def main(self, argv, fake):
         with mock.patch.object(depth_pass, "Store", type("S", (), {"from_env": staticmethod(
-                    lambda: fake)})), \
+                    lambda **_kwargs: fake)})), \
                 mock.patch.object(depth_pass.index_store, "install_registry", lambda s: None), \
                 mock.patch.object(depth_pass.index_store, "judging_registry",
                                   lambda s: REGISTRY), \

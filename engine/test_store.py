@@ -7,7 +7,9 @@ import urllib.error
 from contextlib import redirect_stderr
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import store as store_module
 from store import Store, StoreError
 
 
@@ -169,6 +171,22 @@ class StoreTest(unittest.TestCase):
             self.store(t, sleep=sleeps.append).select("aci_labs", {"limit": "1"})
         self.assertEqual(len(t.calls), 5)
         self.assertEqual(sleeps, [2, 4, 8, 16])
+
+    def test_a_patient_store_waits_through_a_cut_of_several_minutes(self):
+        t = FakeTransport([urllib.error.URLError("Network is unreachable")] * 7
+                          + [(200, b"")])
+        sleeps = []
+        Store("https://example.supabase.co", "k", transport=t, sleep=sleeps.append,
+              backoff=store_module.PATIENT_BACKOFF_SECONDS).update(
+            "aci_assessment_calls", {"id": "abc"}, {"status": "done"})
+        self.assertEqual(len(t.calls), 8)
+        self.assertEqual(sleeps, [2, 4, 8, 16, 30, 60, 120])
+
+    def test_the_commands_that_pay_between_writes_open_a_patient_store(self):
+        for path in (HERE / "assess.py", HERE / "panel" / "depth_pass.py"):
+            with self.subTest(path=path.name):
+                self.assertIn("Store.from_env(backoff=PATIENT_BACKOFF_SECONDS)",
+                              path.read_text())
 
     def test_a_retry_log_line_carries_no_key_or_header_value(self):
         t = FakeTransport([urllib.error.URLError("Connection refused"),
