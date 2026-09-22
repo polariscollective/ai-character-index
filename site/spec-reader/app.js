@@ -44,14 +44,19 @@ function payloadName(id) {
   return typeof id === "string" && PUBLICATION_ID.test(id);
 }
 
-/* The address the routes slice by. A parameter left out means everything, which
- * is what an unpinned first load wants; a parameter present and empty means the
- * reader has asked for none. The routes read the difference. */
+/* The address the routes slice by. A parameter left out means everything, a
+ * parameter present and empty means none, and the routes read that difference
+ * exactly as before: nothing about the wire contract changes here.
+ *
+ * What changed is which of the two an empty list produces. It used to be
+ * dropped, so a caller asking for no documents was served every document. An
+ * empty list is a caller saying none, and it is written out as such now. Only a
+ * caller passing no list at all still asks for everything. */
 function sliceParams(pinned, { behaviours, specs } = {}) {
   const params = new URLSearchParams();
   if (pinned) params.set("publication", pinned);
   if (behaviours) params.set("behavior", behaviours.join(","));
-  if (specs && specs.length) params.set("spec", specs.join(","));
+  if (specs) params.set("spec", specs.join(","));
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -190,7 +195,7 @@ async function loadBehaviourNotes() {
  * state.payloadSource rather than from the URL, so a pin that fell back reads
  * the current publication's documents with its payload. */
 /* Sliced like the payload and the links beside it. The documents column is
- * 1161 KB for four documents and the panel shows one, or two when comparing;
+ * 1070 KB for four documents and the panel shows one, or two when comparing;
  * every other loader already said which it wanted and this one did not. */
 async function loadDocuments() {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
@@ -386,6 +391,37 @@ function paragraphsOf(behaviour, documentId) {
   return coverage;
 }
 
+/* Whether a behaviour arrived with its paragraphs or with only its heading and
+ * its figures. It reads the marker paragraphsOf reads, and exists so that the
+ * two places deciding "has this one's text arrived" cannot drift into two
+ * different answers: one copy of a rule is what this file keeps asking for.
+ *
+ * A behaviour covering no document at all counts as carried, because there is
+ * nothing to fetch for it and treating it as missing would ask for it forever. */
+function carriesParagraphs(behaviour) {
+  return !Object.values(behaviour?.coverage || {}).some(cell => cell.passagesWithheld);
+}
+
+/* What the reader holds once a response arrives: the behaviours it already had,
+ * each replaced by the copy that arrived when that copy brought paragraphs.
+ *
+ * Merged by slug rather than appended. A sliced response carries every behaviour
+ * of the publication, the asked-for ones with their paragraphs and the rest
+ * withheld, so appending would duplicate the entire menu rather than add one
+ * entry. And only a copy carrying paragraphs replaces what is held, so a
+ * withheld copy riding along in a later response cannot displace text already
+ * fetched.
+ *
+ * It is a named function so a harness can hold it to those two rules. Both were
+ * broken here at once, and the first hid the second: every behaviour was marked
+ * as already fetched on arrival, so this branch never ran and its appending
+ * could not be seen. */
+function mergeBehaviours(held, arrived) {
+  const carried = new Map((arrived || [])
+    .filter(carriesParagraphs).map(behaviour => [behaviour.slug, behaviour]));
+  return (held || []).map(behaviour => carried.get(behaviour.slug) || behaviour);
+}
+
 /* Behaviour colours live in the stylesheet, one --hue-N per slot and one set per
  * surface, so a palette switch repaints every highlight without re-annotating. */
 const HUE_SLOTS = 12;
@@ -576,12 +612,20 @@ document.body.classList.toggle("embedded", state.embedded);
 /* The behaviours the URL names before anything has checked them against the
  * registry: good enough to slice the very first fetch by, since a slug the
  * publication does not carry simply comes back unmatched, exactly as it would
- * had the whole payload been fetched and searched. Undefined (no parameter)
- * asks the routes for everything, which is the bare-URL default. */
+ * had the whole payload been fetched and searched.
+ *
+ * An address naming none asks for none. It used to ask for everything, and what
+ * that cost was the whole publication on arrival: the "Doc reader" link on all
+ * three public pages is bare, so is every bookmark and every ?publication=
+ * link, and the ordinary way into this page pulled 7300 KB in order to show one
+ * behaviour of one document. The menu still arrives complete, because a
+ * withheld cell keeps its heading and its figures; only the paragraphs stay
+ * behind, and ensureBehaviours fetches them for the behaviour actually opened
+ * before the first paint. */
 function urlSlugs() {
   return initialParams.has("behavior")
     ? initialParams.get("behavior").split(",").map(slug => slug.trim()).filter(Boolean)
-    : undefined;
+    : [];
 }
 
 /* The documents the URL already names, ?spec= and ?compare-with= together, so
@@ -4769,7 +4813,7 @@ async function ensureBehaviours(slugs) {
         : null,
     ]);
     if (payload) {
-      state.rawBehaviours = [...state.rawBehaviours, ...(payload.behaviours || [])];
+      state.rawBehaviours = mergeBehaviours(state.rawBehaviours, payload.behaviours);
       state.payload.behaviours =
         applyPanelThreshold({ behaviours: structuredClone(state.rawBehaviours) }).behaviours;
     }
@@ -5225,10 +5269,16 @@ async function initialize() {
     // loaded payload would filter out a behaviour ticked before it arrives.
     registrySlugs = Object.keys(behaviourNotes || {});
     state.rawBehaviours = behaviours.behaviours || [];
-    // Already answered by the fetch loadBehaviours() just made: ensureBehaviours
-    // must not ask for these again, or a later tick would merge their bubbles a
-    // second time.
-    for (const behaviour of state.rawBehaviours) inFlight.set(behaviour.slug, Promise.resolve());
+    // Held only where that fetch actually carried paragraphs. Marking every
+    // behaviour was right while an arrival fetched the whole publication. Now
+    // that an address naming none asks for none, the cells come back withheld,
+    // and marking them would tell ensureBehaviours there is nothing left to
+    // fetch: the reader would paint its complete menu over a document with no
+    // passages under it. Read the marker the server sent rather than assume
+    // what this page believes it asked for.
+    for (const behaviour of state.rawBehaviours) {
+      if (carriesParagraphs(behaviour)) inFlight.set(behaviour.slug, Promise.resolve());
+    }
     state.provenance = behaviours.provenance || {};
     state.bands = initialBands();
     state.payload = {

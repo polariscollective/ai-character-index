@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-/* Guard for paragraphsOf in site/spec-reader/app.js: the three answers a cell
- * can give about its paragraphs, and which of them the reader may count.
+/* Guard for the withheld state in site/spec-reader/app.js: the three answers a
+ * cell can give about its paragraphs, which of them the reader may count, and
+ * what a later response is allowed to replace.
  *
  * app.js runs DOM code at module scope and cannot be imported, so the function
  * is extracted verbatim from the real file, as the sibling harnesses do.
@@ -136,6 +137,53 @@ check("a behaviour missing from the loaded set takes the first one's colour, whi
               return [behaviourHue(MIXED.behaviours[0]),
                       behaviourHue(MIXED.behaviours[2])]; },
       ["var(--hue-1)", "var(--hue-1)"]);
+
+/* ---- what arrived, and what a later response may replace ----
+ * Two rules were broken here at once and the first hid the second. Every
+ * behaviour was marked as already fetched the moment the payload arrived, so
+ * ticking a second one fetched its links and never its paragraphs; and because
+ * that branch never ran, nobody could see that it appended its response to the
+ * held set. A sliced response carries EVERY behaviour, so appending it would
+ * have doubled the menu the first time the first fault was fixed. */
+eval(extractFn("function carriesParagraphs(behaviour) {"));
+eval(extractFn("function mergeBehaviours(held, arrived) {"));
+
+const WITHHELD_B = { id: 2, slug: "b", name: "B", category: "One",
+  coverage: { [DOC]: { depth: { mean: 1 }, passagesWithheld: true } } };
+const FULL_B = { id: 2, slug: "b", name: "B", category: "One",
+  coverage: { [DOC]: { depth: { mean: 1 }, passages: [{ locator: "p" }] } } };
+
+check("a behaviour whose cell is withheld has not brought its paragraphs",
+      () => carriesParagraphs(WITHHELD_B), false);
+check("a behaviour carrying passages has",
+      () => carriesParagraphs(FULL_B), true);
+check("a behaviour covering no document counts as carried, or it is asked for forever",
+      () => carriesParagraphs({ slug: "z", coverage: {} }), true);
+
+/* What the route actually answers when one behaviour is asked for: that one
+ * with its paragraphs, and every other behaviour of the publication withheld. */
+const ARRIVED = [
+  { ...MIXED.behaviours[0],
+    coverage: { [DOC]: { depth: { mean: 2 }, passagesWithheld: true } } },
+  FULL_B,
+  MIXED.behaviours[2],
+];
+
+check("a response replaces only what it brought paragraphs for, and never lengthens the menu",
+      () => { const held = [MIXED.behaviours[0], WITHHELD_B, MIXED.behaviours[2]];
+              const merged = mergeBehaviours(held, ARRIVED);
+              return [merged.length,
+                      merged.map(b => b.slug),
+                      merged[0].coverage[DOC].passages.length,
+                      merged[1].coverage[DOC].passages.length,
+                      !!merged[2].coverage[DOC].passagesWithheld]; },
+      [3, ["a", "b", "c"], 1, 1, true]);
+
+check("merging the same response twice changes nothing",
+      () => { const held = [MIXED.behaviours[0], WITHHELD_B, MIXED.behaviours[2]];
+              const once = mergeBehaviours(held, ARRIVED);
+              const twice = mergeBehaviours(once, ARRIVED);
+              return [twice.length, twice[1].coverage[DOC].passages.length]; }, [3, 1]);
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

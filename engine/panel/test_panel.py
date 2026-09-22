@@ -392,7 +392,7 @@ class TestAppJSWithheld(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         # Exit status alone cannot tell "every check holds" from "the harness
         # stopped asserting"; pin the count the way the sibling harnesses do.
-        self.assertIn("12 checks, 0 failures", out.stdout, out.stdout)
+        self.assertIn("17 checks, 0 failures", out.stdout, out.stdout)
 
 
 class TestLinkParagraphCells(unittest.TestCase):

@@ -91,8 +91,11 @@ eval(consts + "\n" +
 
 const PINNED_ID = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
 const SPEC_A = "anthropic--constitution@2026-01-20";
-const CURRENT_URL = "/api/reader/payload";
-const PINNED_URL = `${CURRENT_URL}?publication=${PINNED_ID}`;
+/* An address naming no behaviour asks for none, so the reader writes the empty
+ * parameter that says so. It used to write nothing at all, which the routes
+ * read as a request for the whole publication. */
+const CURRENT_URL = "/api/reader/payload?behavior=";
+const PINNED_URL = `/api/reader/payload?publication=${PINNED_ID}&behavior=`;
 const PIN = { behaviours: ["PIN"] };
 const CURRENT = { behaviours: ["CURRENT"] };
 
@@ -148,8 +151,8 @@ function check(ok, label, detail) {
    * publication's documents matches nothing. The loader follows the payload's
    * outcome rather than the URL: a pin that fell back reads the current documents
    * even where a pinned documents request would have answered. */
-  const DOCS_CURRENT_URL = "/api/reader/documents";
-  const DOCS_PINNED_URL = `${DOCS_CURRENT_URL}?publication=${PINNED_ID}`;
+  const DOCS_CURRENT_URL = "/api/reader/documents?spec=";
+  const DOCS_PINNED_URL = `/api/reader/documents?publication=${PINNED_ID}&spec=`;
   const DOCS_PIN = { documents: ["PIN"] };
   const DOCS_CURRENT = { documents: ["CURRENT"] };
   const readDocuments = async (search, map) => {
@@ -185,7 +188,7 @@ function check(ok, label, detail) {
           docs.error || JSON.stringify(readAsked()));
   }
   {
-    const DOCS_SPEC_URL = `${DOCS_CURRENT_URL}?spec=${encodeURIComponent(SPEC_A)}`;
+    const DOCS_SPEC_URL = `/api/reader/documents?spec=${encodeURIComponent(SPEC_A)}`;
     const docs = await readDocuments(`?spec=${SPEC_A}`, {
       [CURRENT_URL]: CURRENT, [DOCS_SPEC_URL]: DOCS_CURRENT });
     check(docs.documents[0] === "CURRENT",
