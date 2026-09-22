@@ -100,6 +100,11 @@ ASSESSMENT = "3b9d6f1a-7c2e-4a5b-8d0f-1e3a5c7b9d2f"
 EARLIER_ASSESSMENT = "0c2e4a6b-8d1f-4b3c-9e5a-7f9b1d3c5e7a"
 ASSESSMENT_PANELS = {"criteria": ["sol", "fable", "deepseek"],
                      "contradictions": ["sol", "fable", "kimi"]}
+# A run of the second method that takes its criteria from ASSESSMENT, so the
+# depths given against ASSESSMENT stand for it.
+TAKING = "5d7f9b1c-3e5a-4c7e-9f1b-2d4f6a8c0e3b"
+TAKING_PANELS = {"criteria": ["sol", "fable", "deepseek"],
+                 "contradictions": ["sol", "opus", "kimi"]}
 
 CONSTITUTION = """# Constitution
 
@@ -306,6 +311,27 @@ def assessment_tables(passages_of):
                     verdicts.append({"claim_id": claim_id, "call_id": confirm_calls[seat],
                                      "seat": seat, "holds": holds, "absolute": absolute,
                                      "reason": f"{seat} read claim {n}."})
+    # The run that takes its criteria from ASSESSMENT: every contradictions
+    # seat found and read, and one claim per document, found by opus alone and
+    # held by two readings that call it absolute.
+    runs.append({"id": TAKING, "created_by": "test", "status": "done", "panels": TAKING_PANELS,
+                 "prompts": {}, "config": {"substitutes": {}, "criteria_from": ASSESSMENT}})
+    for version_id in [d[0] for d in DOCUMENTS]:
+        for seat in TAKING_PANELS["contradictions"]:
+            call(TAKING, version_id, "contradictions", seat)
+        locs = sorted(passages_of[version_id])
+        claim_id = f"{TAKING}:{version_id}:claim"
+        claims.append({"id": claim_id, "run_id": TAKING, "spec_version_id": version_id,
+                       "first_locator": locs[1], "second_locator": locs[2],
+                       "situation": "A new situation.", "why": "A new reason.",
+                       "found_by": ["opus"], "reviewed_verdict": None, "reviewed_by": None,
+                       "reviewed_at": None})
+        for seat, holds, absolute in (("sol", True, True), ("opus", True, True),
+                                      ("kimi", False, True)):
+            verdicts.append({"claim_id": claim_id,
+                             "call_id": call(TAKING, version_id, "confirm", seat),
+                             "seat": seat, "holds": holds, "absolute": absolute,
+                             "reason": f"{seat} read it."})
     return {"aci_assessment_runs": runs, "aci_assessment_calls": calls,
             "aci_assessment_scores": scores, "aci_assessment_claims": claims,
             "aci_assessment_verdicts": verdicts}
@@ -560,8 +586,9 @@ class OutOfTenTest(unittest.TestCase):
                          ["Being honest > ¶1", "Avoiding harm > ¶1"])
         alibaba = assessment["alibaba--model-spec@2026-04-00"]
         self.assertEqual(alibaba["criteria"]["reasons"]["judges"]["fable"]["model"], "opus")
-        # Two claims confirmed, one of them absolute.
-        self.assertEqual(alibaba["contradictions"]["score"], 0)
+        # Two claims confirmed, and neither absolute: one reading alone calls
+        # the second so, and absoluteness needs two holding readings.
+        self.assertEqual(alibaba["contradictions"]["score"], 2)
 
     def test_publish_build_hands_the_builder_what_a_publication_out_of_ten_names(self):
         payload, _digest = build_payload(self.tables, depth_prompt=TEN,
@@ -593,6 +620,50 @@ class OutOfTenTest(unittest.TestCase):
                 self.assertNotIn(document_id, message)
             else:
                 self.assertIn(document_id, message)
+
+
+
+class CriteriaFromTest(unittest.TestCase):
+    """A publication built with a run that takes its criteria from an earlier
+    run carries that run's criteria and the depths given against it, and its
+    own contradictions."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tables = both_scales()
+        cls.earlier = json.loads(run_builder(cls.tables, f"--depth-prompt={TEN}",
+                                             f"--assessment-run={ASSESSMENT}"))
+        cls.payload = json.loads(run_builder(cls.tables, f"--depth-prompt={TEN}",
+                                             f"--assessment-run={TAKING}"))
+
+    def test_the_depths_are_those_given_against_the_earlier_run(self):
+        self.assertEqual(self.payload["behaviours"], self.earlier["behaviours"])
+        depths = [cov["depth"] for b in self.payload["behaviours"]
+                  for cov in b["coverage"].values()]
+        self.assertTrue(depths and all(d is not None and d["scale"] == 10 for d in depths))
+
+    def test_the_criteria_are_the_earlier_run_s_and_the_contradictions_its_own(self):
+        for document_id in DOCUMENT_IDS:
+            with self.subTest(document=document_id):
+                taken = self.payload["assessment"][document_id]
+                earlier = self.earlier["assessment"][document_id]
+                self.assertEqual(taken["criteria"], earlier["criteria"])
+                [claim] = taken["contradictions"]["claims"]
+                self.assertEqual((claim["situation"], claim["why"]),
+                                 ("A new situation.", "A new reason."))
+                self.assertEqual([(r["seat"], r["found"], r["holds"])
+                                  for r in claim["readings"]],
+                                 [("sol", False, True), ("opus", True, True),
+                                  ("kimi", False, False)])
+                self.assertEqual((claim["confirmed"], claim["absolute"]), (True, True))
+                self.assertEqual(taken["contradictions"]["score"], 0)
+                # The same four means, with this run's contradictions score.
+                self.assertAlmostEqual(taken["total"], earlier["total"]
+                                       - earlier["contradictions"]["score"], places=6)
+
+    def test_publish_build_hands_the_builder_the_run_named_and_rebuilds_the_same(self):
+        payload, _digest = build_payload(self.tables, depth_prompt=TEN, assessment_run=TAKING)
+        self.assertEqual(payload, self.payload)
 
 
 if __name__ == "__main__":

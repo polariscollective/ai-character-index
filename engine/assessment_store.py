@@ -3,8 +3,15 @@
 `engine/assess.py` prices an assessment and, with --go, hands it here. This
 module runs each document's calls in order through `assessment_run`'s rules and
 writes what they give: the run row, each call as it moves from pending to
-running to done or error, the scores each reply gives, the pooled claims and
-every verdict on them, the finders' included.
+running to done or error, the scores each criteria reply gives, the claims
+pooled across the versions of each document, and every seat's reading of every
+claim of a version, its own findings included.
+
+The versions of one document (one spec id) the run is asked to assess are
+assessed together, because their findings are pooled: every version is read
+for its criteria and searched for contradictions first, then each version's
+claims are written and read. A run that takes its criteria from an earlier run
+(`criteria_from`, `assess.py --criteria-from`) never asks the criteria.
 
 A run taken up where it stopped (`assess.py --resume`) goes through the same
 code as a fresh one, which is a run whose documents have no rows yet. Each
@@ -115,53 +122,45 @@ def criteria_scores(call_id, parsed, passages):
             for criterion in assessment_call.CRITERIA if parsed["scores"][criterion] is not None]
 
 
-def contradictions_scores(call_id, parsed):
-    """The judge's own contradictions score, when it parsed. The score from
-    confirmed claims is read from the claims and verdicts, not stored."""
-    if parsed["score"] is None:
-        return []
-    return [{"call_id": call_id, "criterion": "contradictions", "score": parsed["score"],
-             "rationale": parsed["rationale"], "locators": []}]
-
-
 def locator_pair(claim, passages):
     """A pooled claim's two passages as their locators, in code point order,
     which is the byte order the table's `collate "C"` compares them in."""
     return tuple(sorted((passages[claim["first"] - 1][0], passages[claim["second"] - 1][0])))
 
 
-def distinct_claims(pooled, passages):
-    """The pooled claims whose two passages resolve to different locators: the
-    only ones `claim_rows` writes, so the only ones read, confirmed or priced."""
-    return [claim for claim in pooled if len(set(locator_pair(claim, passages))) == 2]
+def groups(documents):
+    """`documents` in groups, one per document of the index (a spec id), each
+    in the order its versions are named, the groups in the order each first
+    appears. The findings of one group are pooled."""
+    by_spec = {}
+    for document in documents:
+        by_spec.setdefault(document["version"]["spec_id"], []).append(document)
+    return list(by_spec.values())
 
 
-def confirmations(found, seats, passages):
-    """(the pooled claims, {seat: [(index into the pool, claim)]}) from
-    `found`, each contradictions seat's parsed items: the pool as
-    `claim_rows` writes it, and for each seat with something to confirm, in
-    seat order, the claims it did not find, as
-    `assessment_run.claims_to_confirm` gives them.
+def pooled_claims(documents, found, seats):
+    """{version id: claims}, the claims of each of `documents`, the versions of
+    one document, pooled across all of them from `found`, {version id: {seat:
+    items}}, by `assessment_run.pool_versions`.
 
-    Pricing a confirmation (`to_ask`) and asking it (`Assessment.document`)
-    both read it from here, so the claims priced are the claims asked about."""
-    pooled = distinct_claims(assessment_run.pool_claims(found, seats), passages)
-    to_confirm = {}
-    for seat in seats:
-        claims = assessment_run.claims_to_confirm(pooled, seat)
-        if claims:
-            to_confirm[seat] = claims
-    return pooled, to_confirm
+    The versions are pooled in the order of their version, whatever order they
+    were named in, so a run and a resume that names them otherwise pool the same
+    claims. Pricing a reading (`to_ask`) and asking it (`Assessment.group`) both
+    read the claims from here, so the claims priced are the claims asked about."""
+    ordered = sorted(documents, key=lambda d: (d["version"]["version"], d["version"]["id"]))
+    return assessment_run.pool_versions(
+        {d["version"]["id"]: found.get(d["version"]["id"], {}) for d in ordered},
+        {d["version"]["id"]: d["passages"] for d in ordered}, seats)
 
 
 def claim_rows(run_id, version_id, pooled, claim_ids, passages):
     """One row per pooled claim whose two passages resolve to different
     locators, its two locators in code point order (`locator_pair`).
 
-    A claim whose two passages resolve to the same locator is counted as
-    unreadable on the finder's call and gets no row, so the table's
-    `first_locator < second_locator` check can never refuse a row after the
-    calls that found the claim were already paid for."""
+    `assessment_run.pool_versions` makes no claim of one locator twice, so the
+    table's `first_locator < second_locator` check can never refuse a row after
+    the calls that found the claim were already paid for; the check here keeps
+    it so."""
     rows = []
     for claim_id, claim in zip(claim_ids, pooled):
         first, second = locator_pair(claim, passages)
@@ -195,25 +194,34 @@ def seated_at_start(question, seats, rows):
                          and call.get("model")}
 
 
-def only_a_new_run(rows, panels):
-    """Why taking the run up again cannot finish assessing the document these
-    rows are about, or None when it can.
+def only_a_new_run(group, panels):
+    """Why taking the run up again cannot finish assessing the versions of one
+    document in `group`, [(version row, rows the run holds about it)], every
+    version of it the run is asked to assess, or None when it can. It answers
+    for the group as a whole, since their claims are pooled together.
 
-    Once a document's claims are written, every contradictions seat reads them.
-    A contradictions seat with no done call by then (possible only when its
-    every candidate failed, since a stop raises before claims are written)
-    cannot be asked again: what it found would change claims other seats have
-    already confirmed or rejected. And a done call whose reply was not stored
+    Once a version's claims are written, every contradictions seat reads them.
+    A contradictions seat with no done call on one of these versions by then
+    (possible only when its every candidate failed, since a stop raises before
+    claims are written) cannot be asked again: what it found could change
+    claims already read, on that version or on another that reads the same. A
+    version the run has not begun, beside one whose claims are written, is
+    such a version for every seat. And a done call whose reply was not stored
     cannot have its rows rebuilt."""
-    done = done_calls(rows)
-    if rows["claims"]:
-        silent = [seat for seat in panels["contradictions"]
-                  if ("contradictions", seat) not in done]
+    several = len(group) > 1
+
+    def on(version):
+        return f" on {name_of(version)}" if several else ""
+    if any(rows["claims"] for _version, rows in group):
+        silent = [f"{seat}{on(version)}" for version, rows in group
+                  for seat in panels["contradictions"]
+                  if ("contradictions", seat) not in done_calls(rows)]
         if silent:
             return (f"its claimed contradictions are written and already read, and "
                     f"{' and '.join(silent)} gave no contradictions answer, so asking again "
                     "now would change claims other seats have already read")
-    unkept = [f"{call['seat']} {call['question']}" for call in rows["calls"]
+    unkept = [f"{call['seat']} {call['question']}{on(version)}" for version, rows in group
+              for call in rows["calls"]
               if call["status"] == "done" and call.get("raw_output") is None]
     if unkept:
         return (f"no reply was stored for {', '.join(unkept)}, so the rows it gave cannot "
@@ -221,31 +229,42 @@ def only_a_new_run(rows, panels):
     return None
 
 
-def to_ask(document, rows, panels):
-    """[(question, seat, claims)] for every call assessing `document` can make,
-    given `rows`, the rows its run already holds about it, in the order they
-    are made: every seat of each question with no done call, then every
-    confirmation not done that has claims to confirm.
+def to_ask(documents, rows, panels, criteria=True):
+    """{version id: [(question, seat, claims)]} for every call assessing
+    `documents`, the versions of one document the run is asked to assess, can
+    make, given `rows`, {version id: the rows the run already holds about it},
+    in the order each version's calls are made: every seat of each question
+    asked with no done call, then every reading not done of a version that has
+    claims to read. With `criteria` false no criteria call is listed, since
+    the run takes them from another.
 
-    `claims` is what a confirmation will be asked about, and None for a
-    question that is not a confirmation. It is None for a confirmation too
-    while a contradictions seat has still to answer, since the claims are not
-    known yet: every contradictions seat's confirmation is then listed, as
+    `claims` is what a reading will be asked about, every claim of its version,
+    and None for a question that is not a reading. It is None for a reading too
+    while a contradictions seat has still to answer on any of these versions,
+    since the claims pooled across them are not known yet: every
+    contradictions seat's reading of every version is then listed, as
     `assessment_run.price_document` prices it."""
-    passages = document["passages"]
-    done = done_calls(rows)
-    asked = [(question, seat, None) for question in assessment_call.QUESTIONS
-             for seat in panels[question] if (question, seat) not in done]
     seats = panels["contradictions"]
-    if not all(("contradictions", seat) in done for seat in seats):
-        return asked + [("confirm", seat, None) for seat in seats
-                        if ("confirm", seat) not in done]
-    parse = parse_contradictions(passages)
-    found = {seat: parse(done[("contradictions", seat)]["raw_output"])[0]["items"]
-             for seat in seats}
-    _pooled, to_confirm = confirmations(found, seats, passages)
-    return asked + [("confirm", seat, [claim for _i, claim in claims])
-                    for seat, claims in to_confirm.items() if ("confirm", seat) not in done]
+    done = {d["version"]["id"]: done_calls(rows.get(d["version"]["id"]) or empty_rows())
+            for d in documents}
+    asked = {version_id: [(question, seat, None)
+                          for question in assessment_run.questions(criteria)
+                          for seat in panels[question] if (question, seat) not in held]
+             for version_id, held in done.items()}
+    if not all(("contradictions", seat) in held for held in done.values() for seat in seats):
+        for version_id, held in done.items():
+            asked[version_id] += [("confirm", seat, None) for seat in seats
+                                  if ("confirm", seat) not in held]
+        return asked
+    found = {d["version"]["id"]: {
+        seat: parse_contradictions(d["passages"])(
+            done[d["version"]["id"]][("contradictions", seat)]["raw_output"])[0]["items"]
+        for seat in seats} for d in documents}
+    for version_id, claims in pooled_claims(documents, found, seats).items():
+        if claims:
+            asked[version_id] += [("confirm", seat, claims) for seat in seats
+                                  if ("confirm", seat) not in done[version_id]]
+    return asked
 
 
 class Assessment:
@@ -254,13 +273,16 @@ class Assessment:
 
     `run` is the row of a run taken up where it stopped, and `existing` the
     rows it already holds, {version id: rows} in `index_store.assessment_rows`'s
-    shape. Both are omitted for a fresh run."""
+    shape. Both are omitted for a fresh run. `criteria_from` is the row of the
+    run whose criteria this run takes, fresh or taken up: it then asks no
+    criteria call."""
 
     def __init__(self, store, config, panels, call_model, panel=PANEL, run=None,
-                 existing=None):
+                 existing=None, criteria_from=None):
         self.store, self.config, self.panels = store, config, panels
         self.call_model, self.panel = call_model, panel
         self.run = run
+        self.criteria_from = criteria_from
         self.run_id = run["id"] if run is not None else None
         # Whether the run row exists, so a stop can name it.
         self.written = run is not None
@@ -293,12 +315,17 @@ class Assessment:
             self.store.update("aci_assessment_runs", {"id": self.run_id}, patch)
             return
         self.run_id = str(uuid.uuid4())
+        panels = dict(self.panels)
+        prompts = {question: assessment_call.prompt_sha256(question) for question in PROMPTS}
+        config = {"substitutes": self.config.get("substitutes", {})}
+        if self.criteria_from is not None:
+            # What the criteria were asked under is the earlier run's record.
+            panels["criteria"] = list(self.criteria_from["panels"]["criteria"])
+            prompts["criteria"] = self.criteria_from["prompts"]["criteria"]
+            config["criteria_from"] = self.criteria_from["id"]
         self.store.insert("aci_assessment_runs", [{
             "id": self.run_id, "created_by": created_by, "status": "pending",
-            "panels": self.panels,
-            "prompts": {question: assessment_call.prompt_sha256(question)
-                        for question in PROMPTS},
-            "config": {"substitutes": self.config.get("substitutes", {})},
+            "panels": panels, "prompts": prompts, "config": config,
             "estimated_usd": estimate}])
         self.written = True
         patch = {"status": "running", "started_at": now()}
@@ -437,89 +464,104 @@ class Assessment:
         held.update(tuple(row[column] for column in key) for row in new)
         self.insert(table, new)
 
-    def document(self, document):
-        """Criteria per criteria seat, contradictions per contradictions seat,
-        the pooled claims with their finders' verdicts, then a confirmation per
-        contradictions seat that has claims it did not find.
+    def group(self, documents):
+        """The versions of one document the run is asked to assess, together:
+        each version's criteria, per criteria seat, unless the run takes them
+        from another run, and its contradictions, per contradictions seat, in
+        the order the versions are named; then, once every version has been
+        searched, each version's claims, pooled across them all
+        (`pooled_claims`), and every contradictions seat's reading of every
+        claim of that version.
 
-        Within each question, `seated` starts at the question's configured
-        seats, and the model of every call of it the run already holds done,
-        and gains every model that answers it, so a later seat's substitute
-        never repeats a model this document has already had answer the same
-        question.
+        Within each question and version, `seated` starts at the question's
+        configured seats, and the model of every call of it the run already
+        holds done, and gains every model that answers it, so a later seat's
+        substitute never repeats a model that version has already had answer
+        the same question.
 
-        What the run already holds about the document is kept (the module's
+        What the run already holds about the versions is kept (the module's
         docstring says how), so a fresh run and one taken up again are one
-        loop. A document `only_a_new_run` names is refused."""
+        loop. A group `only_a_new_run` names is refused."""
+        held = {d["version"]["id"]: self.existing.get(d["version"]["id"]) or empty_rows()
+                for d in documents}
+        refusal = only_a_new_run([(d["version"], held[d["version"]["id"]]) for d in documents],
+                                 self.panels)
+        if refusal is not None:
+            names = ", ".join(name_of(d["version"]) for d in documents)
+            raise SystemExit(f"{names} cannot be taken up again: {refusal}. "
+                             "Assess them in a new run.")
+        found = {d["version"]["id"]: self.search(d, held[d["version"]["id"]]) for d in documents}
+        pooled = pooled_claims(documents, found, self.panels["contradictions"])
+        for d in documents:
+            self.read(d, held[d["version"]["id"]], pooled[d["version"]["id"]])
+
+    def ask(self, version, rows, question, seat, system, user, parse, seated):
+        """`call`, for the call of `question` and `seat` about `version`,
+        whose rows are `rows`, adding the model that answered to `seated`."""
+        existing = next((call for call in rows["calls"]
+                         if (call["question"], call["seat"]) == (question, seat)), None)
+        call_id, parsed, tag = self.call(version, question, seat, system, user, parse,
+                                         seated, existing)
+        if tag is not None:
+            seated.add(tag)
+        return call_id, parsed
+
+    def search(self, document, rows):
+        """One version's criteria, unless the run takes them from another run,
+        with the scores each reply gives, then its contradictions. Returns
+        {seat: items} for every contradictions seat that answered."""
         version, passages, labelled = (document["version"], document["passages"],
                                        document["labelled"])
-        rows = self.existing.get(version["id"]) or empty_rows()
-        refusal = only_a_new_run(rows, self.panels)
-        if refusal is not None:
-            raise SystemExit(f"{name_of(version)} cannot be taken up again: {refusal}. "
-                             "Assess it in a new run.")
-        calls = {(call["question"], call["seat"]): call for call in rows["calls"]}
         scored = {(row["call_id"], row["criterion"]) for row in rows["scores"]}
-        read = {(row["claim_id"], row["seat"]) for row in rows["verdicts"]}
-        written = {(row["first_locator"], row["second_locator"]): row["id"]
-                   for row in rows["claims"]}
-
-        def ask(question, seat, system, user, parse, seated):
-            call_id, parsed, tag = self.call(version, question, seat, system, user, parse,
-                                             seated, calls.get((question, seat)))
-            if tag is not None:
-                seated.add(tag)
-            return call_id, parsed
-
-        seated = seated_at_start("criteria", self.panels["criteria"], rows)
-        for seat in self.panels["criteria"]:
+        if self.criteria_from is None:
+            seated = seated_at_start("criteria", self.panels["criteria"], rows)
             system, user = assessment_call.compose("criteria", labelled)
-            call_id, parsed = ask("criteria", seat, system, user, parse_criteria(passages),
-                                  seated)
-            if parsed is not None:
-                self.insert_new("aci_assessment_scores",
-                                criteria_scores(call_id, parsed, passages), scored,
-                                ("call_id", "criterion"))
-
+            for seat in self.panels["criteria"]:
+                call_id, parsed = self.ask(version, rows, "criteria", seat, system, user,
+                                           parse_criteria(passages), seated)
+                if parsed is not None:
+                    self.insert_new("aci_assessment_scores",
+                                    criteria_scores(call_id, parsed, passages), scored,
+                                    ("call_id", "criterion"))
         seats = self.panels["contradictions"]
         seated = seated_at_start("contradictions", seats, rows)
-        found, finder_calls = {}, {}
+        system, user = assessment_call.compose("contradictions", labelled)
+        found = {}
         for seat in seats:
-            system, user = assessment_call.compose("contradictions", labelled)
-            call_id, parsed = ask("contradictions", seat, system, user,
-                                  parse_contradictions(passages), seated)
-            finder_calls[seat] = call_id
+            _call_id, parsed = self.ask(version, rows, "contradictions", seat, system, user,
+                                        parse_contradictions(passages), seated)
             if parsed is not None:
                 found[seat] = parsed["items"]
-                self.insert_new("aci_assessment_scores", contradictions_scores(call_id, parsed),
-                                scored, ("call_id", "criterion"))
+        return found
 
-        # A claim whose two passages share a locator gets no row (it is
-        # counted as unreadable on the finder's call), so it is dropped before
-        # anything else: no verdict or confirmation is asked about a claim
-        # nothing was written for. A claim the run already wrote keeps its id.
-        pooled, to_confirm = confirmations(found, seats, passages)
+    def read(self, document, rows, claims):
+        """One version's claims, written, then read by every contradictions
+        seat, each reading every claim, the ones it found included. A version
+        with no claim is read by nobody. A claim the run already wrote keeps
+        its id, and a reading already written is not written twice."""
+        version, passages, labelled = (document["version"], document["passages"],
+                                       document["labelled"])
+        written = {(row["first_locator"], row["second_locator"]): row["id"]
+                   for row in rows["claims"]}
+        read = {(row["claim_id"], row["seat"]) for row in rows["verdicts"]}
         claim_ids = [written.get(locator_pair(claim, passages)) or str(uuid.uuid4())
-                     for claim in pooled]
+                     for claim in claims]
         self.insert_new("aci_assessment_claims",
-                        claim_rows(self.run_id, version["id"], pooled, claim_ids, passages),
+                        claim_rows(self.run_id, version["id"], claims, claim_ids, passages),
                         set(written), ("first_locator", "second_locator"))
-        self.insert_new("aci_assessment_verdicts", [
-            {"claim_id": claim_id, "call_id": finder_calls[seat], "seat": seat,
-             "holds": True, "absolute": None, "reason": "found it"}
-            for claim_id, claim in zip(claim_ids, pooled) for seat in claim["found_by"]],
-            read, ("claim_id", "seat"))
-
+        if not claims:
+            return
+        seats = self.panels["contradictions"]
         seated = seated_at_start("confirm", seats, rows)
-        for seat, indexed in to_confirm.items():
-            claims = [claim for _i, claim in indexed]
-            system, user = assessment_call.compose_confirm(labelled, claims)
-            call_id, verdicts = ask("confirm", seat, system, user, parse_confirm(claims), seated)
+        system, user = assessment_call.compose_confirm(labelled, claims)
+        for seat in seats:
+            call_id, verdicts = self.ask(version, rows, "confirm", seat, system, user,
+                                         parse_confirm(claims), seated)
             if verdicts is None:
                 continue
             self.insert_new("aci_assessment_verdicts", [
-                {"claim_id": claim_ids[i], "call_id": call_id, "seat": seat,
+                {"claim_id": claim_ids[position - 1], "call_id": call_id, "seat": seat,
                  "holds": verdict["holds"], "absolute": verdict["absolute"],
                  "reason": verdict["reason"]}
-                for i, verdict in assessment_run.by_claim(indexed, verdicts).items()],
+                for position, verdict in verdicts.items()],
                 read, ("claim_id", "seat"))

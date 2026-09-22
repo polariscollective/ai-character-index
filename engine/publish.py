@@ -24,7 +24,10 @@ every cell must also carry a depth from each of its run's judges.
 Depths are out of four unless --depth-prompt names the prompt of ten, which is
 read with the assessment run its depths were given with, --assessment-run. Such
 a publication also carries each document's assessment as a whole, so that run
-must have assessed every document it carries. It carries no comparison paragraph
+must have assessed every document it carries. A run that takes its criteria
+from an earlier run (`engine/assess.py --criteria-from`) is named the same way:
+its criteria and its depths are the earlier run's, read by that run's id, and
+its contradictions its own, while the build parameters record the run named. It carries no comparison paragraph
 and no depth note, since every one written so far quotes a figure out of 4, and
 its build parameters record all three choices. The portal names neither flag, so
 what it publishes is what it published before the scale of ten existed.
@@ -177,9 +180,9 @@ def _depth_complete_keys(store, matched, assessment_run_id=None):
     table whole.
 
     With no assessment run this reads `aci_depths`, the scale of four, exactly
-    as today. With one it reads `aci_depths_out_of_ten` instead, for that
-    assessment run and the current prompt of ten
-    (`depth_call.prompt_sha256(10)`).
+    as today. With one it reads `aci_depths_out_of_ten` instead, for the run
+    whose criteria stand for that assessment run (`index_store.criteria_run_id`)
+    and the current prompt of ten (`depth_call.prompt_sha256(10)`).
     """
     ids = sorted({call["id"] for calls in matched.values() for call in calls})
     if not ids:
@@ -191,7 +194,8 @@ def _depth_complete_keys(store, matched, assessment_run_id=None):
     else:
         table = "aci_depths_out_of_ten"
         params = {"call_id": call_ids, "status": "eq.done",
-                  "assessment_run_id": f"eq.{assessment_run_id}",
+                  "assessment_run_id":
+                      f"eq.{index_store.criteria_run_id(store, assessment_run_id)}",
                   "prompt_sha256": f"eq.{depth_call.prompt_sha256(10)}"}
     done_depths = {row["call_id"] for row in store.select(table, params)}
     return {key for key, calls in matched.items()
@@ -373,7 +377,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         raise SystemExit(
             f"--depth-prompt={depth_prompt} is not the prompt of ten as it stands, {current}. "
             "A new publication carries depths given under the current prompt: give them "
-            f"again (engine/panel/depth_pass.py --runs=... --assessment-run={assessment_run} "
+            "again (engine/panel/depth_pass.py --runs=... "
+            f"--assessment-run={index_store.criteria_run_id(store, assessment_run)} "
             f"--go), then build with --depth-prompt={current}.")
     config = config or json.loads((HERE / "panel" / "panel-config.json").read_text())
     panel_name = config["display"]["panel"]

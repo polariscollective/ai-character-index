@@ -7,7 +7,13 @@ One call scores four of them. The other searches the document for contradictions
 it leaves unresolved, which is a long, careful read with a list for an answer, so
 it is asked on its own. Both read the whole document as numbered passages, the
 way a passage call does, so a reply cites passages by number and the numbers
-resolve to locators."""
+resolve to locators.
+
+Since the second method (22 September 2026), the contradictions call lists every
+contradiction it finds and gives no score, and a third call reads every claimed
+contradiction of the document, whoever found it. Both ask under their v2
+prompts; the v1 files stay, so a run of the first method keeps digests that name
+a file."""
 
 import hashlib
 import re
@@ -15,14 +21,13 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PROMPTS = {"criteria": HERE / "prompts" / "assessment-criteria-v1.txt",
-           "contradictions": HERE / "prompts" / "assessment-contradictions-v1.txt",
-           "confirm": HERE / "prompts" / "assessment-confirm-v1.txt"}
+           "contradictions": HERE / "prompts" / "assessment-contradictions-v2.txt",
+           "confirm": HERE / "prompts" / "assessment-confirm-v2.txt"}
 # The two questions a document is scored on. "confirm" is a follow-up call that
-# puts one judge's contradictions to another, not a third question about the
-# document, so it lives in PROMPTS but not here.
+# puts the claimed contradictions to every reader, not a third question about
+# the document, so it lives in PROMPTS but not here.
 QUESTIONS = ("criteria", "contradictions")
 CRITERIA = ("conflict_rules", "rule_force", "reasons", "situations")
-MAX_CONTRADICTIONS = 8
 
 ASK = {"criteria": "Answer with the nine lines the instructions give.",
        "contradictions": "Answer in the form the instructions give."}
@@ -82,8 +87,9 @@ def compose(question, passages):
 
 
 def compose_confirm(passages, claims):
-    """(system, user) for putting another judge's claimed contradictions to a
-    second reader. Each claim is {"first": int, "second": int, "situation":
+    """(system, user) for putting the claimed contradictions of a document to
+    one reader, which may have found some of them. Each claim is {"first": int,
+    "second": int, "situation":
     str, "why": str} with 1-based passage numbers into passages. The document
     comes first, numbered exactly as compose numbers it, then the claims, one
     per line, numbered in the order given."""
@@ -164,17 +170,21 @@ def parse_criteria(reply, passage_count):
 
 
 def parse_contradictions(reply, passage_count):
-    """The contradictions listed, the score and its rationale.
+    """The contradictions listed, every one of them in the order given, and a
+    score and its rationale when the reply gives them.
 
     An item must name exactly two different passages that exist, then a
     situation and a reason, separated by bars. One that does not is counted as
-    unreadable rather than guessed at. At most MAX_CONTRADICTIONS are kept, in
-    the order given, which the prompt asks to be most serious first."""
-    items, unreadable = [], 0
+    unreadable rather than guessed at. The v2 prompt asks for no score, so a
+    reply is complete once it answers at all: one readable item, or the line
+    saying none was found. A score is still read when one is given, as a reply
+    to the v1 prompt gives it."""
+    items, unreadable, said_none = [], 0, False
     score = rationale = None
     for label, value in _labelled(reply):
         if label == "CONTRADICTION":
             if value.lower().startswith("none"):
+                said_none = True
                 continue
             parts = [part.strip() for part in value.split("|")]
             numbers = (_passage_numbers(parts[0], passage_count)
@@ -189,9 +199,8 @@ def parse_contradictions(reply, passage_count):
                 score = _score(value)
         elif label == "CONTRADICTIONS_RATIONALE" and value:
             rationale = value
-    return {"score": score, "rationale": rationale,
-            "items": items[:MAX_CONTRADICTIONS], "unreadable": unreadable,
-            "complete": score is not None}
+    return {"score": score, "rationale": rationale, "items": items, "unreadable": unreadable,
+            "complete": bool(items) or said_none}
 
 
 def parse_confirm(reply, claim_count):

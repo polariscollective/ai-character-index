@@ -306,51 +306,160 @@ def verdict(holds, absolute=False, reason=""):
 
 
 class SettleTest(unittest.TestCase):
-    SEATS = ["sol", "fable", "kimi"]
+    """A claim is settled on its readings, one per seat that read it. Finding
+    a claim is not a reading of it."""
+    SEATS = ["sol", "opus", "kimi"]
 
     def settle(self, pooled, verdicts_by_seat):
         return assessment_run.settle(pooled, verdicts_by_seat, self.SEATS, PASSAGES)
 
-    def test_one_finder_and_one_holding_reader_confirm_a_claim(self):
+    def test_two_holding_readings_confirm_a_claim(self):
         pooled = [dict(item(2, 3, "sit", "why"), found_by=["sol"])]
-        [claim] = self.settle(pooled, {"fable": {0: verdict(True, reason="Matches.")},
+        [claim] = self.settle(pooled, {"sol": {0: verdict(True, reason="Clashes.")},
+                                       "opus": {0: verdict(True, reason="Matches.")},
                                        "kimi": {0: verdict(False, reason="No.")}})
         self.assertEqual(claim, {
             "first": PASSAGES[1][0], "second": PASSAGES[2][0], "situation": "sit",
-            "why": "why", "found_by": ["sol"], "holds": ["fable"], "does_not_hold": ["kimi"],
-            "absolute": False, "confirmed": True,
-            "reasons": {"fable": "Matches.", "kimi": "No."}})
+            "why": "why", "found_by": ["sol"], "holds": ["sol", "opus"],
+            "does_not_hold": ["kimi"], "absolute": False, "confirmed": True,
+            "reasons": {"sol": "Clashes.", "opus": "Matches.", "kimi": "No."}})
 
-    def test_two_finders_confirm_a_claim_nobody_else_holds(self):
+    def test_two_finders_and_one_objection_the_objection_counts(self):
+        # sol and kimi found it; on reading every claim, kimi is persuaded by
+        # opus's objection and only sol still says it holds.
         pooled = [dict(item(1, 2), found_by=["sol", "kimi"])]
-        [claim] = self.settle(pooled, {"fable": {0: verdict(False)}})
-        self.assertTrue(claim["confirmed"])
-        self.assertEqual(claim["does_not_hold"], ["fable"])
-
-    def test_one_finder_rejected_by_both_readers_is_not_confirmed(self):
-        pooled = [dict(item(1, 2), found_by=["kimi"])]
-        [claim] = self.settle(pooled, {"sol": {0: verdict(False)},
-                                       "fable": {0: verdict(False)}})
+        [claim] = self.settle(pooled, {"sol": {0: verdict(True)},
+                                       "opus": {0: verdict(False, reason="Settled in 3.")},
+                                       "kimi": {0: verdict(False, reason="Settled in 3.")}})
         self.assertFalse(claim["confirmed"])
-        self.assertEqual(claim["does_not_hold"], ["sol", "fable"])
+        self.assertEqual(claim["does_not_hold"], ["opus", "kimi"])
 
-    def test_one_finder_whose_readers_failed_to_answer_is_not_confirmed(self):
-        pooled = [dict(item(1, 2), found_by=["kimi"])]
+    def test_finding_a_claim_is_not_a_reading_of_it(self):
+        pooled = [dict(item(1, 2), found_by=["sol", "opus", "kimi"])]
+        [claim] = self.settle(pooled, {"sol": {0: verdict(True)}})
+        self.assertFalse(claim["confirmed"], "three finders and one reading that holds")
         [claim] = self.settle(pooled, {})
         self.assertFalse(claim["confirmed"])
         self.assertEqual((claim["holds"], claim["does_not_hold"]), ([], []))
 
-    def test_a_claim_is_absolute_once_any_reader_says_so(self):
-        pooled = [dict(item(1, 2), found_by=["kimi"])]
-        [claim] = self.settle(pooled, {"sol": {0: verdict(False, absolute=True)},
-                                       "fable": {0: verdict(True, absolute=None)}})
-        self.assertTrue(claim["absolute"])
+    def test_a_first_method_finder_s_row_is_a_reading_that_holds(self):
+        # A run of the first method wrote a "found it" row for each finder,
+        # holding and silent on absoluteness: two of them confirm the claim.
+        found = {"holds": True, "absolute": None, "reason": "found it"}
+        pooled = [dict(item(1, 2), found_by=["sol", "kimi"])]
+        [claim] = self.settle(pooled, {"sol": {0: found}, "kimi": {0: found},
+                                       "opus": {0: verdict(False)}})
+        self.assertTrue(claim["confirmed"])
+        self.assertFalse(claim["absolute"], "opus answered the question, saying no")
 
-    def test_a_claim_every_seat_found_was_never_asked_about_its_absoluteness(self):
-        pooled = [dict(item(1, 2), found_by=["sol", "fable", "kimi"])]
-        [claim] = self.settle(pooled, {})
+    def test_absolute_from_a_reading_that_does_not_hold_does_not_count(self):
+        pooled = [dict(item(1, 2), found_by=["kimi"])]
+        [claim] = self.settle(pooled, {"sol": {0: verdict(True, absolute=True)},
+                                       "opus": {0: verdict(True, absolute=False)},
+                                       "kimi": {0: verdict(False, absolute=True)}})
+        self.assertTrue(claim["confirmed"])
+        self.assertFalse(claim["absolute"])
+
+    def test_absolute_needs_two_holding_readings_that_say_so(self):
+        pooled = [dict(item(1, 2), found_by=["kimi"])]
+        [one] = self.settle(pooled, {"sol": {0: verdict(True, absolute=True)},
+                                     "opus": {0: verdict(True, absolute=None)},
+                                     "kimi": {0: verdict(True, absolute=False)}})
+        self.assertFalse(one["absolute"])
+        [two] = self.settle(pooled, {"sol": {0: verdict(True, absolute=True)},
+                                     "opus": {0: verdict(False, absolute=False)},
+                                     "kimi": {0: verdict(True, absolute=True)}})
+        self.assertTrue(two["absolute"])
+
+    def test_a_claim_no_reading_was_asked_about_has_no_absoluteness(self):
+        # A claim of the first method every seat found was put to nobody, so
+        # whether it is absolute was never asked.
+        found = {"holds": True, "absolute": None, "reason": "found it"}
+        pooled = [dict(item(1, 2), found_by=["sol", "opus", "kimi"])]
+        [claim] = self.settle(pooled, {seat: {0: found} for seat in self.SEATS})
         self.assertIsNone(claim["absolute"])
         self.assertTrue(claim["confirmed"])
+
+
+V1 = "lab--spec@2026-01-01"
+V2 = "lab--spec@2026-06-01"
+V3 = "lab--spec@2026-09-01"
+V4 = "lab--spec@2026-12-01"
+
+
+def version(head, texts):
+    """The passages of one version, `texts` {path: text} in document order."""
+    return [(f"{head} > {path}", path.split(" > ")[0], text) for path, text in texts.items()]
+
+
+SAME = {"#a > ¶1": "In a conflict, safety comes first.", "#b > ¶1": "Never lie.",
+        "#b > ¶2": "Keep the operator's instructions private."}
+
+
+class PoolVersionsTest(unittest.TestCase):
+    """The candidates found on every version of one document, pooled by the
+    pair of passages without the version head, and carried to every version
+    where both passages read the same."""
+    SEATS = ["sol", "opus", "kimi"]
+
+    def test_a_pair_is_carried_where_both_passages_read_the_same_and_nowhere_else(self):
+        passages = {
+            V1: version(V1, SAME),
+            # The same text, one passage earlier.
+            V2: version(V2, {"#new > ¶1": "Be brief.", **SAME}),
+            # ¶2 of #b reworded.
+            V3: version(V3, {**SAME, "#b > ¶2": "Keep the operator's instructions secret."}),
+            # ¶2 of #b gone.
+            V4: version(V4, {"#a > ¶1": SAME["#a > ¶1"], "#b > ¶1": SAME["#b > ¶1"]}),
+        }
+        found = {V1: {"sol": [item(2, 3, "A user asks.", "They clash.")]},
+                 V2: {}, V3: {}, V4: {}}
+        pooled = assessment_run.pool_versions(found, passages, self.SEATS)
+        self.assertEqual(pooled[V1], [{"first": 2, "second": 3, "situation": "A user asks.",
+                                       "why": "They clash.", "found_by": ["sol"]}])
+        # Carried, and numbered as that version numbers the two passages.
+        self.assertEqual(pooled[V2], [{"first": 3, "second": 4, "situation": "A user asks.",
+                                       "why": "They clash.", "found_by": ["sol"]}])
+        self.assertEqual(pooled[V3], [])
+        self.assertEqual(pooled[V4], [])
+
+    def test_found_by_is_every_seat_that_proposed_the_pair_where_it_applies(self):
+        passages = {V1: version(V1, SAME), V2: version(V2, SAME),
+                    V3: version(V3, {**SAME, "#b > ¶2": "Keep it secret."})}
+        found = {V1: {"kimi": [item(3, 2, "kimi's situation", "kimi's reason")]},
+                 V2: {"sol": [item(2, 3, "sol's situation", "sol's reason")],
+                      "kimi": [item(2, 3)]},
+                 # On a reworded ¶2: a proposal about other words.
+                 V3: {"opus": [item(2, 3, "opus's situation", "opus's reason")]}}
+        pooled = assessment_run.pool_versions(found, passages, self.SEATS)
+        # The first proposal in version order, then seat order, gives the words
+        # and the order of the two passages, on every version it applies to.
+        for head in (V1, V2):
+            self.assertEqual(pooled[head], [{"first": 3, "second": 2,
+                                             "situation": "kimi's situation",
+                                             "why": "kimi's reason",
+                                             "found_by": ["sol", "kimi"]}])
+        self.assertEqual(pooled[V3], [{"first": 2, "second": 3,
+                                       "situation": "opus's situation", "why": "opus's reason",
+                                       "found_by": ["opus"]}])
+
+    def test_one_claim_per_pair_whichever_way_round_in_the_order_first_proposed(self):
+        passages = {V1: version(V1, SAME)}
+        found = {V1: {"sol": [item(2, 3, "first seen", "because")],
+                      "opus": [item(1, 2), item(3, 2, "later", "other")],
+                      "kimi": [item(3, 2)]}}
+        pooled = assessment_run.pool_versions(found, passages, self.SEATS)
+        self.assertEqual(pooled[V1], [
+            {"first": 2, "second": 3, "situation": "first seen", "why": "because",
+             "found_by": ["sol", "opus", "kimi"]},
+            {"first": 1, "second": 2, "situation": "s", "why": "w", "found_by": ["opus"]}])
+
+    def test_a_pair_whose_two_passages_share_a_locator_is_no_claim(self):
+        shared = f"{V1} > #b > ¶2"
+        passages = {V1: [(shared, "B", "one reading"), (shared, "B", "another reading")]}
+        pooled = assessment_run.pool_versions({V1: {"sol": [item(1, 2)]}}, passages,
+                                              self.SEATS)
+        self.assertEqual(pooled, {V1: []})
 
 
 class ScoreTest(unittest.TestCase):
@@ -396,6 +505,21 @@ class PriceTest(unittest.TestCase):
         self.assertEqual(assessment_run.CONFIRM_CLAIMS_CHARS, 3000)
         self.assertAlmostEqual(assessment_run.price_document(PASSAGES, panels, config), expected)
         self.assertGreater(expected, 0)
+
+    def test_a_run_that_takes_its_criteria_is_priced_on_finding_and_reading_only(self):
+        config = seat_call.h.load_config()
+        panels = {"criteria": ["sol", "fable", "deepseek"],
+                  "contradictions": ["sol", "opus", "kimi"]}
+        self.assertEqual(assessment_run.fresh_calls(panels, criteria=False),
+                         [("contradictions", seat, None) for seat in ("sol", "opus", "kimi")]
+                         + [("confirm", seat, None) for seat in ("sol", "opus", "kimi")])
+        system, user = assessment_call.compose("criteria", PASSAGES)
+        criteria = sum(seat_call.priced(seat, system, user,
+                                        assessment_run.OUTPUT_TOKENS["criteria"], config)
+                       for seat in panels["criteria"])
+        self.assertAlmostEqual(
+            assessment_run.price_document(PASSAGES, panels, config, criteria=False),
+            assessment_run.price_document(PASSAGES, panels, config) - criteria)
 
 
 if __name__ == "__main__":

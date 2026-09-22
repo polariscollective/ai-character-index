@@ -362,8 +362,13 @@ class PilotTest(unittest.TestCase):
         self.assertTrue(pair_23["confirmed"])
         self.assertFalse(pair_12["confirmed"])
         # fable and deepseek both confirmed the pair sol found, in the order
-        # the panel asks them (sol itself is never asked, having found it).
-        self.assertEqual(pair_23["holds"], ["fable", "deepseek"])
+        # the panel asks them (sol itself is never asked, having found it):
+        # the pilot's finders are readings that hold, as a stored run's "found
+        # it" rows are, since settle counts readings alone.
+        self.assertEqual(pair_23["holds"], ["sol", "fable", "deepseek"])
+        self.assertEqual(pair_23["reasons"]["sol"], "found it")
+        self.assertIn("Found by sol. Held by fable (opus) (Matches.), deepseek (Matches.).",
+                      text)
         # Every confirmer of the pair deepseek found (sol and fable, in that
         # order) rejected it.
         self.assertEqual(pair_12["does_not_hold"], ["sol", "fable"])

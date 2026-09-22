@@ -278,10 +278,13 @@
       "deepseek": [
         "glm",
         "kimi"
+      ],
+      "opus": [
+        "glm"
       ]
     }
   },
-  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. glm last: kimi holds a contradictions seat of its own in the assessment, so on a document where every Anthropic model is refused, as the Alibaba Model Spec was, nobody else could take fable's contradictions seat. frontier_fast's deepseek seat: glm first, named deepseek's substitute by the audition of 2026-08-17 recorded in _frontier_fast_note, about a tenth of kimi's price per token, and seated nowhere else, so it is free where kimi already sits in fable's place. kimi next. (Owner, 22 September 2026.) A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. The depth ladder and the assessment try this list in order; for passage judging, which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
+  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. glm last: kimi holds a contradictions seat of its own in the assessment, so on a document where every Anthropic model is refused, as the Alibaba Model Spec was, nobody else could take fable's contradictions seat. frontier_fast's deepseek seat: glm first, named deepseek's substitute by the audition of 2026-08-17 recorded in _frontier_fast_note, about a tenth of kimi's price per token, and seated nowhere else, so it is free where kimi already sits in fable's place. kimi next. (Owner, 22 September 2026.) frontier_fast's opus seat, which opus holds only on the assessment's contradictions: glm alone, since on the Alibaba Model Spec every Anthropic model is refused and kimi already holds a contradictions seat of its own (owner, 22 September 2026). A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. The depth ladder and the assessment try this list in order; for passage judging, which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
   "assessment": {
     "criteria": [
       "sol",
@@ -290,11 +293,11 @@
     ],
     "contradictions": [
       "sol",
-      "fable",
+      "opus",
       "kimi"
     ]
   },
-  "_assessment_note": "The seats of the assessment of a document as a whole (engine/assess.py), per question. The criteria are scored by frontier_fast's seats. The contradictions are found, and confirmed on a second reading, by sol, fable and kimi: kimi sits in deepseek's place for those two questions (owner, 21 September 2026). A seat that cannot answer is taken by its declared substitutes from frontier_fast's substitutes block, skipping any substitute already seated for the same question.",
+  "_assessment_note": "The seats of the assessment of a document as a whole (engine/assess.py), per question. The criteria are scored by frontier_fast's seats. The contradictions are found, and every claim is then read by every one of their seats, by sol, opus and kimi. kimi sits in deepseek's place for those questions (owner, 21 September 2026), and opus in fable's since 22 September 2026: fable's content filter refused the finding of contradictions on all four documents of the first full run, and billed about 1.20 dollars each time on three of them (owner, 22 September 2026). A seat that cannot answer is taken by its declared substitutes from frontier_fast's substitutes block, skipping any substitute already seated for the same question.",
   "rubric": "v5",
   "specs": [
     "anthropic--constitution",

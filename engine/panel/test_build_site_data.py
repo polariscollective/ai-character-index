@@ -247,8 +247,27 @@ class DocumentAssessmentTest(unittest.TestCase):
                 {"seat": "kimi", "found": False, "holds": False, "absolute": False,
                  "reason": "kimi on a"}],
             "confirmed": True, "absolute": False, "reviewed": None})
-        self.assertEqual((claims[1]["absolute"], claims[1]["confirmed"]), (True, True))
+        # Held by kimi's "found it" row and by sol, but only sol's reading
+        # calls it absolute: absoluteness needs two holding readings.
+        self.assertEqual((claims[1]["absolute"], claims[1]["confirmed"]), (False, True))
         self.assertEqual((claims[2]["absolute"], claims[2]["confirmed"]), (False, False))
+
+    def test_a_claim_of_the_second_method_is_settled_on_its_readings_alone(self):
+        # sol and fable found it. On reading every claim, fable is persuaded
+        # by kimi's objection: the objection counts, and it is not confirmed.
+        objected = [claim("d", L1, L2, ["sol", "fable"])]
+        readings = [verdict("d", "sol", True, True), verdict("d", "fable", False, True),
+                    verdict("d", "kimi", False, False)]
+        [one] = self.assess(objected, readings)["contradictions"]["claims"]
+        self.assertEqual((one["confirmed"], one["absolute"]), (False, False))
+        self.assertEqual([(r["seat"], r["found"], r["holds"]) for r in one["readings"]],
+                         [("sol", True, True), ("fable", True, False), ("kimi", False, False)])
+        # Two holding readings that call it absolute make it absolute.
+        held = [verdict("d", "sol", True, True), verdict("d", "fable", True, True),
+                verdict("d", "kimi", False, False)]
+        [one] = self.assess(objected, held)["contradictions"]["claims"]
+        self.assertEqual((one["confirmed"], one["absolute"]), (True, True))
+        self.assertEqual(self.assess(objected, held)["contradictions"]["score"], 0)
 
     def test_each_reading_names_the_model_of_the_call_that_gave_it(self):
         readings = {tuple(p["locator"] for p in c["passages"]): c["readings"]
@@ -289,8 +308,8 @@ class DocumentAssessmentTest(unittest.TestCase):
         self.assertIn(L3, str(refused.exception))
 
     def test_the_score_counts_confirmed_claims_only(self):
-        # Two confirmed, one of them absolute.
-        self.assertEqual(self.assess()["contradictions"]["score"], 0)
+        # Two confirmed, neither absolute by two holding readings.
+        self.assertEqual(self.assess()["contradictions"]["score"], 2)
         # One confirmed, not absolute.
         only_a = [c for c in CLAIMS if c["id"] == "a"]
         self.assertEqual(self.assess(only_a)["contradictions"]["score"], 2)
@@ -308,13 +327,13 @@ class DocumentAssessmentTest(unittest.TestCase):
         self.assertTrue(settled["confirmed"])
 
     def test_the_total_is_the_four_means_and_the_contradictions_score(self):
-        self.assertEqual(self.assess()["total"], 10.0)
+        self.assertEqual(self.assess()["total"], 12.0)
         only_c = [c for c in CLAIMS if c["id"] == "c"]
         self.assertEqual(self.assess(only_c)["total"], 14.0)
 
     def test_the_total_is_rounded_once(self):
         """Four means of 10/3 add to 13.3 before rounding and to 13.2 after it;
-        4, 4, 4 and 4/3 add to 13.3 either way. The contradictions score is 0."""
+        4, 4, 4 and 4/3 add to 13.3 either way. The contradictions score is 2."""
         for given, shown in (({criterion: (4, 3, 3) for criterion in GIVEN}, [3.3] * 4),
                              ({"conflict_rules": (4, 4, 4), "rule_force": (4, 4, 4),
                                "reasons": (4, 4, 4), "situations": (2, 1, 1)},
@@ -325,8 +344,8 @@ class DocumentAssessmentTest(unittest.TestCase):
                       for n, call_id in enumerate(("c-sol", "c-fable", "c-deepseek"))]
             assessed = bs.document_assessment(RUN, CALLS, scores, CLAIMS, VERDICTS, PASSAGE_TEXT)
             self.assertEqual([c["mean"] for c in assessed["criteria"].values()], shown)
-            self.assertEqual(assessed["contradictions"]["score"], 0)
-            self.assertEqual(assessed["total"], 13.3)
+            self.assertEqual(assessed["contradictions"]["score"], 2)
+            self.assertEqual(assessed["total"], 15.3)
 
     def test_a_claim_on_a_passage_the_document_does_not_hold_is_refused(self):
         stray = [claim("e", L1, f"{NEW} > #gone > ¶1", ["sol"])]

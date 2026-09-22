@@ -595,8 +595,16 @@ class RecordingStore(FakeStore):
         return [dict(row, id="publication-1") for row in rows] if returning else None
 
 
+def taking_of(version_id):
+    """The contradictions half of one document in assessment-2, which takes its
+    criteria from assessment-1: every seat found nothing, so nothing was read."""
+    return [{"id": f"assessment-2-{version_id}-contradictions-{seat}", "run_id": "assessment-2",
+             "spec_version_id": version_id, "question": "contradictions", "seat": seat,
+             "model": seat, "status": "done"} for seat in ("sol", "opus", "kimi")]
+
+
 def publishing_store(assessed=("v1", "v2"), four=True, ten=True, notes=None,
-                     run_status="done", unconfirmed_claims=False):
+                     run_status="done", unconfirmed_claims=False, ten_run="assessment-1"):
     run_calls = [dict(call, id=f"{call['id']}-{version_id}")
                  for version_id in ("v1", "v2")
                  for call in calls("r1", "helpfulness", version_id, PANEL)]
@@ -612,11 +620,16 @@ def publishing_store(assessed=("v1", "v2"), four=True, ten=True, notes=None,
         aci_runs=[{"id": "r1", "rubric": "v5", "created_at": "2026-09-15"}],
         aci_judge_calls=run_calls,
         aci_depths=depth_rows(call_ids(run_calls)) if four else [],
-        aci_depths_out_of_ten=ten_depth_rows(call_ids(run_calls), "assessment-1") if ten else [],
+        aci_depths_out_of_ten=ten_depth_rows(call_ids(run_calls), ten_run) if ten else [],
         aci_spec_versions=[V1, V2], aci_seat_substitutions=[],
         aci_assessment_runs=[{"id": "assessment-1", "status": run_status,
-                              "panels": ASSESSMENT_PANELS}],
-        aci_assessment_calls=assessment_calls, aci_assessment_scores=assessment_scores,
+                              "panels": ASSESSMENT_PANELS},
+                             {"id": "assessment-2", "status": "done",
+                              "panels": {"criteria": ASSESSMENT_PANELS["criteria"],
+                                         "contradictions": ["sol", "opus", "kimi"]},
+                              "config": {"substitutes": {}, "criteria_from": "assessment-1"}}],
+        aci_assessment_calls=assessment_calls + taking_of("v1") + taking_of("v2"),
+        aci_assessment_scores=assessment_scores,
         aci_assessment_claims=assessment_claims, aci_assessment_verdicts=assessment_verdicts,
         aci_document_notes=notes if notes is not None else [
             {"kind": "depth", "prompt_sha256": "sha-depth"},
@@ -753,6 +766,48 @@ class PublishOutOfTenTest(unittest.TestCase):
         message = self.refused(publishing_store(notes=notes), depth_prompt=TEN,
                                assessment_run="assessment-1")
         self.assertIn("sha-shared", message)
+
+
+class PublishTakingCriteriaTest(unittest.TestCase):
+    """A publication naming a run that takes its criteria from an earlier run
+    records the run it names, and carries the depths given against the earlier
+    one."""
+
+    def publish(self, store):
+        builds = []
+
+        def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+                  note_prompts=None, **given):
+            builds.append({"name": name, **given})
+            return {name: True}, f"sha-{name}"
+
+        with mock.patch.object(publish, "build", side_effect=build):
+            publish.publish(store, ["helpfulness"], ["v1", "v2"], "v5", "tester",
+                            config=CONFIG, link_runs=["link-1"], depth_prompt=TEN,
+                            assessment_run="assessment-2")
+        return builds
+
+    def test_the_run_named_is_recorded_and_the_earlier_run_s_depths_stand(self):
+        store = publishing_store()
+        builds = self.publish(store)
+        [(_table, [row])] = [entry for entry in store.inserted
+                             if entry[0] == "aci_publications"]
+        self.assertEqual(row["build_params"]["assessment_run_id"], "assessment-2")
+        payload = next(build for build in builds if build["name"] == "payload")
+        self.assertEqual(payload["assessment_run"], "assessment-2")
+
+    def test_depths_given_against_the_run_named_are_not_the_ones_read(self):
+        with self.assertRaises(SystemExit) as refused:
+            self.publish(publishing_store(ten_run="assessment-2"))
+        self.assertIn("helpfulness x constitution@2026-01-20", str(refused.exception))
+
+    def test_the_depths_it_reads_are_the_earlier_run_s_when_cells_are_chosen(self):
+        store = publishing_store()
+        run_calls = store.tables["aci_judge_calls"]
+        matched = {("r1", "helpfulness", "v1"): [c for c in run_calls
+                                                 if c["spec_version_id"] == "v1"]}
+        self.assertEqual(publish._depth_complete_keys(store, matched, "assessment-2"),
+                         set(matched))
 
 
 class ChooseCellsOutOfTenTest(unittest.TestCase):

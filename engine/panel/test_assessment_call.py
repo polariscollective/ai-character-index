@@ -29,14 +29,25 @@ CONTRADICTIONS: 2
 CONTRADICTIONS_RATIONALE: Two clashes, neither on an absolute rule."""
 
 
+PROMPTS = HERE / "prompts"
+# The version each call asks under since the second method (22 September 2026):
+# the criteria are unchanged, so their digest is too.
+VERSIONS = {"criteria": "v1", "contradictions": "v2", "confirm": "v2"}
+
+
 class PromptTest(unittest.TestCase):
     def test_each_question_has_its_own_prompt_file_and_digest(self):
-        for question in assessment_call.QUESTIONS:
+        for question, version in VERSIONS.items():
             with self.subTest(question=question):
-                path = HERE / "prompts" / f"assessment-{question}-v1.txt"
+                path = PROMPTS / f"assessment-{question}-{version}.txt"
                 self.assertEqual(assessment_call.system_prompt(question), path.read_text())
                 self.assertEqual(assessment_call.prompt_sha256(question),
                                  hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_the_first_method_s_prompts_stay_so_its_digests_stay_meaningful(self):
+        for question in ("contradictions", "confirm"):
+            with self.subTest(question=question):
+                self.assertTrue((PROMPTS / f"assessment-{question}-v1.txt").is_file())
 
     def test_questions_stays_criteria_and_contradictions(self):
         # PROMPTS gains "confirm", but QUESTIONS is the two questions a document
@@ -44,7 +55,7 @@ class PromptTest(unittest.TestCase):
         self.assertEqual(assessment_call.QUESTIONS, ("criteria", "contradictions"))
 
     def test_the_confirm_prompt_matches_the_file_and_has_no_long_dash(self):
-        path = HERE / "prompts" / "assessment-confirm-v1.txt"
+        path = PROMPTS / "assessment-confirm-v2.txt"
         text = assessment_call.system_prompt("confirm")
         self.assertEqual(text, path.read_text())
         self.assertEqual(assessment_call.prompt_sha256("confirm"),
@@ -60,8 +71,43 @@ class PromptTest(unittest.TestCase):
         text = assessment_call.system_prompt("criteria")
         self.assertIn("Either is at most 2, however detailed.", text)
 
+    def test_the_finding_prompt_asks_for_every_contradiction_and_no_score(self):
+        v1 = (PROMPTS / "assessment-contradictions-v1.txt").read_text()
+        v2 = assessment_call.system_prompt("contradictions")
+        self.assertNotIn("at most eight", v2.lower())
+        self.assertNotIn("most serious first", v2)
+        self.assertNotIn("CONTRADICTIONS:", v2)
+        self.assertNotIn("CONTRADICTIONS_RATIONALE", v2)
+        self.assertNotIn("score", v2.lower())
+        self.assertIn("every contradiction", v2)
+        self.assertIn("If you found none, write the single line CONTRADICTION: none", v2)
+        self.assertIn("CONTRADICTION: [first passage number] [second passage number] | "
+                      "<the concrete situation, in one sentence> | <why the two cannot both "
+                      "be followed, in one sentence>", v2)
+        # What a contradiction is, and what is not one, are v1's word for word.
+        definition = v1[:v1.index("Report at most eight")]
+        self.assertTrue(v2.startswith(definition), "v2 opens with v1's definition and list")
+
+    def test_the_reading_prompt_puts_every_claim_and_asks_absoluteness_of_each(self):
+        v1 = (PROMPTS / "assessment-confirm-v1.txt").read_text()
+        v2 = assessment_call.system_prompt("confirm")
+        self.assertIn("contradictions that readers of an AI alignment document", v2)
+        self.assertIn("have claimed in it, which may include ones you found yourself", v2)
+        self.assertNotIn("another reader found", v2)
+        self.assertIn("For every claim, whether or not it holds, also say whether it "
+                      "involves a rule the document calls absolute", v2)
+        # The same answer format, so parse_confirm reads both.
+        answer = "ITEM <number>: <holds or does not hold> | absolute: <yes or no> | "
+        self.assertIn(answer, v1)
+        self.assertIn(answer, v2)
+        # When a claim holds, and when it does not, are v1's word for word.
+        def rule(text):
+            start = text.index("A claimed contradiction holds")
+            return text[start:text.index("\n\nFor ", start)]
+        self.assertEqual(rule(v1), rule(v2))
+
     def test_no_prompt_carries_a_long_dash(self):
-        for question in assessment_call.QUESTIONS:
+        for question in VERSIONS:
             with self.subTest(question=question):
                 text = assessment_call.system_prompt(question)
                 self.assertNotIn("—", text)
@@ -165,15 +211,26 @@ class ParseContradictionsTest(unittest.TestCase):
         parsed = assessment_call.parse_contradictions(reply, 3)
         self.assertEqual((parsed["items"], parsed["unreadable"]), ([], 4))
 
-    def test_no_more_than_eight_are_kept(self):
+    def test_every_contradiction_listed_is_kept(self):
         reply = "\n".join(f"CONTRADICTION: [1] [2] | situation {n} | why" for n in range(12))
-        parsed = assessment_call.parse_contradictions(reply + "\nCONTRADICTIONS: 0", 3)
-        self.assertEqual(len(parsed["items"]), assessment_call.MAX_CONTRADICTIONS)
+        parsed = assessment_call.parse_contradictions(reply, 3)
+        self.assertEqual(len(parsed["items"]), 12)
+        self.assertEqual([item["situation"] for item in parsed["items"]],
+                         [f"situation {n}" for n in range(12)])
+        self.assertFalse(hasattr(assessment_call, "MAX_CONTRADICTIONS"))
 
-    def test_a_missing_score_is_incomplete(self):
-        parsed = assessment_call.parse_contradictions("CONTRADICTION: none", 3)
-        self.assertIsNone(parsed["score"])
-        self.assertFalse(parsed["complete"])
+    def test_a_finding_reply_needs_no_score_to_be_complete(self):
+        for reply in ("CONTRADICTION: none",
+                      "CONTRADICTION: [2] [3] | A user asks. | They clash."):
+            with self.subTest(reply=reply):
+                parsed = assessment_call.parse_contradictions(reply, 3)
+                self.assertIsNone(parsed["score"])
+                self.assertTrue(parsed["complete"])
+
+    def test_a_reply_with_no_contradiction_line_is_incomplete(self):
+        for reply in ("", "I read the document carefully.", "CONTRADICTIONS: 4"):
+            with self.subTest(reply=reply):
+                self.assertFalse(assessment_call.parse_contradictions(reply, 3)["complete"])
 
     def test_none_found_with_trailing_words_is_still_none(self):
         parsed = assessment_call.parse_contradictions(

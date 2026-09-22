@@ -45,7 +45,9 @@ digest the depths were given under, which a rebuild takes from what the
 publication recorded, whatever the prompt of ten has become since. The
 payload gains `depthScale`: 10, and `assessment`, each document's assessment as
 a whole from that run: the four criteria with every judge, the contradictions
-the judges claimed with how each was settled, and the total out of 20.
+the judges claimed with how each was settled, and the total out of 20. A run
+that takes its criteria from an earlier run carries that run's criteria and the
+depths given against it, and its own contradictions.
 
 --out is required and is where the payload goes. There is no timestamped file and
 no manifest: a local build was how a run got pinned by ?data=, and a publication
@@ -282,13 +284,13 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     reads one way in the whole payload; and one reading per seat of the run's
     contradictions, in the run's order: whether the seat found the claim,
     whether it holds, whether it is absolute and why, with "model" when a
-    declared substitute answered the call that gave the reading. A finder's
-    reading comes from its contradictions call and a confirmation from its
-    confirm call, so one seat can read through two models across the claims.
-    `confirmed` and `absolute` are assessment_run.settle's, the rule the run
-    itself applies, fed the other seats' readings: a finder's verdict row says
-    only that it found the claim. A person's reading is not carried yet, so
-    `reviewed` is null.
+    declared substitute answered the call that gave the reading. A reading is
+    a verdict row, from the seat's reading call; in a run of the first method
+    a finder's row came from its contradictions call instead, saying only that
+    it found the claim, so one seat can read through two models across the
+    claims. `confirmed` and `absolute` are assessment_run.settle's, the one
+    rule that settles a claim, fed every verdict row. A person's reading is not
+    carried yet, so `reviewed` is null.
 
     `total`: the four unrounded means plus the contradictions score, rounded
     once, out of 20.
@@ -352,13 +354,13 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     for claim in claims:
         found_by = list(claim["found_by"])
         pair = sorted((claim["first_locator"], claim["second_locator"]), key=position.get)
-        second_readings = {seat: {0: {"holds": v["holds"], "absolute": v["absolute"],
-                                      "reason": v["reason"]}}
-                           for seat, v in readings[claim["id"]].items() if seat not in found_by}
+        every_reading = {seat: {0: {"holds": v["holds"], "absolute": v["absolute"],
+                                    "reason": v["reason"]}}
+                         for seat, v in readings[claim["id"]].items()}
         [one] = assessment_run.settle(
             [{"first": 1, "second": 2, "situation": claim["situation"], "why": claim["why"],
               "found_by": found_by}],
-            second_readings, seats, [(pair[0],), (pair[1],)])
+            every_reading, seats, [(pair[0],), (pair[1],)])
         settled.append((tuple(position[locator] for locator in pair), {
             "passages": [passage(locator) for locator in pair],
             "situation": one["situation"], "why": one["why"],

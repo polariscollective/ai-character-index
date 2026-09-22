@@ -193,6 +193,12 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
             provider=answer["provider"], model_id=answer["model_id"], kwargs=answer["kwargs"],
             claims_asked=len(claims))
         verdicts_by_seat[seat] = assessment_run.by_claim(to_confirm, verdicts)
+    # settle counts readings alone: a finder's is that it holds, as the "found
+    # it" row a stored run of this method writes for it.
+    for i, claim in enumerate(pooled):
+        for seat in claim["found_by"]:
+            verdicts_by_seat.setdefault(seat, {})[i] = {"holds": True, "absolute": None,
+                                                        "reason": "found it"}
     contradictions = assessment_run.settle(pooled, verdicts_by_seat, seats, text)
     return contradictions, assessment_run.confirm_score(contradictions)
 
@@ -574,7 +580,7 @@ def _contradictions_lines(record):
                           for seat in claim["found_by"])
         held = ", ".join(f"{_seat_label(record, seat, 'confirm')} "
                          f"({_cell_text(claim['reasons'].get(seat, ''))})"
-                         for seat in claim["holds"])
+                         for seat in claim["holds"] if seat not in claim["found_by"])
         rejected = ", ".join(f"{_seat_label(record, seat, 'confirm')} "
                              f"({_cell_text(claim['reasons'].get(seat, ''))})"
                              for seat in claim["does_not_hold"])

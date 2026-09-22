@@ -260,6 +260,10 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     digest is not read. The cell's entry then gains "scale": 10, and a judge's
     entry gains "model" and "substitution_reason" when a declared substitute
     gave that depth.
+
+    A depth out of ten is given from the conflict rules of an assessment run's
+    criteria, so an assessment run that takes its criteria from an earlier run
+    reads the depths given against that run (`criteria_run_id`).
     """
     wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
     calls = [c for c in _rows(store, "aci_judge_calls")
@@ -272,8 +276,9 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
         if depth_prompt is None:
             raise ValueError("depths out of ten are read by the digest of the prompt they were "
                              "given under: pass depth_prompt")
+        given_with = criteria_run_id(store, assessment_run_id)
         depths = {d["call_id"]: d for d in _rows(store, "aci_depths_out_of_ten")
-                  if d.get("assessment_run_id") == assessment_run_id
+                  if d.get("assessment_run_id") == given_with
                   and d.get("prompt_sha256") == depth_prompt}
 
     by_cell = {}
@@ -366,46 +371,172 @@ def _any_of(values):
     return "in.(" + ",".join(f'"{value}"' for value in sorted(values)) + ")"
 
 
-def assessment_rows(store, assessment_run_id, spec_version_ids):
-    """(run, {version id: {"calls", "scores", "claims", "verdicts"}}) for one
-    assessment run, restricted to the documents named. The run is None when no
-    run carries that id.
-
-    Each read is filtered to the run, or to the calls and claims already read,
-    and every row is held to the run and the documents again once read, so a
-    store that answered a filter loosely could not bring another run's rows in.
-    """
+def _assessment_run(store, assessment_run_id):
+    """The row of assessment run `assessment_run_id`, or None."""
     runs = [row for row in _rows(store, "aci_assessment_runs",
                                  {"id": f"eq.{assessment_run_id}"})
             if row["id"] == assessment_run_id]
-    wanted = set(spec_version_ids)
+    return runs[0] if runs else None
+
+
+def _criteria_from(run):
+    """The id of the run whose criteria `run` takes, or None."""
+    return ((run or {}).get("config") or {}).get("criteria_from")
+
+
+def criteria_run_id(store, assessment_run_id):
+    """The id of the run whose criteria, conflict rules and depths out of ten
+    stand for assessment run `assessment_run_id`: the run it takes its
+    criteria from (`config["criteria_from"]`, `assess.py --criteria-from`), or
+    the run itself."""
+    return _criteria_from(_assessment_run(store, assessment_run_id)) or assessment_run_id
+
+
+def _run_rows(store, assessment_run_id, wanted, claims=True):
+    """{version id: {"calls", "scores", "claims", "verdicts"}}, what run
+    `assessment_run_id` wrote about the versions `wanted`, its claims and
+    verdicts left unread unless `claims`."""
     by_version = {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
                   for version_id in wanted}
-    if not runs:
-        return None, by_version
 
     def mine(table):
         return [row for row in _rows(store, table, {"run_id": f"eq.{assessment_run_id}"})
                 if row["run_id"] == assessment_run_id and row["spec_version_id"] in wanted]
 
-    calls, claims = mine("aci_assessment_calls"), mine("aci_assessment_claims")
+    calls = mine("aci_assessment_calls")
+    claim_rows = mine("aci_assessment_claims") if claims else []
     version_of_call = {call["id"]: call["spec_version_id"] for call in calls}
-    version_of_claim = {claim["id"]: claim["spec_version_id"] for claim in claims}
+    version_of_claim = {claim["id"]: claim["spec_version_id"] for claim in claim_rows}
     scores = ([row for row in _rows(store, "aci_assessment_scores",
                                     {"call_id": _any_of(version_of_call)})
                if row["call_id"] in version_of_call] if calls else [])
     verdicts = ([row for row in _rows(store, "aci_assessment_verdicts",
                                       {"claim_id": _any_of(version_of_claim)})
-                 if row["claim_id"] in version_of_claim] if claims else [])
+                 if row["claim_id"] in version_of_claim] if claim_rows else [])
     for call in calls:
         by_version[call["spec_version_id"]]["calls"].append(call)
-    for claim in claims:
+    for claim in claim_rows:
         by_version[claim["spec_version_id"]]["claims"].append(claim)
     for score in scores:
         by_version[version_of_call[score["call_id"]]]["scores"].append(score)
     for verdict in verdicts:
         by_version[version_of_claim[verdict["claim_id"]]]["verdicts"].append(verdict)
-    return runs[0], by_version
+    return by_version
+
+
+def assessment_run_rows(store, assessment_run_id, spec_version_ids):
+    """(run, {version id: {"calls", "scores", "claims", "verdicts"}}): what one
+    assessment run itself wrote, restricted to the documents named. The run is
+    None when no run carries that id. This is what taking a run up again reads;
+    what a run stands on is `assessment_rows`.
+
+    Each read is filtered to the run, or to the calls and claims already read,
+    and every row is held to the run and the documents again once read, so a
+    store that answered a filter loosely could not bring another run's rows in.
+    """
+    wanted = set(spec_version_ids)
+    run = _assessment_run(store, assessment_run_id)
+    if run is None:
+        return None, {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
+                      for version_id in wanted}
+    return run, _run_rows(store, assessment_run_id, wanted)
+
+
+def assessment_rows(store, assessment_run_id, spec_version_ids):
+    """(run, {version id: {"calls", "scores", "claims", "verdicts"}}): the rows
+    one assessment run stands on, restricted to the documents named, in
+    `assessment_run_rows`'s shape. The run is None when no run carries that id.
+
+    A run that takes its criteria from an earlier run (`criteria_from` in its
+    config) stands on that run's criteria calls and their scores, and on its
+    own contradictions, readings, claims and verdicts. Its row is then returned
+    with `criteria_run`, the earlier run's row, or None when no run carries
+    that id, so the gaps can be checked half by half. A run that takes nothing
+    stands on its own rows, as `assessment_run_rows` reads them.
+    """
+    wanted = set(spec_version_ids)
+    run, by_version = assessment_run_rows(store, assessment_run_id, wanted)
+    taken_from = _criteria_from(run)
+    if taken_from is None:
+        return run, by_version
+    criteria_run = _assessment_run(store, taken_from)
+    theirs = (_run_rows(store, taken_from, wanted, claims=False) if criteria_run is not None
+              else {version_id: {"calls": [], "scores": []} for version_id in wanted})
+    for version_id, own in by_version.items():
+        criteria = [call for call in theirs[version_id]["calls"] if call["question"] == "criteria"]
+        asked = {call["id"] for call in criteria}
+        own_calls = [call for call in own["calls"] if call["question"] != "criteria"]
+        kept = {call["id"] for call in own_calls}
+        by_version[version_id] = {
+            "calls": criteria + own_calls,
+            "scores": ([score for score in theirs[version_id]["scores"]
+                        if score["call_id"] in asked]
+                       + [score for score in own["scores"] if score["call_id"] in kept]),
+            "claims": own["claims"], "verdicts": own["verdicts"]}
+    return dict(run, criteria_run=criteria_run), by_version
+
+
+def _criteria_gaps(name, calls, scores, seats, where=""):
+    """Every criteria seat of `seats` with no done call among `calls`, or
+    whose done call left a criterion unscored in `scores`."""
+    scored = {}
+    for score in scores:
+        scored.setdefault(score["call_id"], set()).add(score["criterion"])
+    gaps = []
+    for seat in seats:
+        done = [call for call in calls if call["question"] == "criteria"
+                and call["seat"] == seat and call["status"] == "done"]
+        if not done:
+            gaps.append(f"{name}: {seat} gave no criteria answer{where}")
+            continue
+        missing = [criterion for criterion in _criteria() if criterion not in
+                   scored.get(done[0]["id"], set())]
+        if missing:
+            gaps.append(f"{name}: {seat}'s criteria answer scored no {', '.join(missing)}{where}")
+    return gaps
+
+
+def _contradictions_gaps(name, calls, claims, verdicts, seats, where=""):
+    """Every contradictions seat of `seats` with no done finding among
+    `calls`, every reading asked that did not finish, and every seat that left
+    a claim of `claims` unread in `verdicts`."""
+    gaps = [f"{name}: {seat} gave no contradictions answer{where}" for seat in seats
+            if not any(call["question"] == "contradictions" and call["seat"] == seat
+                       and call["status"] == "done" for call in calls)]
+    unfinished = sorted(call["seat"] for call in calls
+                        if call["question"] == "confirm" and call["status"] != "done")
+    if unfinished:
+        gaps.append(f"{name}: the confirmation asked of {', '.join(unfinished)} "
+                    f"did not finish{where}")
+    # One reading per seat per claim, the table's primary key being (claim,
+    # seat), so a claim is read in full when every seat has a row on it.
+    read_by = {}
+    for verdict in verdicts:
+        read_by.setdefault(verdict["claim_id"], set()).add(verdict["seat"])
+    for seat in seats:
+        unread = [claim for claim in claims if seat not in read_by.get(claim["id"], set())]
+        if unread:
+            gaps.append(f"{name}: {seat} gave no reading of {len(unread)} of its "
+                        f"{len(claims)} claimed contradictions{where}")
+    return gaps
+
+
+def _criteria():
+    # Imported here rather than at the top, so that a build naming no
+    # assessment run loads only the modules it loaded before assessments existed.
+    import assessment_call  # noqa: E402
+    return assessment_call.CRITERIA
+
+
+def criteria_gaps(name, rows, seats):
+    """What keeps the criteria of the rows one run wrote about one document
+    from standing, by the rule `assessment_gaps` applies to them: every seat of
+    `seats` answered, with all four criteria scored. One sentence per gap, each
+    opening with `name`, the document's."""
+    calls = [call for call in rows.get("calls") or [] if call["question"] == "criteria"]
+    if not calls:
+        return [f"{name}: the assessment run did not assess it"]
+    return _criteria_gaps(name, calls, rows.get("scores") or [], seats)
 
 
 def assessment_gaps(assessment_run_id, run, by_version, versions):
@@ -416,63 +547,69 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
     and what it never wrote cannot be told apart from what nobody found. A
     document is then assessed when every seat of the run's criteria answered
     with all four criteria scored, every seat of its contradictions answered,
-    every confirmation it asked finished, and every claim written about it
-    carries a reading from every seat of the contradictions, the finders' own
-    readings included. A seat that could not answer and whose substitutes could
-    not either leaves its call in error, and a total built without it would be
-    a mean of fewer judges presented as the panel's; a claim a seat never read
-    would be settled on fewer readings than the rule counts on, and could be
-    left unconfirmed by a reading that was never given.
+    every reading it asked finished, and every claim written about it carries a
+    reading from every seat of the contradictions. A seat that could not answer
+    and whose substitutes could not either leaves its call in error, and a
+    total built without it would be a mean of fewer judges presented as the
+    panel's; a claim a seat never read would be settled on fewer readings than
+    the rule counts on, and could be left unconfirmed by a reading that was
+    never given.
+
+    A run that takes its criteria from an earlier run (`assessment_rows` gives
+    its row a `criteria_run`) is held to each half in its own run: the
+    criteria to the earlier run, which must exist and have finished, under the
+    criteria seats that run recorded, and the contradictions to the run itself.
+    Each of its gaps then names the run it is in.
     """
-    # Imported here rather than at the top, so that a build naming no
-    # assessment run loads only the modules it loaded before assessments existed.
-    import assessment_call  # noqa: E402
     if run is None:
         return [f"there is no assessment run {assessment_run_id}"]
     panels = run.get("panels") or {}
+    taken_from = _criteria_from(run)
     gaps = []
+    if taken_from is not None:
+        criteria_run = run.get("criteria_run")
+        taken = (f"assessment run {taken_from}, whose criteria assessment run "
+                 f"{assessment_run_id} takes")
+        if criteria_run is None:
+            gaps.append(f"there is no {taken}")
+        elif criteria_run.get("status") != "done":
+            gaps.append(f"{taken}, has status {criteria_run.get('status')}, not done, so what "
+                        "it wrote may stop short of what it would have written")
     if run.get("status") != "done":
         names = ", ".join(f"{version['spec_id']}@{version['version']}" for version in versions)
         gaps.append(f"the run's status is {run.get('status')}, not done, so what it wrote about "
-                    f"{names} may stop short of what it would have written")
+                    f"{names} may stop short of what it would have written"
+                    + (f" (assessment run {assessment_run_id})" if taken_from else ""))
     for version in versions:
         name = f"{version['spec_id']}@{version['version']}"
         rows = by_version.get(version["id"]) or {}
         calls = rows.get("calls") or []
-        if not calls:
-            gaps.append(f"{name}: the assessment run did not assess it")
+        claims, verdicts = rows.get("claims") or [], rows.get("verdicts") or []
+        if taken_from is None:
+            if not calls:
+                gaps.append(f"{name}: the assessment run did not assess it")
+                continue
+            gaps += _criteria_gaps(name, calls, rows.get("scores") or [],
+                                   panels.get("criteria", []))
+            gaps += _contradictions_gaps(name, calls, claims, verdicts,
+                                         panels.get("contradictions", []))
             continue
-        scored = {}
-        for score in rows.get("scores") or []:
-            scored.setdefault(score["call_id"], set()).add(score["criterion"])
-        for question in assessment_call.QUESTIONS:
-            for seat in panels.get(question, []):
-                done = [call for call in calls if call["question"] == question
-                        and call["seat"] == seat and call["status"] == "done"]
-                if not done:
-                    gaps.append(f"{name}: {seat} gave no {question} answer")
-                elif question == "criteria":
-                    missing = [criterion for criterion in assessment_call.CRITERIA
-                               if criterion not in scored.get(done[0]["id"], set())]
-                    if missing:
-                        gaps.append(f"{name}: {seat}'s criteria answer scored no "
-                                    + ", ".join(missing))
-        unfinished = sorted(call["seat"] for call in calls
-                            if call["question"] == "confirm" and call["status"] != "done")
-        if unfinished:
-            gaps.append(f"{name}: the confirmation asked of {', '.join(unfinished)} "
-                        "did not finish")
-        # One reading per seat per claim, the table's primary key being (claim,
-        # seat), so a claim is read in full when every seat has a row on it.
-        read_by = {}
-        for verdict in rows.get("verdicts") or []:
-            read_by.setdefault(verdict["claim_id"], set()).add(verdict["seat"])
-        claims = rows.get("claims") or []
-        for seat in panels.get("contradictions", []):
-            unread = [claim for claim in claims if seat not in read_by.get(claim["id"], set())]
-            if unread:
-                gaps.append(f"{name}: {seat} gave no reading of {len(unread)} of its "
-                            f"{len(claims)} claimed contradictions")
+        if criteria_run is not None:
+            criteria = [call for call in calls if call["question"] == "criteria"]
+            if not criteria:
+                gaps.append(f"{name}: {taken}, did not assess it")
+            else:
+                gaps += _criteria_gaps(name, criteria, rows.get("scores") or [],
+                                       (criteria_run.get("panels") or {}).get("criteria", []),
+                                       f" in assessment run {taken_from}")
+        own = [call for call in calls if call["question"] != "criteria"]
+        if not own:
+            gaps.append(f"{name}: the assessment run did not assess it "
+                        f"(assessment run {assessment_run_id})")
+        else:
+            gaps += _contradictions_gaps(name, own, claims, verdicts,
+                                         panels.get("contradictions", []),
+                                         f" in assessment run {assessment_run_id}")
     return gaps
 
 
@@ -484,7 +621,8 @@ def assessment(store, assessment_run_id, versions):
     the calls not done and says when a document can only be assessed in a new
     assessment run instead; with no run of that id, a new run. A depth out of
     ten belongs to the assessment run it was given with, so the depths are
-    given against the run that stands.
+    given against the run that stands, or read from the run whose criteria it
+    takes.
     """
     run, by_version = assessment_rows(store, assessment_run_id,
                                       [version["id"] for version in versions])
@@ -498,12 +636,16 @@ def assessment(store, assessment_run_id, versions):
                      f"--resume={assessment_run_id} --documents=... --go), which asks only the "
                      "calls not done and says when a document can only be assessed in a new "
                      "assessment run instead")
+        taken_from = _criteria_from(run)
+        depths = (f"depths out of ten are read from assessment run {taken_from}, whose "
+                  "criteria this run takes, so a gap in those criteria is that run's"
+                  if taken_from else
+                  "depths out of ten belong to the run they were given with: give them "
+                  "against the run that stands (engine/panel/depth_pass.py --runs=... "
+                  "--assessment-run=<id> --go), then build with --assessment-run=<id>")
         raise SystemExit(
             f"assessment run {assessment_run_id} does not assess every document this "
-            "publication carries:\n  " + "\n  ".join(gaps)
-            + f"\n{first}, and depths out of ten belong to the run they were given with: give "
-            "them against the run that stands (engine/panel/depth_pass.py --runs=... "
-            "--assessment-run=<id> --go), then build with --assessment-run=<id>.")
+            "publication carries:\n  " + "\n  ".join(gaps) + f"\n{first}, and {depths}.")
     return run, by_version
 
 
