@@ -425,6 +425,47 @@ class CallSettingsTest(unittest.TestCase):
         self.assertNotIn("temperature", sink[0])
 
 
+class CostOfTest(unittest.TestCase):
+    """Null means unknown and zero means free, as `assessment_store.summed`
+    puts it, so a usage whose meters are both null is not a free call."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = batch_job.h.load_config()
+
+    def test_a_usage_with_no_meters_at_all_is_unknown_and_not_free(self):
+        # What call_openrouter returns when the provider sent no usage block:
+        # a dict of nulls, which is truthy and used to price at 0.0.
+        self.assertIsNone(batch_job.cost_of(
+            "fable", {"prompt_tokens": None, "completion_tokens": None}, self.config))
+
+    def test_no_usage_at_all_is_unknown_too(self):
+        for usage in (None, {}):
+            with self.subTest(usage=usage):
+                self.assertIsNone(batch_job.cost_of("fable", usage, self.config))
+
+    def test_one_meter_read_is_priced_on_what_was_read(self):
+        # Half a reading is still a reading: it prices the half that is there.
+        prices = self.config["models"]["fable"]["price_per_mtok"]
+        self.assertEqual(
+            batch_job.cost_of("fable", {"prompt_tokens": 1000, "completion_tokens": None},
+                              self.config),
+            round(1000 * prices[0] / 1e6, 6))
+        self.assertEqual(
+            batch_job.cost_of("fable", {"prompt_tokens": None, "completion_tokens": 100},
+                              self.config),
+            round(100 * prices[1] / 1e6, 6))
+
+    def test_a_call_that_metered_nothing_is_free_rather_than_unknown(self):
+        self.assertEqual(batch_job.cost_of(
+            "fable", {"prompt_tokens": 0, "completion_tokens": 0}, self.config), 0.0)
+
+    def test_a_seat_with_no_price_is_unknown_whatever_it_metered(self):
+        config = {"models": {"nameless": {}}}
+        self.assertIsNone(batch_job.cost_of(
+            "nameless", {"prompt_tokens": 1000, "completion_tokens": 100}, config))
+
+
 class RoutingTest(unittest.TestCase):
     """With only OPENROUTER_API_KEY set, every seat must resolve to its mirror.
 

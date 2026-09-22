@@ -59,14 +59,24 @@ def now():
 
 
 def cost_of(tag, usage, config):
-    """What a call cost, from the panel's own prices. The mirror's price when the
-    mirror is what was called, since that is what OpenRouter bills."""
+    """What a call cost, from the panel's own prices, or None where that cannot
+    be known. The mirror's price when the mirror is what was called, since that
+    is what OpenRouter bills.
+
+    A provider that sends no usage block at all leaves `call_openrouter`
+    returning both meters null, which is a dict and therefore truthy. That is a
+    cost nobody can state, not a free call: null means unknown and zero means
+    free, as `assessment_store.summed` puts it, and they are not the same claim.
+    """
     model = config["models"].get(tag, {})
     prices = (model.get("openrouter") or model).get("price_per_mtok")
     if not prices or not usage:
         return None
-    return round((usage.get("prompt_tokens", 0) or 0) * prices[0] / 1e6
-                 + (usage.get("completion_tokens", 0) or 0) * prices[1] / 1e6, 6)
+    prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
+    if prompt is None and completion is None:
+        return None
+    return round((prompt or 0) * prices[0] / 1e6
+                 + (completion or 0) * prices[1] / 1e6, 6)
 
 
 def call_openrouter(provider, model_id, system, user, kwargs):
