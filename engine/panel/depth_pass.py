@@ -20,16 +20,26 @@ against an assessment the publication would refuse could never be published,
 so a gap stops the pass before it is priced or writes anything, naming every
 gap at once.
 
+A run that takes its criteria from an earlier run (`criteria_from`,
+`engine/assess.py --criteria-from`) is still held to what it wrote itself, so
+a gap in its own contradictions stops the pass as any other gap does. Its
+depths are written against the run whose criteria it takes
+(`index_store.criteria_run_id`): that is the run the conflict rules a depth is
+shown come from, and the run `index_store.cell_depths` and `publish.py` read a
+depth out of ten from, so depths written under the named run's id would be
+paid for and never read. The command says which run they are given against
+before it prices.
+
 Writing is in two steps, kept separate so the command can be asked twice for
 the same runs at no extra cost. First, every done call of the named runs gets
 a pending row of `aci_depths_out_of_ten`, keyed by the call, the current
-prompt of ten and the named assessment run, unless one already exists: a row
-already there, whatever its status, is left alone. Second, every cell whose
-calls are all done is given its depths through `depth_ladder.give`, one call
-per judge, writing each row `done` or `error` by its own id, never by its
-call id, since a call can carry more than one row across assessment runs and
-prompts. A pass interrupted mid-depth writes that row `error` with every
-attempt already billed before the interruption goes on.
+prompt of ten and the assessment run the depths are given against, unless one
+already exists: a row already there, whatever its status, is left alone.
+Second, every cell whose calls are all done is given its depths through
+`depth_ladder.give`, one call per judge, writing each row `done` or `error` by
+its own id, never by its call id, since a call can carry more than one row
+across assessment runs and prompts. A pass interrupted mid-depth writes that
+row `error` with every attempt already billed before the interruption goes on.
 
 A model that cannot be reached is waited for (`seat_call.RETRY_WAITS`), and if
 it still cannot be, the pass stops the same way: the row it was giving is
@@ -145,11 +155,16 @@ def ready_cells(store, run_ids):
             if cell and all(c["status"] == "done" for c in cell)}
 
 
-def jobs_for(store, run_ids, assessment_run_id, passages_for, versions):
+def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions):
     """[(call, retained passages, conflict rules, seated models)] ready to be
     given a depth out of ten: every call of a whole cell of `run_ids` that has
     no done row of `aci_depths_out_of_ten` for the current prompt of ten and
-    this assessment run.
+    `given_against`, the assessment run the depths are written against.
+
+    `assessment_run_id` is the run the operator named, which is what the pass
+    is held to; `given_against` is the run whose criteria stand for it
+    (`index_store.criteria_run_id`), which is the same run for one that takes
+    its criteria from nowhere.
 
     `seated` is one set per cell, shared by that cell's jobs: the models of
     the cell's own calls, and every model that has already given one of its
@@ -169,7 +184,7 @@ def jobs_for(store, run_ids, assessment_run_id, passages_for, versions):
     prompt = depth_call.prompt_sha256(10)
     done = {d["call_id"]: d for d in store.select("aci_depths_out_of_ten")
             if d["status"] == "done" and d["prompt_sha256"] == prompt
-            and d["assessment_run_id"] == assessment_run_id}
+            and d["assessment_run_id"] == given_against}
     ready = ready_cells(store, run_ids)
 
     judgements = store.select("aci_judgements") if ready else []
@@ -323,16 +338,26 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
     """Price giving a depth out of ten to every eligible call of `run_ids`,
     and, with `go`, give them and write the rows.
 
+    The assessment run named is what the pass is held to, gaps and all. The
+    rows are written against the run whose criteria stand for it
+    (`index_store.criteria_run_id`), which is the run they will be read from,
+    and a run that takes its criteria from an earlier one says so in a line of
+    its own before the price.
+
     Returns (the price in dollars, a {"done", "failed"} report, or None
     without `go`)."""
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
-    jobs = jobs_for(store, run_ids, assessment_run_id, passages_for, versions)
+    given_against = index_store.criteria_run_id(store, assessment_run_id)
+    jobs = jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions)
     registry = registry if registry is not None else index_store.judging_registry(store)
 
     estimate, priced_count, worst_case, ceiling = price(jobs, registry, config)
     detail = "; ".join(f"{seat} up to {worst_case[seat]}" for seat in sorted(worst_case))
     warning = ("A depth that does not parse can cost the ladder more calls before it "
                "answers or gives up")
+    if given_against != assessment_run_id:
+        print(f"The depths are given against assessment run {given_against}, whose criteria "
+              f"assessment run {assessment_run_id} takes.")
     print(f"Priced at about {estimate} dollars for {priced_count} depth(s), one call each. "
           f"{warning}{f': {detail}.' if detail else '.'} "
           f"That sets a ceiling of {ceiling} dollars, the most this pass can cost: every "
@@ -349,13 +374,13 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
                 for d in store.select("aci_depths_out_of_ten")}
     to_insert = [
         {"id": str(uuid.uuid4()), "call_id": c["id"], "prompt_sha256": prompt,
-         "assessment_run_id": assessment_run_id, "status": "pending"}
-        for c in done_calls if (c["id"], prompt, assessment_run_id) not in existing]
+         "assessment_run_id": given_against, "status": "pending"}
+        for c in done_calls if (c["id"], prompt, given_against) not in existing]
     if to_insert:
         store.insert("aci_depths_out_of_ten", to_insert)
 
     rows_by_call = {d["call_id"]: d for d in store.select("aci_depths_out_of_ten")
-                    if d["prompt_sha256"] == prompt and d["assessment_run_id"] == assessment_run_id}
+                    if d["prompt_sha256"] == prompt and d["assessment_run_id"] == given_against}
 
     report = {"done": 0, "failed": 0}
     for call, retained, rules, seated in jobs:
@@ -384,7 +409,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runs", required=True, help="comma-separated aci_runs ids")
     parser.add_argument("--assessment-run", required=True, dest="assessment_run",
-                        help="aci_assessment_runs id supplying the document's conflict rules")
+                        help="aci_assessment_runs id supplying the document's conflict rules; "
+                             "one that takes its criteria from an earlier run is given its "
+                             "depths against that run")
     parser.add_argument("--go", action="store_true",
                         help="spend and write; without it the pass is only priced")
     args = parser.parse_args(argv)

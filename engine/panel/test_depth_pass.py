@@ -28,6 +28,7 @@ import batch_job                 # noqa: E402
 import depth_call                # noqa: E402
 import depth_ladder              # noqa: E402
 import depth_pass                # noqa: E402
+import index_store               # noqa: E402
 import seat_call                 # noqa: E402
 import store as store_module     # noqa: E402
 
@@ -95,6 +96,20 @@ ASSESSMENT_SCORES = [
      for criterion in ("rule_force", "reasons", "situations")]
 
 
+# A second assessment run of the same document, taking its criteria from the
+# first: `assess.py --criteria-from` writes that into its config, and it holds
+# contradictions of its own and no criteria call at all.
+TAKING_RUN = "7c2b1e94-3a5d-4f18-8b60-1d9e2c4a6f31"
+TAKING_RUN_ROW = {"id": TAKING_RUN, "status": "done",
+                  "panels": {"criteria": ["sol", "fable", "deepseek"],
+                             "contradictions": ["sol", "fable", "kimi"]},
+                  "config": {"substitutes": {}, "criteria_from": ASSESSMENT_RUN}}
+TAKING_CALLS = [
+    {"id": f"tx-{seat}", "run_id": TAKING_RUN, "spec_version_id": VERSION_ID,
+     "question": "contradictions", "seat": seat, "model": seat, "status": "done"}
+    for seat in TAKING_RUN_ROW["panels"]["contradictions"]]
+
+
 def passages_for(spec, version):
     assert (spec, version) == (SPEC_ID, VERSION_STR)
     return PASSAGES
@@ -148,6 +163,14 @@ def store(**extra):
     }
     tables.update(extra)
     return FakeStore(**tables)
+
+
+def taking_store(taking_calls=TAKING_CALLS):
+    """The same tables, with the second run beside the first: its criteria are
+    the first run's, and `taking_calls` is what it wrote itself."""
+    return store(aci_assessment_runs=[dict(ASSESSMENT_RUN_ROW), dict(TAKING_RUN_ROW)],
+                 aci_assessment_calls=[dict(c) for c in ASSESSMENT_CALLS]
+                 + [dict(c) for c in taking_calls])
 
 
 ANSWER = "DEPTH: 6\nRATIONALE: A default, weighed against another rule."
@@ -300,6 +323,81 @@ class RefusedAsThePublicationWouldTest(unittest.TestCase):
         self.assertIn("new assessment run", message)
         self.assertIn(f"--resume={ASSESSMENT_RUN}", message)
         self.assertNotIn("not taken up again", message)
+
+
+class CriteriaFromAnEarlierRunTest(unittest.TestCase):
+    """A run that takes its criteria from an earlier run is held to what it
+    wrote itself, and its depths are written against the run whose criteria it
+    takes, which is the run a publication reads them from."""
+
+    def printed(self, fake, assessment_run, go):
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            depth_pass.give_pass(fake, CONFIG, [RUN], assessment_run, passages_for,
+                                 call_model=Scripted(), go=go, registry=REGISTRY)
+        return printed.getvalue()
+
+    def test_the_rows_are_written_against_the_run_whose_criteria_it_takes(self):
+        fake = taking_store()
+        _estimate, report, _model = give(fake, assessment_run=TAKING_RUN)
+        self.assertEqual(report, {"done": 3, "failed": 0})
+        rows = fake.tables["aci_depths_out_of_ten"]
+        self.assertEqual({r["call_id"] for r in rows},
+                         {"call-sol", "call-fable", "call-deepseek"})
+        self.assertTrue(all(r["assessment_run_id"] == ASSESSMENT_RUN for r in rows))
+        self.assertFalse(any(r["assessment_run_id"] == TAKING_RUN for r in rows))
+
+    def test_it_says_which_run_the_depths_are_given_against_before_it_prices(self):
+        out = self.printed(taking_store(), TAKING_RUN, go=False)
+        self.assertEqual(out.splitlines()[0],
+                         f"The depths are given against assessment run {ASSESSMENT_RUN}, "
+                         f"whose criteria assessment run {TAKING_RUN} takes.")
+        self.assertIn("Priced at about", out)
+        self.assertLess(out.index("given against"), out.index("Priced at about"))
+
+    def test_a_run_taking_nothing_says_nothing_and_writes_against_the_run_named(self):
+        fake = store()
+        out = self.printed(fake, ASSESSMENT_RUN, go=True)
+        self.assertTrue(out.startswith("Priced at about"), out.splitlines()[:1])
+        self.assertNotIn("given against", out)
+        self.assertTrue(all(r["assessment_run_id"] == ASSESSMENT_RUN
+                            for r in fake.tables["aci_depths_out_of_ten"]))
+
+    def test_a_gap_in_its_own_contradictions_still_stops_the_pass(self):
+        calls = [dict(c, status="error") if c["seat"] == "kimi" else dict(c)
+                 for c in TAKING_CALLS]
+        fake = taking_store(taking_calls=calls)
+        model = Scripted()
+        with contextlib.redirect_stdout(io.StringIO()) as printed, \
+                self.assertRaises(SystemExit) as refused:
+            depth_pass.give_pass(fake, CONFIG, [RUN], TAKING_RUN, passages_for,
+                                 call_model=model, go=True, registry=REGISTRY)
+        self.assertIn(f"{DOC}: kimi gave no contradictions answer in assessment run "
+                      f"{TAKING_RUN}", str(refused.exception))
+        self.assertEqual(fake.writes, [])
+        self.assertEqual(model.asked, [])
+        self.assertEqual(printed.getvalue(), "", "a refused pass said which run it would use")
+
+    def test_a_depth_already_given_against_the_earlier_run_is_not_given_again(self):
+        fake = taking_store()
+        give(fake, assessment_run=ASSESSMENT_RUN)
+        inserted = len(fake.inserted("aci_depths_out_of_ten"))
+        _estimate, _report, model = give(fake, assessment_run=TAKING_RUN)
+        self.assertEqual(model.asked, [])
+        self.assertEqual(len(fake.inserted("aci_depths_out_of_ten")), inserted)
+        self.assertEqual(len(fake.tables["aci_depths_out_of_ten"]), 3)
+
+    def test_a_publication_naming_the_run_reads_the_depths_the_pass_wrote(self):
+        """The whole point of writing them there: `index_store.cell_depths`,
+        which is what a publication reads its depths with, finds them under the
+        run named."""
+        fake = taking_store()
+        give(fake, assessment_run=TAKING_RUN)
+        cells = [{"run_id": RUN, "behaviour_slug": "honesty", "spec_version_id": VERSION_ID}]
+        given = index_store.cell_depths(fake, cells, TAKING_RUN,
+                                        depth_prompt=depth_call.prompt_sha256(10))
+        cell = given[("honesty", VERSION_ID)]
+        self.assertEqual((cell["mean"], cell["scale"]), (6, 10))
+        self.assertEqual(sorted(cell["judges"]), ["deepseek", "fable", "sol"])
 
 
 class OneModelOneDepthTest(unittest.TestCase):
