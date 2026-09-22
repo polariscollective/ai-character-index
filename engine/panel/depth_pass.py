@@ -255,16 +255,17 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
 
     When `row` already carries `attempts` from an earlier pass that left it in
     error, this pass's attempts are appended to them rather than replacing
-    them, and its cost and tokens add to the row's earlier totals: a row given
-    again keeps the bill of what it already spent, on top of what giving it
-    again costs.
+    them, and its cost, tokens and seconds add to the row's earlier totals: a
+    row given again keeps the bill of what it already spent, on top of what
+    giving it again costs.
 
     Anything that stops this depth once the ladder has started, a
     `KeyboardInterrupt`, a model that could not be reached
     (`seat_call.Unreachable`, recorded as `unreachable: ...`) or a final write
-    that fails, writes the row `error` with every attempt already billed and
-    its cost, then goes on being raised: the attempts are the list
-    `depth_ladder.give` was filling in place."""
+    that fails, writes the row `error` with every attempt already billed, its
+    cost and its tokens, then goes on being raised: the attempts are the list
+    `depth_ladder.give` was filling in place, and the replies they were billed
+    for are the other one."""
     row_id = row["id"]
     match = {"id": row_id}
     store.update("aci_depths_out_of_ten", match, {"status": "running", "started_at": now()})
@@ -277,17 +278,17 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
 
     system, user = depth_call.compose(call["behaviour_slug"], registry, retained,
                                       scale=10, conflict_rules=rules)
-    billed = []
+    billed, came_back = [], []
     # An already-seated skip carries no "cost_usd" key at all, not merely None.
     try:
         result = depth_ladder.give(call["model"], system, user, config, call_model,
-                                   seated=seated, attempts=billed)
+                                   seated=seated, attempts=billed, answered=came_back)
         new_cost = _sum(attempt.get("cost_usd") for attempt in billed)
         patch = {"attempts": (row.get("attempts") or []) + billed, "passages": len(retained),
                  "prompt_tokens": _sum([row.get("prompt_tokens"), result["prompt_tokens"]]),
                  "completion_tokens": _sum([row.get("completion_tokens"),
                                             result["completion_tokens"]]),
-                 "seconds": result["seconds"],
+                 "seconds": _sum([row.get("seconds"), result["seconds"]]),
                  "cost_usd": _sum([row.get("cost_usd"), new_cost]),
                  "finished_at": now()}
         if result["substitution_reason"] is not None:
@@ -313,11 +314,19 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
                          rationale=result["rationale"] or "", error=None, raw_output=None)
         store.update("aci_depths_out_of_ten", match, patch)
     except BaseException as stopped:
+        # The tokens beside the cost: a reply that was paid for was metered too,
+        # and a row that keeps one and drops the other says the call read
+        # nothing. `came_back` holds the replies, since an attempt carries no
+        # meters of its own.
         stopped_patch = {
             "status": "error", "error": seat_call.stop_error(stopped),
             "attempts": (row.get("attempts") or []) + billed,
             "cost_usd": _sum([row.get("cost_usd"),
                               _sum(attempt.get("cost_usd") for attempt in billed)]),
+            "prompt_tokens": _sum([row.get("prompt_tokens"),
+                                   depth_ladder.metered(came_back, "prompt_tokens")]),
+            "completion_tokens": _sum([row.get("completion_tokens"),
+                                       depth_ladder.metered(came_back, "completion_tokens")]),
             "finished_at": now()}
         try:
             store.update("aci_depths_out_of_ten", match, stopped_patch)

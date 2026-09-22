@@ -13,8 +13,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import httpx
-import openai
+# CI installs no python dependency, so both of these are optional here, as
+# openai already is in seat_call.py. A connection error has builtins in
+# `seat_call.CONNECTION_ERRORS`, so `cut()` raises one of those when openai is
+# absent and the path under test is the same either way.
+try:
+    import httpx
+    import openai
+except ImportError:
+    httpx = openai = None
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -532,7 +539,8 @@ class InterruptedTest(unittest.TestCase):
         fake = store(aci_depths_out_of_ten=[
             {"id": "row-sol", "call_id": "call-sol", "status": "error",
              "prompt_sha256": depth_call.prompt_sha256(10), "assessment_run_id": ASSESSMENT_RUN,
-             "attempts": [dict(earlier)], "cost_usd": 0.05}])
+             "attempts": [dict(earlier)], "cost_usd": 0.05,
+             "prompt_tokens": 500, "completion_tokens": 50}])
         model = Scripted(sol=["DEPTH: -1", KeyboardInterrupt()])
         with self.assertRaises(KeyboardInterrupt):
             give(fake, model=model)
@@ -544,6 +552,10 @@ class InterruptedTest(unittest.TestCase):
                                    CONFIG)
         self.assertEqual(row["attempts"][1]["cost_usd"], billed)
         self.assertAlmostEqual(row["cost_usd"], 0.05 + billed)
+        # The reply that was paid for was metered too: a row that keeps the
+        # cost and drops the tokens says the call was free of them.
+        self.assertEqual(row["prompt_tokens"], 500 + 1000)
+        self.assertEqual(row["completion_tokens"], 50 + 100)
         self.assertEqual(row["error"], "KeyboardInterrupt")
         self.assertTrue(row["finished_at"])
 
@@ -566,11 +578,16 @@ class InterruptedTest(unittest.TestCase):
         self.assertIsNotNone(row["cost_usd"])
 
 
-REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+REQUEST = (httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+           if httpx is not None else None)
 
 
 def cut():
-    """What the openai client raises when the connection is gone."""
+    """What a call raises when the connection is gone: the openai client's own
+    error where the package is installed, and a builtin where it is not.
+    `seat_call.CONNECTION_ERRORS` holds both, so the path under test is one."""
+    if openai is None:
+        return ConnectionError("Connection error.")
     return openai.APIConnectionError(request=REQUEST)
 
 
@@ -603,7 +620,7 @@ class UnreachableTest(unittest.TestCase):
         fable = rows["call-fable"]
         self.assertEqual(fable["status"], "error")
         self.assertTrue(fable["error"].startswith("unreachable: fable"), fable["error"])
-        self.assertIn("APIConnectionError", fable["error"])
+        self.assertIn(type(cut()).__name__, fable["error"], "the class is named")
         billed = batch_job.cost_of("fable", {"prompt_tokens": 1000, "completion_tokens": 100},
                                    CONFIG)
         self.assertEqual([(a["model"], a["reminder"], a["cost_usd"]) for a in fable["attempts"]],
@@ -793,7 +810,7 @@ class GiveTest(unittest.TestCase):
              "prompt_sha256": depth_call.prompt_sha256(10),
              "assessment_run_id": ASSESSMENT_RUN, "status": "error",
              "attempts": [dict(earlier_attempt)], "cost_usd": 0.05,
-             "prompt_tokens": 500, "completion_tokens": 50,
+             "prompt_tokens": 500, "completion_tokens": 50, "seconds": 1.25,
              "raw_output": "a stale unparsed reply", "error": "no depth parsed"}])
         give(fake)
         row = next(r for r in fake.tables["aci_depths_out_of_ten"] if r["call_id"] == "call-sol")
@@ -805,6 +822,9 @@ class GiveTest(unittest.TestCase):
         self.assertAlmostEqual(row["cost_usd"], 0.05 + new_cost)
         self.assertEqual(row["prompt_tokens"], 500 + 1000)
         self.assertEqual(row["completion_tokens"], 50 + 100)
+        # Time is a meter like the other two: what the row already stood at,
+        # plus what giving it again took.
+        self.assertAlmostEqual(row["seconds"], 1.25 + 0.5)
 
     def test_a_cell_with_nothing_retained_is_depth_zero_without_a_call(self):
         empty_calls = [{"id": "call-sol-2", "run_id": RUN, "behaviour_slug": "silence",

@@ -70,8 +70,19 @@ def substitution_reason(own):
     return RAISED_OR_OFF_SCALE
 
 
+def metered(answered, field):
+    """`field` summed over the replies that came back, None when none did.
+
+    The caller of `give` needs this when `give` never returns: a stop mid-ladder
+    leaves it holding `answered`, and the tokens on those replies are what it
+    has to write beside the cost it already writes."""
+    if field == "seconds":
+        return _sum(answer["seconds"] for answer in answered)
+    return _sum((answer["usage"] or {}).get(field) for answer in answered)
+
+
 def give(tag, system, user, config, call_model, panel="frontier_fast", seated=None,
-         attempts=None):
+         attempts=None, answered=None):
     """One seat's depth out of ten: `tag`'s own model three times (plain, then
     each reminder), then each of `tag`'s declared substitutes in `panel` twice
     (plain, then the first reminder), until an attempt parses.
@@ -88,11 +99,13 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
     comes back or raises, so a `KeyboardInterrupt`, a `SystemExit` or a
     `seat_call.Unreachable`, which are not caught here and propagate at once,
     still leave the caller holding every attempt already billed. Omitted, a
-    list of its own is used. A model that could not be reached through every
-    wait is not an attempt that failed: nothing is appended for it, and no
-    later attempt or substitute is asked. A rate limit or a server error that
-    outlasts every wait is: its provider was reached, so it is an attempt that
-    raised, and the ladder goes on.
+    list of its own is used. `answered` is the same arrangement for the replies
+    that came back, which carry the meters an attempt does not: pass a list, and
+    `metered` reads the tokens and the seconds off it after a stop. A model that
+    could not be reached through every wait is not an attempt that failed:
+    nothing is appended for it, and no later attempt or substitute is asked. A
+    rate limit or a server error that outlasts every wait is: its provider was
+    reached, so it is an attempt that raised, and the ladder goes on.
 
     Returns {"depth", "rationale", "model", "substitution_reason", "attempts",
     "replies", "prompt_tokens", "completion_tokens", "seconds"}:
@@ -114,7 +127,8 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
       when none did."""
     seated = seated or ()
     attempts = [] if attempts is None else attempts
-    replies, answered = [], []
+    answered = [] if answered is None else answered
+    replies = []
 
     def try_once(model, reminder):
         try:
@@ -136,13 +150,12 @@ def give(tag, system, user, config, call_model, panel="frontier_fast", seated=No
         return None if depth is None else (depth, rationale)
 
     def result(depth, rationale, model, substitution_reason):
-        usage = [answer["usage"] or {} for answer in answered]
         return {"depth": depth, "rationale": rationale, "model": model,
                 "substitution_reason": substitution_reason,
                 "attempts": attempts, "replies": replies,
-                "prompt_tokens": _sum(u.get("prompt_tokens") for u in usage),
-                "completion_tokens": _sum(u.get("completion_tokens") for u in usage),
-                "seconds": _sum(answer["seconds"] for answer in answered)}
+                "prompt_tokens": metered(answered, "prompt_tokens"),
+                "completion_tokens": metered(answered, "completion_tokens"),
+                "seconds": metered(answered, "seconds")}
 
     start = len(attempts)
     for reminder in SEAT_REMINDERS:
