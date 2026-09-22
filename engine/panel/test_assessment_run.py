@@ -25,7 +25,7 @@ USAGE = {"prompt_tokens": 1000, "completion_tokens": 100}
 
 
 def tag_of(model_id):
-    return next((t for t in ("deepseek", "fable", "opus", "kimi", "sol")
+    return next((t for t in ("deepseek", "fable", "glm", "opus", "kimi", "sol")
                  if t in model_id.lower()), model_id)
 
 
@@ -94,23 +94,27 @@ class AskWithSubstitutesTest(unittest.TestCase):
 
     def test_every_candidate_refusing_answers_nothing(self):
         model = Scripted(fable=("", "content_filter"), opus=("", "content_filter"),
-                         kimi=("", "content_filter"))
+                         kimi=("", "content_filter"), glm=("", "content_filter"))
         tag, answer, substituted, refused = self.ask("fable", model)
         self.assertIsNone(tag)
         self.assertIsNone(answer)
-        self.assertEqual([item["model"] for item in substituted], ["fable", "opus", "kimi"])
+        self.assertEqual([item["model"] for item in substituted],
+                         ["fable", "opus", "kimi", "glm"])
         self.assertEqual(refused, [])
         self.assertEqual(assessment_run.last_failure(substituted),
                          "finish_reason=content_filter")
 
     def test_a_substitute_already_seated_for_the_question_is_skipped(self):
-        model = Scripted(fable=("", "content_filter"), opus=("", "content_filter"))
+        model = Scripted(fable=("", "content_filter"), opus=("", "content_filter"),
+                         glm=("", "content_filter"))
         tag, answer, substituted, _refused = self.ask("fable", model,
                                                       seated=("sol", "fable", "kimi"))
         self.assertIsNone(answer)
         self.assertIsNone(tag)
-        self.assertEqual(substituted[-1], {"model": "kimi", "reason": "already seated"})
-        self.assertEqual(model.asked, ["fable", "opus"])
+        self.assertEqual([item["model"] for item in substituted],
+                         ["fable", "opus", "kimi", "glm"])
+        self.assertEqual(substituted[2], {"model": "kimi", "reason": "already seated"})
+        self.assertEqual(model.asked, ["fable", "opus", "glm"])
         # The failure a seat's call reports is the last candidate actually asked.
         self.assertEqual(assessment_run.last_failure(substituted),
                          "finish_reason=content_filter")

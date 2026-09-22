@@ -39,8 +39,8 @@ class ConfigTest(unittest.TestCase):
 
     def test_the_substitutes_stay_those_of_frontier_fast(self):
         self.assertEqual(CONFIG["substitutes"],
-                         {"frontier_fast": {"fable": ["opus", "kimi"],
-                                            "deepseek": ["kimi"]}})
+                         {"frontier_fast": {"fable": ["opus", "kimi", "glm"],
+                                            "deepseek": ["glm", "kimi"]}})
 
 
 class FakeStore:
@@ -109,7 +109,8 @@ QUESTION_OF = {assessment_call.system_prompt(q): q
 
 
 def tag_of(model_id):
-    return next(t for t in ("deepseek", "fable", "opus", "kimi", "sol") if t in model_id.lower())
+    return next(t for t in ("deepseek", "fable", "glm", "opus", "kimi", "sol")
+                if t in model_id.lower())
 
 
 class Scripted:
@@ -178,20 +179,20 @@ class PriceTest(unittest.TestCase):
             return batch_job.cost_of(tag, usage, CONFIG)
 
         want = 0.0
-        # Criteria: sol, fable then opus then kimi, deepseek then kimi.
+        # Criteria: sol, fable then opus then kimi then glm, deepseek then glm then kimi.
         system, user = assessment_call.compose("criteria", labelled)
         want += sum(at_most(tag, system, user)
-                    for tag in ("sol", "fable", "opus", "kimi", "deepseek", "kimi"))
-        # Contradictions: sol, fable then opus then kimi, kimi.
+                    for tag in ("sol", "fable", "opus", "kimi", "glm", "deepseek", "glm", "kimi"))
+        # Contradictions: sol, fable then opus then kimi then glm, kimi.
         system, user = assessment_call.compose("contradictions", labelled)
         want += sum(at_most(tag, system, user)
-                    for tag in ("sol", "fable", "opus", "kimi", "kimi"))
+                    for tag in ("sol", "fable", "opus", "kimi", "glm", "kimi"))
         # Confirmation, at the estimate's own input: the document and 3,000
         # characters of claims, asked of the contradictions' seats.
         system, user = assessment_call.compose_confirm(labelled, [])
         user += "x" * assessment_run.CONFIRM_CLAIMS_CHARS
         want += sum(at_most(tag, system, user)
-                    for tag in ("sol", "fable", "opus", "kimi", "kimi"))
+                    for tag in ("sol", "fable", "opus", "kimi", "glm", "kimi"))
         self.assertAlmostEqual(assess.ceiling_document(labelled, CONFIG["assessment"], CONFIG),
                                want)
 
@@ -354,19 +355,22 @@ class RunTest(unittest.TestCase):
         self.assertEqual(len(scores), 4)
 
     def test_no_model_answers_one_question_twice_for_one_document(self):
-        # fable, then its substitutes opus and kimi, all refused on criteria:
-        # kimi answers deepseek's substitute list too, but must not be asked
-        # to answer criteria a second time.
+        # fable, then its substitutes opus and kimi, all refused on criteria,
+        # and glm too, deepseek's own first substitute: kimi answers
+        # deepseek's substitute list too, but must not be asked to answer
+        # criteria a second time.
         model = Scripted(criteria__fable=("", "content_filter"),
                          criteria__opus=("", "content_filter"),
-                         criteria__deepseek=("", "content_filter"))
+                         criteria__deepseek=("", "content_filter"),
+                         criteria__glm=("", "content_filter"))
         fake, _estimate, _run_id = run(model)
         calls = calls_by(fake)
         self.assertEqual(calls[("criteria", "fable")]["model"], "kimi")
         deepseek_call = calls[("criteria", "deepseek")]
         self.assertEqual(deepseek_call["status"], "error")
         self.assertEqual([(a["model"], a["reason"]) for a in deepseek_call["attempts"]], [
-            ("deepseek", "finish_reason=content_filter"), ("kimi", "already seated")])
+            ("deepseek", "finish_reason=content_filter"),
+            ("glm", "finish_reason=content_filter"), ("kimi", "already seated")])
         asked = [(question, tag) for question, tag, _user in model.asked]
         self.assertEqual(asked.count(("criteria", "kimi")), 1)
         self.assertEqual(fake.tables["aci_assessment_runs"][0]["status"], "done")
@@ -374,6 +378,7 @@ class RunTest(unittest.TestCase):
     def test_a_substitute_already_seated_for_the_question_is_skipped(self):
         model = Scripted(contradictions__fable=("", "content_filter"),
                          contradictions__opus=RuntimeError("provider refused the input"),
+                         contradictions__glm=("", "content_filter"),
                          criteria__fable=("", "content_filter"),
                          criteria__opus=("", "content_filter"))
         fake, _estimate, _run_id = run(model)
@@ -381,10 +386,10 @@ class RunTest(unittest.TestCase):
         call = calls[("contradictions", "fable")]
         self.assertEqual(call["status"], "error")
         self.assertIsNone(call.get("model"), "a call nobody answered names no model")
-        self.assertEqual(call["error"], "provider refused the input")
+        self.assertEqual(call["error"], "finish_reason=content_filter")
         self.assertEqual([(a["model"], a["reason"]) for a in call["attempts"]], [
             ("fable", "finish_reason=content_filter"), ("opus", "provider refused the input"),
-            ("kimi", "already seated")])
+            ("kimi", "already seated"), ("glm", "finish_reason=content_filter")])
         self.assertEqual(call["attempts"][2], {"model": "kimi", "finish_reason": None,
                                                "cost_usd": None, "reason": "already seated"})
         asked = [(question, tag) for question, tag, _user in model.asked]
@@ -399,17 +404,33 @@ class RunTest(unittest.TestCase):
         self.assertFalse([row for row in fake.inserted("aci_assessment_scores")
                           if row["call_id"] == call["id"]])
 
+    def test_glm_answers_fables_contradictions_seat_when_opus_and_kimi_cannot(self):
+        """The case the new order exists for: on contradictions kimi already
+        holds its own seat, so when fable and opus are refused, glm, fable's
+        last declared substitute, answers in its place."""
+        model = Scripted(contradictions__fable=("", "content_filter"),
+                         contradictions__opus=RuntimeError("provider refused the input"))
+        fake, _estimate, _run_id = run(model)
+        call = calls_by(fake)[("contradictions", "fable")]
+        self.assertEqual(call["status"], "done")
+        self.assertEqual(call["model"], "glm")
+        self.assertEqual([(a["model"], a["reason"]) for a in call["attempts"]], [
+            ("fable", "finish_reason=content_filter"), ("opus", "provider refused the input"),
+            ("kimi", "already seated"), ("glm", None)])
+
     def test_a_seat_nobody_could_answer_keeps_the_last_refused_text_and_its_cost(self):
         model = Scripted(criteria__fable=("I cannot help with that.", "content_filter"),
                          criteria__opus=RuntimeError("401"),
-                         criteria__kimi=("", "stop"))
+                         criteria__kimi=("", "stop"),
+                         criteria__glm=("", "stop"))
         fake, _estimate, _run_id = run(model)
         call = calls_by(fake)[("criteria", "fable")]
         self.assertEqual(call["status"], "error")
         self.assertEqual(call["error"], "empty reply, finish_reason=stop")
         self.assertEqual(call["raw_output"], "I cannot help with that.")
         self.assertEqual(call["cost_usd"], round(batch_job.cost_of("fable", USAGE, CONFIG)
-                                                 + batch_job.cost_of("kimi", USAGE, CONFIG), 6))
+                                                 + batch_job.cost_of("kimi", USAGE, CONFIG)
+                                                 + batch_job.cost_of("glm", USAGE, CONFIG), 6))
         self.assertEqual(fake.tables["aci_assessment_runs"][0]["status"], "done")
 
     def test_a_reply_that_does_not_parse_completely_is_kept(self):

@@ -159,7 +159,7 @@ class Scripted:
         self.asked = []
 
     def __call__(self, provider, model_id, system, user, kwargs):
-        tag = next((t for t in ("deepseek", "fable", "opus", "kimi", "sol")
+        tag = next((t for t in ("deepseek", "fable", "glm", "opus", "kimi", "sol")
                     if t in model_id.lower()), model_id)
         self.asked.append((tag, user))
         replies = self.script.get(tag) or []
@@ -198,10 +198,11 @@ class PriceTest(unittest.TestCase):
         self.assertIn("one call", out)
         # The worst case is computed per seat actually present, from the ladder
         # and config["substitutes"]: 3 for a seat with no declared substitute
-        # (sol), 3 + 2*2 for fable (opus, kimi), 3 + 2*1 for deepseek (kimi).
+        # (sol), 3 + 2*3 for fable (opus, kimi, glm), 3 + 2*2 for deepseek
+        # (glm, kimi).
         self.assertIn("sol up to 3", out)
-        self.assertIn("fable up to 7", out)
-        self.assertIn("deepseek up to 5", out)
+        self.assertIn("fable up to 9", out)
+        self.assertIn("deepseek up to 7", out)
 
     def test_the_price_names_only_the_seats_actually_present(self):
         fake = store(aci_judge_calls=[dict(CALLS[0])])
@@ -301,7 +302,7 @@ class OneModelOneDepthTest(unittest.TestCase):
 
     def test_kimi_answering_for_fable_is_then_skipped_for_deepseek(self):
         model = Scripted(fable=["DEPTH: -1"] * 3, opus=["DEPTH: -1"] * 2,
-                         deepseek=["DEPTH: -1"] * 3)
+                         deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2)
         fake = store()
         give(fake, model=model)
         rows = {r["call_id"]: r for r in fake.tables["aci_depths_out_of_ten"]}
@@ -314,12 +315,32 @@ class OneModelOneDepthTest(unittest.TestCase):
         self.assertEqual([tag for tag, _user in model.asked].count("kimi"), 1,
                          "kimi gives fable's depth and is not asked for deepseek's")
 
+    def test_glm_gives_deepseeks_depth_when_kimi_already_gave_fables(self):
+        """The case the new order exists for: kimi already sits in fable's
+        seat, and deepseek's own three attempts are off the scale, so glm,
+        deepseek's other declared substitute, gives the depth instead."""
+        model = Scripted(fable=["DEPTH: -1"] * 3, opus=["DEPTH: -1"] * 2,
+                         deepseek=["DEPTH: -1"] * 3,
+                         glm=["DEPTH: 5\nRATIONALE: A default only."])
+        fake = store()
+        give(fake, model=model)
+        rows = {r["call_id"]: r for r in fake.tables["aci_depths_out_of_ten"]}
+        self.assertEqual((rows["call-fable"]["status"], rows["call-fable"]["model"]),
+                         ("done", "kimi"))
+        deepseek = rows["call-deepseek"]
+        self.assertEqual(deepseek["status"], "done")
+        self.assertEqual(deepseek["depth"], 5)
+        self.assertEqual(deepseek["model"], "glm")
+        self.assertEqual(deepseek["substitution_reason"], "off-scale reply after two reminders")
+        self.assertEqual([tag for tag, _user in model.asked].count("kimi"), 1,
+                         "kimi gives fable's depth only; glm gives deepseek's without needing it")
+
     def test_a_substitute_of_an_earlier_done_row_is_seated_on_resuming(self):
         fake = store(aci_depths_out_of_ten=[
             {"id": "row-fable", "call_id": "call-fable", "status": "done", "depth": 5,
              "prompt_sha256": depth_call.prompt_sha256(10), "assessment_run_id": ASSESSMENT_RUN,
              "model": "kimi", "substitution_reason": depth_ladder.SUBSTITUTION_REASON}])
-        model = Scripted(deepseek=["DEPTH: -1"] * 3)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2)
         give(fake, model=model)
         deepseek = next(r for r in fake.tables["aci_depths_out_of_ten"]
                         if r["call_id"] == "call-deepseek")
@@ -331,7 +352,7 @@ class OneModelOneDepthTest(unittest.TestCase):
             {"id": "row-fable-old", "call_id": "call-fable", "status": "done", "depth": 5,
              "prompt_sha256": depth_call.prompt_sha256(10), "assessment_run_id": MISSING_RUN,
              "model": "kimi", "substitution_reason": depth_ladder.SUBSTITUTION_REASON}])
-        model = Scripted(deepseek=["DEPTH: -1"] * 3)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2)
         give(fake, model=model)
         deepseek = next(r for r in fake.tables["aci_depths_out_of_ten"]
                         if r["call_id"] == "call-deepseek"
@@ -370,12 +391,14 @@ class CeilingTest(unittest.TestCase):
         _estimate, out = self.printed(store(aci_judge_calls=[dict(CALLS[0])]))
         self.assertIn(f"ceiling of {round(want, 2)} dollars", out)
 
-    def test_fable_is_billed_then_opus_then_kimi_each_at_its_own_largest_output(self):
+    def test_fable_is_billed_then_opus_then_kimi_then_glm_each_at_its_own_largest_output(self):
         system, user = self.composed()
         want = (sum(at_most("fable", system, depth_ladder.user_for(user, r)) for r in (0, 1, 2))
                 + sum(at_most("opus", system, depth_ladder.user_for(user, r)) for r in (0, 1))
-                + sum(at_most("kimi", system, depth_ladder.user_for(user, r)) for r in (0, 1)))
+                + sum(at_most("kimi", system, depth_ladder.user_for(user, r)) for r in (0, 1))
+                + sum(at_most("glm", system, depth_ladder.user_for(user, r)) for r in (0, 1)))
         self.assertEqual(CONFIG["models"]["kimi"]["max_output"], 65536)
+        self.assertNotIn("max_output", CONFIG["models"]["glm"])
         _estimate, out = self.printed(store(aci_judge_calls=[dict(CALLS[1])]))
         self.assertIn(f"ceiling of {round(want, 2)} dollars", out)
 
@@ -515,25 +538,25 @@ class GiveTest(unittest.TestCase):
 
     def test_a_substitute_is_recorded_only_when_it_answers(self):
         model = Scripted(deepseek=["DEPTH: -1"] * 3,
-                         kimi=["DEPTH: 5\nRATIONALE: A default only."])
+                         glm=["DEPTH: 5\nRATIONALE: A default only."])
         fake = store()
         give(fake, model=model)
         row = next(r for r in fake.tables["aci_depths_out_of_ten"]
                   if r["call_id"] == "call-deepseek")
         self.assertEqual(row["status"], "done")
         self.assertEqual(row["depth"], 5)
-        self.assertEqual(row["model"], "kimi")
+        self.assertEqual(row["model"], "glm")
         self.assertEqual(row["substitution_reason"], depth_ladder.SUBSTITUTION_REASON)
 
     def test_a_substitutes_depth_sums_cost_and_tokens_over_every_attempt_of_the_ladder(self):
         model = Scripted(deepseek=["DEPTH: -1"] * 3,
-                         kimi=["DEPTH: -1", "DEPTH: 5\nRATIONALE: A default only."])
+                         glm=["DEPTH: -1", "DEPTH: 5\nRATIONALE: A default only."])
         fake = store()
         give(fake, model=model)
         row = next(r for r in fake.tables["aci_depths_out_of_ten"]
                   if r["call_id"] == "call-deepseek")
         self.assertEqual(row["status"], "done")
-        self.assertEqual(len(row["attempts"]), 5, "3 of deepseek, 2 of kimi")
+        self.assertEqual(len(row["attempts"]), 5, "3 of deepseek, 2 of glm")
         self.assertEqual(row["cost_usd"], depth_pass._sum(a["cost_usd"] for a in row["attempts"]))
         self.assertIsNotNone(row["cost_usd"])
         self.assertEqual(row["prompt_tokens"], 5 * 1000)
@@ -541,12 +564,12 @@ class GiveTest(unittest.TestCase):
 
     def test_a_declared_substitute_already_seated_in_the_cell_is_skipped(self):
         # An Alibaba-like cell: kimi already gave one of the cell's depths, in
-        # fable's seat, and deepseek is off scale three times. Its only
-        # declared substitute is kimi, already seated, so it cannot give a
-        # second depth in the same cell.
+        # fable's seat, and deepseek is off scale three times, and so is glm.
+        # Its last declared substitute is kimi, already seated, so it cannot
+        # give a second depth in the same cell.
         calls = [dict(CALLS[0]), dict(CALLS[1], id="call-kimi", model="kimi"), dict(CALLS[2])]
         fake = store(aci_judge_calls=calls)
-        model = Scripted(deepseek=["DEPTH: -1"] * 3)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2)
         give(fake, model=model)
         row = next(r for r in fake.tables["aci_depths_out_of_ten"]
                   if r["call_id"] == "call-deepseek")

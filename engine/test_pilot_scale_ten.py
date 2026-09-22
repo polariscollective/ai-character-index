@@ -211,13 +211,13 @@ class PilotTest(unittest.TestCase):
 
     def test_every_declared_substitute_refusing_records_an_error(self):
         with tempfile.TemporaryDirectory() as out:
-            _estimate, folder = self.go(Scripted(refuse=("fable", "opus", "kimi")), out)
+            _estimate, folder = self.go(Scripted(refuse=("fable", "opus", "kimi", "glm")), out)
             results = __import__("json").loads((folder / "pilot.json").read_text())
         record = results["documents"][DOC]
         criteria = record["assessment"]["fable"]["criteria"]
         self.assertIn("content_filter", criteria["error"])
         self.assertEqual([item["model"] for item in criteria["substituted"]],
-                         ["fable", "opus", "kimi"])
+                         ["fable", "opus", "kimi", "glm"])
         # sol and deepseek still cite the first passage, which is the quorum.
         self.assertEqual(record["conflict_rules"], [PASSAGES[0][0]])
 
@@ -250,7 +250,7 @@ class PilotTest(unittest.TestCase):
         def model(provider, model_id, system, user, kwargs):
             mid = model_id.lower()
             if system == assessment_call.system_prompt("criteria") and (
-                    "fable" in mid or "opus" in mid or "kimi" in mid):
+                    "fable" in mid or "opus" in mid or "kimi" in mid or "glm" in mid):
                 return ("no", {"prompt_tokens": 20, "completion_tokens": 5},
                         "content_filter", 0.01)
             return Scripted()(provider, model_id, system, user, kwargs)
@@ -261,7 +261,7 @@ class PilotTest(unittest.TestCase):
             results = __import__("json").loads((folder / "pilot.json").read_text())
         criteria = results["documents"][DOC]["assessment"]["fable"]["criteria"]
         self.assertIn("error", criteria)
-        self.assertEqual(len(criteria["substituted"]), 3)
+        self.assertEqual(len(criteria["substituted"]), 4)
         attempt_costs = [item["cost_usd"] for item in criteria["substituted"]]
         self.assertTrue(all(cost is not None and cost > 0 for cost in attempt_costs))
         self.assertGreaterEqual(round(results["cost_usd"], 6), round(sum(attempt_costs), 6))
@@ -438,11 +438,13 @@ class PilotTest(unittest.TestCase):
         self.assertIn("1 unreadable", text)
 
     def test_a_depth_with_no_line_shows_its_finish_reason_and_counts_as_no_depth(self):
-        # deepseek's declared substitute, kimi, is asked too once the ladder of
-        # three reminders is exhausted; both must fail to reach "no depth" here.
+        # deepseek's declared substitutes, glm and kimi, are asked too once
+        # the ladder of three reminders is exhausted; all three must fail to
+        # reach "no depth" here.
         def model(provider, model_id, system, user, kwargs):
             mid = model_id.lower()
-            if system == depth_call.system_prompt(10) and ("deepseek" in mid or "kimi" in mid):
+            if system == depth_call.system_prompt(10) and (
+                    "deepseek" in mid or "glm" in mid or "kimi" in mid):
                 return ("I cannot decide.", {"prompt_tokens": 10, "completion_tokens": 10},
                         "content_filter", 0.01)
             return Scripted()(provider, model_id, system, user, kwargs)
@@ -485,16 +487,17 @@ class PilotTest(unittest.TestCase):
             results = json.loads((folder / "pilot.json").read_text())
             text = (folder / "summary.md").read_text()
         given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
-        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["model"], "glm")
         self.assertEqual(len(given["attempts"]), 4)
         self.assertEqual([a["reminder"] for a in given["attempts"]], [0, 1, 2, 0])
         self.assertEqual(given["substituted"],
-                         {"model": "kimi", "reason": "off-scale reply after two reminders"})
-        self.assertIn("deepseek (kimi)", text)
+                         {"model": "glm", "reason": "off-scale reply after two reminders"})
+        self.assertIn("deepseek (glm)", text)
 
     def test_every_attempt_failing_leaves_no_depth(self):
         model = Scripted(depth_script={
             "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+            "glm": ["DEPTH: -1", "DEPTH: -1"],
             "kimi": ["DEPTH: -1", "DEPTH: -1"]})
         with tempfile.TemporaryDirectory() as out:
             _estimate, folder = self.go(model, out)
@@ -502,7 +505,7 @@ class PilotTest(unittest.TestCase):
             text = (folder / "summary.md").read_text()
         given = results["documents"][DOC]["cells"][SLUG]["new"]["deepseek"]
         self.assertIsNone(given["depth"])
-        self.assertEqual(len(given["attempts"]), 5)
+        self.assertEqual(len(given["attempts"]), 7)
         self.assertNotIn("substituted", given)
         self.assertIn("no depth", text)
 
@@ -518,9 +521,10 @@ class ReplayPilotTest(unittest.TestCase):
 
     def _run_with_one_failed_depth(self, out):
         """A saved pilot.json whose only depth failure is deepseek's, its
-        declared substitute kimi failing too."""
+        declared substitutes glm and kimi failing too."""
         model = Scripted(depth_script={
             "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+            "glm": ["DEPTH: -1", "DEPTH: -1"],
             "kimi": ["DEPTH: -1", "DEPTH: -1"]})
         _estimate, folder = pilot.run_pilot(store(), self.config, self.registry, passages_for,
                                             out, call_model=model, go=True, documents=(DOC,),
@@ -532,6 +536,7 @@ class ReplayPilotTest(unittest.TestCase):
             folder = self._run_with_one_failed_depth(out)
             replay_model = Scripted(depth_script={
                 "deepseek": ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1"],
+                "glm": ["DEPTH: -1", "DEPTH: -1"],
                 "kimi": ["DEPTH: 6\nRATIONALE: Given again, prescribed."]})
             cost, replay_folder = pilot.replay_pilot(
                 store(), self.config, self.registry, passages_for, folder, out,

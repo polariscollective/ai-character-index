@@ -272,14 +272,16 @@
     "frontier_fast": {
       "fable": [
         "opus",
-        "kimi"
+        "kimi",
+        "glm"
       ],
       "deepseek": [
+        "glm",
         "kimi"
       ]
     }
   },
-  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. Which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
+  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. glm last: kimi holds a contradictions seat of its own in the assessment, so on a document where every Anthropic model is refused, as the Alibaba Model Spec was, nobody else could take fable's contradictions seat. frontier_fast's deepseek seat: glm first, named deepseek's substitute by the audition of 2026-08-17 recorded in _frontier_fast_note, about a tenth of kimi's price per token, and seated nowhere else, so it is free where kimi already sits in fable's place. kimi next. (Owner, 22 September 2026.) A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. The depth ladder and the assessment try this list in order; for passage judging, which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
   "assessment": {
     "criteria": [
       "sol",

@@ -3,9 +3,9 @@
 
 `panel-config.json` names, per panel per seat, the ordered stand-ins a
 publication may accept in that seat: `substitutes.frontier_fast.fable` is
-`["opus", "kimi"]`. `declared()` is the pure check underneath `publish.py`'s
-refusal -- it answers one question, is this pair on that list, and knows
-nothing about a cell, a run, or a database.
+`["opus", "kimi", "glm"]`. `declared()` is the pure check underneath
+`publish.py`'s refusal -- it answers one question, is this pair on that list,
+and knows nothing about a cell, a run, or a database.
 
 Run: python3 engine/test_seat_substitutions.py
 """
@@ -52,13 +52,18 @@ class DeclaredTest(unittest.TestCase):
 
 class RealConfigTest(unittest.TestCase):
     """Pins what the shipped configuration actually declares, so an edit to
-    panel-config.json that drops or reorders fable's substitutes fails here
-    first, not in a publish attempt weeks later."""
+    panel-config.json that drops or reorders fable's or deepseek's substitutes
+    fails here first, not in a publish attempt weeks later."""
 
     def test_fable_s_declared_substitutes_in_frontier_fast(self):
         config = json.loads((HERE / "panel" / "panel-config.json").read_text())
         self.assertEqual(config["substitutes"]["frontier_fast"]["fable"],
-                         ["opus", "kimi"])
+                         ["opus", "kimi", "glm"])
+
+    def test_deepseek_s_declared_substitutes_in_frontier_fast(self):
+        config = json.loads((HERE / "panel" / "panel-config.json").read_text())
+        self.assertEqual(config["substitutes"]["frontier_fast"]["deepseek"],
+                         ["glm", "kimi"])
 
 
 if __name__ == "__main__":

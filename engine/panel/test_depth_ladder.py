@@ -34,7 +34,7 @@ class Scripted:
         self.asked = []
 
     def __call__(self, provider, model_id, system, user, kwargs):
-        tag = next((t for t in ("deepseek", "fable", "opus", "kimi", "sol")
+        tag = next((t for t in ("deepseek", "fable", "glm", "opus", "kimi", "sol")
                     if t in model_id.lower()), model_id)
         self.asked.append((tag, user))
         replies = self.script.get(tag) or []
@@ -80,20 +80,20 @@ class GiveTest(unittest.TestCase):
                                  depth_call.retry_user(USER, 2)])
 
     def test_three_failures_fall_to_the_declared_substitute_plain_then_reminded(self):
-        model = Scripted(deepseek=["DEPTH: -1"] * 3, kimi=["no depth here", ANSWER])
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["no depth here", ANSWER])
         given = self.give("deepseek", model)
         self.assertEqual(given["depth"], 7)
-        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["model"], "glm")
         self.assertEqual(given["substitution_reason"], "off-scale reply after two reminders")
         self.assertEqual([(a["model"], a["reminder"]) for a in given["attempts"]],
                          [("deepseek", 0), ("deepseek", 1), ("deepseek", 2),
-                          ("kimi", 0), ("kimi", 1)])
-        self.assertEqual(model.asked[3], ("kimi", USER))
-        self.assertEqual(model.asked[4], ("kimi", depth_call.retry_user(USER, 1)))
+                          ("glm", 0), ("glm", 1)])
+        self.assertEqual(model.asked[3], ("glm", USER))
+        self.assertEqual(model.asked[4], ("glm", depth_call.retry_user(USER, 1)))
 
     def test_every_substitute_is_tried_in_order_and_nothing_answering_leaves_no_depth(self):
         model = Scripted(fable=["DEPTH: -1"] * 3, opus=["DEPTH: -1"] * 2,
-                         kimi=["DEPTH: -1"] * 2)
+                         kimi=["DEPTH: -1"] * 2, glm=["DEPTH: -1"] * 2)
         given = self.give("fable", model)
         self.assertIsNone(given["depth"])
         self.assertIsNone(given["rationale"])
@@ -101,8 +101,8 @@ class GiveTest(unittest.TestCase):
         self.assertIsNone(given["substitution_reason"])
         self.assertEqual([(a["model"], a["reminder"]) for a in given["attempts"]],
                          [("fable", 0), ("fable", 1), ("fable", 2), ("opus", 0), ("opus", 1),
-                          ("kimi", 0), ("kimi", 1)])
-        self.assertEqual(len(given["replies"]), 7)
+                          ("kimi", 0), ("kimi", 1), ("glm", 0), ("glm", 1)])
+        self.assertEqual(len(given["replies"]), 9)
 
     def test_a_seat_with_no_declared_substitute_stops_after_its_reminders(self):
         given = self.give("sol", Scripted(sol=["DEPTH: -1"] * 3))
@@ -115,7 +115,7 @@ class GiveTest(unittest.TestCase):
         self.assertEqual({a["model"] for a in given["attempts"]}, {"deepseek"})
 
     def test_a_substitute_already_seated_is_skipped_and_recorded(self):
-        model = Scripted(deepseek=["DEPTH: -1"] * 3, kimi=["DEPTH: -1"] * 2)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2)
         given = self.give("deepseek", model, seated={"kimi"})
         self.assertIsNone(given["depth"])
         self.assertEqual(given["model"], "deepseek")
@@ -123,19 +123,24 @@ class GiveTest(unittest.TestCase):
                           for a in given["attempts"]],
                          [("deepseek", 0, None, False), ("deepseek", 1, None, False),
                           ("deepseek", 2, None, False),
+                          ("glm", 0, None, False), ("glm", 1, None, False),
                           ("kimi", None, depth_ladder.ALREADY_SEATED, False)])
-        self.assertNotIn("cost_usd", given["attempts"][3])
-        self.assertEqual(given["replies"], ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1", None])
+        self.assertNotIn("cost_usd", given["attempts"][5])
+        self.assertEqual(given["replies"], ["DEPTH: -1", "DEPTH: -1", "DEPTH: -1",
+                                            "DEPTH: -1", "DEPTH: -1", None])
         self.assertEqual(model.asked, [("deepseek", USER),
                                        ("deepseek", depth_call.retry_user(USER, 1)),
-                                       ("deepseek", depth_call.retry_user(USER, 2))],
+                                       ("deepseek", depth_call.retry_user(USER, 2)),
+                                       ("glm", USER),
+                                       ("glm", depth_call.retry_user(USER, 1))],
                          "kimi is never asked at all once it is already seated")
 
     def test_with_no_seated_argument_a_substitute_is_tried_as_before(self):
-        model = Scripted(deepseek=["DEPTH: -1"] * 3, kimi=["DEPTH: -1"] * 2)
+        model = Scripted(deepseek=["DEPTH: -1"] * 3, glm=["DEPTH: -1"] * 2,
+                         kimi=["DEPTH: -1"] * 2)
         given = self.give("deepseek", model)
         self.assertIsNone(given["depth"])
-        self.assertEqual({a["model"] for a in given["attempts"]}, {"deepseek", "kimi"})
+        self.assertEqual({a["model"] for a in given["attempts"]}, {"deepseek", "glm", "kimi"})
         self.assertIn(("kimi", USER), model.asked, "kimi is tried when nothing seats it")
 
     def test_a_raised_call_is_an_attempt_with_no_reply_and_no_cost(self):
@@ -159,7 +164,7 @@ class GiveTest(unittest.TestCase):
     def test_a_seat_that_only_replied_off_the_scale_is_substituted_as_off_scale(self):
         model = Scripted(deepseek=["DEPTH: -1", "no depth", "DEPTH: 11"])
         given = self.give("deepseek", model)
-        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["model"], "glm")
         self.assertEqual(given["substitution_reason"], "off-scale reply after two reminders")
         self.assertEqual(given["substitution_reason"], depth_ladder.SUBSTITUTION_REASON)
 
@@ -167,7 +172,7 @@ class GiveTest(unittest.TestCase):
         model = Scripted(deepseek=[RuntimeError("provider refused the input"),
                                    RuntimeError("second"), RuntimeError("third")])
         given = self.give("deepseek", model)
-        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["model"], "glm")
         self.assertEqual(given["substitution_reason"],
                          "the seat's model raised on every attempt: "
                          "RuntimeError: provider refused the input")
@@ -182,7 +187,7 @@ class GiveTest(unittest.TestCase):
     def test_a_seat_that_raised_and_replied_off_the_scale_says_both(self):
         model = Scripted(deepseek=[RuntimeError("429"), "DEPTH: -1", RuntimeError("500")])
         given = self.give("deepseek", model)
-        self.assertEqual(given["model"], "kimi")
+        self.assertEqual(given["model"], "glm")
         self.assertEqual(given["substitution_reason"],
                          "the seat's model raised or replied off the scale")
 
@@ -201,11 +206,11 @@ class GiveTest(unittest.TestCase):
     def test_every_attempt_the_ladder_can_make_is_listed_in_order(self):
         self.assertEqual(depth_ladder.attempts_at_most("fable", self.config), [
             ("fable", 0), ("fable", 1), ("fable", 2), ("opus", 0), ("opus", 1),
-            ("kimi", 0), ("kimi", 1)])
+            ("kimi", 0), ("kimi", 1), ("glm", 0), ("glm", 1)])
         self.assertEqual(depth_ladder.attempts_at_most("sol", self.config),
                          [("sol", 0), ("sol", 1), ("sol", 2)])
         model = Scripted(fable=["DEPTH: -1"] * 3, opus=["DEPTH: -1"] * 2,
-                         kimi=["DEPTH: -1"] * 2)
+                         kimi=["DEPTH: -1"] * 2, glm=["DEPTH: -1"] * 2)
         given = self.give("fable", model)
         self.assertEqual([(a["model"], a["reminder"]) for a in given["attempts"]],
                          depth_ladder.attempts_at_most("fable", self.config))
