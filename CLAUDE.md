@@ -542,7 +542,9 @@ builder shows every behaviour a publication selects and reads no curation, and
 so two versions of one lab's document are two documents. And each judge of the
 panel gives a 0 to 4 depth per cell, in a small call after the passages, on the
 rubric in `methodology/spec-coverage-depth-rubric.md`; the publication carries
-the mean.
+the mean. That is the scale every publication so far was built on. Depth runs to
+10 now, given in a pass of its own rather than in the judging job; see `Depth
+runs to ten, and a document is scored as a whole`.
 
 Found on the way, and fixed with it: `harness.passages` read a spec's newest
 version whatever version a call named, so judging an older version after
@@ -632,7 +634,10 @@ the panel cited and not a shortlist of the strongest, and
 and that a depth is a reading of the panel's citations rather than of the whole
 document. `prompts/depth-v1.txt` changed with it, from sha `20df8c4d` to
 `bd096eba`; a run records the depth prompt's digest, so the wording cannot change
-quietly.
+quietly. That describes the scale of four. A depth out of ten is shown a second
+block beside the panel's citations, the passages stating the document's general
+rules for conflicts, so it is a reading of those citations and of that block;
+see `Depth runs to ten, and a document is scored as a whole`.
 
 The 156 depth calls of the three runs the public publication selects from
 (`aef5e906`, `c2f1b34a`, `a2bdadba`) were given again in place, under the new
@@ -1226,6 +1231,266 @@ passage containing a long dash is quoted in fragments joined by "[...]". The
 papers are not in this repository, because the memo is an unpublished draft and
 Kembery and colleagues' paper is under review, so a quote cannot be checked
 against its source here and the test holds only their shape.
+
+### Depth runs to ten, and a document is scored as a whole
+
+The grid was green wherever a lab had published anything. Of the 52 cells of the
+public publication, `1919ee6b`, none is below 2.3 and 24 are at 3.7 or more,
+because the step from 3 to 4 asks for one worked example and the model specs put
+examples under nearly every rule. The scale had nothing left to say about a
+document that already covers a behaviour with rules and examples, which is most
+of the grid.
+
+Depth runs from 0 to 10 now. The six described levels sit on the even numbers,
+and the five that existed keep their wording: 0 absent, 2 named, 4 discussed, 6
+prescribed, 8 demonstrated. The new top, 10, is bounded: demonstrated, and the
+document meets three conditions, all of them, and for every facet the
+behaviour's brief names rather than for one instance. The edge is shown, where
+two cases differing in one feature the document names receive opposite
+sanctioned responses. A conflict is settled, where the document names another of
+its own rules that pulls against this behaviour, says which prevails and under
+what condition, and shows it on a case. A default is given for the undecidable
+case, where the model cannot tell which side of the edge it is on because intent
+is unclear, a claim cannot be checked or context is missing, or the acceptable
+second-best responses are ordered. An odd value means the level below is fully
+met and the level above met in part, and its rationale has to name which part; a
+judge that cannot name one gives the even value below. The prompt is
+`engine/panel/prompts/depth-v2.txt`, digest `d856c646`, and the rubric it
+restates is `methodology/spec-coverage-depth-rubric.md`, which carries both
+scales now.
+
+**A depth out of ten is given in a pass of its own, against an assessment.** It
+reads what a depth out of four reads, the passages the panel cited for the cell,
+and one block besides: the passages in which the document states its general
+rules for conflicts. Those come from the assessment of the whole document, so a
+depth on this scale cannot be given inside the judging job that composed the
+cell, which ran before any document had been assessed.
+`engine/panel/depth_pass.py` takes runs already judged and the assessment run
+whose conflict rules its depths are shown, prices itself with an estimate and a
+ceiling, and writes only with `--go`. The block is evidence of what the general
+rules say and never settles the second condition on its own, so a behaviour
+whose conflict is settled only by a general order of authority does not reach 10
+on that account.
+
+**The document as a whole is scored by the same panel, five criteria out of 4
+each.** `engine/assess.py` gives each seat the document whole, as the passage
+calls present it, and asks two questions of it. Four criteria in one call: what
+the document says in general when two of its own rules conflict, and which
+passages state those rules; whether a reader can tell of each rule whether it is
+absolute or a default and who may change it; whether the rules say why they
+exist; and whether the six situations a model is actually used in have rules of
+their own. The fifth, unresolved contradictions, is a question of its own,
+because it is a search with a list for an answer rather than a score. The total
+is out of 20, and the criteria are `methodology/document-assessment-rubric.md`.
+
+**Six tables, and depths out of ten got one of their own rather than a column.**
+`20260921180000_aci_depth_out_of_ten_and_the_document_as_a_whole.sql` in
+`polaris-supabase` adds `aci_assessment_runs`, `aci_assessment_calls`,
+`aci_assessment_scores`, `aci_assessment_claims`, `aci_assessment_verdicts` and
+`aci_depths_out_of_ten`. The first version of it added a scale and a prompt to
+`aci_depths` and keyed the table by both. Its review found that the code running
+in production treats `call_id` as the key of `aci_depths`: once a second row
+existed for a call, the judging job could overwrite either row, a publication
+built from the portal could read either one, and the portal would count a
+pending depth out of ten as work left to launch on a run that is done. A table
+of its own removes the order in which code and schema would otherwise have had
+to be deployed, and the backfill with it. `aci_depths_out_of_ten` is keyed by
+the call, the depth prompt and the assessment run, because the conflict rules a
+depth was shown come from that run, so a document assessed again gives new
+depths beside the old ones rather than over them. Scores, claims and verdicts
+are evidence and take insert and select only; the three review columns of a
+claim are the one thing on any of them that is ever updated.
+
+**A publication carries the scale and the assessment only when it names both
+flags.** `publish.py` takes `--depth-prompt` and `--assessment-run`, and with
+neither it publishes what it published before any of this existed: depths out of
+four read from `aci_depths`, and no assessment. `depthScale` and the
+`assessment` object appear in the payload only on the other path, inside the
+bytes the existing digest already covers, so no column was added for them. A
+publication built on the scale of four therefore rebuilds byte for byte with
+these tables full, which `engine/test_publication_rebuilds.py` holds every
+publication built so far to. The portal names neither flag.
+
+**The contradictions were scored a second way on 22 September 2026.** The first
+full run showed four faults in the first way. A seat that found a contradiction
+counted as a vote for it without ever seeing another seat's objection, and on
+the OpenAI Model Spec of December 2025 two finders outvoted a third seat whose
+objection quoted the text that settled the clash. A contradiction was marked
+absolute when any seat said so, including a seat that said it does not hold. Two
+versions of one document carrying the same two passages word for word got
+different outcomes, because what each seat happens to find varies from one
+reading to the next. And the finding prompt asked for at most eight, the most
+serious first, where the owner wants the list exhaustive, since the list is
+worth more than the score.
+
+Finding and reading are kept apart now. Each contradictions seat reads each
+document whole, lists every contradiction it finds however minor and gives no
+score (`assessment-contradictions-v2.txt`). The candidates found on all the
+versions of one document in a run are pooled by their pair of passages, each
+passage named without its version head, and a candidate is carried to every
+version where both passages exist with exactly the same text, so each version
+has one claim per pair. Every contradictions seat then reads every claim of each
+version, the ones it found included, and says whether it holds and whether it
+involves a rule the document calls absolute (`assessment-confirm-v2.txt`). No
+"found it" verdict is written any more. A claim is confirmed when at least two
+readings say it holds, and absolute when at least two say both that it holds and
+that it is absolute. The score is unchanged: 4 when no claim is confirmed, 2
+when one or two are and none is absolute, 0 when three or more are or any
+confirmed claim is absolute.
+
+What moved is the reading rather than the finding. Listing exhaustively more
+than doubled the claims on the two OpenAI versions, 29 across the run becoming
+49, and left the constitution and the Alibaba Model Spec at the counts they had.
+But under the first method a seat that found a claim counted as a holding
+reading of it, so a pair two seats proposed was confirmed with no second reader
+at all; under the second nobody votes for what they found, and the
+constitution's confirmed claims fell from three of eight to two, the Alibaba
+Model Spec's from three of four to none.
+
+| Document | Claims, first method | Confirmed | Score | Claims, second method | Confirmed | Score |
+|---|---|---|---|---|---|---|
+| `anthropic--constitution@2026-01-20` | 8 | 3 | 0 | 8 | 2 | 2 |
+| `openai--model-spec@2025-12-18` | 8 | 2 | 2 | 18 | 2 | 2 |
+| `openai--model-spec@2026-08-18` | 9 | 0 | 4 | 19 | 0 | 4 |
+| `alibaba--model-spec@2026-04-00` | 4 | 3 | 0 | 4 | 0 | 4 |
+
+**A run can take its criteria from an earlier run.** The 168 depths out of ten
+had already been given against `b4acc896`, from the conflict rules its criteria
+cited, so asking the contradictions again the second way would have meant giving
+the criteria and every depth again with them.
+`engine/assess.py --criteria-from=<run id>` starts a run that asks only the
+contradictions and their reading and records the earlier run in its config. It
+is refused unless that run is done, took no criteria of its own from a third
+run, asked its criteria of the seats and under the prompt the configuration
+gives now, and assessed the criteria of every document named. A publication that
+names the new run carries the earlier run's criteria and the depths given
+against it, read by that run's id, with the new run's contradictions.
+
+**What failed is replayed, and a replayed group is not what a fresh run would
+have given.** `engine/assess.py --resume --replay` asks a failed finding again
+in its own row, pools what it finds with the claims already written, and asks
+each seat a supplementary reading of the new claims alone, recorded among the
+attempts of its existing reading call. A written claim is never updated, because
+the grants forbid it: a pair the replayed seat found that was already claimed
+goes into the run's config as `also_found`. Before it spends, it rebuilds the
+pool the first readings were given on and refuses if that pool no longer gives
+the claims written and the verdicts stored against them. Each replay writes a
+record in `config.replays` naming the calls it asked, the groups it touched and
+how each one ended, with a note that finishes "A fresh run pools every finding
+before any reading, so this is not exactly what a fresh run would give." The
+readings of the two OpenAI versions were given on a list that grew afterwards,
+and the supplementary readings saw the new claim by itself rather than beside
+the others.
+
+**Three substitutes were declared for this work, each for a refusal already
+met.** `opus` takes `fable`'s seat on the contradictions and their reading,
+because `fable` came back empty with `finish_reason=content_filter` when asked
+to find contradictions in all four documents. `glm` stands behind `opus` there,
+since every Anthropic model is refused on the Alibaba Model Spec and `kimi`
+already holds a contradictions seat of its own, so nobody else could take that
+seat on that document. `glm` is also first behind `deepseek`, where `kimi` used
+to be: the audition of 17 August 2026 named it `deepseek`'s substitute, it costs
+about a tenth of `kimi` per token, and it is seated nowhere else, so it is free
+where `kimi` already sits in `fable`'s place. `glm` is last behind `fable`,
+after `opus` and `kimi`, for the same reason read the other way round.
+
+**What the full run gave.** `b4acc896`, begun on 22 September 2026, read the
+constitution (374 passages), the OpenAI Model Spec of December 2025 (589) and of
+August 2026 (592), and the Alibaba Model Spec (247). Criteria by `sol`, `fable`
+and `deepseek`; contradictions and their confirmation by `sol`, `fable` and
+`kimi`, under the first method. Priced at 14.95 dollars, it cost 17.30, the
+difference being the refusals: the price counts each seat's own model once, and
+a refused attempt is billed before its substitute answers. The contradictions
+column below is the second method's, from `e2c00b2e`, which took its criteria
+from this run.
+
+| Document | Conflict rules | Force of each rule | Reasons given | Situations covered | Contradictions | Out of 20 |
+|---|---|---|---|---|---|---|
+| `anthropic--constitution@2026-01-20` | 2.3 | 2.7 | 3.7 | 2.7 | 2 | 13.3 |
+| `openai--model-spec@2025-12-18` | 4.0 | 3.3 | 3.3 | 4.0 | 2 | 16.7 |
+| `openai--model-spec@2026-08-18` | 4.0 | 3.7 | 3.3 | 4.0 | 4 | 19.0 |
+| `alibaba--model-spec@2026-04-00` | 4.0 | 3.7 | 2.3 | 3.7 | 4 | 17.7 |
+
+A total is rounded once, from the means before they are shown rounded, so the
+five figures of a row do not always add to the sixth on the page.
+
+The tightened conflict-rules anchor, which asks a strict order that decides who
+wins and puts an order weighed as a whole at 2, did what was asked of it: the
+constitution scored 2, 3 and 2 where every judge gave 4 to all three model
+specs.
+
+`depth_pass.py` then gave 168 depths against `b4acc896`, fourteen behaviours
+over the four documents, 56 cells of three judges each, all of them done and all
+under the one prompt. Priced at 6.22 dollars, they cost 8.35; the difference is
+the ladder, which asks a depth again when the reply does not parse. The
+distribution is one 1, two 2s, two 4s, twelve 5s, twenty-six 6s, twenty-five 7s,
+thirty-five 8s, sixty-four 9s and a single 10, and nobody gave 0 or 3. Exactly
+one depth of ten was given, by `deepseek` on `honesty-and-non-deception` against
+the constitution, where `sol` and `fable` both gave 9; that cell's mean of 9.3
+is the highest of the 56, so no cell reached ten. `glm` answered ten of
+`deepseek`'s 56 depths in its seat, each recorded with the reason `off-scale
+reply after two reminders`, and they are the only substitutions in the pass.
+
+**Two output caps were ours and not the providers', and the readings that
+followed were paid on lists that were short.** `kimi`, listing the
+contradictions of the OpenAI Model Spec of August 2026, stopped at the 65536
+tokens `panel-config.json` allowed it, where OpenRouter allows 943718; the
+attempt came back empty with `finish_reason=length` and was billed 1.18 dollars.
+`glm`, standing in for `opus` on the Alibaba Model Spec after two content-filter
+refusals, had no cap of its own and was sent with the 32768 a model without one
+gets, where OpenRouter allows 131072; that attempt cost 0.06 dollars. The
+code then went on as though nothing had happened: it wrote each version's claims
+and had every seat read them, on a pool short of one seat's findings, and those
+readings were paid for, 1.27 dollars on the August OpenAI spec, 1.26 on the
+December one and 0.49 on the Alibaba Model Spec, 3.01 in all. Of the 10.15
+dollars the run had cost before any replay, 7.87 was spent on those three
+documents, about four fifths of it, and the constitution, whose three finders all
+answered, was the only document left standing. Both caps are 131072 now, and a
+document stops before its readings when a finder has failed: no claim is
+written and nobody reads one, because what that seat would have found could
+change them.
+
+**Two versions of one document settle the same pair differently, although the
+claims are now shared.** Sixteen pairs are carried to both OpenAI versions,
+which means both passages read the same word for word in each. Two of the
+sixteen are confirmed on the December version and neither on the August one:
+`#assume_objective_pov ¶17` against `¶18`, held by `opus` and `sol` on December
+and by nobody on August, and `#no_topic_off_limits ¶4` against `#refusal_style
+¶3`, held by `kimi` and `sol` on December and by `sol` alone on August. Pooling
+fixed what each seat happened to find. It did not fix what a seat says about the
+same words read twice, and the two versions score 2 and 4 on that. The column is
+worth 4 of the 20 and it is the only one of the five that can swing its whole
+range on what three models happen to notice in one reading: between the two runs
+the Alibaba Model Spec moved 4 points out of 20 and the constitution 2, on four
+criteria rows that are literally the same rows underneath.
+
+**No person has reviewed any contradiction.** `reviewed_verdict` is null on all
+78 claims of the two runs. The second pilot's recommendation was that the judges
+find and cross-check candidates and a person decides which ones a published list
+carries, as the governance view's scores are decided by hand. The columns are in
+the table and nothing is in them, so every contradictions figure above is the
+panel's alone.
+
+**The independence problem is what it was, and the full run carries it into
+every figure.** `sol` is OpenAI's model and it read both versions of the OpenAI
+Model Spec, on every question of both runs. The constitution's criteria were
+scored by `fable`, its contradictions listed by `opus` in `fable`'s seat and
+confirmed by `fable` in `b4acc896`, and both listed and confirmed by `opus` in
+`e2c00b2e`: every one of those is an Anthropic model reading Anthropic's own
+document. Nothing in these runs was arranged to avoid that, and nothing in the
+figures corrects for it.
+
+**None of it is published.** No publication names either flag, so none carries a
+depth out of ten or an assessment; the public publication is still `1919ee6b` on
+the scale of four, and the reader and the overview still say "Depth, out of 4".
+The depth notes and the comparison paragraphs quote a figure out of 4 and have
+not been written since 17 September 2026, so a publication on the new scale
+would carry neither. The display decisions were taken with the owner on 22
+September 2026 and a prototype exists on `feat/depth-to-ten-site`, but the scale
+read from the payload, the colour ramp, the legend, the row for the document as
+a whole, the MCP server and the copy are not written. The design is
+`docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md`;
+the migration is applied and its pull request, `polaris-supabase` #37, is open.
 
 ## Where the fork is heading
 
