@@ -1,7 +1,10 @@
 # Depth out of ten, and the document as a whole
 
 Date: 2026-09-21
-Status: proposed, awaiting review
+Status: implemented and run. The scale, the assessment, the migration and
+both runs are done, and what they gave is recorded below. The Display section
+is the work still to do, on `feat/depth-to-ten-site`, and until it lands no
+publication carries a depth out of ten or an assessment.
 Branch: `feat/depth-to-ten-and-document-assessment`
 
 ## Why

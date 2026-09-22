@@ -267,10 +267,18 @@ python3 engine/panel/test_judge_call.py
 python3 engine/panel/test_passages.py
 python3 engine/panel/test_bands.py
 python3 engine/panel/test_depth_call.py
+python3 engine/panel/test_depth_ladder.py          # a depth asked again when the reply does not parse
+python3 engine/panel/test_depth_pass.py            # the depths out of ten
+python3 engine/panel/test_seat_call.py             # one seat's call, its waits and its substitutes
+python3 engine/panel/test_assessment_call.py       # a document as a whole: the two calls
+python3 engine/panel/test_assessment_run.py        # and its rules: pooling, carrying, settling
 python3 engine/panel/test_batch_job.py
 python3 engine/panel/test_compose_run.py
 python3 engine/test_job.py                         # the job's dispatch
 python3 engine/test_publish.py                     # which run answers for a cell
+python3 engine/test_publication_rebuilds.py        # every publication still rebuilds to its bytes
+python3 engine/test_assess.py                      # assessing a document, run and stored
+python3 engine/test_pilot_scale_ten.py             # the pilot of the scale of ten
 python3 engine/test_local_run.py                   # judging with no database
 python3 engine/test_store.py
 python3 engine/test_index_store.py
