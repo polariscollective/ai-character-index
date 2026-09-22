@@ -108,6 +108,23 @@ class ParseCriteriaTest(unittest.TestCase):
         reply = CRITERIA_REPLY + "\nREASONS: the reasons are mostly given in commentary."
         self.assertEqual(assessment_call.parse_criteria(reply, 3)["scores"]["reasons"], 4)
 
+    def test_a_roman_numeral_is_read_as_its_figure(self):
+        # deepseek answered RULE_FORCE: III on the Alibaba Model Spec in run
+        # b4acc896, as it has answered DEPTH: III before.
+        reply = "CONFLICT_RULES: IV\nRULE_FORCE: III\nREASONS: II.\nSITUATIONS: I (few)"
+        parsed = assessment_call.parse_criteria(reply, 3)
+        self.assertEqual(parsed["scores"],
+                         {"conflict_rules": 4, "rule_force": 3, "reasons": 2, "situations": 1})
+        self.assertTrue(parsed["complete"])
+
+    def test_a_roman_numeral_off_the_scale_is_not_a_score(self):
+        parsed = assessment_call.parse_criteria(CRITERIA_REPLY.replace("REASONS: 4", "REASONS: V"), 3)
+        self.assertIsNone(parsed["scores"]["reasons"])
+
+    def test_prose_opening_with_the_word_i_does_not_blank_a_score(self):
+        reply = CRITERIA_REPLY + "\nREASONS: I would say most rules give their reasons."
+        self.assertEqual(assessment_call.parse_criteria(reply, 3)["scores"]["reasons"], 4)
+
     def test_no_passages_cited(self):
         reply = CRITERIA_REPLY.replace("CONFLICT_RULES_PASSAGES: 1, 3, 1, 9",
                                        "CONFLICT_RULES_PASSAGES: none")
@@ -120,6 +137,11 @@ class ParseCriteriaTest(unittest.TestCase):
 
 
 class ParseContradictionsTest(unittest.TestCase):
+    def test_a_roman_numeral_score_is_read_as_its_figure(self):
+        reply = CONTRADICTIONS_REPLY.replace("CONTRADICTIONS: 2", "CONTRADICTIONS: II")
+        self.assertNotEqual(reply, CONTRADICTIONS_REPLY)
+        self.assertEqual(assessment_call.parse_contradictions(reply, len(PASSAGES))["score"], 2)
+
     def test_a_well_formed_reply(self):
         parsed = assessment_call.parse_contradictions(CONTRADICTIONS_REPLY, len(PASSAGES))
         self.assertEqual(parsed["score"], 2)

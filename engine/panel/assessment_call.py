@@ -42,6 +42,13 @@ MARKUP_RE = re.compile(r"[*`]+|(?<!\w)_+|_+(?!\w)")
 SCORE_RE = re.compile(
     r"^([0-4])(?:\s*/\s*4|\s+of\s+4)?\s*[.,;:!?]*\s*(?:\([^()]*\))?\s*[.,;:!?]*$",
     re.IGNORECASE)
+# The same score as a Roman numeral from I to IV, which deepseek gives, as the
+# depth parser already reads it (depth_call.ROMAN). Zero has no numeral. The
+# numeral must stand alone, so prose opening with the word "I" is still prose.
+ROMAN_SCORE_RE = re.compile(
+    r"^(IV|III|II|I)(?:\s*/\s*4|\s+of\s+4)?\s*[.,;:!?]*\s*(?:\([^()]*\))?\s*[.,;:!?]*$",
+    re.IGNORECASE)
+ROMAN_SCORES = {"I": 1, "II": 2, "III": 3, "IV": 4}
 # A heading line carrying attributes in curly braces after its anchor, such as
 # "## Do not lie {#do_not_lie authority=user}". The attributes are everything
 # after the anchor's name, stripped.
@@ -107,9 +114,18 @@ def _labelled(reply):
     return out
 
 
+def _gives_a_score(value):
+    """Whether a labelled value is meant as a score: it starts with a figure,
+    or it is a Roman numeral standing alone. Anything else is prose."""
+    return bool(re.match(r"\d", value) or ROMAN_SCORE_RE.match(value))
+
+
 def _score(value):
     match = SCORE_RE.match(value)
-    return int(match.group(1)) if match else None
+    if match:
+        return int(match.group(1))
+    roman = ROMAN_SCORE_RE.match(value)
+    return ROMAN_SCORES[roman.group(1).upper()] if roman else None
 
 
 def _passage_numbers(value, passage_count):
@@ -126,15 +142,16 @@ def parse_criteria(reply, passage_count):
     """Scores, rationales and the passages cited as general conflict rules.
 
     The last line for a label answers. A line whose value does not start with a
-    figure is prose and is read through, so it cannot blank an earlier score; a
-    figure off the scale is refused and gives no score."""
+    figure, and is not a Roman numeral standing alone, is prose and is read
+    through, so it cannot blank an earlier score; a figure off the scale is
+    refused and gives no score."""
     scores = {criterion: None for criterion in CRITERIA}
     rationales = {criterion: None for criterion in CRITERIA}
     cited = []
     for label, value in _labelled(reply):
         key = label.lower()
         if key in scores:
-            if re.match(r"\d", value):
+            if _gives_a_score(value):
                 scores[key] = _score(value)
         elif key.endswith("_rationale") and key[:-len("_rationale")] in rationales:
             if value:
@@ -168,7 +185,7 @@ def parse_contradictions(reply, passage_count):
             items.append({"first": numbers[0], "second": numbers[1],
                           "situation": parts[1], "why": parts[2]})
         elif label == "CONTRADICTIONS":
-            if re.match(r"\d", value):
+            if _gives_a_score(value):
                 score = _score(value)
         elif label == "CONTRADICTIONS_RATIONALE" and value:
             rationale = value
