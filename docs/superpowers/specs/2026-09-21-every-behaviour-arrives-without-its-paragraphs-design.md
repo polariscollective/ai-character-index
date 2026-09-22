@@ -26,15 +26,22 @@ Measured against publication `9b7ce377`, 13 behaviours over 4 documents.
 
 | column | whole | what the first screen reads |
 |---|---|---|
-| `payload` | 913.7 KB | 57.7 KB of depths, 2.1 KB of definitions, the titles |
-| `documents` | 1161.2 KB | 0.96 KB of metadata, plus the text of the one on screen |
-| `links` | 5324 KB | 88 KB, the depth and standing notes |
+| `payload` | 888.9 KB | the depths, definitions and titles, about 7 per cent |
+| `documents` | 1069.8 KB | 0.96 KB of metadata, plus the text of the one on screen |
+| `links` | 5324.2 KB | 88 KB, the depth and standing notes |
 | `behaviours` | 15.8 KB | all of it |
 
-The payload is passages and almost nothing else: 847.0 KB of its 913.7. A
+Every figure in that table is wire bytes at 1024 bytes per KB. An earlier
+version recorded 913.7, 1161.2 and 5349.9, taken by re-serialising each response
+in Python, which escapes non-ASCII and therefore inflates: by 2.8 per cent for
+the payload, 8.5 for the documents whose text is the most heavily non-ASCII, and
+0.5 for the links. The proportions below are given as proportions for that
+reason, since they hold whichever instrument is used.
+
+The payload is passages and almost nothing else: about 93 per cent of it. A
 coverage entry carries exactly three keys, `passages`, `depth` and
 `substitutions`, so the thing worth sending without the paragraphs is already a
-clean subset. A document is `original` at 309 KB and `markdown` at 118 KB, with
+clean subset. A document is almost entirely `original` and `markdown`, with
 `id`, `lab`, `title`, `shortTitle`, `version`, `sourceUrl` and `translation`
 weighing 0.96 KB for all four together. `translation` is on one document of the
 four, the Alibaba spec, which the index reads in translation and says so.
@@ -77,23 +84,29 @@ frozen bytes, and a projection cannot falsify what it projects.
 
 | | today | decided |
 |---|---|---|
-| reader, one behaviour and one document | 1339 KB | 454 KB |
-| overview | 2062 KB | about 170 KB |
+| reader, one behaviour and one document | 1339 KB | about 516 KB |
+| overview | 2062 KB | about 235 KB |
 
-The reader's 454 KB is 92 for the payload, 186 for the document, 161 for the
+The reader's 516 KB is 155 for the payload, 184 for the document, 161 for the
 links and 15 for the registry. It moves with which behaviour and which document
 the address names.
 
 **This document does two things, and only one of them is about bytes.**
 
-The first is the menu, and it is free. The payload barely moves: 92.2 KB decided
-against 93 KB today, because the thirteen headings with their depths come to
-66.1 KB and a named behaviour's own paragraphs to about 26. So listing every
-behaviour costs nothing measurable, and the regression this document exists to
-fix bought no bytes when it was introduced. It made the sidebar wrong for
-nothing.
+The first is the menu, and it is cheap rather than free. Measured on the wire at
+1024 bytes per KB, the decided payload is 155 KB against 93 KB today, so listing
+every behaviour costs about 62 KB. Roughly half of the 155 is the `citedBy`
+index, which the response carries whenever a behaviour set is present and which
+the sidebar never follows.
 
-The second is `documents`, 1070 KB down to 186, and that is the whole of the
+An earlier version of this document said 92.2 against 93 and concluded the menu
+was free. It was wrong in a way worth recording rather than quietly fixing: the
+92.2 came from reconstructing the shape in Python instead of measuring a
+response, so it omitted `citedBy` altogether, and it was compared against a 93
+taken with curl, which included it. Two errors pointing the same way, and the
+conclusion they produced flattered the change.
+
+The second is `documents`, 1070 KB down to 184, and that is the whole of the
 saving. It comes from `loadDocuments` learning to pass the slice the other three
 loaders already pass, which is an omission from the previous chantier rather
 than a new idea.

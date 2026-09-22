@@ -263,7 +263,7 @@ and add beside `withheldParagraphs`:
 
 ```javascript
 /* A document the reader is not looking at: everything the menu needs to name it
- * and offer it, and none of the 309 KB of `original` or 118 KB of `markdown`
+ * and offer it, and none of the `original` or `markdown`
  * that only the panel on screen reads. */
 function withheldText(document) {
   const { markdown, original, ...rest } = document;
@@ -755,7 +755,7 @@ Replace `loadDocuments` at `site/spec-reader/app.js:192`:
 
 ```javascript
 /* Sliced like the payload and the links beside it. The documents column is
- * 1161 KB for four documents and the panel shows one, or two when comparing;
+ * 1070 KB for four documents and the panel shows one, or two when comparing;
  * every other loader already said which it wanted and this one did not. */
 async function loadDocuments() {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
@@ -993,8 +993,8 @@ In `site/overview.js`, replace the first two entries of the `Promise.all`:
     /* Both sets present and empty: every behaviour and every document is still
      * listed with its heading and its figures, and none of them carries the
      * paragraphs or the document text this page never reads. Measured on
-     * 9b7ce377: the payload falls from 914 KB to 131 and the documents from
-     * 1161 KB to 1. Of that 131, half is a citedBy index this page never
+     * 9b7ce377: the payload falls from 888 KB to 131 and the documents from
+     * 1070 KB to 1. Of that 131, half is a citedBy index this page never
      * reads, which sliceColumn attaches whenever a behaviour set is present. */
     loadJSON(`/api/reader/payload${PINNED ? `${PINNED}&` : "?"}behavior=`, null),
     loadJSON(`/api/reader/documents${PINNED ? `${PINNED}&` : "?"}spec=`, null),
@@ -1093,15 +1093,14 @@ and withheld are three different answers and `paragraphsOf` in `app.js` is the
 one place that tells them apart; every reader of a cell's paragraphs goes
 through it.
 
-Two things are worth recording about the cost, because both were measured and
-neither was what the work was started for. Listing every behaviour is free: the
-payload is 92.2 KB under the new shape against 93 KB under the old, since the
-thirteen headings with their depths come to 66.1 KB and one behaviour's
-paragraphs to about 26. So the regression made the sidebar wrong and saved
-nothing. The whole saving was elsewhere and was an omission rather than a new
-idea: `loadDocuments` passed no slice, so the reader fetched 1070 KB of four
-documents to show one, and it now fetches 186. A first load of one behaviour on
-one document went from 1339 KB to 454.
+Two things are worth recording about the cost, because both were measured on the
+wire and neither was what the work was started for. Listing every behaviour is
+cheap but not free: the payload is 155 KB under the new shape against 93 KB
+under the old, so the menu costs about 62 KB, roughly half of that being a
+`citedBy` index the sidebar never follows. The whole saving was elsewhere and
+was an omission rather than a new idea: `loadDocuments` passed no slice, so the
+reader fetched 1070 KB of four documents to show one, and it now fetches 184. A
+first load of one behaviour on one document went from 1339 KB to about 516.
 ```
 
 - [ ] **Step 2: Check the rules**

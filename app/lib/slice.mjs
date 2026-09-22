@@ -97,7 +97,7 @@ function withheldParagraphs(behaviour) {
 }
 
 /* A document the reader is not looking at: everything the menu needs to name it
- * and offer it, and none of the 309 KB of `original` or 118 KB of `markdown`
+ * and offer it, and none of the `original` or `markdown`
  * that only the panel on screen reads. */
 function withheldText(document) {
   const { markdown, original, ...rest } = document;
