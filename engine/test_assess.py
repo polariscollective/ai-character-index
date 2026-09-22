@@ -14,8 +14,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import httpx
-import openai
+# CI installs no python dependency, so both of these are optional here, as
+# openai already is in seat_call.py. A connection error has builtins in
+# `seat_call.CONNECTION_ERRORS`, so `cut()` raises one of those when openai is
+# absent and the path under test is the same either way.
+try:
+    import httpx
+    import openai
+except ImportError:
+    httpx = openai = None
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -691,11 +698,16 @@ class MainTest(unittest.TestCase):
 
 
 
-REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+REQUEST = (httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+           if httpx is not None else None)
 
 
 def cut():
-    """What the openai client raises when the connection is gone."""
+    """What a call raises when the connection is gone: the openai client's own
+    error where the package is installed, and a builtin where it is not.
+    `seat_call.CONNECTION_ERRORS` holds both, so the path under test is one."""
+    if openai is None:
+        return ConnectionError("Connection error.")
     return openai.APIConnectionError(request=REQUEST)
 
 
@@ -782,7 +794,7 @@ class UnreachableTest(unittest.TestCase):
         call = calls[("w", "contradictions", "opus")]
         self.assertEqual(call["status"], "error")
         self.assertTrue(call["error"].startswith("unreachable: glm"), call["error"])
-        self.assertIn("APIConnectionError", call["error"])
+        self.assertIn(type(cut()).__name__, call["error"], "the class is named")
         self.assertEqual(call["attempts"], [
             {"model": "opus", "finish_reason": "content_filter", "cost_usd": cost("opus"),
              "reason": "finish_reason=content_filter"}])
@@ -1029,6 +1041,28 @@ class FailsOnDone(FakeStore):
         return super().update(table, match, patch)
 
 
+class FailsOnSupplement(FakeStore):
+    """A store whose write recording a supplementary reading raises `stop`, and
+    whose write in the handler after it fails too. Armed by setting `stop`,
+    since the reading it breaks only happens on a replay of a run this store
+    has to have carried out first.
+
+    A supplementary reading's patch is the one that meters a call without
+    saying anything about its status, which is what tells it from every write
+    `Assessment.call` makes."""
+
+    stop = None
+
+    def update(self, table, match, patch):
+        if (self.stop is not None and table == "aci_assessment_calls"
+                and "attempts" in patch and "status" not in patch):
+            self.failed = getattr(self, "failed", []) + [dict(patch)]
+            if len(self.failed) == 1:
+                raise self.stop
+            raise store_module.StoreError("PATCH aci_assessment_calls: connection reset")
+        return super().update(table, match, patch)
+
+
 def billed(*models):
     """What every call the scripted `models` were asked cost, all of them
     billed at USAGE."""
@@ -1076,6 +1110,22 @@ class StoppedWhileWritingTest(unittest.TestCase):
                 self.assertAlmostEqual(run_row["cost_usd"], billed(first, again), places=6)
                 self.assertEqual(assess.gaps(fake, run_row["id"], ["v"]), [])
 
+    def test_a_second_write_failing_is_reported_and_the_stop_goes_up_as_it_was(self):
+        # The write that marks the call error fails too. Raising that from
+        # inside the handler would throw away the stop that caused it, and a
+        # KeyboardInterrupt would come out of the run as a store error: what
+        # the second failure gets is a line on stderr naming the row to close.
+        stop = KeyboardInterrupt()
+        fake = FailsOnDone(("v", "criteria", "fable"), stop, and_error=True,
+                           aci_spec_versions=[dict(VERSION)])
+        stopped = go(Scripted(), fake, documents=("v",))
+        self.assertIs(stopped.raised, stop, "the stop, not the failure to record it")
+        call = calls_in(fake)[("v", "criteria", "fable")]
+        self.assertEqual(call["status"], "running", "neither write reached the row")
+        [line] = [line for line in stopped.stderr.splitlines() if "by hand" in line]
+        self.assertIn(call["id"], line, "the row is named")
+        self.assertIn("connection reset", line, "and why it could not be closed")
+
     def test_a_resume_never_lowers_the_run_s_cost_below_what_its_row_recorded(self):
         # The done write fails, and so does the error write after it: the row
         # is left running with nothing on it, while the run row, closed after,
@@ -1084,7 +1134,7 @@ class StoppedWhileWritingTest(unittest.TestCase):
                            aci_spec_versions=[dict(VERSION)])
         first = Scripted()
         stopped = go(first, fake, documents=("v",))
-        self.assertIsInstance(stopped.raised, store_module.StoreError)
+        self.assertIsInstance(stopped.raised, KeyboardInterrupt)
         call = calls_in(fake)[("v", "criteria", "fable")]
         self.assertEqual((call["status"], call.get("cost_usd")), ("running", None))
         [run_row] = fake.tables["aci_assessment_runs"]
@@ -1261,6 +1311,11 @@ class AcrossVersionsTest(unittest.TestCase):
             self.assertIn(f"python3 engine/assess.py --resume={fresh.run_id} --replay "
                           "--documents=v,b --go", said)
             self.assertIn("not exactly what a fresh run would give", said)
+        # The run itself has read the documents and run replay_refusal before it
+        # offers, so it promises the replay. remedy has read neither the
+        # passages nor the refusal, so it says the offer may not stand.
+        self.assertIn("if it is still replayable", remedy)
+        self.assertNotIn("if it is still replayable", resumed.stdout)
 
     def test_every_version_is_found_on_before_any_claim_is_written(self):
         fake, model, _run_id = self.run_three(("v", "b"))
@@ -1393,12 +1448,26 @@ class ReplayTest(unittest.TestCase):
 
     HEADS = {"v": DOC, "b": "lab--spec@2026-06-01"}
 
-    def read_without_kimi_on_b(self):
-        fake = FakeStore(aci_spec_versions=[dict(VERSION), dict(VERSION_B)])
+    def read_without_kimi_on_b(self, store_class=FakeStore):
+        fake = store_class(aci_spec_versions=[dict(VERSION), dict(VERSION_B)])
         fresh = go(Versions(), fake, documents=("v", "b"), passages=three_versions)
         self.assertIsNone(fresh.raised)
         failed_after_the_readings(fake, "b", "kimi")
         return fake, fresh.run_id
+
+    def test_a_supplementary_write_failing_twice_is_reported_and_the_stop_goes_up(self):
+        # The write recording a supplementary reading fails, and the write in
+        # the handler after it fails too. The stop that caused it is what comes
+        # out, and the row that could not be closed is named on stderr.
+        fake, run_id = self.read_without_kimi_on_b(FailsOnSupplement)
+        fake.stop = KeyboardInterrupt()
+        _model, outcome = self.replay(fake, run_id)
+        self.assertIs(outcome.raised, fake.stop, "the stop, not the failure to record it")
+        self.assertEqual(len(fake.failed), 2, "the write was issued once more, and once only")
+        [line] = [line for line in outcome.stderr.splitlines() if "by hand" in line]
+        self.assertIn("connection reset", line, "why the reading could not be recorded")
+        confirmed = calls_in(fake)[("v", "confirm", SEATS[0])]
+        self.assertIn(confirmed["id"], line, "the row is named")
 
     def replay(self, fake, run_id, model=None, replay=True, spend=True):
         model = model or Replaying()

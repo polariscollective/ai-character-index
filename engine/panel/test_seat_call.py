@@ -16,8 +16,18 @@ import urllib.error
 from pathlib import Path
 from unittest import mock
 
-import httpx
-import openai
+# CI installs no python dependency, so both of these are optional here, as
+# openai already is in seat_call.py. A connection error has builtins in
+# `seat_call.CONNECTION_ERRORS`, so `cut()` raises one of those when openai is
+# absent and the path under test is the same; a status error has no builtin at
+# all, so what asserts one is skipped.
+try:
+    import httpx
+    import openai
+except ImportError:
+    httpx = openai = None
+
+needs_openai = unittest.skipIf(openai is None, "the openai package is not installed")
 
 HERE = Path(__file__).resolve().parent
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -30,11 +40,16 @@ import batch_job                 # noqa: E402
 import seat_call                 # noqa: E402
 
 USAGE = {"prompt_tokens": 1000, "completion_tokens": 100}
-REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+REQUEST = (httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+           if httpx is not None else None)
 
 
 def cut():
-    """What the openai client raises when the connection is gone."""
+    """What a call raises when the connection is gone: the openai client's own
+    error where the package is installed, and a builtin where it is not.
+    `seat_call.CONNECTION_ERRORS` holds both, so the path under test is one."""
+    if openai is None:
+        return ConnectionError("Connection error.")
     return openai.APIConnectionError(request=REQUEST)
 
 
@@ -91,6 +106,7 @@ class AskTest(unittest.TestCase):
     def test_the_waits_are_those_of_the_brief(self):
         self.assertEqual(seat_call.RETRY_WAITS, (30, 60, 120, 240, 480))
 
+    @needs_openai                    # the printed line names openai's own class
     def test_a_transport_error_twice_then_an_answer_is_one_call_billed(self):
         model = Sequenced(cut(), cut(), "the reply")
         answer, waits, printed = self.ask(model)
@@ -105,6 +121,7 @@ class AskTest(unittest.TestCase):
             "fable could not be reached (APIConnectionError: Connection error.); "
             "trying again in 60 s"])
 
+    @needs_openai                    # the message names openai's own class
     def test_a_transport_error_on_every_wait_is_unreachable(self):
         errors = [cut() for _ in range(6)]
         model = Sequenced(*errors, "never reached")
@@ -126,8 +143,12 @@ class AskTest(unittest.TestCase):
                          + "); trying again in 30 s")
 
     def test_every_connection_error_is_waited_out(self):
-        for error in (openai.APIConnectionError(request=REQUEST),
-                      openai.APITimeoutError(request=REQUEST),
+        # openai's two go when the package is absent; the builtins stay, which
+        # is the half of `CONNECTION_ERRORS` a stdlib-only run still has.
+        of_openai = ((openai.APIConnectionError(request=REQUEST),
+                      openai.APITimeoutError(request=REQUEST))
+                     if openai is not None else ())
+        for error in of_openai + (
                       ConnectionResetError("reset"), TimeoutError("timed out"),
                       socket.gaierror(8, "nodename nor servname provided"),
                       http.client.RemoteDisconnected("closed"),
@@ -138,6 +159,7 @@ class AskTest(unittest.TestCase):
                 self.assertEqual(answer["reply"], "the reply")
                 self.assertEqual(waits, [30])
 
+    @needs_openai                    # openai's status errors have no builtin in STATUS_ERRORS
     def test_a_rate_limit_or_a_server_error_is_waited_out_too(self):
         for error in (status_error(openai.RateLimitError, 429),
                       status_error(openai.InternalServerError, 500),
@@ -148,6 +170,7 @@ class AskTest(unittest.TestCase):
                 self.assertEqual(answer["reply"], "the reply")
                 self.assertEqual(waits, [30])
 
+    @needs_openai                    # openai's status errors have no builtin in STATUS_ERRORS
     def test_a_rate_limit_twice_then_an_answer_is_one_call_billed(self):
         limited = status_error(openai.RateLimitError, 429, "Error code: 429 - rate limited")
         model = Sequenced(limited, limited, "the reply")
@@ -167,6 +190,7 @@ class AskTest(unittest.TestCase):
             "fable's provider could not answer for now (RateLimitError: Error code: 429 - "
             "rate limited); trying again in 60 s"])
 
+    @needs_openai                    # openai's status errors have no builtin in STATUS_ERRORS
     def test_a_server_error_on_every_wait_is_raised_as_itself(self):
         errors = [status_error(openai.InternalServerError, 502, "Error code: 502 - Bad gateway")
                   for _ in range(6)]
@@ -177,6 +201,7 @@ class AskTest(unittest.TestCase):
         self.assertEqual(waits, [30, 60, 120, 240, 480])
         self.assertEqual(len(model.asked), 6, "the first try and one after each wait")
 
+    @needs_openai                    # openai's status errors have no builtin in STATUS_ERRORS
     def test_the_last_error_decides_whether_the_model_was_reached(self):
         bad_gateway = status_error(openai.InternalServerError, 502)
         # The connection came back for the last try, and the provider answered 502.
@@ -191,11 +216,14 @@ class AskTest(unittest.TestCase):
         self.assertIs(raised.__cause__, last)
 
     def test_any_other_error_is_raised_at_once(self):
-        for error in (status_error(openai.BadRequestError, 400),
+        # openai's five go when the package is absent; the builtins stay.
+        of_openai = ((status_error(openai.BadRequestError, 400),
                       status_error(openai.AuthenticationError, 401),
                       status_error(openai.PermissionDeniedError, 403),
                       status_error(openai.NotFoundError, 404),
-                      status_error(openai.UnprocessableEntityError, 422),
+                      status_error(openai.UnprocessableEntityError, 422))
+                     if openai is not None else ())
+        for error in of_openai + (
                       urllib.error.HTTPError("https://x", 400, "Bad Request", {}, None),
                       RuntimeError("provider refused the input")):
             with self.subTest(error=type(error).__name__):

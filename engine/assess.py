@@ -311,12 +311,19 @@ def command(version_ids, run_id=None, criteria_from=None, replay=False):
             f"--documents={','.join(version_ids)} --go")
 
 
-def replay_offer(names, run_id, version_ids):
+def replay_offer(names, run_id, version_ids, checked=True):
     """The sentence that offers to replay, in run `run_id`, what failed in the
-    documents `names` after their readings (`assessment_store.replayable`)."""
-    return (f"or replay in this run only what failed in {names}, the new claims read on "
-            "their own after the readings already given, which is not exactly what a fresh "
-            f"run would give: {command(version_ids, run_id, replay=True)}")
+    documents `names` after their readings (`assessment_store.replayable`).
+
+    `checked` says whether the caller has also run
+    `assessment_store.replay_refusal`, which a replay is held to before its
+    first call. That check needs the documents' passages, which `remedy` has
+    not read and would need a second round of store reads to get, so its offer
+    says the replay may not stand rather than promising one."""
+    still = "" if checked else ", if it is still replayable,"
+    return (f"or replay in this run{still} only what failed in {names}, the new claims read "
+            "on their own after the readings already given, which is not exactly what a "
+            f"fresh run would give: {command(version_ids, run_id, replay=True)}")
 
 
 def remedy(store, run_id, version_ids):
@@ -347,7 +354,10 @@ def remedy(store, run_id, version_ids):
             lines.append(f"{name_of(versions[version_id])} can only be assessed in a new run, "
                          f"since {refusal}: {command(group, criteria_from=criteria_from)}")
             if assessment_store.replayable(members, panels):
-                lines.append("  " + replay_offer(name_of(versions[version_id]), run_id, wanted))
+                # checked=False: replay_refusal needs the documents' passages,
+                # which nothing here has read.
+                lines.append("  " + replay_offer(name_of(versions[version_id]), run_id, wanted,
+                                                 checked=False))
     if resumable_gap:
         lines.insert(0, "Take the run up where it stopped, asking only the calls that are "
                         f"not done: {command(wanted, run_id)}")

@@ -764,7 +764,17 @@ class Assessment:
                 # A reply paid for and not yet marked done: kept, although the
                 # row is error and a resume asks the seat again.
                 patch["raw_output"] = answer["reply"]
-            self.store.update("aci_assessment_calls", match, patch)
+            # Once. Raising a second failure from inside this handler would
+            # throw away the stop that caused it, and leave the row running
+            # with its cost already counted, so a resume would pay for the
+            # reading again with nothing on the page saying why.
+            try:
+                self.store.update("aci_assessment_calls", match, patch)
+            except Exception as failed:              # noqa: BLE001
+                print(f"assessment call {call_id} could not be marked error after "
+                      f"{stopped!r}: {failed}. It is left running with its attempts "
+                      "billed to the run; find and close it by hand.",
+                      file=sys.stderr, flush=True)
             raise
         return call_id, parsed, tag
 
@@ -1032,14 +1042,23 @@ class Assessment:
             self.costs.append(cost)
             billed = True
             self.store.update("aci_assessment_calls", match, patch)
-        except BaseException:
+        except BaseException as stopped:
             if not billed:
                 attempts = supplementary_attempts(None, None, substituted, claim_ids)
                 cost, patch = metered(call, attempts, substituted, None)
                 self.costs.append(cost)
                 patch = patch if attempts else None
             if patch is not None:
-                self.store.update("aci_assessment_calls", match, patch)
+                # Once, as `call` does: a second failure raised from inside this
+                # handler would lose the stop and leave the reading billed to
+                # the run with no attempt of it on the row.
+                try:
+                    self.store.update("aci_assessment_calls", match, patch)
+                except Exception as failed:          # noqa: BLE001
+                    print(f"assessment call {call['id']} could not have its supplementary "
+                          f"reading recorded after {stopped!r}: {failed}. Its attempts are "
+                          "billed to the run and are not on the row; find and close it by "
+                          "hand.", file=sys.stderr, flush=True)
             raise
         self.rows_now[call["id"]] = dict(call, **patch)
         if answer is None:

@@ -10,8 +10,17 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import httpx
-import openai
+# CI installs no python dependency, so both of these are optional here, as
+# openai already is in seat_call.py. A connection error has builtins in
+# `seat_call.CONNECTION_ERRORS`, so `cut()` raises one of those when openai is
+# absent; a status error has no builtin at all, so what asserts one is skipped.
+try:
+    import httpx
+    import openai
+except ImportError:
+    httpx = openai = None
+
+needs_openai = unittest.skipIf(openai is None, "the openai package is not installed")
 
 HERE = Path(__file__).resolve().parent
 # Keys stay out of it: resolve() reads a .env beside the harness unless told not to.
@@ -236,11 +245,16 @@ class GiveTest(unittest.TestCase):
         self.assertIsNone(given["seconds"])
 
 
-REQUEST = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+REQUEST = (httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+           if httpx is not None else None)
 
 
 def cut():
-    """What the openai client raises when the connection is gone."""
+    """What a call raises when the connection is gone: the openai client's own
+    error where the package is installed, and a builtin where it is not.
+    `seat_call.CONNECTION_ERRORS` holds both, so the path under test is one."""
+    if openai is None:
+        return ConnectionError("Connection error.")
     return openai.APIConnectionError(request=REQUEST)
 
 
@@ -286,6 +300,7 @@ class NetworkTest(unittest.TestCase):
                          [("deepseek", 0, False)])
         self.assertEqual(held[0]["cost_usd"], batch_job.cost_of("deepseek", USAGE, self.config))
 
+    @needs_openai        # a status error has no builtin in STATUS_ERRORS
     def test_a_rate_limit_twice_then_an_answer_is_one_attempt(self):
         limited = openai.RateLimitError("Error code: 429 - rate limited", body=None,
                                         response=httpx.Response(429, request=REQUEST))
@@ -299,6 +314,7 @@ class NetworkTest(unittest.TestCase):
         self.assertEqual(waits, [30, 60])
         self.assertEqual(model.asked, [("deepseek", USER)] * 3, "nothing else is asked")
 
+    @needs_openai        # a status error has no builtin in STATUS_ERRORS
     def test_a_server_error_through_every_wait_is_an_attempt_that_raised(self):
         # Each of the seat's three attempts meets a 502 on every wait: the
         # provider was reached, so each is an attempt that raised, and the seat
@@ -319,6 +335,7 @@ class NetworkTest(unittest.TestCase):
                          [("deepseek", reminder, "InternalServerError: Error code: 502 - Bad gateway")
                           for reminder in (0, 1, 2)] + [("glm", 0, None)])
 
+    @needs_openai        # a status error has no builtin in STATUS_ERRORS
     def test_a_status_error_that_is_not_transport_is_an_attempt_that_raised(self):
         bad = openai.BadRequestError("input refused", body=None,
                                      response=httpx.Response(400, request=REQUEST))
