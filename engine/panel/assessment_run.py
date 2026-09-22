@@ -273,6 +273,34 @@ def pool_versions(found, passages, seats):
     return pooled
 
 
+def supplementary_readings(attempts):
+    """Every supplementary reading a reading call's `attempts` record, in the
+    order they were given, as (model, reply, claim ids).
+
+    A reading call gives its first reading as any call does, its reply in the
+    row's `raw_output`. A document whose finding was replayed after its
+    readings (`assess.py --replay`) has every seat read only the claims added
+    since, and that reading is recorded on the same row, whose key allows one
+    reading call per run, version and seat: every attempt of it carries the
+    ordered `claim_ids` it was asked about, and the one that answered also
+    carries its `reply`, its reason None. A candidate that failed or was
+    skipped gave no reading."""
+    return [(attempt["model"], attempt["reply"], list(attempt["claim_ids"]))
+            for attempt in attempts or []
+            if attempt.get("claim_ids") is not None and attempt.get("reason") is None
+            and attempt.get("reply") is not None]
+
+
+def reading_model(call, claim_id):
+    """The model that gave reading call `call`'s reading of claim `claim_id`:
+    the model of the supplementary reading that answered about it, if one
+    did, and otherwise the model the call itself answered through."""
+    for model, _reply, claim_ids in supplementary_readings(call.get("attempts")):
+        if claim_id in claim_ids:
+            return model
+    return call.get("model")
+
+
 def confirm_score(claims):
     """4 when no claim is confirmed, 2 when one or two are and none is
     absolute, 0 when three or more are confirmed or any confirmed claim is

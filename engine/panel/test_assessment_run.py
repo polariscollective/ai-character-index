@@ -462,6 +462,36 @@ class PoolVersionsTest(unittest.TestCase):
         self.assertEqual(pooled, {V1: []})
 
 
+class SupplementaryReadingTest(unittest.TestCase):
+    """A reading call asked again about claims added after its first reading
+    (`assess.py --replay`) records that reading among its attempts: every
+    attempt of it names the claims it was asked about, in order, and the one
+    that answered carries its reply."""
+    FIRST = {"model": "opus", "finish_reason": "stop", "cost_usd": 0.1, "reason": None}
+    REFUSED = {"model": "opus", "finish_reason": "content_filter", "cost_usd": 0.1,
+               "reason": "finish_reason=content_filter", "claim_ids": ["c3", "c4"]}
+    SKIPPED = {"model": "kimi", "finish_reason": None, "cost_usd": None,
+               "reason": assessment_run.ALREADY_SEATED, "claim_ids": ["c3", "c4"]}
+    ANSWERED = {"model": "glm", "finish_reason": "stop", "cost_usd": 0.01, "reason": None,
+                "claim_ids": ["c3", "c4"], "reply": "ITEM 1: holds | absolute: no | Yes.",
+                "seconds": 1.5}
+
+    def test_only_an_attempt_that_answered_one_is_a_supplementary_reading(self):
+        attempts = [self.FIRST, self.REFUSED, self.SKIPPED, self.ANSWERED,
+                    dict(self.ANSWERED, model="sol", claim_ids=["c5"], reply="ITEM 1: holds")]
+        self.assertEqual(assessment_run.supplementary_readings(attempts), [
+            ("glm", self.ANSWERED["reply"], ["c3", "c4"]), ("sol", "ITEM 1: holds", ["c5"])])
+        self.assertEqual(assessment_run.supplementary_readings([self.FIRST]), [])
+        self.assertEqual(assessment_run.supplementary_readings(None), [])
+
+    def test_a_reading_names_the_model_that_gave_it(self):
+        call = {"id": "k-opus", "model": "opus",
+                "attempts": [self.FIRST, self.REFUSED, self.ANSWERED]}
+        self.assertEqual(assessment_run.reading_model(call, "c4"), "glm")
+        self.assertEqual(assessment_run.reading_model(call, "c1"), "opus")
+        self.assertEqual(assessment_run.reading_model({"id": "x", "model": "sol"}, "c1"), "sol")
+
+
 class ScoreTest(unittest.TestCase):
     def claims(self, *specs):
         return [{"confirmed": confirmed, "absolute": absolute} for confirmed, absolute in specs]

@@ -10,8 +10,12 @@ claim of a version, its own findings included.
 The versions of one document (one spec id) the run is asked to assess are
 assessed together, because their findings are pooled: every version is read
 for its criteria and searched for contradictions first, then each version's
-claims are written and read. A run that takes its criteria from an earlier run
-(`criteria_from`, `assess.py --criteria-from`) never asks the criteria.
+claims are written and read. When a contradictions seat ends with no answer on
+any of those versions, none of their claims is written and nobody reads them,
+since what that seat would have found could change them: the run goes on with
+the next document, and a resume asks the finding again. A run that takes its
+criteria from an earlier run (`criteria_from`, `assess.py --criteria-from`)
+never asks the criteria.
 
 A run taken up where it stopped (`assess.py --resume`) goes through the same
 code as a fresh one, which is a run whose documents have no rows yet. Each
@@ -20,6 +24,18 @@ asked or written again: a done call is not asked again, and any rows its reply
 gives that are missing are rebuilt from the reply it stored in `raw_output`; a
 call in any other status is asked again in its own row, its earlier attempts and
 bill kept; a claim already written keeps its id.
+
+A replay (`assess.py --resume --replay`) takes up a document whose claims were
+written and read although one of its finders had failed, as the code before
+that rule did in assessment run e2c00b2e. The failed finding is asked again in
+its row; what it finds is pooled with the claims already written; and every
+contradictions seat reads only the claims that are new, in a supplementary
+reading recorded on its reading call for the version, which the table allows
+once per run, version and seat. The run's config records each replay
+(`replays`). The finding calls named there are left out of the pool a reading
+call's first reading is rebuilt from, so a resume reads each reading apart:
+the first from `raw_output`, each supplementary one from its attempt, by the
+claim ids it answered.
 
 Ids are made here rather than returned by the database, as compose_run makes
 its own, so a verdict can name its claim and its call without reading either
@@ -43,6 +59,17 @@ import seat_call                 # noqa: E402
 # The panel whose declared substitutes stand in for a seat of the assessment.
 PANEL = "frontier_fast"
 PROMPTS = ("criteria", "contradictions", "confirm")
+# What a replay's record in the run's config says of it.
+REPLAY_NOTE = (
+    "The finding calls named had failed after this run had written the claims of the "
+    "documents named and every contradictions seat had read them. Each was asked again "
+    "in its own row. What it found was pooled with the claims already written: a pair "
+    "already claimed kept its row and gained the seat in found_by, and a new pair became "
+    "a new claim on every version where its two passages read the same. Every "
+    "contradictions seat then read only the new claims, in a supplementary reading "
+    "recorded among the attempts of its reading call, whose raw_output keeps the first "
+    "reading. A fresh run pools every finding before any reading, so this is not exactly "
+    "what a fresh run would give.")
 
 
 def now():
@@ -88,6 +115,32 @@ def summed_tokens(field, substituted, answer):
     if answer is not None:
         values.append((answer["usage"] or {}).get(field))
     return summed(values)
+
+
+def metered(earlier, attempts, substituted, answer):
+    """(this asking's cost, a call row's attempts, cost and tokens once this
+    asking is added to what `earlier`, the row as it stood, already carried)."""
+    cost = summed(attempt["cost_usd"] for attempt in attempts)
+    return cost, {
+        "attempts": (earlier.get("attempts") or []) + attempts,
+        "cost_usd": summed([earlier.get("cost_usd"), cost]),
+        "prompt_tokens": summed([earlier.get("prompt_tokens"), summed_tokens(
+            "prompt_tokens", substituted, answer)]),
+        "completion_tokens": summed([earlier.get("completion_tokens"), summed_tokens(
+            "completion_tokens", substituted, answer)])}
+
+
+def supplementary_attempts(tag, answer, substituted, claim_ids):
+    """`attempt_rows` for a supplementary reading: every attempt names the
+    claims it was asked about, `claim_ids` in order, and the one that answered
+    also carries its reply and seconds, since the row's own are its first
+    reading's (`assessment_run.supplementary_readings` reads them back)."""
+    rows = attempt_rows(tag, answer, substituted)
+    for row in rows:
+        row["claim_ids"] = list(claim_ids)
+    if answer is not None:
+        rows[-1].update(reply=answer["reply"], seconds=answer["seconds"])
+    return rows
 
 
 def parse_criteria(passages):
@@ -194,32 +247,65 @@ def seated_at_start(question, seats, rows):
                          and call.get("model")}
 
 
-def only_a_new_run(group, panels):
+def spoken(items):
+    """`items` as a list is said: "a", "a and b", "a, b and c"."""
+    items = list(items)
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def silent_finders(group, panels):
+    """[(version row, seat, call)] for every contradictions seat with no done
+    call on a version of `group`, [(version row, rows the run holds about it)],
+    `call` being the seat's finding call there, or None when the run holds no
+    call of it to ask again."""
+    silent = []
+    for version, rows in group:
+        held = done_calls(rows)
+        for seat in panels["contradictions"]:
+            if ("contradictions", seat) in held:
+                continue
+            silent.append((version, seat, next(
+                (call for call in rows["calls"]
+                 if (call["question"], call["seat"]) == ("contradictions", seat)), None)))
+    return silent
+
+
+def only_a_new_run(group, panels, replay=False):
     """Why taking the run up again cannot finish assessing the versions of one
     document in `group`, [(version row, rows the run holds about it)], every
     version of it the run is asked to assess, or None when it can. It answers
     for the group as a whole, since their claims are pooled together.
 
-    Once a version's claims are written, every contradictions seat reads them.
-    A contradictions seat with no done call on one of these versions by then
-    (possible only when its every candidate failed, since a stop raises before
-    claims are written) cannot be asked again: what it found could change
-    claims already read, on that version or on another that reads the same. A
-    version the run has not begun, beside one whose claims are written, is
-    such a version for every seat. And a done call whose reply was not stored
+    Once a version's claims are written, every contradictions seat reads them,
+    and the claims are written only once every contradictions seat has
+    answered on every version. A run whose claims were written while a seat
+    had not (assessment run e2c00b2e, as the code before that rule left it)
+    cannot have that seat asked again as a resume asks any call: what it found
+    could change claims already read, on that version or on another that
+    reads the same. With `replay` it can (`replayable`), unless the seat was
+    never asked there at all, as on a version the run has not begun beside one
+    whose claims are written. And a done call whose reply was not stored
     cannot have its rows rebuilt."""
     several = len(group) > 1
 
     def on(version):
         return f" on {name_of(version)}" if several else ""
     if any(rows["claims"] for _version, rows in group):
-        silent = [f"{seat}{on(version)}" for version, rows in group
-                  for seat in panels["contradictions"]
-                  if ("contradictions", seat) not in done_calls(rows)]
-        if silent:
+        silent = silent_finders(group, panels)
+        never = {}
+        for version, seat, call in silent:
+            if call is None:
+                never.setdefault(name_of(version), []).append(seat)
+        if replay and never:
+            said = "; ".join(f"{spoken(seats)} {'was' if len(seats) == 1 else 'were'} never "
+                             f"asked on {name}" for name, seats in never.items())
+            return (f"its claimed contradictions are written and already read, and {said}, "
+                    "so there is no finding to replay")
+        if silent and not replay:
             return (f"its claimed contradictions are written and already read, and "
-                    f"{' and '.join(silent)} gave no contradictions answer, so asking again "
-                    "now would change claims other seats have already read")
+                    f"{' and '.join(f'{seat}{on(version)}' for version, seat, _call in silent)} "
+                    "gave no contradictions answer, so asking again now would change claims "
+                    "other seats have already read")
     unkept = [f"{call['seat']} {call['question']}{on(version)}" for version, rows in group
               for call in rows["calls"]
               if call["status"] == "done" and call.get("raw_output") is None]
@@ -229,24 +315,91 @@ def only_a_new_run(group, panels):
     return None
 
 
-def to_ask(documents, rows, panels, criteria=True):
+def replayable(group, panels):
+    """The finding calls a replay (`assess.py --resume --replay`) asks again
+    for `group`, as `only_a_new_run` takes it: when its claims are written and
+    read and a contradictions seat gave no answer on one of its versions, the
+    finding call of every such seat, provided each has a row to be asked again
+    in. Otherwise none."""
+    if not any(rows["claims"] for _version, rows in group):
+        return []
+    silent = silent_finders(group, panels)
+    if any(call is None for _version, _seat, call in silent):
+        return []
+    return [call for _version, _seat, call in silent]
+
+
+def replayed_calls(run):
+    """The ids of every finding call a replay of `run` asked again, from the
+    `replays` its config records."""
+    return {call_id for record in ((run or {}).get("config") or {}).get("replays") or []
+            for call_id in record.get("calls") or []}
+
+
+def first_found(documents, found, rows, replayed):
+    """`found`, {version id: {seat: items}}, less what each finding call of
+    `replayed` found: what the claims of `documents` were pooled from when they
+    were first read, since those calls were asked again after the readings.
+    `rows` are what the run held about each version when the asking began."""
+    kept = {}
+    for document in documents:
+        version_id = document["version"]["id"]
+        again = {call["seat"] for call in (rows.get(version_id) or empty_rows())["calls"]
+                 if call["question"] == "contradictions" and call["id"] in replayed}
+        kept[version_id] = {seat: items for seat, items in found.get(version_id, {}).items()
+                            if seat not in again}
+    return kept
+
+
+def unread_claims(claims, first, call, rows, passages):
+    """The claims of `claims`, one version's pool, that the seat whose reading
+    call is `call` was never asked about: neither among `first`, which its
+    first reading read, nor among the claims a supplementary reading recorded
+    in its attempts answered. `call` is None when the seat has not read yet.
+    `rows` are what the run held about the version when the asking began, whose
+    claims name the ids those readings answered."""
+    pair_of = {row["id"]: (row["first_locator"], row["second_locator"])
+               for row in rows["claims"]}
+    asked = {locator_pair(claim, passages) for claim in first}
+    asked |= {pair_of[claim_id] for _model, _reply, claim_ids
+              in assessment_run.supplementary_readings((call or {}).get("attempts"))
+              for claim_id in claim_ids if claim_id in pair_of}
+    return [claim for claim in claims if locator_pair(claim, passages) not in asked]
+
+
+def verdict_rows(verdicts, claim_ids, call_id, seat):
+    """The verdict rows of one reading, `verdicts` {position: verdict} as
+    `assessment_call.parse_confirm` gives them, each naming the claim at its
+    position in `claim_ids`."""
+    return [{"claim_id": claim_ids[position - 1], "call_id": call_id, "seat": seat,
+             "holds": verdict["holds"], "absolute": verdict["absolute"],
+             "reason": verdict["reason"]}
+            for position, verdict in verdicts.items()]
+
+
+def to_ask(documents, rows, panels, criteria=True, replayed=frozenset()):
     """{version id: [(question, seat, claims)]} for every call assessing
     `documents`, the versions of one document the run is asked to assess, can
     make, given `rows`, {version id: the rows the run already holds about it},
     in the order each version's calls are made: every seat of each question
     asked with no done call, then every reading not done of a version that has
-    claims to read. With `criteria` false no criteria call is listed, since
-    the run takes them from another.
+    claims to read, then every supplementary reading of claims a seat was never
+    asked about. With `criteria` false no criteria call is listed, since the
+    run takes them from another. `replayed` are the finding calls asked again
+    after the readings (`replayed_calls`), whose findings the first readings
+    did not read.
 
-    `claims` is what a reading will be asked about, every claim of its version,
-    and None for a question that is not a reading. It is None for a reading too
-    while a contradictions seat has still to answer on any of these versions,
-    since the claims pooled across them are not known yet: every
-    contradictions seat's reading of every version is then listed, as
-    `assessment_run.price_document` prices it."""
+    `claims` is what a reading will be asked about, and None for a question
+    that is not a reading. It is None for a reading too while a contradictions
+    seat has still to answer on any of these versions, since the claims pooled
+    across them are not known yet: every contradictions seat's reading of
+    every version is then listed, as `assessment_run.price_document` prices it,
+    and, on a version whose claims are already written (a replay), a
+    supplementary reading by every seat of whatever claims the finding adds."""
     seats = panels["contradictions"]
-    done = {d["version"]["id"]: done_calls(rows.get(d["version"]["id"]) or empty_rows())
-            for d in documents}
+    held_rows = {d["version"]["id"]: rows.get(d["version"]["id"]) or empty_rows()
+                 for d in documents}
+    done = {version_id: done_calls(held) for version_id, held in held_rows.items()}
     asked = {version_id: [(question, seat, None)
                           for question in assessment_run.questions(criteria)
                           for seat in panels[question] if (question, seat) not in held]
@@ -255,15 +408,27 @@ def to_ask(documents, rows, panels, criteria=True):
         for version_id, held in done.items():
             asked[version_id] += [("confirm", seat, None) for seat in seats
                                   if ("confirm", seat) not in held]
+            if held_rows[version_id]["claims"]:
+                asked[version_id] += [("confirm", seat, None) for seat in seats]
         return asked
     found = {d["version"]["id"]: {
         seat: parse_contradictions(d["passages"])(
             done[d["version"]["id"]][("contradictions", seat)]["raw_output"])[0]["items"]
         for seat in seats} for d in documents}
+    passages = {d["version"]["id"]: d["passages"] for d in documents}
+    first = pooled_claims(documents, first_found(documents, found, held_rows, replayed), seats)
     for version_id, claims in pooled_claims(documents, found, seats).items():
-        if claims:
-            asked[version_id] += [("confirm", seat, claims) for seat in seats
-                                  if ("confirm", seat) not in done[version_id]]
+        if not claims:
+            continue
+        read_first = first[version_id] or claims
+        for seat in seats:
+            call = done[version_id].get(("confirm", seat))
+            if call is None:
+                asked[version_id].append(("confirm", seat, read_first))
+            more = unread_claims(claims, read_first, call, held_rows[version_id],
+                                 passages[version_id])
+            if more:
+                asked[version_id].append(("confirm", seat, more))
     return asked
 
 
@@ -275,14 +440,23 @@ class Assessment:
     rows it already holds, {version id: rows} in `index_store.assessment_rows`'s
     shape. Both are omitted for a fresh run. `criteria_from` is the row of the
     run whose criteria this run takes, fresh or taken up: it then asks no
-    criteria call."""
+    criteria call. With `replay`, a document `only_a_new_run` would refuse
+    because a finder failed after its readings is taken up as `replayable`
+    says (`record_replay`, `group`)."""
 
     def __init__(self, store, config, panels, call_model, panel=PANEL, run=None,
-                 existing=None, criteria_from=None):
+                 existing=None, criteria_from=None, replay=False):
         self.store, self.config, self.panels = store, config, panels
         self.call_model, self.panel = call_model, panel
         self.run = run
         self.criteria_from = criteria_from
+        self.replay = replay
+        # The finding calls asked again after their document's readings, by
+        # this replay or an earlier one.
+        self.replayed = replayed_calls(run)
+        # Each call row as this asking last wrote it, by id, for a
+        # supplementary reading to add its bill and attempts to.
+        self.rows_now = {}
         self.run_id = run["id"] if run is not None else None
         # Whether the run row exists, so a stop can name it.
         self.written = run is not None
@@ -339,6 +513,21 @@ class Assessment:
                       f"even on retry: {failed}. It is inserted pending; find and "
                       "close it by hand.", file=sys.stderr)
                 raise
+
+    def record_replay(self, by, groups, calls):
+        """Record on the run row, before any of `calls` is asked again, that the
+        documents of `groups` (spec ids) are replayed, `calls` being the ids of
+        the finding calls asked again, and `by` who replayed them: one record
+        per replay, appended to its config's `replays`. It is written first so
+        that a replay stopped part way still says which findings its first
+        readings did not read."""
+        config = dict((self.run or {}).get("config") or {})
+        config["replays"] = list(config.get("replays") or []) + [{
+            "at": now(), "by": by, "groups": list(groups), "calls": list(calls),
+            "note": REPLAY_NOTE}]
+        self.store.update("aci_assessment_runs", {"id": self.run_id}, {"config": config})
+        self.run = dict(self.run or {}, config=config)
+        self.replayed |= set(calls)
 
     def finish(self, stopped=None):
         """Close the run, its cost what it had billed before (`earlier_cost`)
@@ -405,24 +594,13 @@ class Assessment:
             self.store.update("aci_assessment_calls", match, reopened)
         print(f"  {seat} {question} on {name_of(version)} ...", flush=True)
 
-        def metered(attempts, substituted, answer):
-            """(this asking's cost, the row's attempts, cost and tokens with
-            the earlier ones it already carried)."""
-            cost = summed(attempt["cost_usd"] for attempt in attempts)
-            return cost, {
-                "attempts": (earlier.get("attempts") or []) + attempts,
-                "cost_usd": summed([earlier.get("cost_usd"), cost]),
-                "prompt_tokens": summed([earlier.get("prompt_tokens"), summed_tokens(
-                    "prompt_tokens", substituted, answer)]),
-                "completion_tokens": summed([earlier.get("completion_tokens"), summed_tokens(
-                    "completion_tokens", substituted, answer)])}
-
         substituted, answer, billed = [], None, False
         try:
             tag, answer, substituted, refused = assessment_run.ask_with_substitutes(
                 seat, system, user, self.config, self.call_model, self.panel,
                 seated=seated, substituted=substituted)
-            cost, meter = metered(attempt_rows(tag, answer, substituted), substituted, answer)
+            cost, meter = metered(earlier, attempt_rows(tag, answer, substituted), substituted,
+                                  answer)
             self.costs.append(cost)
             billed = True
             if answer is None:
@@ -438,9 +616,11 @@ class Assessment:
                 "status": "done", "model": tag, **meter, "raw_output": answer["reply"],
                 "finish_reason": answer["finish_reason"], "seconds": answer["seconds"],
                 "error": None, "finished_at": now()})
+            self.rows_now[call_id] = {"id": call_id, "model": tag, **meter}
         except BaseException as stopped:
             if not billed:
-                cost, meter = metered(attempt_rows(None, None, substituted), substituted, None)
+                cost, meter = metered(earlier, attempt_rows(None, None, substituted),
+                                      substituted, None)
                 self.costs.append(cost)
             patch = {"status": "error", "error": seat_call.stop_error(stopped), **meter,
                      "finished_at": now()}
@@ -473,6 +653,12 @@ class Assessment:
         (`pooled_claims`), and every contradictions seat's reading of every
         claim of that version.
 
+        When a contradictions seat has no answer on one of the versions once
+        they are searched, nothing more is asked or written for any of them:
+        no claim is written and nobody reads, and the document is a gap until
+        the finding is asked again. In a replay that finding was the one asked
+        again, and the claims already written stay as they were read.
+
         Within each question and version, `seated` starts at the question's
         configured seats, and the model of every call of it the run already
         holds done, and gains every model that answers it, so a later seat's
@@ -485,15 +671,41 @@ class Assessment:
         held = {d["version"]["id"]: self.existing.get(d["version"]["id"]) or empty_rows()
                 for d in documents}
         refusal = only_a_new_run([(d["version"], held[d["version"]["id"]]) for d in documents],
-                                 self.panels)
+                                 self.panels, replay=self.replay)
         if refusal is not None:
             names = ", ".join(name_of(d["version"]) for d in documents)
             raise SystemExit(f"{names} cannot be taken up again: {refusal}. "
                              "Assess them in a new run.")
         found = {d["version"]["id"]: self.search(d, held[d["version"]["id"]]) for d in documents}
-        pooled = pooled_claims(documents, found, self.panels["contradictions"])
+        seats = self.panels["contradictions"]
+        silent = [(d["version"], seat) for d in documents for seat in seats
+                  if seat not in found[d["version"]["id"]]]
+        if silent:
+            self.leave(documents, held, silent)
+            return
+        first = pooled_claims(documents, first_found(documents, found, held, self.replayed),
+                              seats)
+        pooled = pooled_claims(documents, found, seats)
         for d in documents:
-            self.read(d, held[d["version"]["id"]], pooled[d["version"]["id"]])
+            self.read(d, held[d["version"]["id"]], pooled[d["version"]["id"]],
+                      first[d["version"]["id"]])
+
+    def leave(self, documents, held, silent):
+        """Say that the versions `documents` are left unread, since the seats of
+        `silent`, [(version row, seat)], gave no contradictions answer."""
+        names = ", ".join(name_of(d["version"]) for d in documents)
+        several = len(documents) > 1
+        it = "them" if several else "it"
+        who = " and ".join(f"{seat} on {name_of(version)}" if several else seat
+                           for version, seat in silent)
+        if any(rows["claims"] for rows in held.values()):
+            print(f"  {names}: {who} gave no contradictions answer again, so nothing more is "
+                  f"asked or written for {it}: the claims already written stay as they were "
+                  "read, and the gap stays.", flush=True)
+        else:
+            print(f"  {names}: {who} gave no contradictions answer, so no claim of {it} is "
+                  f"written and nobody reads {it}; taking the run up again asks that finding "
+                  "again first.", flush=True)
 
     def ask(self, version, rows, question, seat, system, user, parse, seated):
         """`call`, for the call of `question` and `seat` about `version`,
@@ -534,34 +746,128 @@ class Assessment:
                 found[seat] = parsed["items"]
         return found
 
-    def read(self, document, rows, claims):
+    def read(self, document, rows, claims, first=None):
         """One version's claims, written, then read by every contradictions
         seat, each reading every claim, the ones it found included. A version
         with no claim is read by nobody. A claim the run already wrote keeps
-        its id, and a reading already written is not written twice."""
+        its id, and gains in `found_by` any seat the pool now says proposed it,
+        nothing else of its row changing; a reading already written is not
+        written twice.
+
+        `first` are the claims each seat's first reading reads: the claims
+        pooled without the findings asked again after the readings, which on a
+        run no replay touched are `claims` themselves, and `claims` too when
+        that pool gave this version none. A seat whose first reading is done
+        and that was never asked about some of `claims` reads those in a
+        supplementary reading (`supplement`); the verdicts of a supplementary
+        reading given earlier are rebuilt from its attempt."""
         version, passages, labelled = (document["version"], document["passages"],
                                        document["labelled"])
-        written = {(row["first_locator"], row["second_locator"]): row["id"]
-                   for row in rows["claims"]}
+        seats = self.panels["contradictions"]
+        written = {(row["first_locator"], row["second_locator"]): row for row in rows["claims"]}
         read = {(row["claim_id"], row["seat"]) for row in rows["verdicts"]}
-        claim_ids = [written.get(locator_pair(claim, passages)) or str(uuid.uuid4())
-                     for claim in claims]
+        key = ("claim_id", "seat")
+        pairs = [locator_pair(claim, passages) for claim in claims]
+        id_of = {pair: written[pair]["id"] if pair in written else str(uuid.uuid4())
+                 for pair in pairs}
+        for claim, pair in zip(claims, pairs):
+            row = written.get(pair)
+            if row is None or set(claim["found_by"]) <= set(row["found_by"]):
+                continue
+            joined = [seat for seat in seats
+                      if seat in row["found_by"] or seat in claim["found_by"]]
+            joined += [seat for seat in row["found_by"] if seat not in joined]
+            self.store.update("aci_assessment_claims", {"id": row["id"]}, {"found_by": joined})
         self.insert_new("aci_assessment_claims",
-                        claim_rows(self.run_id, version["id"], claims, claim_ids, passages),
+                        claim_rows(self.run_id, version["id"], claims,
+                                   [id_of[pair] for pair in pairs], passages),
                         set(written), ("first_locator", "second_locator"))
         if not claims:
             return
-        seats = self.panels["contradictions"]
+        first = first or claims
+        first_ids = [id_of[locator_pair(claim, passages)] for claim in first]
         seated = seated_at_start("confirm", seats, rows)
-        system, user = assessment_call.compose_confirm(labelled, claims)
+        system, user = assessment_call.compose_confirm(labelled, first)
+        given = {}
         for seat in seats:
             call_id, verdicts = self.ask(version, rows, "confirm", seat, system, user,
-                                         parse_confirm(claims), seated)
+                                         parse_confirm(first), seated)
             if verdicts is None:
                 continue
-            self.insert_new("aci_assessment_verdicts", [
-                {"claim_id": claim_ids[position - 1], "call_id": call_id, "seat": seat,
-                 "holds": verdict["holds"], "absolute": verdict["absolute"],
-                 "reason": verdict["reason"]}
-                for position, verdict in verdicts.items()],
-                read, ("claim_id", "seat"))
+            given[seat] = self.rows_now.get(call_id) or next(
+                call for call in rows["calls"] if call["id"] == call_id)
+            self.insert_new("aci_assessment_verdicts",
+                            verdict_rows(verdicts, first_ids, call_id, seat), read, key)
+        # Who sits in each seat of this version's reading, so that no model
+        # reads in two seats of it.
+        sitting = {seat: {call.get("model")} | {model for model, _reply, _ids in
+                                                assessment_run.supplementary_readings(
+                                                    call.get("attempts"))}
+                   for seat, call in given.items()}
+        for seat, call in given.items():
+            for _model, reply, claim_ids in assessment_run.supplementary_readings(
+                    call.get("attempts")):
+                self.insert_new("aci_assessment_verdicts", verdict_rows(
+                    assessment_call.parse_confirm(reply, len(claim_ids)), claim_ids,
+                    call["id"], seat), read, key)
+            more = unread_claims(claims, first, call, rows, passages)
+            if not more:
+                continue
+            more_ids = [id_of[locator_pair(claim, passages)] for claim in more]
+            others = set(seats).union(*(models for other, models in sitting.items()
+                                        if other != seat))
+            tag, verdicts = self.supplement(version, call, seat, labelled, more, more_ids,
+                                            others - {None})
+            if tag is not None:
+                sitting[seat].add(tag)
+            if verdicts:
+                self.insert_new("aci_assessment_verdicts",
+                                verdict_rows(verdicts, more_ids, call["id"], seat), read, key)
+
+    def supplement(self, version, call, seat, labelled, claims, claim_ids, seated):
+        """A supplementary reading: `seat`, whose reading call about `version`
+        is `call` and is done, reading only `claims`, which its first reading
+        did not read, their ids `claim_ids` in order. Returns (the model that
+        answered, what `assessment_call.parse_confirm` makes of its reply), or
+        (None, None) when no candidate answered.
+
+        It is recorded on `call`'s row, since the table allows one reading call
+        per run, version and seat. The row stays done, and keeps its first
+        reading's reply in `raw_output`, its model, finish reason and seconds:
+        every attempt is appended to its attempts, each naming `claim_ids`
+        (`supplementary_attempts`), the one that answered with its reply and
+        seconds, and this asking's bill and tokens are added to its own. The
+        seat is asked through its own model and then its declared substitutes,
+        skipping any of `seated`, which are the question's seats and every
+        model that sits in another seat of this version's reading.
+
+        A stop mid-call leaves the attempts already billed on the row, and
+        their cost in the run's total, and is raised, as `call` does; with no
+        reply recorded, a resume asks the reading again."""
+        system, user = assessment_call.compose_confirm(labelled, claims)
+        print(f"  {seat} confirm on {name_of(version)}, of the {len(claims)} claims its "
+              "reading did not read ...", flush=True)
+        match = {"id": call["id"]}
+        substituted, patch, billed = [], None, False
+        try:
+            tag, answer, substituted, _refused = assessment_run.ask_with_substitutes(
+                seat, system, user, self.config, self.call_model, self.panel,
+                seated=seated, substituted=substituted)
+            cost, patch = metered(call, supplementary_attempts(tag, answer, substituted,
+                                                               claim_ids), substituted, answer)
+            self.costs.append(cost)
+            billed = True
+            self.store.update("aci_assessment_calls", match, patch)
+        except BaseException:
+            if not billed:
+                attempts = supplementary_attempts(None, None, substituted, claim_ids)
+                cost, patch = metered(call, attempts, substituted, None)
+                self.costs.append(cost)
+                patch = patch if attempts else None
+            if patch is not None:
+                self.store.update("aci_assessment_calls", match, patch)
+            raise
+        self.rows_now[call["id"]] = dict(call, **patch)
+        if answer is None:
+            return None, None
+        return tag, parse_confirm(claims)(answer["reply"])[0]

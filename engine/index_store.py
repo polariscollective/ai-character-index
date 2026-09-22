@@ -395,15 +395,21 @@ def criteria_run_id(store, assessment_run_id):
 def _run_rows(store, assessment_run_id, wanted, claims=True):
     """{version id: {"calls", "scores", "claims", "verdicts"}}, what run
     `assessment_run_id` wrote about the versions `wanted`, its claims and
-    verdicts left unread unless `claims`."""
+    verdicts left unread unless `claims`. With `claims`, a version the run
+    pooled with versions it holds calls on and `wanted` leaves out also
+    carries them (`_pooled_with`)."""
     by_version = {version_id: {"calls": [], "scores": [], "claims": [], "verdicts": []}
                   for version_id in wanted}
 
-    def mine(table):
+    def everything(table):
         return [row for row in _rows(store, table, {"run_id": f"eq.{assessment_run_id}"})
-                if row["run_id"] == assessment_run_id and row["spec_version_id"] in wanted]
+                if row["run_id"] == assessment_run_id]
 
-    calls = mine("aci_assessment_calls")
+    def mine(table):
+        return [row for row in everything(table) if row["spec_version_id"] in wanted]
+
+    every_call = everything("aci_assessment_calls")
+    calls = [call for call in every_call if call["spec_version_id"] in wanted]
     claim_rows = mine("aci_assessment_claims") if claims else []
     version_of_call = {call["id"]: call["spec_version_id"] for call in calls}
     version_of_claim = {claim["id"]: claim["spec_version_id"] for claim in claim_rows}
@@ -421,7 +427,37 @@ def _run_rows(store, assessment_run_id, wanted, claims=True):
         by_version[version_of_call[score["call_id"]]]["scores"].append(score)
     for verdict in verdicts:
         by_version[version_of_claim[verdict["claim_id"]]]["verdicts"].append(verdict)
+    if claims:
+        _pooled_with(store, by_version, every_call)
     return by_version
+
+
+def _pooled_with(store, by_version, calls):
+    """Give each version of `by_version` that the run pooled with versions
+    `by_version` leaves out, `pooled_with`: [{"name", "calls"}], one per such
+    version, `name` its `<spec id>@<version>` and `calls` its finding calls.
+
+    An assessment run pools the findings of every version of one document it
+    assesses, and writes their claims only once every contradictions seat
+    has answered on all of them; so a version named alone stands on the
+    finders of versions it does not name. Nothing is read, and the rows keep
+    their shape, when every version the run holds a call on is named."""
+    others = {call["spec_version_id"] for call in calls} - set(by_version)
+    if not others:
+        return
+    ids = others | set(by_version)
+    versions = {row["id"]: row for row in _rows(store, "aci_spec_versions", {
+        "select": "id,spec_id,version", "id": _any_of(ids)}) if row["id"] in ids}
+    for version_id, rows in by_version.items():
+        spec_id = (versions.get(version_id) or {}).get("spec_id")
+        pooled = [{"name": f"{versions[other]['spec_id']}@{versions[other]['version']}",
+                   "calls": [call for call in calls if call["spec_version_id"] == other
+                             and call["question"] == "contradictions"]}
+                  for other in sorted(others, key=lambda other: (
+                      (versions.get(other) or {}).get("version") or "", other))
+                  if spec_id is not None and (versions.get(other) or {}).get("spec_id") == spec_id]
+        if pooled:
+            rows["pooled_with"] = pooled
 
 
 def assessment_run_rows(store, assessment_run_id, spec_version_ids):
@@ -473,6 +509,8 @@ def assessment_rows(store, assessment_run_id, spec_version_ids):
                         if score["call_id"] in asked]
                        + [score for score in own["scores"] if score["call_id"] in kept]),
             "claims": own["claims"], "verdicts": own["verdicts"]}
+        if "pooled_with" in own:
+            by_version[version_id]["pooled_with"] = own["pooled_with"]
     return dict(run, criteria_run=criteria_run), by_version
 
 
@@ -496,13 +534,23 @@ def _criteria_gaps(name, calls, scores, seats, where=""):
     return gaps
 
 
-def _contradictions_gaps(name, calls, claims, verdicts, seats, where=""):
-    """Every contradictions seat of `seats` with no done finding among
-    `calls`, every reading asked that did not finish, and every seat that left
-    a claim of `claims` unread in `verdicts`."""
-    gaps = [f"{name}: {seat} gave no contradictions answer{where}" for seat in seats
+def _silent(calls, seats):
+    """Every seat of `seats` with no done finding among `calls`."""
+    return [seat for seat in seats
             if not any(call["question"] == "contradictions" and call["seat"] == seat
                        and call["status"] == "done" for call in calls)]
+
+
+def _contradictions_gaps(name, calls, claims, verdicts, seats, where="", pooled_with=()):
+    """Every contradictions seat of `seats` with no done finding among
+    `calls`, or among the calls of a version `pooled_with` names, every
+    reading asked that did not finish, and every seat that left a claim of
+    `claims` unread in `verdicts`."""
+    gaps = [f"{name}: {seat} gave no contradictions answer{where}"
+            for seat in _silent(calls, seats)]
+    gaps += [f"{name}: {seat} gave no contradictions answer on {other['name']}, whose "
+             f"contradictions are pooled with this version's{',' if where else ''}{where}"
+             for other in pooled_with for seat in _silent(other["calls"], seats)]
     unfinished = sorted(call["seat"] for call in calls
                         if call["question"] == "confirm" and call["status"] != "done")
     if unfinished:
@@ -553,7 +601,11 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
     total built without it would be a mean of fewer judges presented as the
     panel's; a claim a seat never read would be settled on fewer readings than
     the rule counts on, and could be left unconfirmed by a reading that was
-    never given.
+    never given. A version's claims are pooled with those of every other
+    version of its document the run assessed, so it is held to the finders of
+    those versions too, named or not (`pooled_with`): a version whose claims
+    were never written because a finder failed on another version reads
+    exactly like one with none.
 
     A run that takes its criteria from an earlier run (`assessment_rows` gives
     its row a `criteria_run`) is held to each half in its own run: the
@@ -592,7 +644,8 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
             gaps += _criteria_gaps(name, calls, rows.get("scores") or [],
                                    panels.get("criteria", []))
             gaps += _contradictions_gaps(name, calls, claims, verdicts,
-                                         panels.get("contradictions", []))
+                                         panels.get("contradictions", []),
+                                         pooled_with=rows.get("pooled_with") or ())
             continue
         if criteria_run is not None:
             criteria = [call for call in calls if call["question"] == "criteria"]
@@ -609,7 +662,8 @@ def assessment_gaps(assessment_run_id, run, by_version, versions):
         else:
             gaps += _contradictions_gaps(name, own, claims, verdicts,
                                          panels.get("contradictions", []),
-                                         f" in assessment run {assessment_run_id}")
+                                         f" in assessment run {assessment_run_id}",
+                                         pooled_with=rows.get("pooled_with") or ())
     return gaps
 
 

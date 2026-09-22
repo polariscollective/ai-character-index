@@ -284,7 +284,9 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     reads one way in the whole payload; and one reading per seat of the run's
     contradictions, in the run's order: whether the seat found the claim,
     whether it holds, whether it is absolute and why, with "model" when a
-    declared substitute answered the call that gave the reading. A reading is
+    declared substitute answered the call that gave the reading, or gave the
+    supplementary reading of it a replay recorded on that call
+    (assessment_run.reading_model). A reading is
     a verdict row, from the seat's reading call; in a run of the first method
     a finder's row came from its contradictions call instead, saying only that
     it found the claim, so one seat can read through two models across the
@@ -321,7 +323,7 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
                                "judges": dict(sorted(judges.items()))}
 
     seats = run["panels"]["contradictions"]
-    model_of = {call["id"]: call.get("model") for call in calls}
+    call_of = {call["id"]: call for call in calls}
     readings = collections.defaultdict(dict)
     for verdict in verdicts:
         readings[verdict["claim_id"]][verdict["seat"]] = verdict
@@ -345,7 +347,8 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     def reading(seat, found_by, verdict):
         given = {"seat": seat, "found": seat in found_by, "holds": verdict["holds"],
                  "absolute": verdict["absolute"], "reason": verdict["reason"]}
-        model = model_of.get(verdict["call_id"])
+        model = assessment_run.reading_model(call_of.get(verdict["call_id"], {}),
+                                             verdict["claim_id"])
         if model and model != seat:
             given["model"] = model
         return given

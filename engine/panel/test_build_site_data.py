@@ -282,6 +282,25 @@ class DocumentAssessmentTest(unittest.TestCase):
         self.assertEqual([[r["seat"] for r in each] for each in readings.values()],
                          [RUN["panels"]["contradictions"]] * 3)
 
+    def test_a_supplementary_reading_names_the_model_that_gave_it(self):
+        # kimi's reading call read c again after a replay, through glm, and
+        # recorded it among its attempts: that reading is glm's, the call's
+        # first reading kimi's own.
+        supplementary = [{"model": "kimi", "finish_reason": "stop", "cost_usd": 0.1,
+                          "reason": None},
+                         {"model": "glm", "finish_reason": "stop", "cost_usd": 0.01,
+                          "reason": None, "claim_ids": ["c"],
+                          "reply": "ITEM 1: does not hold | absolute: no | No.", "seconds": 1.0}]
+        calls = [dict(call, attempts=supplementary) if call["id"] == "k-kimi" else call
+                 for call in CALLS]
+        readings = {tuple(p["locator"] for p in c["passages"]): c["readings"] for c in
+                    bs.document_assessment(RUN, calls, SCORES, CLAIMS, VERDICTS,
+                                           PASSAGE_TEXT)["contradictions"]["claims"]}
+        self.assertEqual(readings[(L2, L3)][2], {"seat": "kimi", "found": False, "holds": False,
+                                                 "absolute": False, "reason": "kimi on c",
+                                                 "model": "glm"})
+        self.assertNotIn("model", readings[(L1, L2)][2])
+
     def test_a_claim_s_passages_render_as_the_coverage_s_do(self):
         [_, with_example, _] = self.assess()["contradictions"]["claims"]
         second = with_example["passages"][1]

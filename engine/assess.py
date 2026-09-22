@@ -5,6 +5,7 @@
     python3 engine/assess.py --documents=<version id>,<version id> --go   # spends, and writes
     python3 engine/assess.py --resume=<run id> --documents=<version id>,<version id>
     python3 engine/assess.py --resume=<run id> --documents=<version id>,<version id> --go
+    python3 engine/assess.py --resume=<run id> --replay --documents=<version id>,... --go
     python3 engine/assess.py --criteria-from=<run id> --documents=<version id>,<version id> --go
 
 `--documents` names aci_spec_versions ids. Priced and printed by default, run and
@@ -18,7 +19,10 @@ finds. The candidates found on every version of one document the run assesses
 are pooled by their pair of passages, and carried to every version where both
 passages read exactly the same; then every contradictions seat reads every
 claim of a version, the ones it found included, and a claim is confirmed when
-two readings say it holds. A seat that cannot answer is taken by its declared
+two readings say it holds. A document on one of whose versions a
+contradictions seat gives no answer is not read at all: none of its claims is
+written, the run goes on, and a resume asks the finding again before the
+claims are written and read. A seat that cannot answer is taken by its declared
 substitutes, from frontier_fast's `substitutes` block, skipping any substitute
 already seated for the same question. The rules are
 `engine/panel/assessment_run.py`'s; this command runs them and writes the run,
@@ -62,10 +66,28 @@ it did the first time, so a refusal billed before the stop is billed again, and
 so is a reply that came back but was not written done. The run must have
 been started under the seats, prompts and substitutes it is taken up with. A
 document whose claimed contradictions are written while one of its
-contradictions seats never answered is left as it is, since asking that seat
-now would change claims the others have read: only a new run can assess it. A
-resume is priced like a fresh run, counting only the calls it will ask, and
-spends only with --go.
+contradictions seats never answered, as the code before the rule above left
+assessment run e2c00b2e, is left as it is, since asking that seat now would
+change claims the others have read: only a new run can assess it as a fresh
+run would. A resume is priced like a fresh run, counting only the calls it
+will ask, and spends only with --go.
+
+`--replay`, given with `--resume`, takes such a document up instead, which the
+owner allowed on 22 September 2026 while the method is being settled, knowing
+the result is not exactly what a fresh run would give. The finding call that
+failed is asked again in its own row, through the seat's usual candidates; if
+it fails again, nothing more is asked or written for that document and the gap
+stays. If it answers, what it finds is pooled across the document's versions as
+usual: a pair already claimed keeps its row and gains the seat in `found_by`,
+and a new pair becomes a new claim on every version where both passages read
+the same. Every contradictions seat then reads only the new claims of each
+version, in a supplementary reading recorded on its reading call for that
+version: appended to its attempts with its reply and the claims it answered,
+its bill added, and its first reply kept in `raw_output`. The run's config
+records the replay under `replays`. A replay is priced first like any resume,
+the findings at their allowances and each supplementary reading as a reading
+whose claims are not known yet, and spends only with --go. On a run with no
+such document it is a resume and nothing else.
 """
 
 import argparse
@@ -169,6 +191,9 @@ def resumable(store, run_id):
 
 
 ABSENT = object()
+REPLAY_WITHOUT_RESUME = (
+    "--replay replays what failed in a run already read, so it is given with "
+    "--resume=<run id>, the run's full id. Nothing was priced or written.")
 
 
 def differences(path, recorded, current):
@@ -268,13 +293,24 @@ def criteria_source(store, run_id, panels, documents):
     return earlier
 
 
-def command(version_ids, run_id=None, criteria_from=None):
+def command(version_ids, run_id=None, criteria_from=None, replay=False):
     """The command that assesses `version_ids`, in a new run, taking its
     criteria from run `criteria_from` when one is named, or in run `run_id`
-    taken up where it stopped."""
+    taken up where it stopped, replaying what failed after the readings with
+    `replay`."""
     resume = f" --resume={run_id}" if run_id is not None else ""
+    again = " --replay" if replay else ""
     taken = f" --criteria-from={criteria_from}" if criteria_from is not None else ""
-    return f"python3 engine/assess.py{resume}{taken} --documents={','.join(version_ids)} --go"
+    return (f"python3 engine/assess.py{resume}{again}{taken} "
+            f"--documents={','.join(version_ids)} --go")
+
+
+def replay_offer(names, run_id, version_ids):
+    """The sentence that offers to replay, in run `run_id`, what failed in the
+    documents `names` after their readings (`assessment_store.replayable`)."""
+    return (f"or replay in this run only what failed in {names}, the new claims read on "
+            "their own after the readings already given, which is not exactly what a fresh "
+            f"run would give: {command(version_ids, run_id, replay=True)}")
 
 
 def remedy(store, run_id, version_ids):
@@ -297,13 +333,15 @@ def remedy(store, run_id, version_ids):
         if not index_store.assessment_gaps(run_id, run, by_version, [versions[version_id]]):
             continue
         group = group_of[versions[version_id]["spec_id"]]
-        refusal = assessment_store.only_a_new_run(
-            [(versions[member], own[member]) for member in group], panels)
+        members = [(versions[member], own[member]) for member in group]
+        refusal = assessment_store.only_a_new_run(members, panels)
         if refusal is None:
             resumable_gap = True
         else:
             lines.append(f"{name_of(versions[version_id])} can only be assessed in a new run, "
                          f"since {refusal}: {command(group, criteria_from=criteria_from)}")
+            if assessment_store.replayable(members, panels):
+                lines.append("  " + replay_offer(name_of(versions[version_id]), run_id, wanted))
     if resumable_gap:
         lines.insert(0, "Take the run up where it stopped, asking only the calls that are "
                         f"not done: {command(wanted, run_id)}")
@@ -311,7 +349,8 @@ def remedy(store, run_id, version_ids):
 
 
 def assess(store, config, version_ids, passages_for, call_model=None, go=False,
-           created_by="assess.py", panel=PANEL, resume=None, criteria_from=None):
+           created_by="assess.py", panel=PANEL, resume=None, criteria_from=None,
+           replay=False):
     """Price the assessment of each document and, with `go`, run it and write it.
     Returns (the price in dollars, the run's id, or None when nothing was run).
 
@@ -325,10 +364,17 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
     from (`criteria_source`); a run taken up takes it from its own config. The
     criteria are then neither priced nor asked.
 
+    With `replay`, which needs `resume`, the versions of one document whose
+    finding failed after their claims were written and read
+    (`assessment_store.replayable`) are taken up rather than left: the run row
+    records the replay (`Assessment.record_replay`) before anything is asked.
+
     A seat whose every candidate failed leaves its call in error and the run
     goes on. Anything else that stops the run, a model that could not be
     reached included, is written on the run, as its error, and raised, once a
     line on stderr has named the `--resume` that takes the run up again."""
+    if replay and resume is None:
+        raise SystemExit(REPLAY_WITHOUT_RESUME)
     panels = assessment_panels(config)
     documents = load_documents(store, version_ids, passages_for)
     if resume is not None:
@@ -339,32 +385,48 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
     earlier = (None if criteria_from is None
                else criteria_source(store, criteria_from, panels, documents))
     existing = {} if resume is None else taken_up(store, resume, panels, config, documents)
-    plans = []
+    replayed = assessment_store.replayed_calls(resume)
+    plans, replays = [], []
     for group in assessment_store.groups(documents):
         rows = {document["version"]["id"]: existing.get(document["version"]["id"])
                 or assessment_store.empty_rows() for document in group}
-        refusal = assessment_store.only_a_new_run(
-            [(document["version"], rows[document["version"]["id"]]) for document in group],
-            panels)
+        members = [(document["version"], rows[document["version"]["id"]]) for document in group]
+        refusal = assessment_store.only_a_new_run(members, panels, replay=replay)
+        again = assessment_store.replayable(members, panels) if replay and not refusal else []
+        if again:
+            replays.append((group, again))
         asked = ({} if refusal else
-                 assessment_store.to_ask(group, rows, panels, criteria=earlier is None))
-        plans.append((group, refusal, asked))
+                 assessment_store.to_ask(group, rows, panels, criteria=earlier is None,
+                                         replayed=replayed))
+        plans.append((group, refusal, asked, members))
     each = [(document, asked.get(document["version"]["id"], []))
-            for group, _refusal, asked in plans for document in group]
+            for group, _refusal, asked, _members in plans for document in group]
     estimate = round(sum(assessment_run.price_calls(document["labelled"], calls, config)
                          for document, calls in each), 2)
     ceiling = round(sum(ceiling_calls(document["labelled"], calls, config, panel)
                         for document, calls in each), 2)
-    for group, refusal, _asked in plans:
+    for group, refusal, _asked, members in plans:
         for document in group:
             print(f"  {name_of(document['version'])}: {len(document['passages'])} passages")
+        names = ", ".join(name_of(document["version"]) for document in group)
         if refusal is not None:
-            names = ", ".join(name_of(document["version"]) for document in group)
             left, it = (("is left as it is", "it") if len(group) == 1
                         else ("are left as they are", "them"))
             print(f"  {names} {left}, since {refusal}. Only a new run can assess {it}: "
                   + command([document["version"]["id"] for document in group],
                             criteria_from=criteria_from))
+            if not replay and assessment_store.replayable(members, panels):
+                print("  " + replay_offer(names, resume["id"], version_ids))
+    version_of = {document["version"]["id"]: document["version"] for document in documents}
+    for group, again in replays:
+        names = ", ".join(name_of(document["version"]) for document in group)
+        failed = " and ".join(f"{call['seat']} on {name_of(version_of[call['spec_version_id']])}"
+                              for call in again)
+        print(f"  Replaying {names}: {failed} gave no contradictions answer after the claims "
+              "were written and read. That finding is asked again in its own row; the pairs "
+              "found are pooled with the claims already written, and every contradictions "
+              "seat reads only the new claims, in a supplementary reading on its reading "
+              "call. This is not exactly what a fresh run would give.")
     if resume is not None:
         done = sum(call["status"] == "done" for rows in existing.values() for call in rows["calls"])
         print(f"Taking up assessment run {resume['id']}: {done} calls done are not asked again, "
@@ -386,10 +448,15 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
 
     run = assessment_store.Assessment(store, config, panels,
                                       call_model or batch_job.call_openrouter, panel,
-                                      run=resume, existing=existing, criteria_from=earlier)
+                                      run=resume, existing=existing, criteria_from=earlier,
+                                      replay=replay)
     try:
         run.start(created_by, estimate)
-        for group, refusal, _asked in plans:
+        if replays:
+            run.record_replay(created_by,
+                              [group[0]["version"]["spec_id"] for group, _again in replays],
+                              [call["id"] for _group, again in replays for call in again])
+        for group, refusal, _asked, _members in plans:
             if refusal is None:
                 run.group(group)
     except BaseException as stopped:
@@ -397,7 +464,8 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
             print(f"assessment run {run.run_id} stopped ({seat_call.stop_error(stopped)}). "
                   "What it wrote is kept. Take it up where it stopped, asking only the calls "
                   "that are not done: "
-                  + command([document["version"]["id"] for document in documents], run.run_id),
+                  + command([document["version"]["id"] for document in documents], run.run_id,
+                            replay=replay),
                   file=sys.stderr, flush=True)
         run.finish(stopped)
         raise
@@ -422,7 +490,14 @@ def main(argv=None):
                          help="start a run that asks only the contradictions and their "
                               "reading, and takes its criteria from assessment run RUN_ID, "
                               "its full id")
+    parser.add_argument("--replay", action="store_true",
+                        help="with --resume: ask again a finding that failed after its "
+                             "document's claims were written and read, pool what it finds "
+                             "with them, and have every contradictions seat read only the "
+                             "new claims. Not exactly what a fresh run would give")
     args = parser.parse_args(argv)
+    if args.replay and args.resume is None:
+        raise SystemExit(REPLAY_WITHOUT_RESUME)
     # Before the store is opened: an id that is not one is refused by name.
     resume_id = (None if args.resume is None
                  else index_store.assessment_run_id(args.resume, flag="--resume"))
@@ -440,7 +515,7 @@ def main(argv=None):
     try:
         _estimate, run_id = assess(store, config, version_ids, h.passages, go=args.go,
                                    created_by=args.by, resume=resume,
-                                   criteria_from=criteria_from)
+                                   criteria_from=criteria_from, replay=args.replay)
     except seat_call.Unreachable:
         # The run is closed error and the way to take it up again is printed.
         return 1

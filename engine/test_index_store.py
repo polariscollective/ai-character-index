@@ -549,10 +549,12 @@ def assessed(version_id, criteria_status="done", scored=("conflict_rules", "rule
     return calls, scores, claims, verdicts
 
 
-def assessment_store(*documents, runs=(ASSESSMENT_RUN,)):
+def assessment_store(*documents, runs=(ASSESSMENT_RUN,), versions=None):
     tables = {"aci_assessment_runs": list(runs), "aci_assessment_calls": [],
               "aci_assessment_scores": [], "aci_assessment_claims": [],
               "aci_assessment_verdicts": []}
+    if versions is not None:
+        tables["aci_spec_versions"] = list(versions)
     for calls, scores, claims, verdicts in documents:
         tables["aci_assessment_calls"] += calls
         tables["aci_assessment_scores"] += scores
@@ -797,6 +799,69 @@ class CriteriaFromTest(unittest.TestCase):
         self.assertEqual(given[("helpfulness", "row-1")]["mean"], 6)
         self.assertEqual(index_store.criteria_run_id(store, "assessment-2"), "assessment-1")
         self.assertEqual(index_store.criteria_run_id(store, "assessment-1"), "assessment-1")
+
+
+def with_finder(documents, version_id, seat, status):
+    """`documents`, with `seat`'s finding on `version_id` in `status`."""
+    for calls, _scores, _claims, _verdicts in documents:
+        for call in calls:
+            if (call["spec_version_id"], call["question"], call["seat"]) == (
+                    version_id, "contradictions", seat):
+                call["status"] = status
+    return documents
+
+
+class PooledVersionsTest(unittest.TestCase):
+    """The versions of one document an assessment run assessed are pooled, so a
+    version stands only once every contradictions seat answered on every
+    version of its document the run holds, named or not: a version whose
+    claims were never written reads exactly like one with none."""
+
+    def gaps(self, store, versions, run_id="assessment-1"):
+        run, rows = index_store.assessment_rows(store, run_id, [v["id"] for v in versions])
+        return index_store.assessment_gaps(run_id, run, rows, versions)
+
+    def test_a_version_named_alone_is_held_to_the_finders_of_the_versions_pooled_with_it(self):
+        store = assessment_store(*with_finder([assessed("row-1"), assessed("row-2")],
+                                              "row-2", "kimi", "error"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [
+            "acme@2026-01-01: kimi gave no contradictions answer on acme@2026-06-01, whose "
+            "contradictions are pooled with this version's"])
+        with self.assertRaises(SystemExit) as refused:
+            index_store.assessment(store, "assessment-1", [V1])
+        self.assertIn("pooled with this version's", str(refused.exception))
+
+    def test_both_named_the_failure_is_named_once_where_it_is(self):
+        store = assessment_store(*with_finder([assessed("row-1"), assessed("row-2")],
+                                              "row-2", "kimi", "error"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1, V2]),
+                         ["acme@2026-06-01: kimi gave no contradictions answer"])
+
+    def test_a_version_whose_pooled_versions_all_answered_stands_alone(self):
+        store = assessment_store(assessed("row-1"), assessed("row-2"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [])
+        # Another document's versions are not pooled with it.
+        other = dict(V2, id="row-3", spec_id="other")
+        stray = with_finder([assessed("row-3")], "row-3", "kimi", "error")
+        store = assessment_store(assessed("row-1"), *stray, versions=[V1, other])
+        self.assertEqual(self.gaps(store, [V1]), [])
+
+    def test_a_run_whose_every_version_is_named_is_read_as_it_always_was(self):
+        store = assessment_store(assessed("row-1"), assessed("row-2"), versions=[V1, V2])
+        _run, rows = index_store.assessment_rows(store, "assessment-1", ["row-1", "row-2"])
+        self.assertNotIn("aci_spec_versions", [table for table, _params in store.selects])
+        self.assertEqual({key for each in rows.values() for key in each},
+                         {"calls", "scores", "claims", "verdicts"})
+
+    def test_a_run_that_takes_its_criteria_names_the_run_its_pool_is_in(self):
+        store = assessment_store(
+            assessed("row-1"), assessed("row-2"),
+            *with_finder([contradictions_of("row-1"), contradictions_of("row-2")],
+                         "row-2", "kimi", "error"),
+            runs=(ASSESSMENT_RUN, TAKING), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1], run_id="assessment-2"), [
+            "acme@2026-01-01: kimi gave no contradictions answer on acme@2026-06-01, whose "
+            "contradictions are pooled with this version's, in assessment run assessment-2"])
 
 
 if __name__ == "__main__":
