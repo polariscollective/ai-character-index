@@ -61,16 +61,31 @@ HEADING_ATTRS_RE = re.compile(
     r"^#{1,6}\s+.*?\{#([A-Za-z0-9_-]+)\s+([^}]+)\}\s*$", re.MULTILINE)
 
 
-def system_prompt(question):
-    return PROMPTS[question].read_text()
+def system_prompt(question, prompts=None):
+    """The question's prompt, from PROMPTS unless a caller names its own set.
+
+    `prompts` exists for a caller that runs an older method and must go on
+    composing the prompts that method was written against: engine/pilot_scale_ten.py
+    is the one, pinned to v1 while PROMPTS names the v2 contradictions and
+    confirm."""
+    return (prompts or PROMPTS)[question].read_text()
 
 
-def prompt_sha256(question):
-    return hashlib.sha256(PROMPTS[question].read_bytes()).hexdigest()
+def prompt_sha256(question, prompts=None):
+    return hashlib.sha256((prompts or PROMPTS)[question].read_bytes()).hexdigest()
 
 
-# The first method's contradictions prompt, by which a run of it is told.
+# The first method's contradictions prompt, by which a run of it is told. The
+# digest is frozen rather than taken from the file: it is what run `b4acc896`,
+# the run before `e2c00b2e`, recorded for its contradictions prompt, and what
+# every other run of that method recorded. Hashing the file at the time of
+# asking would reclassify all of them the day it is edited, moved or removed,
+# silently and in both directions, so a new wording takes a new file and leaves
+# this line alone. `test_assessment_call.FirstMethodTest` holds the file on disk
+# to it while the file is there.
 FIRST_METHOD_CONTRADICTIONS = HERE / "prompts" / "assessment-contradictions-v1.txt"
+FIRST_METHOD_CONTRADICTIONS_SHA256 = (
+    "2df418eecfd4bef482b8a5a800d927e045825349da8026c43ab194c8649dc783")
 
 
 def of_the_first_method(prompts):
@@ -78,8 +93,7 @@ def of_the_first_method(prompts):
     contradictions by the first method, under the v1 prompt, which pooled
     each version of a document on its own. Any other run pools a document's
     versions together, as the second method does."""
-    return ((prompts or {}).get("contradictions")
-            == hashlib.sha256(FIRST_METHOD_CONTRADICTIONS.read_bytes()).hexdigest())
+    return (prompts or {}).get("contradictions") == FIRST_METHOD_CONTRADICTIONS_SHA256
 
 
 def _numbered_document(passages):
@@ -91,15 +105,15 @@ def _numbered_document(passages):
     return f"The complete document, as {len(passages)} numbered passages in order:\n{body}"
 
 
-def compose(question, passages):
+def compose(question, passages, prompts=None):
     """(system, user): the question's prompt, then the whole document numbered
     in order."""
-    system = system_prompt(question)
+    system = system_prompt(question, prompts)
     user = f"{_numbered_document(passages)}\n\n{ASK[question]}"
     return system, user
 
 
-def compose_confirm(passages, claims):
+def compose_confirm(passages, claims, prompts=None):
     """(system, user) for putting the claimed contradictions of a document to
     one reader, which may have found some of them. Each claim is {"first": int,
     "second": int, "situation":
@@ -113,7 +127,7 @@ def compose_confirm(passages, claims):
     user = (f"{_numbered_document(passages)}\n\n"
             f"Claimed contradictions ({len(claims)}):\n{lines}\n\n"
             "Answer with one ITEM line per claim, in the order given.")
-    return system_prompt("confirm"), user
+    return system_prompt("confirm", prompts), user
 
 
 def _plain_lines(reply):

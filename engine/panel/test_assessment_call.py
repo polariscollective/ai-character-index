@@ -4,6 +4,7 @@ import hashlib
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -301,6 +302,34 @@ class HeadingAttributesTest(unittest.TestCase):
         passages = [("doc@v > Truth > Do not lie > ¶1", "Truth > Do not lie", "Never lie.")]
         self.assertEqual(assessment_call.with_heading_attributes(passages, self.MARKDOWN),
                          passages)
+
+
+class FirstMethodTest(unittest.TestCase):
+    """Which runs are of the first method is decided by a frozen digest.
+
+    Hashing the prompt file at the time of asking would have reclassified every
+    run ever made the day that file was edited, moved or removed, silently and
+    in both directions."""
+
+    FROZEN = "2df418eecfd4bef482b8a5a800d927e045825349da8026c43ab194c8649dc783"
+
+    def test_the_digest_is_a_constant_and_no_run_is_classified_by_a_file(self):
+        with mock.patch.object(assessment_call, "FIRST_METHOD_CONTRADICTIONS",
+                               Path("/no-such-prompt-file.txt")):
+            self.assertEqual(assessment_call.FIRST_METHOD_CONTRADICTIONS_SHA256, self.FROZEN)
+            self.assertTrue(assessment_call.of_the_first_method({"contradictions": self.FROZEN}))
+            self.assertFalse(assessment_call.of_the_first_method({"contradictions": "0" * 64}))
+            for absent in (None, {}, {"criteria": self.FROZEN}):
+                self.assertFalse(assessment_call.of_the_first_method(absent), absent)
+
+    def test_the_prompt_on_disk_still_hashes_to_the_frozen_digest(self):
+        path = assessment_call.FIRST_METHOD_CONTRADICTIONS
+        if not path.is_file():
+            self.skipTest(f"{path.name} has left the tree; the digest stands as it is")
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), self.FROZEN,
+                         "the first method's prompt changed. A run of it is told by the "
+                         "digest it recorded, so the constant stays: give the new wording "
+                         "its own file instead.")
 
 
 if __name__ == "__main__":

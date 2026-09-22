@@ -34,6 +34,15 @@ the scale, the judge's declared substitutes give it in turn, each tried plain
 and then with the format reminder. Every attempt is kept and costed.
 `--replay` gives a saved run's failed depths again through that same ladder,
 with no whole-document call made.
+
+It composes the first method's prompts, `PROMPTS` below, named here rather than
+taken from `assessment_call.PROMPTS`, which now names the second method's v2
+contradictions and confirm. The flow above is the first method's: a claim is put
+only to the seats that did not find it, and a finder's own row counts as a
+reading that holds. The v2 prompts were written for a flow that asks every seat
+about every claim and scores no document on the count of its contradictions, so
+composing them here would send a prompt that does not describe what this script
+then does with the answer.
 """
 
 import argparse
@@ -64,6 +73,11 @@ from seat_call import priced     # noqa: E402
 _spec = importlib.util.spec_from_file_location("h", HERE / "panel" / "harness.py")
 h = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(h)
+
+# The first method's prompts, by name. See the module docstring.
+PROMPTS = {"criteria": HERE / "panel" / "prompts" / "assessment-criteria-v1.txt",
+           "contradictions": HERE / "panel" / "prompts" / "assessment-contradictions-v1.txt",
+           "confirm": HERE / "panel" / "prompts" / "assessment-confirm-v1.txt"}
 
 DOCUMENTS = ("anthropic--constitution@2026-01-20", "openai--model-spec@2026-08-18")
 BEHAVIOURS = ("honesty-and-non-deception", "no-sycophancy",
@@ -178,7 +192,7 @@ def confirm_stage(record, contradictions_by_seat, seats, text, prompt_passages, 
             continue
         print(f"  {seat} confirming {len(to_confirm)} contradictions ...", flush=True)
         claims = [claim for _i, claim in to_confirm]
-        system, user = assessment_call.compose_confirm(prompt_passages, claims)
+        system, user = assessment_call.compose_confirm(prompt_passages, claims, PROMPTS)
         tag, answer, substituted = _ask_seat(seat, "confirm", system, user, config, call_model,
                                              panel, here, seats)
         if answer is None:
@@ -249,17 +263,19 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
                 for document in documents for slug in behaviours}
 
     estimate = 0.0
-    confirm_system = assessment_call.system_prompt("confirm")
+    confirm_system = assessment_call.system_prompt("confirm", PROMPTS)
     for document in documents:
         for question in assessment_call.QUESTIONS:
-            system, user = assessment_call.compose(question, prompt_passages[document])
+            system, user = assessment_call.compose(question, prompt_passages[document],
+                                                   PROMPTS)
             estimate += sum(priced(seat, system, user, OUTPUT_TOKENS[question], config)
                             for seat in seats)
         # A confirmation call carries the whole document, as compose_confirm
         # opens with it, plus an allowance for the claims; its shape is only
         # known once contradictions come back, so it is priced here as one
         # call per seat regardless.
-        _system, confirm_user = assessment_call.compose_confirm(prompt_passages[document], [])
+        _system, confirm_user = assessment_call.compose_confirm(
+            prompt_passages[document], [], PROMPTS)
         estimate += sum(priced(seat, confirm_system, confirm_user + "x" * CONFIRM_CLAIMS_CHARS,
                                CONFIRM_OUTPUT_TOKENS, config) for seat in seats)
     for (_document, slug), (retained, calls, _old) in evidence.items():
@@ -282,8 +298,8 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
     results = {"started_at": now(), "publication": publication["id"],
                "estimate_usd": estimate,
                "prompts": {"depth": depth_call.prompt_sha256(10),
-                           "confirm": assessment_call.prompt_sha256("confirm"),
-                           **{question: assessment_call.prompt_sha256(question)
+                           "confirm": assessment_call.prompt_sha256("confirm", PROMPTS),
+                           **{question: assessment_call.prompt_sha256(question, PROMPTS)
                               for question in assessment_call.QUESTIONS}},
                "documents": {}}
 
@@ -300,7 +316,7 @@ def run_pilot(store, config, registry, passages_for, out_dir, call_model=None,
             record["assessment"][seat] = {}
             for question in assessment_call.QUESTIONS:
                 print(f"  {seat} assessing {document}: {question} ...", flush=True)
-                system, user = assessment_call.compose(question, labelled)
+                system, user = assessment_call.compose(question, labelled, PROMPTS)
                 tag, answer, substituted = _ask_seat(
                     seat, question, system, user, config, call_model, panel, here, seats)
                 if answer is None:

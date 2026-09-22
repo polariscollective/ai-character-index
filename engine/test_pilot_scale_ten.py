@@ -84,7 +84,7 @@ class Scripted:
 
     def __call__(self, provider, model_id, system, user, kwargs):
         self.asked.append((model_id, system, user))
-        if system == assessment_call.system_prompt("criteria"):
+        if system == assessment_call.system_prompt("criteria", pilot.PROMPTS):
             if any(tag.lower() in model_id.lower() for tag in self.refuse):
                 raise RuntimeError("content_filter")
             reply = ("CONFLICT_RULES: 2\nCONFLICT_RULES_PASSAGES: 1\n"
@@ -92,7 +92,7 @@ class Scripted:
                      "RULE_FORCE: 3\nRULE_FORCE_RATIONALE: Labels.\n"
                      "REASONS: 2\nREASONS_RATIONALE: Some.\n"
                      "SITUATIONS: 1\nSITUATIONS_RATIONALE: Conversation.")
-        elif system == assessment_call.system_prompt("contradictions"):
+        elif system == assessment_call.system_prompt("contradictions", pilot.PROMPTS):
             reply = ("CONTRADICTION: [2] [3] | A user asks what the operator said. "
                      "| Honesty and privacy clash.\n"
                      "CONTRADICTIONS: 2\nCONTRADICTIONS_RATIONALE: One clash.")
@@ -149,8 +149,8 @@ class PilotTest(unittest.TestCase):
                                                behaviours=(SLUG,))
         self.assertIsNone(folder)
         self.assertGreater(estimate, 0)
-        confirm_system = assessment_call.system_prompt("confirm")
-        _system, confirm_user = assessment_call.compose_confirm(PASSAGES, [])
+        confirm_system = assessment_call.system_prompt("confirm", pilot.PROMPTS)
+        _system, confirm_user = assessment_call.compose_confirm(PASSAGES, [], pilot.PROMPTS)
         expected_user = confirm_user + "x" * pilot.CONFIRM_CLAIMS_CHARS
         confirm_calls = [call for call in calls if call[1] == confirm_system]
         seats = self.config["panels"][pilot.PANEL]
@@ -164,8 +164,9 @@ class PilotTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as out:
             self.go(model, out)
         systems = [system for _m, system, _u in model.asked]
-        self.assertEqual(systems.count(assessment_call.system_prompt("criteria")), 3)
-        self.assertEqual(systems.count(assessment_call.system_prompt("contradictions")), 3)
+        for question in ("criteria", "contradictions"):
+            self.assertEqual(
+                systems.count(assessment_call.system_prompt(question, pilot.PROMPTS)), 3)
         self.assertEqual(systems.count(depth_call.system_prompt(10)), 3)
 
     def test_the_rules_are_the_passages_two_judges_cited_and_the_depth_call_carries_them(self):
@@ -195,6 +196,28 @@ class PilotTest(unittest.TestCase):
         self.assertEqual((item["first"], item["second"]), (PASSAGES[1][0], PASSAGES[2][0]))
         self.assertEqual(results["prompts"]["depth"], depth_call.prompt_sha256(10))
 
+    def test_what_it_sends_and_records_is_the_first_method_s_prompts(self):
+        """The pilot runs the first method's flow, so it must compose the first
+        method's prompts rather than whatever assessment_call.PROMPTS names.
+
+        The v2 contradictions prompt asks for no CONTRADICTIONS score, which
+        the pilot's summary scores a document on, and puts every claim to a
+        seat that found some of them, which the pilot does not do."""
+        model = Scripted()
+        with tempfile.TemporaryDirectory() as out:
+            _estimate, folder = self.go(model, out)
+            results = json.loads((folder / "pilot.json").read_text())
+        for question in ("criteria", "contradictions", "confirm"):
+            self.assertEqual(pilot.PROMPTS[question].name,
+                             f"assessment-{question}-v1.txt")
+            self.assertTrue(pilot.PROMPTS[question].is_file(), pilot.PROMPTS[question])
+            self.assertEqual(results["prompts"][question],
+                             assessment_call.prompt_sha256(question, pilot.PROMPTS))
+        sent = {system for _model_id, system, _user in model.asked}
+        self.assertIn(pilot.PROMPTS["contradictions"].read_text(), sent)
+        self.assertNotIn(assessment_call.PROMPTS["contradictions"].read_text(), sent,
+                         "the second method's prompt is never composed here")
+
     def test_a_refused_call_is_recorded_and_the_others_go_on(self):
         with tempfile.TemporaryDirectory() as out:
             _estimate, folder = self.go(Scripted(refuse=("fable",)), out)
@@ -223,7 +246,7 @@ class PilotTest(unittest.TestCase):
 
     def test_a_content_filtered_attempts_cost_and_reply_are_kept(self):
         def model(provider, model_id, system, user, kwargs):
-            if (system == assessment_call.system_prompt("criteria")
+            if (system == assessment_call.system_prompt("criteria", pilot.PROMPTS)
                     and "fable" in model_id.lower()):
                 return ("filtered partial reply",
                         {"prompt_tokens": 500, "completion_tokens": 50},
@@ -249,7 +272,7 @@ class PilotTest(unittest.TestCase):
     def test_every_attempt_of_an_all_failed_seat_counts_its_cost(self):
         def model(provider, model_id, system, user, kwargs):
             mid = model_id.lower()
-            if system == assessment_call.system_prompt("criteria") and (
+            if system == assessment_call.system_prompt("criteria", pilot.PROMPTS) and (
                     "fable" in mid or "opus" in mid or "kimi" in mid or "glm" in mid):
                 return ("no", {"prompt_tokens": 20, "completion_tokens": 5},
                         "content_filter", 0.01)
@@ -277,7 +300,7 @@ class PilotTest(unittest.TestCase):
 
     def test_a_refused_contradictions_call_falls_to_its_substitute(self):
         def model(provider, model_id, system, user, kwargs):
-            if (system == assessment_call.system_prompt("contradictions")
+            if (system == assessment_call.system_prompt("contradictions", pilot.PROMPTS)
                     and "fable" in model_id.lower()):
                 return "", {"prompt_tokens": 10, "completion_tokens": 0}, "content_filter", 0.01
             return Scripted()(provider, model_id, system, user, kwargs)
@@ -303,7 +326,7 @@ class PilotTest(unittest.TestCase):
             pilot.run_pilot(fake, self.config, self.registry, passages_for, out,
                             call_model=model, go=True, documents=(DOC,), behaviours=(SLUG,))
         criteria_users = [user for _m, system, user in model.asked
-                          if system == assessment_call.system_prompt("criteria")]
+                          if system == assessment_call.system_prompt("criteria", pilot.PROMPTS)]
         depth_users = [user for _m, system, user in model.asked
                       if system == depth_call.system_prompt(10)]
         self.assertTrue(criteria_users)
@@ -318,7 +341,7 @@ class PilotTest(unittest.TestCase):
 
         def model(provider, model_id, system, user, kwargs):
             mid = model_id.lower()
-            if system == assessment_call.system_prompt("contradictions"):
+            if system == assessment_call.system_prompt("contradictions", pilot.PROMPTS):
                 if "sol" in mid:
                     reply = ("CONTRADICTION: [2] [3] | A user asks what the operator said. "
                              "| Honesty and privacy clash.\n"
@@ -330,7 +353,7 @@ class PilotTest(unittest.TestCase):
                 else:
                     reply = "CONTRADICTIONS: 4\nCONTRADICTIONS_RATIONALE: None found."
                 return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
-            if system == assessment_call.system_prompt("confirm"):
+            if system == assessment_call.system_prompt("confirm", pilot.PROMPTS):
                 if "sol" in mid:
                     sol_confirm_users.append(user)
                     reply = "ITEM 1: does not hold | absolute: no | Not persuasive."
@@ -373,7 +396,8 @@ class PilotTest(unittest.TestCase):
         # order) rejected it.
         self.assertEqual(pair_12["does_not_hold"], ["sol", "fable"])
         self.assertEqual(record["contradictions_score"], 2)
-        self.assertEqual(results["prompts"]["confirm"], assessment_call.prompt_sha256("confirm"))
+        self.assertEqual(results["prompts"]["confirm"],
+                         assessment_call.prompt_sha256("confirm", pilot.PROMPTS))
         # An exact marker, so the assertion cannot pass on "not confirmed" alone.
         self.assertIn(": confirmed.", text)
         self.assertIn("not confirmed", text)
@@ -407,7 +431,7 @@ class PilotTest(unittest.TestCase):
         # The score treats an unasked absoluteness as not absolute: one
         # confirmed claim scores 2, not 0.
         self.assertEqual(record["contradictions_score"], 2)
-        self.assertNotIn(assessment_call.system_prompt("confirm"),
+        self.assertNotIn(assessment_call.system_prompt("confirm", pilot.PROMPTS),
                          [system for _m, system, _u in model.asked])
 
     def test_the_summary_has_no_long_dash(self):
@@ -430,7 +454,7 @@ class PilotTest(unittest.TestCase):
 
     def test_an_unreadable_contradiction_is_shown_in_the_summary(self):
         def model(provider, model_id, system, user, kwargs):
-            if system == assessment_call.system_prompt("contradictions"):
+            if system == assessment_call.system_prompt("contradictions", pilot.PROMPTS):
                 reply = ("CONTRADICTION: [2] | only one passage named | why\n"
                          "CONTRADICTIONS: 3\nCONTRADICTIONS_RATIONALE: One clash missed.")
                 return reply, {"prompt_tokens": 10, "completion_tokens": 10}, "stop", 0.01
