@@ -521,6 +521,63 @@ and a quorum of two in which one reader is `deepseek` confirms its errors.
 5. Check the tightened conflict-rules anchor on the constitution in the full
    run before publishing its figure.
 
+## The contradictions, second method (22 September 2026)
+
+The first full assessment run, `b4acc896`, read four documents and showed four
+faults in how contradictions were found and scored.
+
+1. A seat that found a contradiction counted as a vote for it without ever
+   seeing another seat's objection. On the OpenAI Model Spec of December 2025,
+   two finders outvoted a third seat whose objection quoted the text that
+   settled the clash.
+2. A contradiction was marked absolute when any seat said so, including a seat
+   that said it does not hold.
+3. Two versions of one document with the same two passages word for word got
+   different outcomes, because what each seat happens to find varies from one
+   reading to the next.
+4. The finding prompt asked for at most eight contradictions, the most serious
+   first. The owner wants the list to be exhaustive, since the list is worth
+   more than the score.
+
+`fable` was also refused by a content filter when asked to find contradictions,
+on all four documents, and was billed about 1.20 dollars each time on three of
+them.
+
+The owner changed the method on 22 September 2026, and finding and reading are
+now kept apart. Each contradictions seat reads each document whole, lists every
+contradiction it finds and gives no score (`assessment-contradictions-v2.txt`).
+The candidates found on all the versions of one document in a run are pooled by
+their pair of passages, each passage named without its version head. A
+candidate is carried to every version of that document where both passages
+exist with exactly the same text, so each version has one claim per pair, and
+`found_by` names every seat that proposed the pair on a version where it
+applies. Every contradictions seat then reads every claim of each version, the
+ones it found included, and says for each whether it holds and whether it
+involves a rule the document calls absolute (`assessment-confirm-v2.txt`). No
+"found it" verdict is written any more.
+
+A claim is confirmed when at least two readings say it holds. It is absolute
+when at least two readings say both that it holds and that it is absolute. The
+score is unchanged: 4 when no claim is confirmed, 2 when one or two are and
+none is absolute, and 0 when three or more are or any confirmed claim is
+absolute. This is the only settling rule in the code, and it counts verdict
+rows. A run of the first method still settles under it, since its "found it"
+rows are readings that hold, and its absoluteness now needs two holding
+readings as well.
+
+`opus` takes `fable`'s seat for the contradictions and their reading. Its
+substitute is `glm`, because every Anthropic model is refused on the Alibaba
+Model Spec and `kimi` already holds a contradictions seat. The criteria keep
+`sol`, `fable` and `deepseek`.
+
+The depths out of ten are being given against `b4acc896`, from the conflict
+rules its criteria cited. So that the new contradictions do not force the
+criteria and the depths to be given again,
+`engine/assess.py --criteria-from=<run id>` starts a run that asks only the
+contradictions and their reading, and records the earlier run in its config. A publication that
+names the new run carries the earlier run's criteria and the depths given
+against it, with the new run's contradictions.
+
 Sources:
 [arXiv 2510.07686](https://arxiv.org/abs/2510.07686),
 [arXiv 2605.24229](https://arxiv.org/html/2605.24229v1),
