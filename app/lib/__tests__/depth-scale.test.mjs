@@ -214,12 +214,13 @@ test("the ramp reaches 4.5:1 from a quarter of a maximum up, and its floor is th
   assert.deepEqual(floor.rgb, [191, 99, 45]);
 });
 
-/* One copy of the levels. The overview carried a hand copy of the reader's; it
- * reads this module now and may not grow one back. */
-test("the overview carries no copy of the levels, the ramp or the scale of four", async () => {
-  const overview = await site("overview.js");
-  assert.ok(!overview.includes("No passage bears on the behaviour."), "a bar was copied back in");
-  assert.ok(!/const (DEPTH_LEVELS|DEPTH_WORDS|RAMP)\b/.test(overview), "a copy was declared");
-  assert.ok(!/out of 4\b/.test(overview), "a figure's scale was written as 4");
-  assert.match(overview, /from "\.\/depth-scale\.js"/);
+/* One copy of the levels. The board built from a publication carried a hand copy
+ * of the reader's; it reads this module now and may not grow one back. It led
+ * the front page as overview.js until 23 September 2026 and is coverage.js. */
+test("the coverage board carries no copy of the levels, the ramp or the scale of four", async () => {
+  const board = await site("coverage.js");
+  assert.ok(!board.includes("No passage bears on the behaviour."), "a bar was copied back in");
+  assert.ok(!/const (DEPTH_LEVELS|DEPTH_WORDS|RAMP)\b/.test(board), "a copy was declared");
+  assert.ok(!/out of 4\b/.test(board), "a figure's scale was written as 4");
+  assert.match(board, /from "\.\/depth-scale\.js"/);
 });

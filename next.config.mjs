@@ -47,6 +47,12 @@ const nextConfig = {
       // It is a file like its three siblings now, addressed the same way.
       { source: "/overview", destination: "/overview.html" },
       { source: "/overview/", destination: "/overview.html" },
+      /* The board the front page led with until 23 September 2026, which is
+         built from the publication rather than from a written file. It moved
+         here rather than being deleted: its figures open on the passages behind
+         them, and nothing else on the site does. */
+      { source: "/coverage", destination: "/coverage.html" },
+      { source: "/coverage/", destination: "/coverage.html" },
       { source: "/about", destination: "/about.html" },
       { source: "/about/", destination: "/about.html" },
       { source: "/mcp", destination: "/mcp.html" },

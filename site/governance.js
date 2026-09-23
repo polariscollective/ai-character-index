@@ -29,6 +29,9 @@
  */
 
 import { createBoard, element, level, rankBy, ORDINALS } from "./board.js";
+/* The mark of each company, above its name. One module for both boards, and it
+ * says where the drawings come from and which two companies have none. */
+import { companyMark } from "./company-marks.js";
 
 /* Per question, the average of its checks; then the overall score, the sum of
  * the four questions; and the best practices, reported beside the overall
@@ -475,8 +478,12 @@ function headRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", `${lab.name}, ranked ${lab.rank}`
       + `${lab.open_weights ? ", open weights" : ""}: its profile`);
-    button.append(element("span", "rank", String(lab.rank)),
-      element("span", "company-name", lab.name));
+    button.append(element("span", "rank", String(lab.rank)));
+    // Drawn, quiet and decorative: the name under it is what is read out, and a
+    // company the set has no mark for keeps the space so every name starts on
+    // one line.
+    button.append(companyMark(lab.id));
+    button.append(element("span", "company-name", lab.name));
     if (lab.open_weights) button.append(element("span", "company-flag", "Open weights"));
     button.addEventListener("click", () =>
       view.openPopover(button, content => profile(content, lab, null)));

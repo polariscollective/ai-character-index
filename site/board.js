@@ -136,26 +136,31 @@ export function createBoard({ nodes, everyRow }) {
     /* Fill the popover and show it beside `trigger`. A press on the trigger of
      * an open popover is meant to close it, which the browser's own light
      * dismiss does on the way down; the click that follows must not open it
-     * again. */
+     * again.
+     *
+     * The cross and the contents are two children rather than one run of nodes,
+     * because only the contents scroll. The cross used to float at the top of
+     * the scrolling box, so a reader who had scrolled a long popover had
+     * scrolled past the only control on it; it stays in view now, and the
+     * stylesheet says so under .gov-pop-body. */
     openPopover(trigger, build) {
       const node = nodes.pop;
       if (trigger === pop.closedTrigger && performance.now() - pop.closedAt < 300) return;
       if (node.matches(":popover-open")) node.hidePopover();
 
-      const content = document.createDocumentFragment();
       const close = element("button", "gov-pop-close", "×");
       close.type = "button";
       close.setAttribute("aria-label", "Close");
       close.addEventListener("click", () => node.hidePopover());
-      content.append(close);
+      const content = element("div", "gov-pop-body");
       build(content);
-      node.replaceChildren(content);
+      node.replaceChildren(close, content);
 
       pop.trigger = trigger;
       trigger.setAttribute("aria-expanded", "true");
       trigger.classList.add("is-open");
       node.showPopover();
-      node.scrollTop = 0;
+      content.scrollTop = 0;
       placePopover();
       node.focus({ preventScroll: true });
     },

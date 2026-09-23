@@ -1,0 +1,889 @@
+/* The board's own stylesheet, shared by the two pages that draw one.
+ *
+ * It was the <style> block of site/overview.html until 23 September 2026, when
+ * the coverage board moved to a page of its own. Two pages draw the same table,
+ * the same popover and the same sheet, and a second copy of eight hundred rules
+ * is a second set of bugs: the first edit to one copy is where they part.
+ *
+ * The palette is the framework's, written out here rather than imported: these
+ * pages keep no other stylesheet, and the reader's is its own.
+ */
+:root {
+  --paper: #F1EFE3;
+  /* The header's own ground and height, the reader's values rather than an
+     approximation of them: the two bars sit at the same height and the same
+     tone, or moving between the pages is a jump. */
+  --chrome: #E9E6D7;
+  --header-height: 54px;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --on-accent: #F1EFE3;
+  /* The two status colours, for the contradictions in the sheet: the rust marks
+     a claim the judges confirmed, the grey one they did not. They are the
+     framework's functional colours, and they never carry a claim alone: the
+     word beside the mark says which it is. */
+  --fail: #A0522D;
+  --neutral: #8A8F7A;
+  --footer-height: 30px;
+  /* The page's measure, and the gutter that aligns a full-bleed bar with it.
+     The bars run edge to edge because their ground should; their contents must
+     start where the page's own text starts, or the eye reads two left margins.
+     The 16px is the shell's own padding, so the two agree exactly. */
+  /* A share of the window and nothing else. Any pixel cap here stops the
+     margins growing with the screen, which is the opposite of proportional:
+     capped at 1280 the margins were 336px at 1920 and 118px at 1280. */
+  --measure: 84vw;
+  /* 24px, the same as the reader's bar and the two prose pages'. The bars were
+     briefly indented to meet the page's own text, which put the brand a hundred
+     pixels in and made this page's header read as a different one. Chrome runs
+     to the edge of the window; only the content is held to a measure. */
+  --gutter: 24px;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+/* No side padding here any more: the header runs to both edges of the window,
+   as the reader's does, so the gutter belongs to the shell under it. */
+/* No padding at the foot any more: the footer ends the page, and 96px under it
+   would leave the bar floating above the bottom of the window. The room between
+   the grid and the bar belongs to the shell. */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+/* The foot of the shell clears the fixed bar below it: its own height, and then
+   the room the page wanted anyway. Written as a sum rather than as one number,
+   so changing the bar's height moves this with it. */
+.shell {
+  /* Proportional, within reason. 1100px was a cap chosen once, and on a wide
+     screen it left the grid a ribbon down the middle with empty margin either
+     side. It grows with the window now and stops at 1700, past which a row runs
+     wider than an eye tracks across. */
+  width: var(--measure);
+  margin: 0 auto;
+  padding: 0 16px calc(var(--footer-height) + 24px);
+}
+
+/* The reader's header, rule for rule. Copied rather than imported, like the
+   palette above and for the same reason: this page is provisional and will be
+   rebuilt inside the application, so it stays whole and movable. What that
+   costs is that a change to the reader's bar has to be brought over by hand,
+   which is the trade this whole file already makes.
+
+   The brand lockup is one target in two halves: whichever half the pointer is
+   over, both darken. The chartreuse highlight the framework gives links in
+   prose is not used here, because it would fill a block behind the name that
+   the mark beside it cannot take. */
+/* Stuck to the top. The page is a little taller than a window and is meant to be
+   read at a glance, so the few dozen pixels of scrolling it does take should not
+   cost the reader the way back out of it. Its own ground is opaque, which is
+   what keeps the grid from showing through as it passes underneath. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--header-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+
+/* Where the project came from, and who runs it now, in the reader's own slim
+   bar: one line, the same height and the same tones, so the two pages end the
+   same way.
+
+   Held at the foot of the window rather than at the end of the document. On the
+   reader it is the last row of a full-height application and needs no holding;
+   here the page scrolls, and a bar that scrolled away would leave the credit
+   visible only to whoever reached the bottom. The shell below carries room for
+   it, so nothing is read through it. */
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: var(--footer-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--faint);
+  font-size: 12px;
+}
+.site-footer a { color: var(--muted); text-decoration: none; }
+.site-footer a:hover { background: var(--energy); color: var(--ink); }
+/* On the baseline, not on the boxes: the wordmark is 17px and the collective's
+   name 15px, so centred their boxes would line up while their letters did not. */
+.site-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  --brand-rest: var(--muted);
+  --brand-lit: var(--accent);
+  --brand-pressed: var(--ink);
+}
+.polaris-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--brand-rest);
+  transition: color .15s ease;
+}
+/* The mark leaves for the same place its name does, so it is kept out of the
+   reading order and the tab order: the name is the one link a keyboard meets. */
+.mark-link { display: flex; flex: none; align-self: center; }
+.collective {
+  color: var(--brand-rest);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+.mark-link:hover .polaris-mark,
+.site-brand:has(.collective:hover) .polaris-mark,
+.mark-link:hover + .collective,
+.collective:hover { color: var(--brand-lit); }
+.mark-link:active .polaris-mark,
+.site-brand:has(.collective:active) .polaris-mark,
+.mark-link:active + .collective,
+.collective:active { color: var(--brand-pressed); }
+.brand-divider {
+  width: 1px;
+  height: 15px;
+  flex: none;
+  align-self: center;
+  background: var(--line);
+}
+.wordmark {
+  font-family: var(--display);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+}
+.site-header nav { display: flex; align-items: center; gap: 24px; }
+.site-header nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+.site-header nav a:hover { background: var(--energy); color: var(--ink); }
+/* The page you are on carries the chartreuse rule under it. */
+.site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+
+h1 {
+  margin: 34px 0 6px;
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+h1::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 14px;
+  background: var(--energy);
+}
+/* Wider than the 66ch the framework asks for prose. This is a tool rather than
+   a page of prose, and at 66ch the four sentences ran to six lines above a grid
+   that wants the room. */
+.lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
+
+/* The two parts of the score, said before any figure. Two paragraphs with their
+   subject in the lead, the way the folds under the board already open. */
+.board-parts { margin: 0 0 22px; max-width: 86ch; }
+.board-parts p { margin: 0 0 10px; color: var(--muted); }
+.board-parts strong { color: var(--ink); }
+
+/* The board. A table because it is one: a row reads across, a constitution
+   reads down, and a screen reader needs the headers to say so. Both views draw
+   it, so the rules it is made of sit together further down, under .board. */
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+}
+/* Fixed layout so every constitution gets the same width whatever its name or
+   its version is: columns that size themselves to their contents make one lab
+   look more considered than another for no reason but the length of a word.
+   No minimum width, so the table is exactly its container and never scrolls
+   sideways. Narrow, the cells wrap rather than overflow. */
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.grid-note {
+  margin: 4px 0 0;
+  max-width: 78ch;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1.5;
+}
+th, td { text-align: left; padding: 0; }
+thead th {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--muted);
+  font-weight: 600;
+  color: var(--muted);
+  vertical-align: bottom;
+}
+tbody tr { border-bottom: 1px solid var(--line-light); }
+tbody th {
+  padding: 0;
+  font-weight: 400;
+  vertical-align: middle;
+}
+.cell { padding: 4px 6px 4px 0; }
+.cell-button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: rgb(51 61 34 / var(--tint, .1));
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cell-button:hover,
+.cell-button:focus-visible { border-color: var(--accent); outline: none; }
+.cell-figure {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* A cell of a document that carries figures elsewhere but none here. A column
+   whose document the payload says nothing about at all is left empty instead,
+   because a dash in every one of its cells would read as a document that was
+   examined and found silent. */
+.cell-empty { color: var(--faint); font-family: var(--mono); }
+
+dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+dialog::backdrop { background: rgb(35 40 27 / .55); }
+.sheet-head { padding: 12px 20px 0; }
+/* The link keeps to the left and the close to the right, and with no link the
+   close is still on the right rather than sliding across. */
+.sheet-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 16px;
+}
+.sheet-head h2 {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+}
+.sheet-link {
+  margin-right: auto;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.sheet-link:hover, .sheet-link:focus-visible { background: var(--energy); }
+.sheet-link[hidden] { display: none; }
+.sheet-close {
+  flex: none;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--energy); color: var(--ink); }
+.sheet-body { padding: 6px 20px 22px; overflow-y: auto; max-height: calc(min(86vh, 820px) - 62px); }
+.sheet-body h3 {
+  margin: 20px 0 6px;
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+.sheet-body p { margin: 0 0 10px; max-width: 66ch; }
+.sheet-body a, .lede a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.sheet-body a:hover, .sheet-body a:focus-visible,
+.lede a:hover, .lede a:focus-visible { background: var(--energy); }
+/* The asterisk after "should", a way to the note on About that says what the
+   word means for a model that nobody programs directly. */
+.lede a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; }
+.sheet-body h4 { margin: 14px 0 4px; font-size: 12px; font-weight: 600; color: var(--faint); }
+.sheet-sub { color: var(--faint); font-size: 13px; }
+.sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+/* What a judge said: the figure and the model's name in mono, the reason in the
+   line tone, each reading against a rule of its own. */
+.judges { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.judges li { padding: 2px 0 2px 12px; border-left: 3px solid var(--line); }
+.judges .who { display: block; font-size: 12px; color: var(--faint); }
+.judges .who .mono { font-size: 12px; }
+.judges p { margin: 0; }
+.missing { color: var(--faint); }
+
+/* One contradiction in the sheet: what the judges made of it, the situation,
+   the two passages quoted with a way into the reader, and every seat's reading.
+   The mark beside the word never carries the claim on its own. */
+.claims-count { color: var(--muted); font-size: 13px; }
+.claim { padding: 14px 0 6px; border-top: 1px solid var(--muted); }
+.claim-status { display: flex; align-items: center; gap: 8px; margin-bottom: 4px !important; font-weight: 600; }
+.status-glyph { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--neutral); }
+.status-glyph.is-confirmed { background: var(--fail); }
+.claim-absolute { font-size: 13px; color: var(--ink); }
+.passage { margin: 0 0 4px; padding-left: 14px; border-left: 2px solid var(--line); }
+.passage p { margin: 0; white-space: pre-line; font-size: 14px; line-height: 1.55; }
+.passage-cite { margin: 0 0 12px 16px !important; font-size: 12px; color: var(--faint); }
+.passage-cite a { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.readings { width: 100%; margin: 2px 0 10px; font-size: 13px; line-height: 1.45; table-layout: auto; }
+/* Not stuck: the rule above pins every table head on the page to the top of the
+   window, which is what the board wants and what a small table inside a popover
+   or the sheet does not. Pinned there, the head left its own table and sat over
+   the page. */
+.readings th {
+  position: static;
+  padding: 4px 10px 4px 0;
+  border-bottom: 1px solid var(--muted);
+  color: var(--muted);
+  font-weight: 600;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+.readings td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgb(92 107 60 / .2); vertical-align: top; }
+.readings td.yes-no { white-space: nowrap; }
+.readings .judge-model { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; }
+.readings.figures th:not(:nth-child(-n+2)), .readings td.numeric { text-align: right; }
+.readings td.numeric .mono, .readings td.rank-cell .mono { font-size: 13px; }
+
+/* The two views. The selected tab carries the chartreuse rule the header's menu
+   gives the page you are on, so the two levels of navigation speak one idiom.
+   One weight for both tabs: a selected tab that turned bold would widen and
+   push its neighbour along. */
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  margin: 18px 0 0;
+  border-bottom: 1px solid var(--line);
+}
+.view-tab {
+  padding: 10px 0 9px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease;
+}
+.view-tab:hover { background: var(--energy); color: var(--ink); }
+.view-tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--energy); }
+.view-tab:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The governance view is a board: one table that takes the whole width, the
+   companies across and their scores down. Anything
+   more, what a question asks or why a company scored what it did, opens in a
+   popover beside what was pressed, so the table is never pushed aside by it. */
+.gov-lede { max-width: 96ch; margin-bottom: 26px; }
+#gov-status:empty, #status:empty { display: none; }
+
+.gov-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.gov-hint { margin: 0; max-width: 90ch; color: var(--muted); font-size: 14px; }
+/* The framework's secondary button, and its primary once pressed. */
+.gov-button {
+  flex: none;
+  padding: 5px 14px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.gov-button:hover { background: var(--energy); border-color: var(--energy); color: var(--ink); }
+.gov-button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.gov-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* The table. The grid's own cells and colours, so a score reads the same in
+   both views; every cell carries its figure, so colour is never alone. Its head
+   holds under the site header while the checks are open and the table is long. */
+/* The board: one table with the labs across and the figures down, drawn by site/board.js for both views. Rules that only the governance view's own rows need stay under .gov-heatmap below. */
+/* From the top, so the ranks sit on one line whether a name wraps or carries a
+   mark under it. */
+.board thead th {
+  top: var(--header-height);
+  padding: 8px 6px 8px 0;
+  vertical-align: top;
+}
+.board thead th.row-col { width: 22%; }
+.board tbody th { padding: 0 10px 0 0; font-weight: 400; vertical-align: middle; }
+.board .cell { padding: 3px 6px 3px 0; }
+.board tbody tr { border-bottom: 1px solid var(--line-light); }
+.board .cell-button {
+  display: block;
+  min-height: 44px;
+  padding: 10px 8px;
+  text-align: center;
+}
+/* The figure sits dead centre, across and down. What the score is out of is
+   placed on its own in the corner and takes no part in that centring. */
+.board .cell-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.board .cell-button .cell-figure { font-size: 16px; }
+/* What the score is out of, small in the cell's lower right corner, straight on
+   the cell's own colour. It inherits the figure's ink and stands back from it
+   by its opacity, so it follows the cell from ink to paper: written as a colour
+   of its own it was paper over every cell, which is invisible on the amber and
+   green ones the figure now takes ink on. The opacity is the .7 it has always
+   been, since it reads at that weight on both inks and a heavier corner mark
+   would compete with the figure it belongs to. */
+.cell-max {
+  position: absolute;
+  right: 6px;
+  bottom: 3px;
+  color: inherit;
+  opacity: .7;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.board .cell-button:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
+.board .cell-button.is-open { outline: 3px solid var(--ink); outline-offset: 2px; }
+.board .cell-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* The total leads, and reads as the sum it is: taller, heavier, a rule under it. */
+.board .total-row { border-bottom: 1px solid var(--muted); }
+.board .total-row .cell-button { min-height: 54px; }
+.board .total-row .cell-figure { font-size: 20px; }
+/* Not assessed: no score, so no colour, and a dashed edge so the cell still
+   reads as one. */
+.board .cell-button.cell-na {
+  border: 1px dashed var(--muted);
+  background: transparent;
+  color: var(--muted);
+}
+.board .cell-na .cell-figure { font-weight: 400; }
+.chip-na {
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+  font-weight: 400;
+}
+.legend-na { display: inline-flex; align-items: center; gap: 6px; }
+/* A group's rows, indented under it and a size smaller. */
+.board .check-row th { padding-left: 34px; }
+/* A check's cell starts a fifth of the way into its own column, like the second
+   line of a bullet: an open question reads as the parts its score is the sum of,
+   column by column. */
+.board .check-row .cell-button { width: 80%; margin-left: 20%; }
+.board .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
+/* A little more room on the right than the governance view needs, which only
+   ever marks "/4": "/10" is wider, and touched the figure. The coverage board
+   alone, so no cell of the other moves. */
+#board .check-row .cell-button { padding-right: 20px; }
+.board .check-row .cell-figure { font-size: 14px; }
+.board .check-row { background: rgb(92 107 60 / .05); }
+
+/* The rows only the governance view has, which is why they are not on the board:
+   the line that puts the best practices outside the total, and the line inside
+   them between what anyone can check and what only the company can show. */
+/* The best practices are shown and never counted, so they stand apart, under a
+   line across the table that says so. */
+.gov-heatmap .outside-row { border-top: 2px solid var(--muted); }
+.gov-heatmap .outside-row th, .gov-heatmap .outside-row td { padding-top: 22px; padding-bottom: 6px; }
+.gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
+/* Inside the supporting practices, the line between the five scored from public
+   sources and the five only an audit could score. */
+.gov-heatmap .practice-divider { border-top: 1px solid var(--muted); }
+.gov-heatmap .practice-divider th, .gov-heatmap .practice-divider td { padding-top: 12px; padding-bottom: 6px; }
+.gov-heatmap .divider-note { color: var(--muted); font-size: 13px; vertical-align: middle; }
+
+.row-head { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.row-name, .company-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-name .head-name { font-weight: 600; text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+.check-row .row-name .head-name { font-weight: 400; text-decoration-thickness: 1px; }
+.row-name:hover .head-name, .row-name:focus-visible .head-name,
+.company-button:hover .company-name, .company-button:focus-visible .company-name { background: var(--energy); }
+.row-name:focus-visible, .company-button:focus-visible, .row-toggle:focus-visible {
+  outline: 2px solid var(--energy);
+  outline-offset: 2px;
+}
+.head-name { display: block; }
+.head-sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); }
+.check-id { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.company-button { display: block; width: 100%; font-weight: 600; }
+.company-button .rank { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--faint); }
+/* The company's own mark, above its name: drawn in one tone from the palette
+   rather than in the company's colours, so a row of nine reads as one board and
+   not as nine brands. The name under it carries the meaning; this is decorative
+   and hidden from assistive technology. A company the set has no mark for gets an
+   empty box of the same size, so every name in the row starts on one line. */
+.company-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 4px;
+  color: var(--accent);
+}
+.company-name { color: var(--muted); }
+.company-flag { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--faint); }
+/* Open and shut, drawn rather than typed: two borders of a small square, turned
+   to point right when shut and down when open. The same chevron marks every
+   fold on the board. */
+.row-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.row-toggle:hover { background: var(--energy); border-color: var(--energy); }
+.row-toggle::before, .gov-findings summary::before, .gov-pop summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform .15s ease;
+}
+.row-toggle[aria-expanded="true"]::before,
+.gov-findings details[open] > summary::before,
+.gov-pop details[open] > summary::before { transform: rotate(45deg); }
+.row-spacer { flex: none; width: 26px; }
+
+.gov-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.gov-legend .swatches { display: flex; gap: 2px; }
+.gov-legend .swatch { width: 26px; height: 12px; border-radius: 2px; }
+.gov-foot { margin: 10px 0 0; max-width: 90ch; color: var(--muted); font-size: 13px; }
+.gov-foot:empty { display: none; }
+.gov-foot a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.gov-foot a:hover, .gov-foot a:focus-visible { background: var(--energy); }
+.gov-date { margin: 6px 0 0; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* The depth of a behaviour, written out under the table in the tone of the
+   board's other notes there: small, muted, the level and its word carrying the
+   weight. Three columns wide, one on a phone. */
+.depth-key { margin: 16px 0 0; max-width: 1100px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.depth-key h2 { margin: 0 0 8px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink); }
+.depth-key-list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 28px; }
+.depth-key-list > li { display: flex; gap: 8px; align-items: baseline; }
+.depth-key .anchor-level { flex: none; width: 1.4em; font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.depth-key .anchor-name { font-weight: 600; color: var(--ink); }
+.depth-key-conditions { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; }
+.depth-key-conditions li { position: relative; padding-left: 13px; }
+.depth-key-conditions li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+.depth-key .gov-foot { margin-top: 8px; }
+
+/* The six findings, under the table: headlines that open. */
+.gov-findings { margin-top: 40px; }
+.gov-findings h2 {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+}
+.gov-findings h2::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 12px;
+  background: var(--energy);
+}
+.gov-findings-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  border-top: 1px solid rgb(92 107 60 / .2);
+}
+.gov-findings details { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-findings summary, .gov-pop summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 0;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.gov-findings summary::-webkit-details-marker, .gov-pop summary::-webkit-details-marker { display: none; }
+.gov-findings summary::before, .gov-pop summary::before { flex: none; margin: 0 4px 0 2px; }
+.gov-findings summary:hover, .gov-pop summary:hover { color: var(--muted); }
+.gov-findings summary:focus-visible, .gov-pop summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-findings details p { margin: 0 0 14px 21px; max-width: 72ch; font-size: 15px; line-height: 1.6; }
+
+/* The popover. Placed by governance.js beside what opened it; the browser keeps
+   it above everything and closes it on Escape or a press elsewhere. */
+/* The popover is the frame and does not scroll; its body does. The cross sat in
+   the scrolling box until 23 September 2026, so a reader who had scrolled a long
+   popover had scrolled past the only control on it and had to reach for Escape
+   or press elsewhere. It is a row of its own above the body now, in view
+   wherever the body has been scrolled to. */
+.gov-pop {
+  inset: auto;
+  margin: 0;
+  width: min(460px, calc(100vw - 16px));
+  max-height: min(72vh, 600px);
+  overflow: hidden;
+  padding: 10px 0 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+/* The column is given to the popover only while it is open. Written on the base
+   rule it would beat the browser's own `display: none` for a closed popover,
+   which is an author declaration against a user-agent one and wins whatever the
+   specificity, and an empty box would sit at the foot of the page. */
+.gov-pop:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.gov-pop:focus { outline: none; }
+.gov-pop:focus-visible { outline: 2px solid var(--energy); }
+.gov-pop-body {
+  overflow-y: auto;
+  padding: 0 20px 18px;
+}
+.gov-pop-close {
+  flex: none;
+  align-self: flex-end;
+  margin: 0 12px 2px 12px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.gov-pop-close:hover { background: var(--energy); color: var(--ink); }
+.gov-pop h2 {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.gov-pop h3 { margin: 14px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.gov-pop p { margin: 0 0 10px; }
+/* The two boards whose popovers are read as prose rather than as a list of
+   figures. Their paragraphs stand apart, so a popover of three sentences reads
+   as three and not as one block. */
+#grid-pop p { margin-bottom: 13px; }
+.gov-pop .subtitle { color: var(--muted); }
+.gov-pop .figure strong { font-size: 26px; font-weight: 600; }
+.gov-pop details { border-top: 1px solid rgb(92 107 60 / .2); }
+.gov-pop details:last-of-type { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-pop details > :not(summary) { margin-left: 21px; }
+.gov-pop .aside { margin: 14px 0 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--muted); }
+.gov-pop a { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+.gov-pop .gov-button { margin-top: 6px; }
+/* The fold that holds the judges' own wording. Discreet: it opens under the
+   sentences a reader came for, and never above them. */
+.gov-pop .detail-fold { margin-top: 16px; }
+/* The working paper's own words, quoted exactly, each under a chartreuse rule. */
+.gov-pop .paper-fold { margin-top: 10px; }
+.paper-name { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.paper-quote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 3px solid var(--energy); }
+.paper-quote p { margin: 0; }
+.paper-quote .paper-where { margin-top: 3px; font-size: 12px; color: var(--faint); }
+.chip {
+  flex: none;
+  display: inline-block;
+  min-width: 30px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.check-list { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.check-list li { display: flex; gap: 10px; align-items: baseline; line-height: 1.45; }
+.anchors { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.anchors li { display: flex; gap: 12px; padding: 4px 8px; border-radius: 3px; line-height: 1.45; }
+.anchors li.is-here { background: rgb(183 201 75 / .25); }
+.anchor-level { flex: none; width: 1.2em; font-family: var(--mono); font-weight: 600; }
+.anchor-name { font-weight: 600; }
+/* A behaviour named inside a category's popover, which opens its own popover in
+   place rather than sending the reader back to the table to find its cell. */
+.inline-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline 1px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.inline-button:hover { background: var(--energy); }
+
+/* The reference text under the board, folded. */
+.gov-more { margin-top: 40px; border-top: 1px solid var(--muted); }
+.gov-more > details { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-more summary {
+  padding: 14px 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gov-more summary:hover { color: var(--muted); }
+.gov-more summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.gov-more-body { padding: 0 0 24px; }
+.gov-more-body p, .gov-more-body li { max-width: 72ch; font-size: 15px; line-height: 1.6; }
+.gov-more-body p { margin: 0 0 12px; }
+.gov-more-body h3 { margin: 24px 0 8px; font-family: var(--display); font-size: 16px; font-weight: 600; }
+.gov-more a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.gov-more a:hover, .gov-more a:focus-visible { background: var(--energy); }
+.gov-bullets { margin: 0 0 16px; padding: 0; list-style: none; }
+.gov-bullets li { position: relative; margin-bottom: 8px; padding-left: 20px; }
+.gov-bullets li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: .7em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--energy);
+}
+.table-scroll { overflow-x: auto; margin-bottom: 8px; }
+.gov-table { font-size: 14px; line-height: 1.5; }
+.gov-table thead th { position: static; }
+.gov-table td, .gov-table tbody th {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgb(92 107 60 / .2);
+  vertical-align: top;
+}
+.gov-table tbody tr { border-bottom: 0; }
+.gov-scoring-table { min-width: 560px; }
+.gov-scoring-table .check-col { width: 28%; }
+.gov-scoring-table tbody th { font-weight: 600; }
+
+/* Nine companies need about a thousand pixels. Narrower than that the table
+   scrolls sideways in its own frame, with the names of the rows held at its left
+   edge so a score never loses its row. The head no longer holds at the top
+   there: a frame that can scroll is what a sticky head would stick to. */
+@media (max-width: 1180px) {
+  .matrix-wrap { overflow-x: auto; }
+  .board { min-width: 1000px; }
+  .board thead th { position: static; }
+  .board tbody th, .board thead th.row-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper);
+  }
+  .board .check-row th { background: #EAE8DB; }
+  /* Held at the left only. The top the wide layout gives the head, to clear the
+     site header, would push this one cell down inside the frame. */
+  .board thead th.row-col { top: auto; }
+}
+@media (max-width: 880px) {
+  .depth-key-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .gov-findings-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .depth-key-list { grid-template-columns: 1fr; }
+}
+/* A phone: the readings of a contradiction stop being a table and become
+   labelled lines, since five columns of yes and no cannot set in 360 pixels. */
+@media (max-width: 560px) {
+  .readings thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .readings, .readings tbody, .readings tr, .readings td { display: block; width: 100%; }
+  .readings tr { padding: 8px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
+  .readings td { padding: 1px 0; border: 0; text-align: left !important; }
+  .readings td[data-label]:not(.judge)::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 600; }
+  .readings td.judge { font-weight: 600; }
+  .readings td.reason { margin-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-tab, .gov-button, .row-toggle::before,
+  .gov-findings summary::before, .gov-pop summary::before { transition: none; }
+}

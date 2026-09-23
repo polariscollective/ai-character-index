@@ -1,8 +1,8 @@
 """The feedback bubble is on every public page, and reaches the right route.
 
-site/page-feedback.js is one file for four pages, like dev-tag.js and brand.js:
+site/page-feedback.js is one file for every page, like dev-tag.js and brand.js:
 copied into each, its wording and its route would drift, and the page nobody
-remembered would be the one posting somewhere else. This holds the four pages
+remembered would be the one posting somewhere else. This holds every public page
 to carrying it.
 
 No network, no keys. Run: python3 -m unittest discover -s tests
@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PAGES = ["site/overview.html", "site/about.html", "site/mcp.html",
+PAGES = ["site/overview.html", "site/coverage.html", "site/about.html", "site/mcp.html",
          "site/spec-reader/index.html"]
 TAG = '<script type="module" src="/page-feedback.js"></script>'
 MODULE = ROOT / "site" / "page-feedback.js"

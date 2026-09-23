@@ -1492,6 +1492,52 @@ a whole, the MCP server and the copy are not written. The design is
 `docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md`;
 the migration is applied and its pull request, `polaris-supabase` #37, is open.
 
+### The front board reads a written file, and the old one kept its figures
+
+The board the index leads with is built from `site/constitutions.json`, a file
+people write, the way the governance board is built from `site/governance.json`.
+It keeps the shape the publication board had: a final score out of 20, the
+document as a whole out of 10 opening into five criteria out of 2, and each
+behaviour category opening into its behaviours out of 10, with companies ranked
+by the final score. What it no longer keeps is the account of how any figure was
+arrived at. No judge, no panel, no rationale appears anywhere on it, and every
+word a popover shows is a sentence out of the file: what the constitution says on
+a behaviour, how that stands beside the others, and why the figure is what it is.
+The two scales are written once under the table and never repeated inside a
+popover.
+
+There is no NA on it. A company that publishes no constitution scores nought on
+every row, and its cells say, in the file's own words, that it publishes none and
+that a document of this kind may exist inside the company unpublished. The file
+carries a figure and no prose for those cells, so the company's own line is what
+such a cell shows; anything written into the code instead would be the board
+making that claim rather than the file.
+
+The board built from a publication is at `/coverage`, unchanged. It is the one
+board whose figures open on the passages behind them and on the contradictions in
+the sheet, and the front board links to it in one line carrying the publication
+its file names. `site/overview.js` is now the tabs and nothing else;
+`site/coverage.js` is the file that used to be `overview.js`, and the `<style>`
+block both pages need is `site/board.css`.
+
+One entry of the file is not a column. `openai-2025-12` is the December 2025
+version of the same company's document, and two columns under one name would read
+as two companies, so a company's column is its newest document and the earlier
+version is reached from that column's profile, unranked.
+
+**The companies carry their own marks.** Above each name, on both boards of the
+front page, one path filled with `currentColor` so the colour is the stylesheet's
+olive-deep rather than a company's brand colours. They are decorative and hidden
+from assistive technology: the name under the mark is what is announced, and a
+company the set has no mark for keeps the space so every name starts on one line.
+The framework's "do not" list names icon libraries; these are the marks of the
+companies being assessed, which is the ground the owner asked for them on. They
+are Simple Icons 16.32.0, CC0 1.0, copied in as path data in
+`site/company-marks.js` so no request leaves the page. That set carries no mark
+for OpenAI and none for xAI, so those two show their name alone; Alibaba is drawn
+with the Alibaba Cloud mark and Google DeepMind with Google's, both recorded in
+that file.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

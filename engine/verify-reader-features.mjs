@@ -2293,13 +2293,260 @@ const rustIn = async png => page.evaluate(async encoded => {
 }, png.toString("base64"));
 
 // =============================================================================
-console.log("== Overview: the board, on the scale of four and on the scale of ten ==");
+/* The board the front page leads with, which reads site/constitutions.json and
+ * no route at all. Every check below is driven from that file rather than from
+ * strings typed here: the writers fill it in, and a board that agreed with a
+ * copy of their words in this harness rather than with the file itself would
+ * pass while showing something else. */
+console.log("== Overview: the constitutions board ==");
+{
+  const root = new URL("/", base).href;
+  const file = JSON.parse(readFileSync(join(SITE, "constitutions.json"), "utf8"));
+  const depthTop = file.scale.depth[file.scale.depth.length - 1].level;
+  const criterionTop = file.scale.criterion[file.scale.criterion.length - 1].score;
+  const wholeTop = file.criteria.length * (criterionTop / 2);
+  const shown = value => value.toFixed(1);
+  /* The file wraps its paragraphs, and the DOM is read back with the whitespace
+   * collapsed, so both sides are collapsed before they are compared. */
+  const flat = text => String(text).replace(/\s+/g, " ").trim();
+  const version = company => String(company.document.version).replace(/-00$/, "");
+  const lowerFirst = text =>
+    (/^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
+  const documentLine = company => (company.document
+    ? `${company.document.title}, ${version(company)}.` : "No published constitution.");
+  /* One column per company, its newest document, ordered by the final score.
+   * The file carries an earlier version of one document as an entry of its own,
+   * and two columns under one name would read as two companies. */
+  const groups = new Map();
+  file.companies.forEach(company => {
+    const key = company.document ? company.name : company.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(company);
+  });
+  const columns = [...groups.values()]
+    .map(group => [...group].sort((a, b) =>
+      String(b.document?.version || "").localeCompare(String(a.document?.version || "")))[0])
+    .sort((a, b) => b.final - a.final);
+  const earlier = file.companies.filter(company => !columns.includes(company));
+  const categories = [...new Set(file.behaviours.map(behaviour => behaviour.category))];
+
+  pageErrors = [];
+  await page.goto(root, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+
+  const board = await page.evaluate(() => ({
+    corner: document.querySelector("#board thead .row-col .head-name")?.textContent,
+    heads: [...document.querySelectorAll("#board thead .company-button")].map(button => ({
+      id: button.dataset.lab,
+      rank: button.querySelector(".rank")?.textContent.trim(),
+      name: button.querySelector(".company-name")?.textContent,
+      flag: button.querySelector(".company-flag")?.textContent,
+      label: button.getAttribute("aria-label"),
+      mark: button.querySelector(".company-mark")?.tagName.toLowerCase() ?? null,
+      markHidden: button.querySelector(".company-mark")?.getAttribute("aria-hidden"),
+    })),
+    names: [...document.querySelectorAll("#board tbody tr")]
+      .map(row => row.querySelector(".head-name")?.textContent),
+    subs: [...document.querySelectorAll("#board tbody tr")]
+      .map(row => row.querySelector(".head-sub")?.textContent ?? ""),
+    folded: [...document.querySelectorAll("#board tbody tr.check-row")].every(row => row.hidden),
+    figures: [...document.querySelectorAll("#board .cell-button")].map(button => ({
+      text: button.querySelector(".cell-figure")?.textContent,
+      na: button.classList.contains("cell-na"),
+    })),
+    scales: {
+      behaviour: [...document.querySelectorAll("#behaviour-scale li .anchor-level")]
+        .map(node => node.textContent),
+      names: [...document.querySelectorAll("#behaviour-scale li .anchor-name")]
+        .map(node => node.textContent),
+      criterion: [...document.querySelectorAll("#criterion-scale li .anchor-level")]
+        .map(node => node.textContent),
+    },
+    ties: document.querySelector("#ties")?.textContent ?? "",
+    asOf: document.querySelector("#as-of")?.textContent ?? "",
+    coverage: document.querySelector("#coverage-line a")?.getAttribute("href"),
+    governanceMarks: document.querySelectorAll("#gov-heatmap thead .company-mark").length,
+  }));
+
+  check(board.corner === "Company by rank", "the corner of the board reads Company by rank",
+    board.corner);
+  check(board.heads.map(head => head.id).join() === columns.map(one => one.id).join()
+      && board.heads.every((head, index) => head.name === columns[index].name),
+    "one column per company, in the order of the final score, and the earlier version of a "
+    + "document is not a column of its own",
+    JSON.stringify([board.heads.map(head => head.id), columns.map(one => one.id)]));
+  check(board.heads.every(head => {
+      const company = columns.find(one => one.id === head.id);
+      return head.flag === (company.document ? version(company) : "No published constitution");
+    }),
+    "each column carries its document's version, or says the company publishes none",
+    JSON.stringify(board.heads.map(head => [head.id, head.flag])));
+  /* The marks. They are drawn, so they are hidden from assistive technology and
+   * the company's name is what is announced; a company the set carries no mark
+   * for keeps the box, so every name in the row starts on one line. */
+  check(board.heads.every(head => head.mark && head.markHidden === "true"
+        && head.label === `${head.name}, ranked ${head.rank}: its profile`)
+      && board.heads.filter(head => head.mark === "svg").length >= 7
+      && board.governanceMarks === 9,
+    "every column carries a mark above its name, hidden from assistive technology, on both "
+    + "boards", JSON.stringify(board.heads.map(head => [head.id, head.mark])));
+
+  const expectedRows = ["Final score", "The document as a whole",
+    ...file.criteria.map(criterion => criterion.name),
+    ...categories.flatMap(category => [category,
+      ...file.behaviours.filter(behaviour => behaviour.category === category)
+        .map(behaviour => behaviour.name)])];
+  check(board.names.join(" | ") === expectedRows.join(" | ") && board.folded,
+    "the final score leads, the document as a whole follows with its criteria, then the "
+    + "categories with their behaviours, every group folded", JSON.stringify(board.names));
+  check(board.subs[0] === `out of ${wholeTop + depthTop}`
+      && board.subs[1] === `out of ${wholeTop}, ${file.criteria.length} criteria`,
+    "the final score is out of the two halves added together, and the document as a whole out "
+    + "of its criteria", JSON.stringify(board.subs.slice(0, 2)));
+  check(board.figures.length > 0 && board.figures.every(one => !one.na && one.text !== "NA"),
+    "no cell of the board reads NA",
+    JSON.stringify(board.figures.filter(one => one.na || one.text === "NA")));
+  check(board.scales.behaviour.join() === file.scale.depth.map(one => one.level).join()
+      && board.scales.names.join() === file.scale.depth.map(one => one.name).join()
+      && board.scales.criterion.join() === file.scale.criterion.map(one => one.score).join(),
+    "both scales are written out under the table, level by level, in the file's own words",
+    JSON.stringify(board.scales));
+  check(board.asOf === `As of ${file.as_of}`
+      && board.coverage === `/coverage?publication=${file.publication}`,
+    "the board says what it is as of, and leads to the coverage board on its own publication",
+    JSON.stringify([board.asOf, board.coverage]));
+
+  /* A cell's popover, held to the file word for word. Nothing is checked here
+   * against a sentence typed into this harness: the board must show what the
+   * file says and nothing besides, which is what an exact comparison of every
+   * block in the popover tests. */
+  const readPop = () => page.evaluate(() => ({
+    open: document.querySelector("#grid-pop").matches(":popover-open"),
+    blocks: [...document.querySelector("#grid-pop .gov-pop-body").children]
+      .map(node => node.textContent.replace(/\s+/g, " ").trim()),
+    anchors: document.querySelectorAll("#grid-pop .anchors").length,
+  }));
+  const pressCell = (name, id) => page.evaluate(([name, id]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    row.querySelector(`td .cell-button[data-lab="${id}"]`).click();
+  }, [name, id]);
+  const pressName = name => page.evaluate(name => {
+    [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelector(".row-name").click();
+  }, name);
+  const closePop = () => page.evaluate(() => document.querySelector("#grid-pop").hidePopover());
+  await page.evaluate(() => document.querySelector("#expand-all").click());
+
+  const withDocument = columns.find(company => company.document);
+  const behaviour = file.behaviours[0];
+  const entry = withDocument.behaviours[behaviour.slug];
+  await pressCell(behaviour.name, withDocument.id);
+  let popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      `${withDocument.name}: ${lowerFirst(behaviour.name)}`, documentLine(withDocument),
+      `${shown(entry.score)} out of ${depthTop}`, entry.says, entry.compared, entry.why,
+    ].map(flat).join(" | ") && popover.anchors === 0,
+    "a behaviour's cell says what the document says, how it stands beside the others and why "
+    + "the figure is what it is, in the file's words and no others, with the scale left under "
+    + "the table", JSON.stringify(popover.blocks.slice(0, 3)));
+  await closePop();
+
+  const criterion = file.criteria[0];
+  const scored = withDocument.whole.criteria[criterion.id];
+  await pressCell(criterion.name, withDocument.id);
+  popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      `${withDocument.name}: ${lowerFirst(criterion.name)}`, documentLine(withDocument),
+      `${shown(scored.score / 2)} out of ${criterionTop / 2}`, criterion.what_it_is,
+      scored.what_the_document_does, scored.why,
+    ].map(flat).join(" | "),
+    "a criterion's cell gives what the criterion asks, what the document does and why the "
+    + "figure is what it is", JSON.stringify(popover.blocks.slice(0, 3)));
+  await closePop();
+
+  await pressName(behaviour.name);
+  popover = await readPop();
+  check(popover.open && popover.blocks.includes(flat(behaviour.is))
+      && popover.blocks.includes(flat(behaviour.is_not)),
+    "a behaviour's name opens what it covers and what it does not, in the file's words",
+    JSON.stringify(popover.blocks));
+  await closePop();
+
+  /* A company that publishes no constitution. The file carries a figure for
+   * every cell of it and no prose, so what such a cell says is the company's
+   * own line, which leaves open that a document of this kind exists inside the
+   * company unpublished. */
+  const without = columns.find(company => !company.document);
+  await pressCell(behaviour.name, without.id);
+  popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      `${without.name}: ${lowerFirst(behaviour.name)}`, "No published constitution.",
+      `${shown(without.behaviours[behaviour.slug].score)} out of ${depthTop}`, without.profile,
+    ].map(flat).join(" | "),
+    "a company that publishes no constitution scores nought and says so in the file's words",
+    JSON.stringify(popover.blocks));
+  await closePop();
+
+  /* The earlier version of a document has no column, so its profile is reached
+   * from the column of the company that published it, and it is not ranked. */
+  if (earlier.length) {
+    const [older] = earlier;
+    const current = columns.find(company => company.name === older.name);
+    await page.evaluate(id => document.querySelector(
+      `#board thead .company-button[data-lab="${id}"]`).click(), current.id);
+    await page.evaluate(label => [...document.querySelectorAll("#grid-pop .gov-button")]
+      .find(button => button.textContent === label).click(),
+      `The version of ${version(older)}`);
+    popover = await readPop();
+    check(popover.open && popover.blocks[0] === flat(older.name)
+        && popover.blocks[1] === flat(documentLine(older))
+        && popover.blocks[2] === `${shown(older.final)} out of ${wholeTop + depthTop}`
+        && !popover.blocks.some(block => block.startsWith("Ranked")),
+      "an earlier version of a document is reached from its company's column, and is not ranked",
+      JSON.stringify(popover.blocks.slice(0, 3)));
+    await closePop();
+  }
+
+  /* The cross stays in view while the body scrolls under it. A popover long
+   * enough to scroll is what this board is full of, and before the frame and
+   * the body were separated the only control on it scrolled away. */
+  await page.waitForTimeout(350);
+  const crossHeld = await page.evaluate(() => {
+    const pop = document.querySelector("#grid-pop");
+    document.querySelector('#board thead .company-button').click();
+    pop.style.maxHeight = "180px";
+    const body = pop.querySelector(".gov-pop-body");
+    body.scrollTop = 9999;
+    const cross = pop.querySelector(".gov-pop-close").getBoundingClientRect();
+    const box = pop.getBoundingClientRect();
+    const held = { open: pop.matches(":popover-open"), scrolled: body.scrollTop > 0,
+      inside: cross.top >= box.top && cross.bottom <= box.bottom };
+    pop.style.maxHeight = "";
+    pop.hidePopover();
+    return held;
+  });
+  check(crossHeld.open && crossHeld.scrolled && crossHeld.inside,
+    "the popover's cross stays in view while its body scrolls", JSON.stringify(crossHeld));
+
+  check(pageErrors.length === 0, "the constitutions board: no console errors",
+    pageErrors.join("; "));
+}
+
+// =============================================================================
+console.log("== Coverage: the board, on the scale of four and on the scale of ten ==");
 /* The board reads its scale and its assessment from the publication. The
  * current fixture is out of four and carries no assessment, so the board is its
  * categories and nothing else; the publication of ten, answered to a pin,
- * carries the final score, the document as a whole and its contradictions. */
+ * carries the final score, the document as a whole and its contradictions.
+ *
+ * It led the front page until 23 September 2026 and is at /coverage now, which
+ * is the one thing that changed here: the page is the same page, so every check
+ * below is the check it was. */
 {
-  const root = new URL("/", base).href;
+  const root = new URL("/coverage", base).href;
   const S1 = "corpus@2026-01-01 > #sentences > ¶1";
   const S2 = "corpus@2026-01-01 > #sentences > ¶2";
   const B2 = "corpus@2026-01-01 > #blocks > ¶2";
@@ -2405,18 +2652,18 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
    * given a paragraph each before the reader meets a figure. The asterisk stays
    * on "should", which is the word /about#why answers. */
   const headline = await page.evaluate(() => ({
-    title: document.querySelector("#view-coverage h1").textContent,
-    lede: document.querySelector("#view-coverage .lede").textContent.replace(/\s+/g, " ").trim(),
-    parts: [...document.querySelectorAll("#view-coverage .board-parts p strong")]
+    title: document.querySelector("#coverage-board h1").textContent,
+    lede: document.querySelector("#coverage-board .lede").textContent.replace(/\s+/g, " ").trim(),
+    parts: [...document.querySelectorAll("#coverage-board .board-parts p strong")]
       .map(node => node.textContent.trim()),
-    asterisk: document.querySelector("#view-coverage .lede .asterisk")?.getAttribute("href"),
+    asterisk: document.querySelector("#coverage-board .lede .asterisk")?.getAttribute("href"),
   }));
-  check(headline.title === "What each constitution says, and how well it is built"
+  check(headline.title === "Each constitution scored, with the passages behind every figure"
       && headline.lede.includes("scores each one twice, out of 10 each")
       && headline.parts.join(" | ") === "The document as a whole. | The behaviours."
       && headline.asterisk === "/about#why",
-    "the overview's title names both halves of the score, and the lede says what they are",
-    JSON.stringify(headline));
+    "the coverage board's title says what it carries that the front board does not, and the "
+    + "lede says what its two halves are", JSON.stringify(headline));
   const four = await readBoard();
   check(!four.names.includes("Final score") && !four.names.includes("The document as a whole"),
     "a publication of four has no final score and no document as a whole",
@@ -2424,8 +2671,8 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(four.names[0] === "Behaviours under test" && four.subs[0] === "out of 4, 2 behaviours"
       && four.folded,
     "its categories are the board's groups, folded", JSON.stringify([four.names, four.subs]));
-  check(four.caption === "Each lab's behaviours by category, with each group's rows available "
-      + "to open",
+  check(four.caption === "Each company's behaviours by category, with each group's rows "
+      + "available to open",
     "the caption promises the rows a publication of four has, and no others", four.caption);
   check(four.keyTitle === "How far a constitution goes on one behaviour, out of 4"
       && four.levels.join() === "0,1,2,3,4" && four.conditions.length === 0 && four.odd === "",
@@ -2452,8 +2699,8 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && ten.folded,
     "the final score leads, the document as a whole follows, and every group starts folded",
     JSON.stringify([ten.names, ten.subs, ten.folded]));
-  check(ten.caption === "Each lab's final score, its document as a whole and its behaviours by "
-      + "category, with each group's rows available to open",
+  check(ten.caption === "Each company's final score, its document as a whole and its behaviours "
+      + "by category, with each group's rows available to open",
     "the caption names the two rows a publication of ten adds", ten.caption);
   /* Two documents are assessed and they are level, so the ranking is walked
    * rather than asserted against a board with one figure on it: both carry
@@ -3345,14 +3592,14 @@ console.log("== Every page: the feedback bubble ==");
    * layer included: a pill raised into it with showPopover is drawn above the
    * backdrop and still refuses a click, measured against this application. So
    * the pill moves into whatever modal is open, which is the one place the
-   * platform leaves operable. The overview opens the contradictions of a
+   * platform leaves operable. The coverage board opens the contradictions of a
    * document in a modal sheet, and somebody who wants to report that sheet has
    * to reach the pill while looking at it.
    *
    * Under the pin, because that sheet holds a publication's assessment and the
    * fixture the front page answers with carries none. Every other press on the
    * board opens a popover, which is not a modal and takes nothing in. */
-  await page.goto(`${root}?publication=${TEN_PUBLICATION}`, { waitUntil: "networkidle" });
+  await page.goto(`${root}coverage?publication=${TEN_PUBLICATION}`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
     undefined, { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(400);
@@ -3394,7 +3641,7 @@ console.log("== Every page: the feedback bubble ==");
       document.querySelector("#pf-pill")?.parentElement?.tagName);
     check(gaveItBack === "BODY", "closing the panel gives the pill back to the body", gaveItBack);
   } else {
-    check(false, "the overview has a modal panel to test the pill against");
+    check(false, "the coverage board has a modal panel to test the pill against");
   }
 
   /* The cross. Escape closed this dialog before there was one, and still does,

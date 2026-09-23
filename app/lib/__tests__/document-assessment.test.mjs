@@ -160,7 +160,7 @@ test("the contradictions are described by the second method, and as nobody's but
   assert.equal(NOT_REVIEWED, "No person has reviewed the list.");
 });
 
-test("the overview draws its rows from this module", async () => {
-  const overview = await readFile(new URL("../../../site/overview.js", import.meta.url), "utf8");
-  assert.match(overview, /from "\.\/document-assessment\.js"/);
+test("the coverage board draws its rows from this module", async () => {
+  const board = await readFile(new URL("../../../site/coverage.js", import.meta.url), "utf8");
+  assert.match(board, /from "\.\/document-assessment\.js"/);
 });
