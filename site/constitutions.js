@@ -50,10 +50,12 @@ const nodes = {};
  * on its own scale and shown at half of it, which is what makes five criteria
  * add up to the same 10 the behaviours are out of. */
 const depthMax = () => state.data.scale.depth[state.data.scale.depth.length - 1].level;
-const criterionMax = () =>
-  state.data.scale.criterion[state.data.scale.criterion.length - 1].score;
-const shownMax = () => criterionMax() / 2;
-const wholeMax = () => state.data.criteria.length * shownMax();
+/* Each part of a document is read out of 2, which is also what the scale beside
+ * it describes, so the five parts add up to the same 10 the behaviours are out
+ * of. The figures in the file are on that scale already. */
+const SHOWN_MAX = 2;
+const shownMax = () => SHOWN_MAX;
+const wholeMax = () => state.data.criteria.length * SHOWN_MAX;
 const finalMax = () => wholeMax() + depthMax();
 
 const shown = value => value.toFixed(1);
