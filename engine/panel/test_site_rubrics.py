@@ -21,6 +21,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -33,6 +34,17 @@ DEPTH_SCALE_JS = ROOT / "site" / "depth-scale.js"
 LEVEL = re.compile(r"^(\d+) = ([A-Z]+): (.+)$")
 # "(a) The edge is shown. Two cases that differ ..."
 CONDITION = re.compile(r"^\([abc]\) (.+?\.)(?: |$)")
+
+sys.path.insert(0, str(HERE))
+import assessment_call            # noqa: E402
+
+DOCUMENT_ASSESSMENT_JS = ROOT / "site" / "document-assessment.js"
+# "CONFLICT_RULES: what the document says, ...", and not "CONFLICT_RULES: <0 to 4>"
+QUESTION = re.compile(r"^([A-Z_]+): ([a-z].*)$")
+# "2 = an order of priority between its rules ..."
+ANCHOR = re.compile(r"^([024]) = (.+)$")
+# "2. actions the model takes on its own with tools, such as sending, buying or deleting;"
+SITUATION = re.compile(r"^\d\. (.+?)[;.]$")
 
 
 def sentence_case(text):
@@ -62,6 +74,35 @@ def site_module(path, expression):
     result = subprocess.run(["node", "-e", script, path.as_uri()],
                             capture_output=True, text=True, check=True)
     return json.loads(result.stdout)
+
+
+def prompt_criteria():
+    """The four criteria the judges were asked, each with its question and its
+    anchors at 0, 2 and 4, and the six situations the fourth names."""
+    lines = assessment_call.PROMPTS["criteria"].read_text(encoding="utf-8").splitlines()
+    asks, anchors, situations, key = {}, {}, [], None
+    for line in lines:
+        question = QUESTION.match(line)
+        anchor = ANCHOR.match(line)
+        situation = SITUATION.match(line)
+        if question:
+            key = question.group(1).lower()
+            if key in assessment_call.CRITERIA:
+                asks[key] = sentence_case(first_sentence(question.group(2)))
+                anchors[key] = {}
+            else:
+                key = None
+        elif anchor and key:
+            anchors[key][int(anchor.group(1))] = sentence_case(anchor.group(2))
+        elif situation and key == "situations":
+            situations.append(situation.group(1))
+    return asks, anchors, situations
+
+
+def prompt_contradiction():
+    lines = assessment_call.PROMPTS["contradictions"].read_text(encoding="utf-8").splitlines()
+    return first_sentence(next(line for line in lines
+                               if line.startswith("A contradiction here is")))
 
 
 class PromptScaleTest(unittest.TestCase):
@@ -102,6 +143,53 @@ class DepthScaleOfTenTest(unittest.TestCase):
 
     def test_the_line_on_odd_figures_is_the_prompt_s(self):
         self.assertEqual(self.site["odd"], self.prompt["odd"])
+
+
+class PromptCriteriaTest(unittest.TestCase):
+    def test_the_criteria_prompt_is_read_as_four_questions_with_anchors_and_six_situations(self):
+        asks, anchors, situations = prompt_criteria()
+        self.assertEqual(sorted(asks), sorted(assessment_call.CRITERIA))
+        for key in assessment_call.CRITERIA:
+            self.assertEqual(sorted(anchors[key]), [0, 2, 4], key)
+        self.assertEqual(len(situations), 6)
+
+
+@unittest.skipUnless(shutil.which("node"), "node reads the site's module")
+class AssessmentCriteriaTest(unittest.TestCase):
+    """site/document-assessment.js says what each criterion asks and what its
+    scores mean. The judges were asked in assessment-criteria-v1.txt and
+    assessment-contradictions-v2.txt, so the board asks it in their words."""
+
+    def setUp(self):
+        self.site = site_module(DOCUMENT_ASSESSMENT_JS, "m.CRITERIA")
+        self.scored = [one for one in self.site if one["key"] != "contradictions"]
+
+    def test_the_criteria_are_the_builder_s_four_in_its_order_and_contradictions_last(self):
+        self.assertEqual([one["key"] for one in self.scored], list(assessment_call.CRITERIA))
+        self.assertEqual(self.site[-1]["key"], "contradictions")
+
+    def test_each_criterion_asks_the_prompt_s_question(self):
+        asks, _anchors, _situations = prompt_criteria()
+        for criterion in self.scored:
+            self.assertTrue(criterion["asks"].startswith(asks[criterion["key"]]),
+                            criterion["key"])
+
+    def test_each_criterion_s_anchors_are_the_prompt_s(self):
+        _asks, anchors, _situations = prompt_criteria()
+        for criterion in self.scored:
+            self.assertEqual(criterion["anchors"], {str(k): v for k, v
+                                                    in anchors[criterion["key"]].items()},
+                             criterion["key"])
+
+    def test_situations_names_the_prompt_s_six(self):
+        _asks, _anchors, situations = prompt_criteria()
+        asked = next(one["asks"] for one in self.site if one["key"] == "situations")
+        for situation in situations:
+            self.assertIn(situation, asked)
+
+    def test_a_contradiction_is_what_the_prompt_calls_one(self):
+        self.assertIn(prompt_contradiction(),
+                      next(one["asks"] for one in self.site if one["key"] == "contradictions"))
 
 
 if __name__ == "__main__":
