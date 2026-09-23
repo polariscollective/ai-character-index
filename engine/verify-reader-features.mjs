@@ -2400,6 +2400,22 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
 
   // ---- the publication of four
   await openBoard("");
+  /* The page's own words. The title named the grid of depths the board grew out
+   * of; it names both halves of the score now, and the lede says what they are
+   * before the reader meets a figure. The asterisk stays on "should", which is
+   * the word /about#why answers. */
+  const headline = await page.evaluate(() => ({
+    title: document.querySelector("#view-coverage h1").textContent,
+    lede: document.querySelector("#view-coverage .lede").textContent.replace(/\s+/g, " ").trim(),
+    asterisk: document.querySelector("#view-coverage .lede .asterisk")?.getAttribute("href"),
+  }));
+  check(headline.title === "What each constitution says, and how well it is built"
+      && headline.lede.includes("two halves")
+      && headline.lede.includes("how far it goes on each behaviour it governs")
+      && headline.lede.includes("how well it holds together as a set of rules")
+      && headline.asterisk === "/about#why",
+    "the overview's title names both halves of the score, and the lede says what they are",
+    JSON.stringify(headline));
   const four = await readBoard();
   check(!four.names.includes("Final score") && !four.names.includes("The document as a whole"),
     "a publication of four has no final score and no document as a whole",
