@@ -718,7 +718,7 @@ export async function initializeGovernance() {
   const byId = id => document.getElementById(id);
   view = createBoard({
     nodes: { table: byId("gov-heatmap"), pop: byId("gov-pop"), expandAll: byId("gov-expand-all") },
-    everyRow: { show: "Show every check", hide: "Hide every check" },
+    everyRow: { show: "Show every row", hide: "Hide every row" },
   });
   board.nodes = {
     status: byId("gov-status"), legend: byId("gov-legend"), findings: byId("gov-findings"),

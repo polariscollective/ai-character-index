@@ -2077,7 +2077,7 @@ console.log("== Overview: the governance view ==");
   check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
         + "Meta, xAI, Moonshot AI, DeepSeek"
       && seen.overall.join(",") === "9.0,9.0,4.3,3.8,2.7,2.0,2.0,1.5,0.8" && seen.outOf.join() === "/16"
-      && seen.flagged.join(", ") === "Mistral AI, Moonshot AI, DeepSeek",
+      && seen.flagged.join(", ") === "Alibaba, Mistral AI, Moonshot AI, DeepSeek",
     "the nine companies run across in the note's order, both ties broken as the note breaks them, "
       + "each overall score out of 16, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
@@ -2427,9 +2427,11 @@ console.log("== Overview: the constitutions board ==");
     "no cell of the board reads NA",
     JSON.stringify(board.figures.filter(one => one.na || one.text === "NA")));
   check(board.scales.behaviour.join() === file.scale.depth.map(one => one.level).join()
+      && board.scales.behaviour.every(level => Number(level) % 2 === 0)
       && board.scales.names.join() === file.scale.depth.map(one => one.name).join()
-      && board.scales.criterion.join() === file.scale.criterion.map(one => one.score).join(),
-    "both scales are written out under the table, level by level, in the file's own words",
+      && board.scales.criterion.length === 0,
+    "the depth scale is written out under the table on its even levels, in the file's own "
+    + "words, and the parts of a document carry no scale of their own",
     JSON.stringify(board.scales));
   check(board.asOf === `As of ${file.as_of}` && !board.coverage,
     "the board says what it is as of, and links to the coverage board nowhere",

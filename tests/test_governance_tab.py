@@ -30,7 +30,7 @@ PAGE = (ROOT / "site" / "overview.html").read_text(encoding="utf-8")
 # practices still place Meta ahead of xAI.
 NOTE_ORDER = ["openai", "anthropic", "alibaba", "google", "mistral", "meta", "xai",
               "moonshot", "deepseek"]
-OPEN_WEIGHTS = {"mistral", "moonshot", "deepseek"}
+OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
 
 
@@ -270,11 +270,13 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertIn(f"the best score on it is {shown(best_log)} out of 4", first)
 
     def test_the_open_weights_finding_quotes_the_totals(self):
-        # "Mistral's 2.7, Moonshot AI's 1.5, DeepSeek's 0.8, and ... Meta's 2.0"
+        # "Mistral's 2.7, Moonshot AI's 1.5 and DeepSeek's 0.8", with Alibaba
+        # named as the one open-weight company that is not near the bottom.
         text = next(f["text"] for f in DATA["findings"] if "Moonshot AI's" in f["text"])
         for lab, label in (("mistral", "Mistral's"), ("moonshot", "Moonshot AI's"),
-                           ("deepseek", "DeepSeek's"), ("meta", "Meta's")):
+                           ("deepseek", "DeepSeek's")):
             self.assertIn(f"{label} {shown(totals(lab)[1])}", text, lab)
+        self.assertIn(f"third on {shown(totals('alibaba')[1])}", text)
 
     def test_the_findings_on_whole_columns_hold(self):
         # "On the check that asks for a comment period, every company scores 0 or 1"
