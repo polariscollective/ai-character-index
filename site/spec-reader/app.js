@@ -3330,8 +3330,8 @@ function translationNote(translation, judged) {
  * because what a document covers is a fact about its publisher rather than about
  * one version of it. */
 const DOCUMENT_CONTEXT = {
-  alibaba: "The document names no models it governs. Its preface says the models in production "
-         + "do not yet meet what it asks, and are being moved towards it.",
+  alibaba: "The document names no models. Nothing in it says which models or which products "
+         + "it governs.",
 };
 
 const documentContext = id => DOCUMENT_CONTEXT[String(id).split("--")[0]] || "";
