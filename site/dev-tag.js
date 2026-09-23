@@ -127,8 +127,8 @@ const STYLE = `
  * told what a figure on this page is worth. */
 const LINES = [
   "What is published here may still change.",
-  "The method comes from working papers, and the figures come from a panel of "
-  + "three judges from different model families, whose readings are combined.",
+  "The method comes from working papers, and every figure rests on published "
+  + "documents that anyone can check.",
 ];
 
 /* Where the build on screen stands, in the route's own words. */
