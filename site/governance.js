@@ -88,13 +88,16 @@ const groupName = id => GROUPS[id] || questionOf(id).name;
 const partsOf = id => (GROUPS[id] ? "practices" : "checks");
 const rowId = id => `gov-check-${id.replace(".", "-")}`;
 
-/* A score painted the way the grid paints a depth, as a share of its maximum,
- * so 8 of 12 wears the colour 2.7 of 4 would. The figure is always light, where
- * the grid picks dark or light by the colour underneath: across one table of
+/* A score painted the way the board paints a depth, as a share of its maximum,
+ * so 8 of 12 wears the colour 2.7 of 4 would. The ramp paints over whatever
+ * maximum it is given, and this view gives it 4, its own, so no colour here
+ * moved when the depths went to ten. The figure is always light, where the
+ * overview picks dark or light by the colour underneath: across one table of
  * scores, figures that change colour from cell to cell read as a second code. */
 const FIGURE = "#F1EFE3";
+const PAINTED_OVER = 4;
 function paintShare(node, value, max) {
-  board.paint(node, (value / max) * 4);
+  board.paint(node, (value / max) * PAINTED_OVER, PAINTED_OVER);
   node.style.color = FIGURE;
 }
 
@@ -815,7 +818,7 @@ function renderLegend() {
   const swatches = element("span", "swatches");
   [0, 1, 2, 3, 4].forEach(level => {
     const swatch = element("span", "swatch");
-    board.paint(swatch, level);
+    board.paint(swatch, level, PAINTED_OVER);
     swatches.append(swatch);
   });
   legend.append(swatches, element("span", "", "all"));
@@ -907,8 +910,9 @@ async function loadGovernance() {
   }
 }
 
-/* `paint` is the grid's own, so a score of 3 out of 4 here wears the colour a
- * depth of 3 wears in the other view. */
+/* `paint` is the overview's own, given this view's maximum of 4, so a score of
+ * 3 out of 4 here wears the colour a depth of 3 out of 4 wears in the other
+ * view. */
 export async function initializeGovernance({ paint }) {
   const byId = id => document.getElementById(id);
   board.nodes = {

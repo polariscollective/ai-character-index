@@ -16,8 +16,10 @@
  */
 
 import { initializeGovernance } from "./governance.js";
-
-const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated"];
+/* The depth scales, their words and the colour a figure wears: one module for
+ * this page and the reader, which used to carry a copy each. */
+import { depthScaleOf, levelsOf, depthWords, depthPhrase, rampAt, inkOver }
+  from "./depth-scale.js";
 
 /* Labs the index carries no specification for. They are shown at nought across
  * every behaviour, which is what was asked for, and the caption says why: a
@@ -30,32 +32,6 @@ const DEPTH_WORDS = ["absent", "named", "discussed", "prescribed", "demonstrated
  * the other view ranks should not be missing from this one. */
 const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
   "DeepSeek"];
-
-/* Red to green, against the framework's own palette, because the grid is read
- * as a comparison and a single hue at varying strength does not say which end
- * is which. Three stops interpolated in between. */
-const RAMP = [
-  { at: 0, rgb: [180, 71, 47] },
-  { at: 2, rgb: [217, 162, 39] },
-  { at: 4, rgb: [76, 140, 63] },
-];
-
-function rampAt(value) {
-  const held = Math.max(0, Math.min(4, value));
-  const upper = RAMP.find(stop => stop.at >= held) || RAMP[RAMP.length - 1];
-  const lower = [...RAMP].reverse().find(stop => stop.at <= held) || RAMP[0];
-  if (upper === lower) return upper.rgb;
-  const across = (held - lower.at) / (upper.at - lower.at);
-  return lower.rgb.map((channel, i) =>
-    Math.round(channel + across * (upper.rgb[i] - channel)));
-}
-
-/* Black or white over the ramp, by the luminance underneath rather than by
- * eye: the amber middle needs dark text where both ends need light. */
-function inkOver([r, g, b]) {
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? "#23281B" : "#F1EFE3";
-}
 
 const elements = {
   caption: document.querySelector("#grid-caption"),
@@ -72,29 +48,9 @@ const elements = {
   sheetClose: document.querySelector("#sheet-close"),
 };
 
-const state = { behaviours: [], columns: [], passages: {}, depths: {}, registry: {} };
-
-/* The rubric each judge scored against, copied from the reader's own
- * DEPTH_LEVELS. Copied rather than fetched because this page is standalone and
- * has no endpoint for it: the drift that costs is the wording, so if the reader's
- * levels change these must be brought over with them. The source of truth is
- * methodology/spec-coverage-depth-rubric.md. */
-const DEPTH_LEVELS = [
-  { level: 0, anchor: "absent",
-    bar: "No passage bears on the behaviour." },
-  { level: 1, anchor: "named",
-    bar: "The behaviour appears, a word or clause, typically inside a list or a "
-      + "passage about something else, but the spec says nothing further about it." },
-  { level: 2, anchor: "discussed",
-    bar: "The spec addresses the behaviour in its own right, what the norm is and "
-      + "why it matters, but only in terms too general to grade a response against." },
-  { level: 3, anchor: "prescribed",
-    bar: "The spec states concrete do/don't rules or procedures for the behaviour, "
-      + "specific enough that a grader can quote the spec's own sentences as pass criteria." },
-  { level: 4, anchor: "demonstrated",
-    bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
-      + "sanctioned response, usable as an answer key for borderline cases." },
-];
+/* `scale` is the publication's, read from its payload: 10 on a publication out
+ * of ten and 4 on every one before it. */
+const state = { behaviours: [], columns: [], passages: {}, depths: {}, registry: {}, scale: 4 };
 
 /* A ?publication= pin reaches the grid as it reaches the doc reader: every
  * route the grid reads from is asked for that publication, so a link from the
@@ -200,8 +156,8 @@ function depthOf(behaviour, documentId) {
   return depth && Number.isFinite(depth.mean) ? depth : null;
 }
 
-function paint(button, value) {
-  const rgb = rampAt(value);
+function paint(button, value, max) {
+  const rgb = rampAt(value, max);
   button.style.background = `rgb(${rgb.join(" ")})`;
   button.style.color = inkOver(rgb);
 }
@@ -309,7 +265,7 @@ function openCell(behaviour, document_, depth) {
     number.className = "sheet-figure";
     number.textContent = depth.mean.toFixed(1);
     figure.append(number,
-      document.createTextNode(` out of 4, ${DEPTH_WORDS[Math.round(depth.mean)]}.`));
+      document.createTextNode(` out of ${state.scale}, ${depthWords(depth.mean, state.scale)}.`));
     body.append(figure);
 
     /* Why the figure is what it is, in one voice rather than in three named
@@ -454,18 +410,17 @@ function render() {
           const button = document.createElement("button");
           button.type = "button";
           button.className = "cell-button";
-          paint(button, mean);
+          paint(button, mean, state.scale);
           // The accessible name says what the cell shows. A screen reader that
           // heard something the sighted reader cannot see would be reading a
           // different grid.
           button.setAttribute("aria-label",
-            `${behaviour.name} in ${column.lab}: ${mean.toFixed(1)} out of 4, `
-            + DEPTH_WORDS[Math.round(mean)]);
+            `${behaviour.name} in ${column.lab}: ${depthPhrase(mean, state.scale)}`);
           // The figure alone. The rubric's word under it ("prescribed") no longer
           // fits once nine specifications share the width, and the scale beside
           // the grid gives every level its word and its sentence; the accessible
-          // name above still says the word. Not "out of 4" either: every figure
-          // on this grid is out of 4, and the scale says so once.
+          // name above still says the word. Nor the maximum it is read against:
+          // every figure on this grid shares one, and the scale says it once.
           const number = document.createElement("span");
           number.className = "cell-figure";
           number.textContent = mean.toFixed(1);
@@ -487,13 +442,13 @@ function render() {
    * for, and a scale that hides its definition is a legend that explains
    * nothing. It makes the rail tall, which is the right trade. */
   const scale = document.createDocumentFragment();
-  DEPTH_LEVELS.forEach(({ level, anchor, bar }) => {
+  levelsOf(state.scale).forEach(({ level, anchor, bar }) => {
     const item = document.createElement("li");
     const head = document.createElement("span");
     head.className = "scale-head";
     const swatch = document.createElement("span");
     swatch.className = "swatch";
-    swatch.style.background = `rgb(${rampAt(level).join(" ")})`;
+    swatch.style.background = `rgb(${rampAt(level, state.scale).join(" ")})`;
     const number = document.createElement("span");
     number.className = "level";
     number.textContent = String(level);
@@ -547,6 +502,7 @@ async function initialize() {
     return;
   }
   state.behaviours = payload.behaviours;
+  state.scale = depthScaleOf(payload);
   state.columns = newestPerSpecification(documents.documents);
   state.passages = links?.notes?.standing || {};
   state.depths = links?.notes?.depth || {};

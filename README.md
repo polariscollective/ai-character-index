@@ -266,6 +266,7 @@ python3 -m unittest discover -s tests              # the citation resolver and i
 python3 engine/panel/test_judge_call.py
 python3 engine/panel/test_passages.py
 python3 engine/panel/test_bands.py
+python3 engine/panel/test_site_rubrics.py          # the site's rubric, held to the judges' prompts
 python3 engine/panel/test_depth_call.py
 python3 engine/panel/test_depth_ladder.py          # a depth asked again when the reply does not parse
 python3 engine/panel/test_depth_pass.py            # the depths out of ten
