@@ -1,6 +1,7 @@
 {
   "as_of": "September 2026",
   "researched": "2026-09-18",
+  "origin": "The four questions come from Polaris Collective's own working paper. The practices beside them come from Kembery et al., Emerging International Best Practices for AI Model Specs. The scores are ours and open to challenge.",
   "papers": {
     "memo": {
       "title": "Model spec governance and transparency: the state of play and four transparency asks",
@@ -62,6 +63,7 @@
       "id": "1",
       "name": "Published constitution",
       "question": "Does every model the company puts in use have a published constitution?",
+      "plain": "Whether the company publishes a constitution at all, and whether that document says which of its models it governs.",
       "explainer": "A constitution is the document in which a company sets out how its models are meant to behave.",
       "checks": [
         {
@@ -183,6 +185,7 @@
       "id": "2",
       "name": "Change log",
       "question": "Is there one public change log covering the constitution, the system prompts and the guardrails?",
+      "plain": "Whether a reader can see what changed in the rules a model follows, when it changed and why.",
       "explainer": "A system prompt is the standing instruction a company gives its model before every conversation.",
       "checks": [
         {
@@ -294,6 +297,7 @@
       "id": "3",
       "name": "Guardrails",
       "question": "Does the company disclose which guardrails it runs, and of what kind?",
+      "plain": "Whether the company says which automatic filters it runs around its models, and whether changes to them are recorded.",
       "explainer": "Guardrails are automated checks, separate from the model itself, that block or redirect what goes in or comes out.",
       "checks": [
         {
@@ -371,6 +375,7 @@
       "id": "4",
       "name": "Hard constraints",
       "question": "Can the public comment before a hard constraint is weakened?",
+      "plain": "Whether the public can see and comment on a weakening of the things the model must never do, before it takes effect.",
       "explainer": "Hard constraints are the things a model must never do, whoever asks.",
       "checks": [
         {
@@ -537,7 +542,7 @@
     "0": "Nothing found.",
     "1": "Part of the practice, or a weaker form of it.",
     "2": "The practice in full.",
-    "note": "The research note gives no description of each score. These three sum up how it scored."
+    "note": "The paper gives no description of each score. These three sum up how we scored."
   },
   "internal": [
     {
@@ -662,7 +667,7 @@
     }
   ],
   "disclosed_intro": "Four practices from the same working paper that nobody outside a company can see, and that the paper asks companies to state publicly. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
-  "disclosure_note": "A company may well follow a practice without saying so. Where we score 0, we found no reliable public evidence, and no internal audit anyone can verify, that it does. Tell us if we are wrong.",
+  "disclosure_note": "A company may well follow a practice without saying so. Where we score 0, we found nothing published about it, and no audit anyone can verify. Tell us if we are wrong.",
   "internal_note": "The paper raises this as an open problem and does not ask companies to publish it. Only an internal audit could show it. None has been done, so every company is marked NA, not assessed.",
   "scores": {
     "openai": {"1.1": 4, "1.2": 3, "1.3": 1, "2.1": 4, "2.2": 2, "2.3": 1, "3.1": 3, "3.2": 1, "4.1": 3, "4.2": 1},

@@ -106,6 +106,13 @@ function anchorsList(check, score) {
   return list;
 }
 
+/* What a score means, said as one sentence: the description at that score, or a
+ * line for a score that sits between two of them. */
+function meansAt(anchors, score) {
+  return anchors[String(score)]
+    || "This score sits between the two descriptions either side of it below.";
+}
+
 function checksOf(lab, question) {
   const list = element("ul", "check-list");
   question.checks.forEach(check => {
@@ -266,24 +273,26 @@ function profile(content, lab, open) {
 }
 
 function questionScore(content, lab, question) {
-  view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.question);
+  view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.plain);
   content.append(view.figure(shown(lab.byQuestion[question.id]), ` out of ${SCALE}`),
-    element("p", "subtitle", "The average of its checks."), checksOf(lab, question));
+    element("p", "subtitle", "The average of its checks, each scored from 0 to 4."),
+    checksOf(lab, question));
   content.append(view.h3("What we found"),
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function checkScore(content, lab, question, check) {
   const value = board.data.scores[lab.id][check.id];
-  view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.id} ${check.label}.`);
-  content.append(view.figure(value, " out of 4"));
-  content.append(view.h3("What the scores mean for this check"), anchorsList(check, value));
+  view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.label}.`);
+  content.append(view.figure(value, " out of 4"),
+    element("p", "", meansAt(check.anchors, value)));
+  content.append(view.h3("What each score means"), anchorsList(check, value));
   content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function supportingScore(content, lab) {
-  view.titled(content, `${lab.name}: best practices`, "From a second working paper, and left out of the total.");
+  view.titled(content, `${lab.name}: best practices`, "Shown beside the score and left out of it.");
   content.append(view.figure(lab.supporting, ` out of ${board.bestMax}`), practicesOf(lab),
     view.h3("What we found"), paragraphs(board.data.profiles[lab.id].supporting),
     view.h3("What only the company can show"), disclosedList(lab),
@@ -295,10 +304,11 @@ function supportingScore(content, lab) {
 function practiceScore(content, lab, practice) {
   const value = board.data.supporting_scores[lab.id][practice.id];
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
-  content.append(view.figure(value, ` out of ${PRACTICE}`));
+  content.append(view.figure(value, ` out of ${PRACTICE}`),
+    element("p", "", meansAt(board.data.supporting_scale, value)));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
-  content.append(view.h3("What the scores mean for this practice"), scaleList(value));
+  content.append(view.h3("What each score means"), scaleList(value));
   content.append(view.h3(`What we found on ${lab.name}'s best practices`),
     paragraphs(board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
 }
@@ -307,22 +317,23 @@ function disclosedScore(content, lab, practice) {
   const value = board.data.internal_scores[lab.id][practice.id];
   const found = board.data.internal_evidence[lab.id][practice.id];
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
-  content.append(view.figure(value, ` out of ${PRACTICE}`), element("p", "", found.sentence));
+  content.append(view.figure(value, ` out of ${PRACTICE}`),
+    element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
   if (value === 0) content.append(element("p", "subtitle", `*${board.data.disclosure_note}`));
   if (found.sources.length) {
     content.append(view.h3(`What ${lab.name} publishes`));
     found.sources.forEach(source => content.append(sourceQuote(source)));
   }
-  content.append(view.h3("What the scores mean for this practice"),
-    scaleList(value, practice.anchors), paperFold(practice), toProfile(lab, "supporting"));
+  content.append(view.h3("What each score means"),
+    scaleList(value, practice.anchors), toProfile(lab, "supporting"), paperFold(practice));
 }
 
 function aboutDisclosedPractice(content, practice) {
   view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "One of the best practices only the company can show, scored on what it publishes."),
-    paperFold(practice), view.h3("What the scores mean"), scaleList(null, practice.anchors),
-    element("p", "subtitle", `*${board.data.disclosure_note}`));
+    view.h3("What each score means"), scaleList(null, practice.anchors),
+    element("p", "subtitle", `*${board.data.disclosure_note}`), paperFold(practice));
 }
 
 function internalScore(content, lab, practice) {
@@ -343,7 +354,7 @@ function aboutTotal(content) {
   board.data.questions.forEach(question => {
     const item = element("li");
     item.append(element("span", "check-id", question.id),
-      element("span", "", `${question.name}: ${question.question}`));
+      element("span", "", `${question.name}: ${question.plain}`));
     list.append(item);
   });
   content.append(list, element("p", "", "Companies are ranked by this score. A tie is "
@@ -351,12 +362,11 @@ function aboutTotal(content) {
 }
 
 function aboutQuestion(content, question) {
-  view.titled(content, question.name, question.question);
+  view.titled(content, question.name, question.plain);
   content.append(element("p", "", question.explainer));
   if (question.minimum) {
     content.append(view.h3("Part of the minimum"), element("p", "", board.data.minimum_note));
   }
-  content.append(paperFold(question));
   content.append(view.h3("How it is scored"));
   content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4. `
     + "The question's score is their average. Open a check to see what earns each score."));
@@ -368,24 +378,28 @@ function aboutQuestion(content, question) {
     content.append(fold);
   });
   content.append(view.showInTable(question.id, partsPhrase(question.id)));
+  // The paper's own wording, folded, under the sentences a reader came for.
+  content.append(view.h3("What the working paper asks"),
+    element("p", "", question.question), paperFold(question));
 }
 
 function aboutCheck(content, question, check) {
-  view.titled(content, check.short, `${check.id} ${check.label}.`);
+  view.titled(content, check.short, `${check.label}.`);
   content.append(element("p", "subtitle",
-    `One of the checks on the ${question.name.toLowerCase()} question, scored from 0 to 4.`),
-  paperFold(check));
-  content.append(view.h3("What the scores mean"), anchorsList(check, null),
-    element("p", "subtitle", "A score of 1 or 3 falls between the descriptions either side of it."));
+    `Check ${check.id}, one of the checks on the ${question.name.toLowerCase()} question, `
+    + "scored from 0 to 4."));
+  content.append(view.h3("What each score means"), anchorsList(check, null),
+    element("p", "subtitle", "A score of 1 or 3 falls between the descriptions either side of it."),
+    paperFold(check));
 }
 
 function aboutSupporting(content) {
-  view.titled(content, `Best practices, out of ${board.bestMax}`, "From a second working paper, and left out of the total.");
-  content.append(element("p", "", "Practices taken from Kembery et al., Emerging International "
-    + "Best Practices for AI Model Specs. Five can be checked by anyone from public sources. "
-    + "Four more only the company can show, and are scored on what it publishes. One only an "
-    + "internal audit could show, and is not scored. Each scored practice is worth 0, 1 or 2. "
-    + "They measure related good practice, so they are kept out of the total."));
+  view.titled(content, `Best practices, out of ${board.bestMax}`, "Shown beside the score and left out of it.");
+  content.append(element("p", "", "Ten practices a company can be judged on beside the four "
+    + "questions. Five can be checked by anyone from public sources. Four more only the company "
+    + "can show, and are scored on what it publishes. One only an internal audit could show, and "
+    + "is not scored. Each scored practice is worth 0, 1 or 2, and they are kept out of the "
+    + "total."));
   const list = element("ul", "check-list");
   board.data.supporting.forEach(practice => {
     const item = element("li");
@@ -420,7 +434,7 @@ function aboutPractice(content, practice) {
   view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "One of the best practices, scored 0, 1 or 2 and left out of the total."),
-    paperFold(practice), view.h3("What the scores mean"), scaleList(null));
+    view.h3("What each score means"), scaleList(null), paperFold(practice));
 }
 
 function aboutInternal(content) {
@@ -432,8 +446,8 @@ function aboutInternalPractice(content, practice) {
   view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "Not assessed for any company, because no internal audit has been done."),
-    paperFold(practice),
-    view.h3("What an audit would look at"), element("p", "", practice.audit));
+    view.h3("What an audit would look at"), element("p", "", practice.audit),
+    paperFold(practice));
 }
 
 /* ---- The table --------------------------------------------------------------- */
@@ -600,7 +614,7 @@ function renderTable() {
 
 function renderLegend() {
   const legend = document.createDocumentFragment();
-  legend.append(element("span", "", "Colour is the share of the points available:"),
+  legend.append(element("span", "", "Colour goes from nothing scored to the most a row can score:"),
     element("span", "", "none"));
   legend.append(view.swatches([0, 1, 2, 3, 4], SCALE), element("span", "", "all"));
   const na = element("span", "legend-na");
@@ -699,6 +713,7 @@ export async function initializeGovernance() {
     status: byId("gov-status"), legend: byId("gov-legend"), findings: byId("gov-findings"),
     scoring: byId("gov-scoring"), supporting: byId("gov-supporting"),
     disclosed: byId("gov-disclosed"), internal: byId("gov-internal"), ties: byId("gov-ties"),
+    origin: byId("gov-origin"),
   };
   const data = await loadGovernance();
   if (!data) {
@@ -708,6 +723,8 @@ export async function initializeGovernance() {
   board.data = data;
   board.bestMax = PRACTICE * (data.supporting.length + disclosedOf(data).length);
   board.labs = ranked(data);
+  // Where the questions and the practices come from, said once, above the board.
+  board.nodes.origin.textContent = data.origin;
   renderTable();
   renderLegend();
   renderTies();
