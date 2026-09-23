@@ -81,6 +81,22 @@ test("each criterion is halved to a figure out of 2, and the five add up to the 
     "the figures on screen add up to the figure on screen");
 });
 
+/* A criterion with no judge is a criterion the sum of five cannot include. Read
+ * as nought it cost the document two points and the board said so with a
+ * figure, which is a document assessed and found wanting rather than one
+ * nobody finished assessing. */
+test("a criterion nobody scored has no figure, and the total and the final score have none", () => {
+  const { situations, ...scored } = ASSESSED.criteria;
+  const short = { ...ASSESSED, criteria: scored };
+  const { parts, total } = wholeFigures(short);
+  assert.equal(criterionMean(short, "situations"), null);
+  assert.deepEqual(parts, [1.5, 1.7, 1, null, 1]);
+  assert.notEqual(parts[3], 0, "nought is a score, and nobody gave one");
+  assert.equal(total, null, "four of five is not a total");
+  assert.equal(finalFigure(BEHAVIOURS, short, CORPUS_COLUMN), null,
+    "a final score short of two points is worse than none");
+});
+
 test("the behaviours' figure is the plain mean of every cell, not the mean of the categories", () => {
   assert.deepEqual(behavioursFigure(BEHAVIOURS, CORPUS_COLUMN), { value: 7.8, count: 3 });
   const categories = [7.3 + 6, 10].map((sum, i) => sum / [2, 1][i]);

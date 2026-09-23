@@ -379,13 +379,18 @@ function profile(content, column) {
     const { parts, total } = wholeFigures(assessment);
     const whole = element("details");
     const summary = element("summary");
-    summary.append(board.chip(total, WHOLE_MAX, shown(total)),
-      element("span", "", `The document as a whole, ${shown(total)} out of ${WHOLE_MAX}`));
+    summary.append(total === null ? board.naChip() : board.chip(total, WHOLE_MAX, shown(total)),
+      element("span", "", total === null
+        ? "The document as a whole, no total: a criterion carries no score"
+        : `The document as a whole, ${shown(total)} out of ${WHOLE_MAX}`));
     const criteria = element("ul", "check-list");
     CRITERIA.forEach((criterion, index) => {
       const item = element("li");
-      item.append(board.chip(parts[index], SHOWN_MAX, shown(parts[index])),
-        element("span", "", `${criterion.name}, out of ${SHOWN_MAX}`));
+      item.append(parts[index] === null
+        ? board.naChip() : board.chip(parts[index], SHOWN_MAX, shown(parts[index])),
+        element("span", "", parts[index] === null
+          ? `${criterion.name}, not scored`
+          : `${criterion.name}, out of ${SHOWN_MAX}`));
       criteria.append(item);
     });
     whole.append(summary, criteria);
@@ -463,6 +468,38 @@ function absentScore(content, column, subject, these) {
     proposeLine());
 }
 
+/* "conflict rules", or "conflict rules and reasons given": which of the five
+ * carry no score. Named rather than counted, because a reader looking at an NA
+ * where a total belongs wants to know what is missing before anything else. */
+function unscored(assessment) {
+  const { parts } = wholeFigures(assessment);
+  const names = CRITERIA.filter((criterion, index) => parts[index] === null)
+    .map(criterion => lowerFirst(criterion.name));
+  return names.length > 1
+    ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+    : names[0];
+}
+
+/* A figure the board cannot give. The five criteria are summed as shown, so a
+ * sum of four is the document two points short with nothing on the page saying
+ * why; the row reads NA and says which criterion nobody scored. */
+function noFigure(content, column, row, assessment, more) {
+  board.titled(content, `${column.lab}: ${lowerFirst(row)}`, documentLine(column));
+  content.append(board.figure("NA", ", no figure"),
+    element("p", "", `No judge scored ${unscored(assessment)}, so the document as a whole cannot `
+      + `be totalled.${more ? ` ${more}` : ""}`));
+}
+
+/* One criterion of an assessment that left it out. */
+function criterionNotScored(content, column, criterion) {
+  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`, criterion.asks);
+  content.append(board.figure("NA", ", not scored"),
+    element("p", "", "No judge of this document scored this criterion, so the document as a whole "
+      + "has no total and this lab has no final score."),
+    board.h3(`What the judges' scores mean, 0 to ${CRITERION_MAX}`),
+    criterionScale(criterion, null));
+}
+
 function aboutWhole(content) {
   board.titled(content, "The document as a whole",
     `Five criteria, each out of ${SHOWN_MAX}, adding up to a total out of ${WHOLE_MAX}.`);
@@ -487,15 +524,27 @@ function aboutWhole(content) {
 function wholeScore(content, column, assessment) {
   const { parts, total } = wholeFigures(assessment);
   board.titled(content, `${column.lab}: the document as a whole`, documentLine(column));
-  content.append(board.figure(shown(total), ` out of ${WHOLE_MAX}`),
-    element("p", "subtitle", `The sum of its five criteria, each out of ${SHOWN_MAX}. ${HALVING}`));
+  content.append(total === null
+    ? board.figure("NA", ", no total")
+    : board.figure(shown(total), ` out of ${WHOLE_MAX}`));
+  content.append(element("p", "subtitle", total === null
+    ? `The total is the sum of the five criteria, each out of ${SHOWN_MAX}. No judge scored `
+      + `${unscored(assessment)}, so there is no total to give.`
+    : `The sum of its five criteria, each out of ${SHOWN_MAX}. ${HALVING}`));
   CRITERIA.forEach((criterion, index) => {
     const fold = element("details");
     const summary = element("summary");
-    summary.append(board.chip(parts[index], SHOWN_MAX, shown(parts[index])),
-      element("span", "",
-        `${criterion.name}, ${shown(parts[index])} out of ${SHOWN_MAX}`));
+    summary.append(parts[index] === null
+      ? board.naChip() : board.chip(parts[index], SHOWN_MAX, shown(parts[index])),
+      element("span", "", parts[index] === null
+        ? `${criterion.name}, not scored`
+        : `${criterion.name}, ${shown(parts[index])} out of ${SHOWN_MAX}`));
     fold.append(summary);
+    if (parts[index] === null) {
+      fold.append(element("p", "", "No judge of this document scored it."));
+      content.append(fold);
+      return;
+    }
     if (criterion.key === "contradictions") {
       fold.append(element("p", "", CONTRADICTIONS_RULE), contradictionsLine(assessment),
         board.popButton("Read the contradictions",
@@ -810,12 +859,19 @@ function renderTable() {
       `Final score, out of ${FINAL_MAX}: how it is worked out`)));
     columns.forEach(column => {
       if (!hasFigures(column)) { total.append(empty()); return; }
-      const final = finalFigure(state.behaviours, assessmentOf(column), column);
-      total.append(final
-        ? cellFor(column, "final score", "final", {
+      const assessment = assessmentOf(column);
+      const final = finalFigure(state.behaviours, assessment, column);
+      if (final) {
+        total.append(cellFor(column, "final score", "final", {
           value: final.value, max: FINAL_MAX, text: shown(final.value),
           build: content => finalScore(content, column, final),
-        })
+        }));
+        return;
+      }
+      total.append(assessment
+        ? naFor(column, "final score", "final", content => noFigure(content, column, "Final score",
+          assessment, "The final score is that total plus the behaviours' figure, so it cannot be "
+          + "given either."))
         : naFor(column, "final score", "final", content => notAssessed(content, column,
           "Final score", "It has no whole-document total to add, so it has no final score.")));
     });
@@ -832,14 +888,19 @@ function renderTable() {
     columns.forEach(column => {
       if (!hasFigures(column)) { wholeRow.append(empty()); return; }
       const assessment = assessmentOf(column);
-      wholeRow.append(assessment
-        ? cellFor(column, "the document as a whole", "whole", {
-          value: wholeFigures(assessment).total, max: WHOLE_MAX,
-          text: shown(wholeFigures(assessment).total),
-          build: content => wholeScore(content, column, assessment),
-        })
-        : naFor(column, "the document as a whole", "whole",
+      if (!assessment) {
+        wholeRow.append(naFor(column, "the document as a whole", "whole",
           content => notAssessed(content, column, "The document as a whole")));
+        return;
+      }
+      const whole = wholeFigures(assessment).total;
+      wholeRow.append(whole === null
+        ? naFor(column, "the document as a whole", "whole",
+          content => wholeScore(content, column, assessment))
+        : cellFor(column, "the document as a whole", "whole", {
+          value: whole, max: WHOLE_MAX, text: shown(whole),
+          build: content => wholeScore(content, column, assessment),
+        }));
     });
     body.append(wholeRow);
 
@@ -856,6 +917,11 @@ function renderTable() {
           return;
         }
         const part = wholeFigures(assessment).parts[index];
+        if (part === null) {
+          sub.append(naFor(column, lowerFirst(criterion.name), criterion.key,
+            content => criterionNotScored(content, column, criterion)));
+          return;
+        }
         sub.append(cellFor(column, lowerFirst(criterion.name), criterion.key, {
           value: part, max: SHOWN_MAX, text: shown(part),
           build: criterion.key === "contradictions"

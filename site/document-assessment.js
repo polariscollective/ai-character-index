@@ -126,11 +126,19 @@ export function criterionMean(assessment, key) {
 }
 
 /* The five figures out of 2 as the board shows them, and their total out of 10,
- * which is their sum as shown. */
+ * which is their sum as shown.
+ *
+ * A criterion no judge scored is null and not nought: nought is a score, and
+ * halving it gave a document two points fewer than it was assessed at, on a row
+ * the board painted as though somebody had read it. The total is null with it,
+ * because four figures out of 2 do not make a total out of 10, and the final
+ * score is null in turn. */
 export function wholeFigures(assessment) {
-  const parts = CRITERIA.map(criterion =>
-    round1((criterionMean(assessment, criterion.key) / CRITERION_MAX) * SHOWN_MAX));
-  return { parts, total: round1(sum(parts)) };
+  const parts = CRITERIA.map(criterion => {
+    const mean = criterionMean(assessment, criterion.key);
+    return Number.isFinite(mean) ? round1((mean / CRITERION_MAX) * SHOWN_MAX) : null;
+  });
+  return { parts, total: parts.includes(null) ? null : round1(sum(parts)) };
 }
 
 /* The plain mean of every behaviour cell of one document, with how many cells
@@ -159,12 +167,14 @@ export function categoryFigure(members, column) {
 
 /* The final score out of 20: the behaviours' figure out of 10 plus the document
  * as a whole out of 10. Null unless the document has both, so a lab with no
- * specification and a document nobody assessed carry no score and no rank. */
+ * specification, a document nobody assessed and a document whose assessment
+ * leaves a criterion unscored carry no score and no rank. */
 export function finalFigure(behaviours, assessment, column) {
   if (!assessment || !column || column.absent) return null;
   const figure = behavioursFigure(behaviours, column);
   if (!figure) return null;
   const whole = wholeFigures(assessment).total;
+  if (whole === null) return null;
   return { behaviours: figure, whole, value: round1(figure.value + whole) };
 }
 
