@@ -1,7 +1,7 @@
 /**
  * The public MCP server.
  *
- * Four read-only tools over the published index, unauthenticated, on the same
+ * Read-only tools over the published index, unauthenticated, on the same
  * application that serves the reader. Nothing here is disclosed that the
  * reader's own routes do not already serve to anyone who loads the page: this
  * is a second shape over the same rows, not a second door into the database.
@@ -136,14 +136,36 @@ const handler = createMcpHandler(
     server.registerTool("constitutions_board", {
       title: "The board of constitutions",
       description:
-        "Every figure on the index's first board, each with the scale it is on: "
-        + "the score out of 20, the document as a whole out of 10 with its five "
-        + "criteria, and how far each constitution goes on every behaviour, with "
-        + "the level that figure reads as. It carries what each criterion asked "
-        + "and what each level of the depth scale asks for, so a figure can be "
-        + "read without another call. Pass company to narrow it to one company, "
-        + "such as OpenAI. This is what a reader sees on the overview. The whole "
-        + "board runs to a few tens of thousands of characters.",
+        "How far each AI company's published constitution goes. A constitution "
+        + "is the document in which a company sets out how its models are meant "
+        + "to behave, such as Claude's Constitution, the OpenAI Model Spec or "
+        + "the Alibaba Model Spec. This tool reads those documents; "
+        + "governance_board scores what the companies do around them instead. A "
+        + "company that publishes no constitution is on the board at nought and "
+        + "says so.\n\n"
+        + "Each constitution answers with a score out of 20, in two halves.\n\n"
+        + "The document as a whole, out of 10, is five criteria: what wins when "
+        + "two of its own rules clash, how firm each rule is and who may lift "
+        + "it, whether the rules say why they exist, which of the situations a "
+        + "model is used in have rules of their own, and the clashes the "
+        + "document leaves unsettled.\n\n"
+        + "How far it goes on each behaviour, out of 10 each, over the behaviours "
+        + "the index carries, grouped under honesty and epistemics, harm and "
+        + "safety, autonomy, oversight and authority, and helpfulness and "
+        + "judgement. The "
+        + "scale is 0 absent, 2 named, 4 discussed, 6 prescribed, 8 demonstrated "
+        + "with worked examples, and 10 bounded, which asks that the edge be "
+        + "shown, that a clash with another of the document's own rules be "
+        + "settled, and that a default be given for the case the model cannot "
+        + "tell apart. An odd figure means the level below is fully met and the "
+        + "one above only in part.\n\n"
+        + "Every figure comes back with the level it reads as, what the document "
+        + "says on that row, how that stands beside the other constitutions, and "
+        + "why the figure is what it is, so a figure can be read without a "
+        + "second call.\n\n"
+        + "Pass company to narrow to one, such as OpenAI. This is the board on "
+        + "the index's front page. The whole board runs to a few tens of "
+        + "thousands of characters.",
       inputSchema: z.object({
         company: z.string().optional().describe(
           "One company's name, or part of it, such as OpenAI. Every constitution "
@@ -154,22 +176,41 @@ const handler = createMcpHandler(
     server.registerTool("governance_board", {
       title: "The board of governance",
       description:
-        "The index's second board: nine companies scored on two figures out of "
-        + "10 each about how they govern the rules their models follow. What is "
-        + "published is the four asks of our own working paper, each split into "
-        + "checks scored 0 to 4 with the descriptions the scores were given "
-        + "against, plus the licence on the published text; it is the figure the "
-        + "companies are ranked by. What it engages is eight best practices "
-        + "scored 0, 1 or 2 on what each company publishes about its own "
-        + "training, testing and monitoring. The two are never added, and the "
-        + "answer carries the reason. It also carries the paragraph we wrote on "
-        + "what we found for each company. Pass company to narrow it to one "
-        + "company. These figures were given by hand from public documents "
-        + "rather than judged by the panel, and the board belongs to no "
-        + "publication and carries its own as-of date. All nine companies come "
-        + "to about 90,000 characters; one company answers with the same "
-        + "measures and one company's figures, about 30,000, as of September "
-        + "2026.",
+        "How openly each of nine AI companies governs the rules it gives its "
+        + "models. A constitution here is the document in which a company sets "
+        + "out how its models are meant to behave, such as Claude's Constitution "
+        + "or the OpenAI Model Spec. This tool does not read those documents, it "
+        + "scores what the company does around them; constitutions_board reads "
+        + "the documents themselves. The nine are OpenAI, Anthropic, Alibaba, "
+        + "Google DeepMind, Mistral AI, Meta, xAI, Moonshot AI and DeepSeek.\n\n"
+        + "Each company answers with two figures out of 10 that are never added "
+        + "together.\n\n"
+        + "What is published, out of 10, scores what anyone can go and read "
+        + "today, and it is the figure the companies are ranked by. It is eleven "
+        + "rows: ten checks grouped under four questions, each check scored 0 to "
+        + "4, plus one on the licence the text carries. The four questions ask "
+        + "whether the company publishes a constitution at all and for which "
+        + "models, whether it keeps a dated log of the changes it makes to it, "
+        + "what it says about the filters and classifiers that sit outside the "
+        + "model, and which of its rules it declares can never be lifted.\n\n"
+        + "What it engages, out of 10, scores what a company states about its "
+        + "own practice, over eight rows scored 0, 1 or 2: training the models "
+        + "it deploys on the constitution, holding its internal models to it, "
+        + "publishing the text it actually uses, checking and reporting "
+        + "violations in production, publishing a current test of adherence, "
+        + "giving outside evaluators access to test adherence, announcing an "
+        + "adherence threshold before a release, and naming who approves a "
+        + "change to the text.\n\n"
+        + "Every row comes back with its figure, the wording that figure was "
+        + "given against, and the passage or address it rests on. The answer "
+        + "also carries a written paragraph on each company and the reason the "
+        + "two figures are not added.\n\n"
+        + "These were scored by hand by Polaris Collective from public "
+        + "documents, on a date the answer names. The board belongs to no "
+        + "publication of the index. A nought means nothing public was found, "
+        + "not that the company does not do the thing.\n\n"
+        + "Pass company to narrow to one. All nine come to about 90,000 "
+        + "characters; one company to about 30,000.",
       inputSchema: z.object({
         company: z.string().optional().describe(
           "One company's name, or part of it, such as Anthropic. All nine by "

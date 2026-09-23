@@ -618,13 +618,24 @@ say anything. Pass detail counts first, which costs about 2,600 characters and
 reports the exact size of the full answer rather than an estimate of it, and
 decide from that whether to ask for the whole thing.
 
-constitutions_board and governance_board answer with the two boards a reader
-sees on the overview: every figure, the scale it is on, and what a figure at
-that value means. Both take an optional company. The first carries the
-publication's own figures, judged by the panel. The second carries nine
-companies scored on four questions about how they govern the rules their models
-follow; those scores were given by hand from public documents, and that board
-belongs to no publication.
+Two tools answer with a whole scored board rather than with passages, and they
+answer different questions about the same companies.
+
+constitutions_board scores the documents. How far each published constitution
+goes: a score out of 20 per document, being the document as a whole out of 10
+over five criteria, and how far it goes out of 10 on each behaviour the index
+carries. It carries the publication's own figures.
+
+governance_board scores what the companies do around those documents. Whether a
+company publishes a constitution at all, whether it logs the changes it makes to
+it, what it says about the filters that sit outside the model, which rules it
+declares can never be lifted, and what it states about training, testing and
+monitoring against its own text. Nine companies, two figures out of 10 each,
+never added. Those scores were given by hand from public documents, that board
+belongs to no publication, and a nought there means nothing public was found.
+
+Both take an optional company, and both carry the wording each figure was given
+against, so a figure can be read without a second call.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
