@@ -2041,12 +2041,12 @@ const inkReport = cells => {
 };
 
 // =============================================================================
-/* The overview's second view, how each lab governs its rules: one table with the
- * companies across and their scores down, each question opening into its
- * checks, and a popover beside whatever was pressed. Its numbers and words are
- * site/governance.json, and tests/test_governance_tab.py holds the two together;
- * what only a browser can show is that the tabs, the address, the folds and the
- * popover join them. */
+/* The overview's second view, how each company governs its rules: one table with
+ * the companies across and two figures down, what is published and what it
+ * engages, each question opening into its checks, and a popover beside whatever
+ * was pressed. Its numbers and words are site/governance.json, and
+ * tests/test_governance_tab.py holds the two together; what only a browser can
+ * show is that the tabs, the address, the folds and the popover join them. */
 console.log("== Overview: the governance view ==");
 {
   const root = new URL("/", base).href;
@@ -2059,16 +2059,20 @@ console.log("== Overview: the governance view ==");
     coverageHidden: document.querySelector("#view-coverage").hidden,
     selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
     companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
-    overall: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
+    published: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="published"] .cell-figure')]
       .map(b => b.textContent),
-    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-max')]
-      .map(b => b.textContent))],
+    engages: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="engages"] .cell-figure')]
+      .map(b => b.textContent),
+    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="published"] .cell-max, '
+      + '#gov-heatmap .cell-button[data-row="engages"] .cell-max')].map(b => b.textContent))],
     flagged: [...document.querySelectorAll("#gov-heatmap thead .company-button")]
       .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
     rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
       .map(n => n.textContent),
     findings: document.querySelectorAll("#gov-findings .finding").length,
     findingsFolded: document.querySelectorAll("#gov-findings details").length,
+    columnNotes: [...document.querySelectorAll("#gov-columns .gov-foot strong")]
+      .map(node => node.textContent.trim()),
     appendices: [...document.querySelectorAll(".gov-more > details > summary")]
       .map(node => node.textContent),
   }));
@@ -2076,44 +2080,56 @@ console.log("== Overview: the governance view ==");
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
   check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
         + "Meta, xAI, Moonshot AI, DeepSeek"
-      && seen.overall.join(",") === "9.0,9.0,4.3,3.8,2.7,2.0,2.0,1.5,0.8" && seen.outOf.join() === "/16"
+      && seen.published.join(",") === "6.1,5.9,2.3,2.0,1.4,1.1,1.1,0.9,0.5"
+      && seen.engages.join(",") === "5.0,5.0,1.3,1.9,0.0,3.1,1.9,1.3,0.6"
+      && seen.outOf.join() === "/10"
       && seen.flagged.join(", ") === "Alibaba, Mistral AI, Moonshot AI, DeepSeek",
-    "the nine companies run across in the note's order, both ties broken as the note breaks them, "
-      + "each overall score out of 16, the open-weight ones marked",
-    `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.rows.join(", ") === "Overall, Published constitution, Change log, Guardrails, "
-        + "Hard constraints, Best practices"
+    "the nine companies run across in rank order on what is published, Meta and xAI level on it "
+      + "and apart on what they engage, both figures out of 10, the open-weight ones marked",
+    `${seen.companies.join(", ")} / ${seen.published.join(",")} / ${seen.engages.join(",")}`);
+  /* Two figures, never one: the rows run down from what is published, through
+   * its four questions and the licence practice, then from what it engages
+   * through its eight and the one nobody can score. */
+  check(seen.rows.join(", ") === "What is published, Published constitution, Change log, "
+        + "Guardrails, Hard constraints, Open licence, What it engages, Adherence tests published, "
+        + "Outside testers, Release threshold, Change approval published, "
+        + "What only the company can show, Trained to follow it, Internal models, Same text inside, "
+        + "Monitored in use, Separate sign-off"
       && seen.findings === 8 && seen.findingsFolded === 0,
-    "the scores run down from the total, the checks folded, the eight findings open under the "
+    "the rows run down from the two figures, the checks folded, the eight findings open under the "
       + "table", JSON.stringify(seen.rows));
+  check(seen.columnNotes.join(" | ") === "What is published, out of 10. | What it engages, "
+        + "out of 10. | The two are not added.",
+    "one sentence under the table for each figure, and one saying why they are not added",
+    JSON.stringify(seen.columnNotes));
   /* The reference text is two appendices under the findings rather than four folds
    * mixed in with them: how the scoring works, and what was read for each company. */
   check(seen.appendices.join(" | ") === "How the scoring works | Sources, company by company",
     "the method and the sources are the two folded appendices under the findings",
     JSON.stringify(seen.appendices));
 
-  // The board paints every row over its own maximum. 9.0 of 16 is OpenAI's total
-  // and 10 of 18 its best practices, which is the row whose maximum is not four
-  // times a power of two and so the one the arithmetic could have lost. The top
-  // of the ramp was lightened on 23 September 2026, from [76, 140, 63] to
-  // [95, 160, 78], so every colour from half a maximum up moved with it; the
-  // figures themselves did not.
+  // The board paints every row over its own maximum. OpenAI's 6.1 of 10 is the
+  // mean of eleven shares rather than a whole number over a whole number, so it
+  // is the figure the arithmetic could have lost; its 5.0 of 10 sits on the
+  // ramp's exact middle. The top of the ramp was lightened on 23 September 2026,
+  // from [76, 140, 63] to [95, 160, 78], so every colour from half a maximum up
+  // moved with it; the figures themselves did not.
   const colours = await page.evaluate(() => {
     const cellOf = row => document.querySelector(`#gov-heatmap .cell-button[data-row="${row}"]`);
     const paintOf = row => getComputedStyle(cellOf(row)).backgroundColor;
     return {
-      total: paintOf("total"),
-      totalInk: getComputedStyle(cellOf("total")).color,
-      supporting: paintOf("supporting"),
+      published: paintOf("published"),
+      publishedInk: getComputedStyle(cellOf("published")).color,
+      engages: paintOf("engages"),
       legend: [...document.querySelectorAll("#gov-legend .swatch")]
         .map(swatch => getComputedStyle(swatch).backgroundColor),
     };
   });
-  check(colours.total === "rgb(202, 162, 44)" && colours.supporting === "rgb(203, 162, 43)"
+  check(colours.published === "rgb(189, 162, 48)" && colours.engages === "rgb(217, 162, 39)"
       && colours.legend.join(" | ") === "rgb(180, 71, 47) | rgb(199, 117, 43) | rgb(217, 162, 39)"
         + " | rgb(156, 161, 59) | rgb(95, 160, 78)"
-      && colours.totalInk === "rgb(35, 40, 27)",
-    "the governance view wears the ramp's colours: 9.0 of 16, 10 of 18, its five swatches, and "
+      && colours.publishedInk === "rgb(35, 40, 27)",
+    "the governance view wears the ramp's colours: 6.1 of 10, 5.0 of 10, its five swatches, and "
       + "ink on that amber",
     JSON.stringify(colours));
   /* Every question opened, so the checks under them are painted and measured
@@ -2149,30 +2165,34 @@ console.log("== Overview: the governance view ==");
       && opened.expanded === "true",
     "the change log opens into its three checks", JSON.stringify(opened));
 
-  // The best practices open into the five anyone can check, then the four only
-  // the company can show, scored on what it publishes, then the one only an
-  // internal audit could score, NA for everyone.
-  await page.locator('.row-toggle[data-question="supporting"]').click();
-  await page.waitForTimeout(100);
+  // The best practices are rows of the two figures rather than a group of their
+  // own: the licence under what is published, the other eight under what it
+  // engages, the four only the company can show marked by a line, and the one
+  // only an internal audit could score NA for everyone.
   const practices = await page.evaluate(() => {
-    const shown = [...document.querySelectorAll('#gov-heatmap tr.check-row[data-parent="supporting"]:not([hidden])')];
     const openai = id => document.querySelector(`.cell-button[data-lab="openai"][data-row="${id}"]`);
     const figures = ids => [...new Set(ids.flatMap(id =>
       [...document.querySelectorAll(`.cell-button[data-row="${id}"] .cell-figure`)].map(n => n.textContent)))];
     return {
-      rows: shown.map(row => row.id.replace("gov-check-", "")).join(),
+      rows: [...document.querySelectorAll("#gov-heatmap tr.practice-row")]
+        .map(row => row.dataset.practice).join(),
       openai: ["S1", "S2", "S3", "S4", "S5"].map(id => openai(id)?.querySelector(".cell-figure")?.textContent),
       outOf: openai("S1")?.querySelector(".cell-max")?.textContent,
+      credits: [...document.querySelectorAll("#gov-heatmap tbody .row-name .head-sub")]
+        .map(node => node.textContent).filter(text => /Polaris Collective|Kembery/.test(text)).length,
       disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0", "1", "2"].includes(mark)),
       marks: figures(["I5"]),
+      divider: document.querySelector("#gov-heatmap tr.practice-divider .head-name")?.textContent,
     };
   });
-  check(practices.rows === "S1,S2,S3,S4,S5,disclosed,I1,I2,I3,I4,internal,I5"
+  check(practices.rows === "S1,S2,S3,S4,S5,I1,I2,I3,I4,I5"
       && practices.openai.join() === "2,1,0,0,1" && practices.outOf === "/2"
-      && practices.disclosed && practices.marks.join() === "NA",
-    "the best practices open into five anyone can check, four scored on what the company publishes, one NA",
+      && practices.disclosed && practices.marks.join() === "NA"
+      && practices.divider === "What only the company can show"
+      && practices.credits === 14,
+    "the practices sit in the two figures, the four only the company can show under their own "
+      + "line, the ninth NA, and every row of either figure says which paper it comes from",
     JSON.stringify(practices));
-  await page.locator('.row-toggle[data-question="supporting"]').click();
 
   // A check's score opens a popover beside it, with its place on the scale marked.
   const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');

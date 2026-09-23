@@ -1,19 +1,64 @@
 {
  "as_of": "September 2026",
  "researched": "2026-09-18",
- "origin": "The four questions come from Polaris Collective's own working paper. The practices beside them come from Kembery et al., Emerging International Best Practices for AI Model Specs. The scores are ours and open to challenge.",
+ "origin": "The four questions about a company's own documents come from Polaris Collective's working paper on model spec governance. The best practices beside them come from Kembery et al., Emerging International Best Practices for AI Model Specs. Every row says which. Every score is ours, given by hand from public documents, and open to challenge.",
  "papers": {
   "memo": {
    "title": "Model spec governance and transparency: the state of play and four transparency asks",
    "by": "Polaris Collective",
-   "status": "working paper, draft of 10 September 2026"
+   "status": "working paper, draft of 10 September 2026",
+   "credit": "Polaris Collective"
   },
   "kembery": {
    "title": "Emerging International Best Practices for AI Model Specs",
    "by": "Edward Kembery et al.",
-   "status": "working paper, under review"
+   "status": "working paper, under review",
+   "credit": "Kembery et al."
   }
  },
+ "columns": [
+  {
+   "id": "published",
+   "name": "What is published",
+   "out_of": 10,
+   "ranks": true,
+   "plain": "The rules anyone can read: whether a constitution exists and which models it covers, whether every change to the rules can be seen, which filters run around the models, what the model must never do, and whether the published text may be reused. This figure ranks the companies.",
+   "about": "This column is the part of governance a reader can check without being let in. Every row is a document, or something a document says: it exists or it does not, it names the models it governs or it does not, it records its changes or it does not. Eleven rows carry it, the ten checks of the four asks and the licence on the published text. The figure is the mean of those eleven rows' shares of their own maximum, times ten, so every check counts the same and a question with three checks weighs more than one with two.",
+   "prose": "practices_published",
+   "questions": [
+    "1",
+    "2",
+    "3",
+    "4"
+   ],
+   "practices": [
+    "S1"
+   ]
+  },
+  {
+   "id": "engages",
+   "name": "What it engages",
+   "out_of": 10,
+   "ranks": false,
+   "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It sits beside the first figure and does not enter the rank.",
+   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it, and the figure is the mean of their shares of their own maximum, times ten. It does not rank the companies. It says how much of the second thing each one shows.",
+   "prose": "practices_engaged",
+   "questions": [],
+   "practices": [
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "I1",
+    "I2",
+    "I3",
+    "I4"
+   ],
+   "unscored": [
+    "I5"
+   ]
+  }
+ ],
  "labs": [
   {
    "id": "openai",
@@ -63,6 +108,7 @@
   {
    "id": "1",
    "name": "Published constitution",
+   "paper": "memo",
    "question": "Does every model the company puts in use have a published constitution?",
    "plain": "Whether the company publishes a constitution at all, and whether that document says which of its models it governs.",
    "explainer": "A constitution is the document in which a company sets out how its models are meant to behave.",
@@ -185,6 +231,7 @@
   {
    "id": "2",
    "name": "Change log",
+   "paper": "memo",
    "question": "Is there one public change log covering the constitution, the system prompts and the guardrails?",
    "plain": "Whether a reader can see what changed in the rules a model follows, when it changed and why.",
    "explainer": "A system prompt is the standing instruction a company gives its model before every conversation.",
@@ -297,6 +344,7 @@
   {
    "id": "3",
    "name": "Guardrails",
+   "paper": "memo",
    "question": "Does the company disclose which guardrails it runs, and of what kind?",
    "plain": "Whether the company says which automatic filters it runs around its models, and whether changes to them are recorded.",
    "explainer": "Guardrails are automated checks, separate from the model itself, that block or redirect what goes in or comes out.",
@@ -375,6 +423,7 @@
   {
    "id": "4",
    "name": "Hard constraints",
+   "paper": "memo",
    "question": "Can the public comment before a hard constraint is weakened?",
    "plain": "Whether the public can see and comment on a weakening of the things the model must never do, before it takes effect.",
    "explainer": "Hard constraints are the things a model must never do, whoever asks.",
@@ -456,6 +505,7 @@
   {
    "id": "S1",
    "short": "Open licence",
+   "paper": "kembery",
    "label": "Anyone may freely reuse the constitution, under an open licence.",
    "source": "Recommendation 1",
    "reading": "A 2 is a licence that lets anyone reuse and adapt the text, such as CC0.",
@@ -470,6 +520,7 @@
   {
    "id": "S2",
    "short": "Adherence tests published",
+   "paper": "kembery",
    "label": "The company publishes a current test of how well its models follow the constitution.",
    "source": "Recommendation 3, and section 3d",
    "reading": "A 2 is a published test, current for the models in use, of how well they follow the constitution, with its method. Results that stop before the latest models, or a claim with no method, are a 1.",
@@ -489,6 +540,7 @@
   {
    "id": "S3",
    "short": "Outside testers",
+   "paper": "kembery",
    "label": "Outside evaluators have access to test adherence to the constitution specifically.",
    "source": "Section 3d",
    "reading": "A 2 is outside evaluators given access to test adherence to the constitution itself. Outside testing of other risks, or an agreement with no published result, is a 1 at most.",
@@ -503,6 +555,7 @@
   {
    "id": "S4",
    "short": "Release threshold",
+   "paper": "kembery",
    "label": "A model is released only once it meets an adherence threshold announced in advance.",
    "source": "Recommendation 4",
    "reading": "A 2 is a published threshold a model must meet before release, set before the test is run.",
@@ -522,6 +575,7 @@
   {
    "id": "S5",
    "short": "Change approval published",
+   "paper": "kembery",
    "label": "The company publishes who inside it approves changes to the constitution.",
    "source": "Section 3b",
    "reading": "A 2 is a published account of who inside the company may change the constitution, and what approval each kind of change needs.",
@@ -540,7 +594,7 @@
   }
  ],
  "supporting_scale": {
-  "0": "Nothing found.",
+  "0": "Nothing published that we found.",
   "1": "Part of the practice, or a weaker form of it.",
   "2": "The practice in full.",
   "note": "The paper gives no description of each score. These three sum up how we scored."
@@ -549,6 +603,7 @@
   {
    "id": "I1",
    "short": "Trained to follow it",
+   "paper": "kembery",
    "label": "The company trains the models it deploys to follow the constitution.",
    "source": "Recommendation 2, and section 3c",
    "audit": "Whether the constitution enters the training data and the training process of each deployed model, and how.",
@@ -580,6 +635,7 @@
   {
    "id": "I2",
    "short": "Internal models",
+   "paper": "kembery",
    "label": "Models the company uses internally follow the same basic provisions as its public models, apart from a narrow exception for safety research and testing.",
    "source": "Recommendation 5, and section 4a",
    "audit": "The list of models in internal use, and what each is trained to do that a public model would refuse.",
@@ -611,6 +667,7 @@
   {
    "id": "I3",
    "short": "Same text inside",
+   "paper": "kembery",
    "label": "The published constitution is the text used for training and inside the company, or the differences are stated.",
    "source": "Section 3b",
    "audit": "The internal versions of the constitution, compared with the published one.",
@@ -632,6 +689,7 @@
   {
    "id": "I4",
    "short": "Monitored in use",
+   "paper": "kembery",
    "label": "The company checks whether deployed models follow the constitution, and reports serious violations.",
    "source": "Section 3d",
    "audit": "The company's monitoring of deployed models, and its records of violations.",
@@ -653,6 +711,7 @@
   {
    "id": "I5",
    "short": "Separate sign-off",
+   "paper": "kembery",
    "label": "A change to the constitution is drafted by one team and can be vetoed by another on safety, legal or ethical grounds.",
    "source": "Section 4g",
    "audit": "The records of how past changes were proposed, reviewed and approved.",
@@ -668,8 +727,8 @@
   }
  ],
  "disclosed_intro": "Four practices from the same working paper that nobody outside a company can see, and that the paper asks companies to state publicly. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
- "disclosure_note": "A company may well follow a practice without saying so. Where we score 0, we found nothing published about it, and no audit anyone can verify. Tell us if we are wrong.",
- "internal_note": "The paper raises this as an open problem and does not ask companies to publish it. Only an internal audit could show it. None has been done, so every company is marked NA, not assessed.",
+ "disclosure_note": "A 0 means we looked and found nothing published, at the company's own pages and at the sources listed under the board. A company may well follow a practice without saying so, and no audit anyone outside could check exists. Tell us if we are wrong.",
+ "internal_note": "The paper raises this as an open problem and does not ask companies to publish it. Only an internal audit could show it. None has been done, so every company is marked NA, not assessed, and it is counted in neither figure.",
  "scores": {
   "openai": {
    "1.1": 4,
@@ -1425,12 +1484,12 @@
    "text": "It has forty-three rules, four levels of authority, paired examples of compliant and violating answers, and a procedure for settling conflicts that is more explicit than OpenAI's or Anthropic's. It names no model, no family of models and no kind of deployment. The only model publicly tied to it is Oyster-II, a research model of 14 billion parameters (a measure of a model's size) built on Qwen3-14B, a base model from April 2025. Alibaba's flagship line, up to Qwen3.8-Max of August 2026 with 2.4 trillion parameters, is proprietary and goes unmentioned. It is the clearest reason in our evidence to score whether a constitution exists and whether it covers anything as two separate checks."
   },
   {
-   "title": "Meta is the company to watch",
-   "text": "Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
+   "title": "Meta publishes almost nothing and engages more than most",
+   "text": "It scores 1.1 out of 10 on what is published, level with xAI and above only Moonshot AI and DeepSeek, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
   },
   {
    "title": "Most companies whose models anyone can download sit at the bottom, partly because of the questions",
-   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores, Mistral's 2.7, Moonshot AI's 1.5 and DeepSeek's 0.8. Alibaba is the exception, third on 4.3, and its Qwen models are among the most used open-weight models there are. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
+   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores on what is published, Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5. Alibaba is the exception, third on 2.3, and its Qwen models are among the most used open-weight models there are. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
   },
   {
    "title": "Two companies must already write this document for a regulator, and do not publish it",
@@ -1443,14 +1502,16 @@
    "2": "The best of the six, and still short. There have been seven versions, and six are kept at stable, dated addresses; the first, from May 2024, now returns a \"page not found\" error. The change log, CHANGELOG.md, summarises \"notable updates\". It does not show the changed text line by line, and it gives no reasons. Nothing says which version of the constitution governs which model: the system card for GPT-6 Astra (the technical report published with a model), released in September 2026, still cites the December 2025 version, one behind. No timeline for recording changes is stated. The log covers the Model Spec's text only. OpenAI does not publish its system prompts at all, and changes to its guardrail policies are recorded nowhere.",
    "3": "The release of gpt-oss-safeguard is the most substantial disclosure about guardrails that any company has made. It explains how the Safety Reasoner, OpenAI's system for checking content against its policies, works; says that this checking has taken \"as high as 16%\" of the computing power used in recent launches; and names the subject areas its layered guardrails cover. Against that, the age-prediction system launched in January 2026, a guardrail that affects every user, was announced in a blog post and a help article and appears in no release note.",
    "4": "The constitution defines its top-level rules, which it calls root rules, as ones nobody can override while the model is running, and it refers to red-line principles without ever listing them publicly. The collective alignment round of August 2025 is the only real public consultation: about 1,000 people across 19 countries took part, six changes were adopted and two rejected, and the results were published. It has not been repeated, and it gathered views on the constitution after the fact, with no window before any specific weakening.",
-   "supporting": "The constitution is free to reuse, under CC0 (2). OpenAI published tests of how well its models follow the constitution on 25 March 2026, with 596 prompts and the data and testing code open to all. But the tests target the December 2025 version, and no results have been published for any model after GPT-5.4 Thinking, through GPT-5.5, GPT-5.6 and GPT-6 Astra (1). Its programme of outside testing covers biological threats, cyber attacks, models improving themselves, and scheming (a model covertly pursuing aims of its own), not whether models follow the constitution (0). No release depends on a score against the constitution (0). How changes are approved inside the company is published, but thinly: \"Anyone at OpenAI can comment on it or propose changes, and final updates are approved by a broad set of cross-functional stakeholders\" (1)."
+   "practices_published": "The constitution is free to reuse, under CC0 (2).",
+   "practices_engaged": "OpenAI published tests of how well its models follow the constitution on 25 March 2026, with 596 prompts and the data and testing code open to all. But the tests target the December 2025 version, and no results have been published for any model after GPT-5.4 Thinking, through GPT-5.5, GPT-5.6 and GPT-6 Astra (1). Its programme of outside testing covers biological threats, cyber attacks, models improving themselves, and scheming (a model covertly pursuing aims of its own), not whether models follow the constitution (0). No release depends on a score against the constitution (0). How changes are approved inside the company is published, but thinly: \"Anyone at OpenAI can comment on it or propose changes, and final updates are approved by a broad set of cross-functional stakeholders\" (1)."
   },
   "anthropic": {
    "1": "Anthropic's constitution, which it calls Claude's Constitution, is dated 21 January 2026, runs to about 29,000 words, is in the public domain under CC0 and names its authors. It says what it covers, and the flagship models are inside it. It also says plainly what it leaves out: \"This constitution is written for our mainline, general-access Claude models. We have some models built for specialized uses that don't fully fit this constitution.\" Those models exist. Claude Gov (June 2025) and Claude Mythos (April 2026) are in use, and neither has a published constitution. Anthropic's usage policy also allows its rules to be tailored by contract for government customers, and the individual exceptions granted under it are not published.",
    "2": "There is no change log and no version number: one current text. The repository's description promises \"We'll update this repository as the constitution evolves and archive prior versions here\"; that has not happened yet. The contrast inside the company is the finding. Anthropic's Responsible Scaling Policy, its framework for catastrophic risks, has nine dated versions, each with a summary of what changed and a stable archive address, under an explicit commitment that changes \"will be logged both on this page and in a changelog in the policy document itself\". The constitution has none of that. Partial credit for publishing the system prompts of claude.ai and of its iPhone and Android apps for each model, dated, with older versions kept. The system prompts used when developers reach the models directly, through the API, are not included, and changes are not shown line by line.",
    "3": "Anthropic has disclosed its constitutional classifiers, the automated guardrails built on its constitution, by name, by how they work and by what they cover, with operating figures: a refusal rate of 0.05% over a month of traffic to Sonnet 4.5, and about 1% of extra computing cost. How requests to Fable 5 and Mythos 5 are routed was disclosed at launch. There is no register of guardrails and no versioning of them. And the constitution's layer of guidelines, which it ranks third of four in its own order of priorities, above general helpfulness, is explicitly allowed to stay unpublished: \"Other guidelines may be more niche and used primarily during training without broad publication.\" Nothing has been published under that heading as of September 2026.",
    "4": "Anthropic has the highest score for naming hard constraints. It lists seven, marks them non-negotiable, and lets no business deploying Claude, and no user, unlock them. It has nothing on consultation before weakening them, and the constitution contains no procedure for amending it. Anthropic's Collective Constitutional AI exercise dates from 2023. The 2026 consultation with outside experts is described in one sentence that names nobody, and its reference to experts in law, philosophy and theology looks forward to what Anthropic intends to do.",
-   "supporting": "The constitution is free to reuse, under CC0 (2). Anthropic's system cards claim that its models follow the constitution (\"Opus 5 scores particularly high on adherence to Claude's constitution\") without naming the test, the method or a breakdown by provision (1). The only point-by-point audit of the constitution is by outsiders: Jakkli, Rajamanoharan and Nanda broke it into 205 individual tenets (arXiv 2605.24229, May 2026). No outside access to test adherence (0), no release conditional on a score (0), and no published process for amending the constitution (0).",
+   "practices_published": "The constitution is free to reuse, under CC0 (2).",
+   "practices_engaged": "Anthropic's system cards claim that its models follow the constitution (\"Opus 5 scores particularly high on adherence to Claude's constitution\") without naming the test, the method or a breakdown by provision (1). The only point-by-point audit of the constitution is by outsiders: Jakkli, Rajamanoharan and Nanda broke it into 205 individual tenets (arXiv 2605.24229, May 2026). No outside access to test adherence (0), no release conditional on a score (0), and no published process for amending the constitution (0).",
    "aside": {
     "title": "A discrepancy worth knowing",
     "text": "The copy Anthropic offers for reuse, a machine-readable version at anthropics/claude-constitution, leaves out the whole preface, and with it the statement of what the constitution does not cover, the licence statement and the list of authors. We confirmed this by searching the raw file for those passages."
@@ -1461,14 +1522,16 @@
    "2": "No version number, no change log, no archive, no stated schedule, and nothing saying which models it governs. The only language about revision sits inside the definition of the Root level, and it is one-sided: \"room for revision is kept as human understanding of AI ethics deepens.\"",
    "3": "Alibaba Cloud sells AI Guardrails as a product, with a published list of categories, and Alibaba's AAIG team releases a genuine set of guardrails for anyone to use (Kelp, Shark, Jellyfish, Oyster and Qwen3Guard). None of it is presented as a disclosure of the guardrails running on Alibaba's own models, and nothing connects the filtering China requires by law to the published categories. The constitution forbids the model from revealing its system prompts.",
    "4": "Its Root principles are named and \"accept no override at runtime in any form\", which earns full marks for naming hard constraints. Nothing can be checked on consultation: no channel for comment, no record of any consultation, and nothing restricting how the Root level itself may be revised.",
-   "supporting": "We found no licence statement, no test of adherence, no outside access, no release conditional on a score, and no published process for approving changes. One practice falls outside this grid and has no Western equivalent: Alibaba publishes the numbers under which its algorithms are registered with the Cyberspace Administration of China, and the registered names of fourteen of its large language models."
+   "practices_published": "We found no licence statement on the constitution.",
+   "practices_engaged": "We found no test of adherence, no outside access, no release conditional on a score, and no published process for approving changes. One practice falls outside this grid and has no Western equivalent: Alibaba publishes the numbers under which its algorithms are registered with the Cyberspace Administration of China, and the registered names of fourteen of its large language models."
   },
   "google": {
    "1": "No constitution. What exists is spread across five documents with different owners. The Gemini app's safety and policy guidelines list six categories of prohibited output, with no date, no version and no order of authority between instructions. A second page, \"Our approach to the Gemini app\", is the closest thing to a constitution that Google publishes and the least documented. It sets out three commitments in order (follow your directions, adapt to your needs, safeguard your experience), a personality (\"genuine, curious, warm, and vibrant\") and a norm of honesty, and it carries no date at all. The Frontier Safety Framework is properly versioned (version 3.1, 17 April 2026, with a change log) and explicitly covers something else: it \"focuses on possible severe risks stemming from high-impact capabilities\". Nothing is published for Workspace, AI Mode in Search or Gemini for Government.",
    "2": "No change log for any document that governs how the models behave. The one archiving practice worth a point: the 2018 AI Principles are still online at their original address, with a banner pointing to the new version, so the replaced text can still be read. The banner does not say what changed.",
    "3": "The fullest disclosure to developers of the six: four adjustable categories of harm with their exact definitions, six strictness settings, a stated floor that cannot be adjusted (\"core harms, such as content that endangers child safety\" are always blocked), the ShieldGemma guardrail models released for anyone to use, and SynthID, which marks generated content. For its own consumer products, close to nothing, and at least two significant changes went unannounced: a restriction on election questions in March 2024, still in force a year later with no announced review, and a model update in May 2025 that overrode safety settings developers had deliberately set to allow the content it then blocked.",
    "4": "No named set of hard constraints beyond the floor on child sexual abuse material, and no consultation of any kind. The rewrite of the AI Principles in February 2025 is the clearest documented weakening in all our evidence: the section \"AI applications we will not pursue\", including the commitments on weapons and surveillance, was removed, and the blog post announcing the rewrite did not mention the removal. Senators Markey, Merkley and Welch wrote to Google on 19 February 2025: \"A blog post accompanying these revisions made no reference to the removal of these long-standing commitments.\" We found no published response from Google.",
-   "supporting": "Google's double-blind evaluation pilot of 27 August 2026, with the Singapore AI Safety Institute, OpenMined, AVERI and MLCommons, is a real innovation: \"The evaluator cannot see the Gemini model weights, and Google cannot see the evaluator's test prompts.\" It concerns the trustworthiness of benchmarks, which lies outside any constitution (1). Everything else scores 0 for want of a constitution to attach it to.",
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "Google's double-blind evaluation pilot of 27 August 2026, with the Singapore AI Safety Institute, OpenMined, AVERI and MLCommons, is a real innovation: \"The evaluator cannot see the Gemini model weights, and Google cannot see the evaluator's test prompts.\" It concerns the trustworthiness of benchmarks, which lies outside any constitution (1). Everything else scores 0 for want of a constitution to attach it to.",
    "aside": {
     "title": "What goes to the regulator and not to the public",
     "text": "Google has signed the EU's General-Purpose AI Code of Practice in full, so under its Measure 7.1 it must give the EU AI Office \"a specification of how Signatories intend the model to operate\", including its principles, its order of priorities, the topics it refuses and its system prompt. All four go to a regulator, and none of them to the public."
@@ -1479,7 +1542,8 @@
    "2": "The change log in its documentation covers features of the API, model releases and retirements; in its whole history it has one entry that touches on safety, from September 2024. The usage policy has no change log, no version number and no archive: it shows the date it took effect and nothing else. Partial credit for the system prompt published with the downloadable weights, and for the AI compliance hub, which lists 41 models with their release dates and whether they are active or retired. That list does not say which version of a policy governs which model, and the system prompt used in production by Vibe (Le Chat was renamed Vibe in August 2026) is not published.",
    "3": "What Mistral discloses to developers is real and specific: Mistral Moderation 2 documents eleven categories with their exact definitions, and custom guardrails let developers set a threshold for each category. Shieldstral 1.0 (August 2026) is a small safety model of 3 billion parameters that anyone may download under Apache 2.0, and it is the most interesting object here because it comes with no categories at all: its policy is written in plain language by whoever uses it, at the moment of use. Mistral does not state a default policy for it, or say that it reflects Mistral's own standard. For Mistral's own consumer product, the only disclosure is a sentence from November 2024 saying that its moderation service for developers \"powers the moderation service in Le Chat\", which predates both the renaming to Vibe and Shieldstral. Nothing on logging changes to guardrails.",
    "4": "One absolute rule exists, the zero-tolerance clause on child sexual abuse material in the usage policy. But it binds users, and it does not reach models that are downloaded or run on customers' own servers, so it scores 1. No consultation, no ethics board, no advisory council, and no clause giving notice of changes.",
-   "supporting": "No test of any kind of whether its models follow a constitution: the launch post for Mistral 3, in December 2025, has no section on safety or alignment, and the model card for Mistral Large 3 has tests of capability and known limitations but no safety evaluation. We found no named outside evaluator and no agreement giving anyone access before release. Stanford's Foundation Model Transparency Index credited Mistral with 7 of its 88 indicators in December 2025, including 0 of 2 on model behaviour policy: \"No disclosed model behavior policy detailing permitted, restricted, or prohibited behaviors.\" The Future of Life Institute's AI Safety Index for summer 2026 gives it an overall F.",
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "No test of any kind of whether its models follow a constitution: the launch post for Mistral 3, in December 2025, has no section on safety or alignment, and the model card for Mistral Large 3 has tests of capability and known limitations but no safety evaluation. We found no named outside evaluator and no agreement giving anyone access before release. Stanford's Foundation Model Transparency Index credited Mistral with 7 of its 88 indicators in December 2025, including 0 of 2 on model behaviour policy: \"No disclosed model behavior policy detailing permitted, restricted, or prohibited behaviors.\" The Future of Life Institute's AI Safety Index for summer 2026 gives it an overall F.",
    "aside": {
     "title": "An easy company to ask",
     "text": "This regulatory contrast puts Mistral high on the list of companies to ask. It is established in the EU, has signed the General-Purpose AI Code of Practice, and has built a real public compliance surface: an AI compliance hub with documentation for 41 models, and pages for its Vibe Work and Vibe Code systems. The one thing it does not publish is the one Measure 7.1 obliges it to hand to the EU AI Office. A company that has already built the means to publish is an easier ask than one that has not."
@@ -1490,21 +1554,24 @@
    "2": "Appendix II of the scaling framework is a real change log, with real triggers for updating it (\"at least every twelve months, whichever is sooner\") and a named internal sign-off. It covers the framework for catastrophic risks and no document about behaviour. Meta publishes an acceptable use policy for each model, which partly shows which policy applies to which model, though none is dated. No system prompts are published.",
    "3": "Llama Guard 4, Prompt Guard 2 and CyberSecEval are tools Meta publishes for developers, and they do not disclose the guardrails on Meta's own products. The fullest disclosure of those is one oblique sentence: \"An external human red team identified a handful of valid jailbreaks; the majority of these were subsequently patched in Meta AI prior to launch.\" A red team is a group brought in to attack a system; a jailbreak is a way of getting a model past its rules.",
    "4": "No set of hard constraints, no consultation, and no body with authority over either. A member of Meta's Oversight Board, Krishnaswamy, said in March 2026: \"We don't have a mandate on gen-AI, but it's something we're trying to understand.\" Every change to its rules on behaviour in the period was announced as public relations, under pressure from outside: the removal of romantic role-play with minors in August 2025, through a spokesperson's statement to Reuters, and the worldwide pause of teenagers' access to AI characters in January 2026, through an update added to an old blog post and an exclusive given to TechCrunch.",
-   "supporting": "Results of tests against the internal constitution are published, though the constitution is not (1). Outside evaluators are genuinely involved and named, Apollo Research, SecureBio, CAIS and Charlemagne Labs, though on terms that are not stated (1). The framework has a named internal sign-off, though no constitution does (1)."
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "Results of tests against the internal constitution are published, though the constitution is not (1). Outside evaluators are genuinely involved and named, Apollo Research, SecureBio, CAIS and Charlemagne Labs, though on terms that are not stated (1). The framework has a named internal sign-off, though no constitution does (1)."
   },
   "xai": {
    "1": "Nothing. The acceptable use policy governs users and says nothing about the model (\"You are free to use our Service so long as you use it to be a good human\"). The Frontier AI Framework covers catastrophic risks only, and its entire statement of policy on everyday behaviour is one sentence about declining requests with clear criminal intent. Deployments for governments are marketed on \"direct, unfiltered answers\", with no statement about behaviour attached.",
    "2": "The one practice above the baseline in the whole profile is xai-org/grok-prompts, which does publish the system prompts in live use, and is the one thing no other company does at that level of detail. It is two model generations behind: the newest it covers is Grok 4.1, while Grok 4.5 and 4.6 are already in consumer products, and the Grok 4.5 system prompt circulates only through a third party's collection of leaks. Each change is recorded with the note \"Updated grok prompts\" and no reason. One change bundles an edit to the repository's description, a deleted file, code that inserts stored memories into conversations, and three new safety prompts. The change log xAI publicly promised in May 2025, after the \"white genocide\" incident, was never published. Versions of the framework carry no version numbers, and earlier ones survive at addresses nothing links to.",
    "3": "The framework names three kinds of safeguard (safety training, system prompts and filters), and the model cards describe layers of refusal, with reported rates. No inventory, no thresholds, and no process for changing them. The restrictions on image editing of January 2026 were announced by a statement to the press and recorded nowhere.",
    "4": "No named set of hard constraints, no mechanism, no commitment. The framework reserves the right to change course alone: \"We may change our approach over time as we gain further experience.\"",
-   "supporting": "A testing agreement with CAISI, the United States' Center for AI Standards and Innovation, signed in May 2026, with no published evaluation of any Grok model (1)."
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "A testing agreement with CAISI, the United States' Center for AI Standards and Innovation, signed in May 2026, with no published evaluation of any Grok model (1)."
   },
   "moonshot": {
    "1": "No constitution. The closest published statement of how its models should behave is the default system prompt in the quickstart guide for its API, which reads \"You are Kimi, an AI assistant provided by Moonshot AI... You provide users with safe, helpful, and accurate answers. You also refuse to answer any questions involving terrorism, racism, pornography, violence, or similar harmful content.\" It is sample code that a developer can leave out, and it commits Moonshot to nothing about its own deployments, so it scores 1. Nothing is said about coverage, with no statement for the Kimi app, the API, Kimi Business or the downloadable models, and the only clause about behaviour in the K3 licence is that use \"must comply with applicable laws and regulations\".\n\nThe direction of travel is the notable part. The technical report for Kimi K2 (July 2025) had a real safety section. It described safety training from a set of examples chosen by people, across violence, fraud and discrimination, and a safety evaluation (its section 4.3) comparing how often attempts to push the model past its rules succeeded, against DeepSeek and Qwen. The reports for K2.5 (February 2026) and K3 (July 2026) have no section on safety, alignment or responsible release at all. Concordia AI's survey of July 2026 observes of two of the Chinese companies in this set that their most detailed disclosures to date were followed by flagship releases \"with no safety evaluation results at all\".",
    "2": "Better than DeepSeek on one narrow point: the Chinese user agreement carries both a date of update (24 August 2026) and a separate date of effect (31 August 2026), which gives seven days' notice, and the consumer terms carry a version number (v2). No archive, no record of what changed, and no earlier version published. The platform's change log covers features, model launches, retirements and pricing; its one entry about policy says the terms \"have been updated\" without saying what changed. Partial credit for publishing a default system prompt and the chat template for K3, the format in which a conversation is handed to the model. No system prompt used in production is published, and nothing says which policy governs which model.",
    "3": "Safety checks are admitted only by forbidding users to get round them: the platform terms ban \"using variants, random characters, homophones, or other means to evade safety detection\". No categories, no thresholds, and no route to appeal. The labelling of AI-generated content is disclosed, and is required by the labelling rules of the Cyberspace Administration of China: visible and hidden labels are applied by default, and may be removed only on an approved application. None of the thirty repositories Moonshot AI publishes on GitHub is safety tooling.",
    "4": "No named set of hard constraints, no consultation, and no channel for comment. Changes are made by the company alone, and continuing to use the service counts as accepting them.",
-   "supporting": "The safety evaluation in the K2 report is a genuine published evaluation, measured against internal rubrics, with no published constitution behind it, and it was not repeated for K2.5 or K3 (1). The UK AI Security Institute and the US Center for AI Standards and Innovation published a joint preliminary assessment of Kimi K3 on 23 July 2026, finding that \"Kimi K3's safeguards did not prevent it from attempting cyber exploit development\". But the publication does not say whether Moonshot gave access before release, and Moonshot's own section on third-party evaluation names only capability leaderboards (0). An independent academic safety evaluation of K2.5 (arXiv 2604.03121, April 2026) was carried out on the downloadable model without Moonshot's involvement.",
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "The safety evaluation in the K2 report is a genuine published evaluation, measured against internal rubrics, with no published constitution behind it, and it was not repeated for K2.5 or K3 (1). The UK AI Security Institute and the US Center for AI Standards and Innovation published a joint preliminary assessment of Kimi K3 on 23 July 2026, finding that \"Kimi K3's safeguards did not prevent it from attempting cyber exploit development\". But the publication does not say whether Moonshot gave access before release, and Moonshot's own section on third-party evaluation names only capability leaderboards (0). An independent academic safety evaluation of K2.5 (arXiv 2604.03121, April 2026) was carried out on the downloadable model without Moonshot's involvement.",
    "aside": {
     "title": "No filing number found",
     "text": "Unlike Alibaba and DeepSeek, Moonshot AI does not publish, anywhere we could find, its filing number with the Cyberspace Administration of China for its algorithms or its generative AI service: only its website licence (ICP) and its public security (公安网安) registrations. It almost certainly holds one, since it could not operate in China otherwise."
@@ -1515,11 +1582,14 @@
    "2": "Nothing to score. The disclosure page has no date and no version. The API change log covers models and pricing. The terms explicitly refuse an archive: a new version \"replaces the original terms\" as soon as it is announced, and users are told to check the website themselves. No system prompts are published, and nothing says which policy governs which model.",
    "3": "DeepSeek is the sharpest case of undisclosed guardrails among the nine. A layer of moderation is admitted only as a right in its contract, and the Chinese text claims more than the English: DeepSeek reserves the right to review \"inputs and outputs\", to set up \"risk filtering mechanisms\" and to build \"feature databases of illegal content\". The system itself is named exactly once, in one sentence of the paper on its R1 model published in Nature (September 2025): the model's own safety is \"moderate\", but \"when coupled with the risk control system, the safety level of the model is increased to a superior standard\". That risk control system is not in the downloadable model, is not documented anywhere, and has never been described. Nothing on logging changes to guardrails.",
    "4": "No named set of hard constraints on the model, no channel for comment, and no period of notice. Changes are made by the company alone and take effect as soon as they are published.",
-   "supporting": "The R1 paper in Nature contained a real safety evaluation, but it concerns a model withdrawn from service in July 2026, and it measures the model against benchmarks, with no constitution involved. No safety evaluation has been published for V3.1, V3.2, V4 or V4.1. The US Center for AI Standards and Innovation evaluated DeepSeek models in September 2025 without the developer's cooperation, and its follow-up assessment of V4 Pro in May 2026 covers capabilities only, so the most recent authoritative safety data concerns models no longer offered. No framework for frontier risks, no programme giving outsiders access, and no published process for approving changes.",
+   "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
+   "practices_engaged": "The R1 paper in Nature contained a real safety evaluation, but it concerns a model withdrawn from service in July 2026, and it measures the model against benchmarks, with no constitution involved. No safety evaluation has been published for V3.1, V3.2, V4 or V4.1. The US Center for AI Standards and Innovation evaluated DeepSeek models in September 2025 without the developer's cooperation, and its follow-up assessment of V4 Pro in May 2026 covers capabilities only, so the most recent authoritative safety data concerns models no longer offered. No framework for frontier risks, no programme giving outsiders access, and no published process for approving changes.",
    "aside": {
     "title": "Behaviour that travels with the model",
     "text": "Two things are worth knowing. First, the censorship also sits in the model itself. The US Center for AI Standards and Innovation found that \"CCP censorship is built directly into DeepSeek models\", testing copies downloaded from Hugging Face without touching DeepSeek's own service, so behaviour the company has never described travels with the model. Second, like Alibaba, DeepSeek publishes its filing numbers with the Cyberspace Administration of China in full, with links to the regulator's notices. On transparency about registration with a regulator, the Chinese companies are ahead of every Western company here, which have nothing equivalent to publish."
    }
   }
- }
+ },
+ "looked": "The scores were given by hand, from documents found and dated between 18 and 21 September 2026. Nothing here was judged by a model, and nothing was taken from another ranking.",
+ "not_added": "The checks are scored 0 to 4, with a written description of what earns 0, 2 and 4 on every line. The practices are scored 0, 1 or 2 against one generic scale with no line of their own. A single total would give a precision the figures behind it do not have. Adding them would mean putting the practices on the same anchored scale and scoring the nine companies again, which is separate work."
 }

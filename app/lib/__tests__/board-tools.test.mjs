@@ -50,14 +50,25 @@ test("a company argument narrows it, and an unknown one says what there is", () 
 test("the board of governance answers the nine companies in the board's own order", () => {
   const answer = governanceBoard();
   assert.equal(answer.companies.length, 9);
-  assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 1, 3]);
-  assert.equal(answer.companies[0].overall.max, 16);
+  assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 2, 3]);
+  // Two figures out of 10, one of which ranks the companies, and the sentence
+  // saying why they are never added.
+  assert.deepEqual(answer.measures.figures.map(figure => figure.max), [10, 10]);
+  assert.deepEqual(answer.measures.figures.map(figure => figure.ranks_the_companies),
+                   [true, false]);
+  assert.match(answer.measures.not_added, /A single total would give a precision/);
+  assert.deepEqual(answer.companies[0].figures.map(figure => figure.max), [10, 10]);
   assert.equal(answer.measures.questions.length, 4);
   for (const question of answer.measures.questions) {
     assert.ok(question.means, question.id);
+    assert.equal(question.from, "Polaris Collective", question.id);
     assert.ok(question.checks.length >= 2, question.id);
     assert.ok(question.checks.every(check => check.anchors["4"]), question.id);
   }
+  // Every practice says which paper it comes from, and the one no figure counts
+  // says so where it sits.
+  assert.ok(answer.measures.best_practices.practices.every(one => one.from === "Kembery et al."));
+  assert.deepEqual(answer.companies[0].counted_in_no_figure.map(one => one.id), ["I5"]);
   assert.equal(answer.as_of, "September 2026");
 });
 
@@ -65,7 +76,14 @@ test("a company argument narrows the governance board too", () => {
   const answer = governanceBoard({ company: "anthropic" });
   assert.equal(answer.companies.length, 1);
   assert.equal(answer.companies[0].name, "Anthropic");
-  assert.ok(answer.companies[0].questions[0].found.length > 0, "the paragraph we wrote is there");
+  const [published, engages] = answer.companies[0].figures;
+  assert.ok(published.questions[0].found.length > 0, "the paragraph we wrote is there");
+  assert.ok(engages.found.length > 0, "and one for what it engages");
+  // Every row a company is scored on belongs to one figure and no other.
+  const rows = answer.companies[0].figures
+    .flatMap(figure => [...figure.questions.map(one => one.id),
+                        ...figure.practices.map(one => one.id)]);
+  assert.equal(new Set(rows).size, rows.length);
   assert.throws(() => governanceBoard({ company: "nobody at all" }),
                 error => error instanceof ToolError && /This board carries/.test(error.message));
 });
