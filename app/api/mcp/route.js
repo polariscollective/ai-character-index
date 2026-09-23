@@ -18,6 +18,7 @@ import { linkEvidence } from "../../lib/links.mjs";
 import { about, listModelSpecs, listBehaviours, retrievePassages,
          compareDocuments, INSTRUCTIONS, ToolError }
   from "../../lib/mcp-tools.mjs";
+import { constitutionsBoard, governanceBoard } from "../../lib/board-tools.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,6 +132,44 @@ const handler = createMcpHandler(
           "The next_cursor of the previous page, to continue a walk."),
       }),
     }, args => answer(snapshot => retrievePassages(snapshot, args)));
+
+    server.registerTool("constitutions_board", {
+      title: "The board of constitutions",
+      description:
+        "Every figure on the index's first board, each with the scale it is on: "
+        + "the score out of 20, the document as a whole out of 10 with its five "
+        + "criteria, and how far each constitution goes on every behaviour, with "
+        + "the level that figure reads as. It carries what each criterion asked "
+        + "and what each level of the depth scale asks for, so a figure can be "
+        + "read without another call. Pass company to narrow it to one company, "
+        + "such as OpenAI. This is what a reader sees on the overview. The whole "
+        + "board runs to a few tens of thousands of characters.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as OpenAI. Every constitution "
+          + "by default."),
+      }),
+    }, args => answer(snapshot => constitutionsBoard(snapshot, args)));
+
+    server.registerTool("governance_board", {
+      title: "The board of governance",
+      description:
+        "The index's second board: nine companies scored out of 16 on four "
+        + "questions about how they govern the rules their models follow, each "
+        + "question split into checks scored 0 to 4 with the descriptions the "
+        + "scores were given against, the paragraph we wrote on what we found "
+        + "for each company, and the best practices shown beside the score and "
+        + "never counted in it. Pass company to narrow it to one company. These "
+        + "figures were given by hand from public documents rather than judged "
+        + "by the panel, and the board belongs to no publication and carries its "
+        + "own as-of date. All nine companies come to about 83,000 characters, "
+        + "and one company to about 12,000, as of September 2026.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as Anthropic. All nine by "
+          + "default."),
+      }),
+    }, args => answer(() => governanceBoard(args)));
 
     server.registerTool("compare_documents", {
       title: "Compare two documents on one behaviour",

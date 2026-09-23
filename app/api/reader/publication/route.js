@@ -7,8 +7,34 @@
  * downloading three hundred kilobytes of coverage to find a date. */
 import { isPublicationId, publicationRow, servesDevelopment }
   from "../../../lib/publications.mjs";
+import { select } from "../../../lib/supabase.mjs";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Where the build on screen stands: `published`, `unpublished` or `superseded`.
+ *
+ * A page that warns a reader has to say which of the three it is looking at,
+ * and `is_public` alone answers only the middle one. The third needs the newest
+ * public publication to compare against, which is asked for here rather than in
+ * the page, because a page asking twice would have to know that a development
+ * deployment's unpinned answer is the newest build and not the newest public
+ * one.
+ *
+ * Nothing is claimed where nothing is known: a row with no date, or a table
+ * with nothing public in it, stands as published when it is public and
+ * unpublished when it is not.
+ */
+async function standingOf(row, fetchImpl = fetch) {
+  if (row.is_public !== true) return "unpublished";
+  const [newest] = await select(
+    "aci_publications",
+    "select=id,published_at&is_public=is.true&order=published_at.desc&limit=1",
+    fetchImpl);
+  if (!newest || newest.id === row.id) return "published";
+  return new Date(row.published_at) < new Date(newest.published_at)
+    ? "superseded" : "published";
+}
 
 export async function GET(request) {
   const pin = new URL(request.url).searchParams.get("publication");
@@ -29,11 +55,14 @@ export async function GET(request) {
    * published it, and when the newest happens to be public there is nothing for
    * is_public to say. The site would then look like production to a reader while
    * being the place unreviewed work lands. */
-  return Response.json({ ...row, development: servesDevelopment() }, {
-    headers: {
-      "Cache-Control": pin
-        ? "public, max-age=31536000, immutable"
-        : "public, s-maxage=60, stale-while-revalidate=300",
-    },
-  });
+  return Response.json(
+    { ...row, development: servesDevelopment(), standing: await standingOf(row) },
+    {
+      /* One rule for both, where a pinned row used to be cached for a year. The
+       * row itself is still immutable; `standing` is not, because publishing a
+       * newer build turns this one into an earlier publication without touching
+       * it. A year of that answer would be a year of a page saying a figure is
+       * current when it has moved. */
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    });
 }

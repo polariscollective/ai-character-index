@@ -597,7 +597,8 @@ test("about quotes a locator that exists in the payload", () => {
 
 test("about names the other tools, so the list is not the only thing explaining them", () => {
   const answer = about(snapshot());
-  for (const tool of ["list_model_specs", "list_behaviours", "retrieve_passages"]) {
+  for (const tool of ["list_model_specs", "list_behaviours", "retrieve_passages",
+                      "constitutions_board", "governance_board", "compare_documents"]) {
     assert.ok(answer.includes(tool), `the answer does not name ${tool}`);
   }
 });
