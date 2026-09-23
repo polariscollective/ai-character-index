@@ -27,7 +27,7 @@
  * node, wherever it came from.
  */
 
-import { rampAt } from "./depth-scale.js";
+import { rampAt, inkOver } from "./depth-scale.js";
 
 export function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -60,13 +60,6 @@ export function rankBy(items, ahead) {
     rank: 1 + items.filter(other => ahead(other, item)).length,
   }));
 }
-
-/* The figure is always light over the ramp, where the reader picks dark or
- * light by the colour underneath: across one table, figures that change colour
- * from cell to cell read as a second code. The alternative is one line here,
- * `inkOver(rgb)` from depth-scale.js, and that function stays there for the
- * reader and the scale beside the table. */
-const FIGURE = "#F1EFE3";
 
 /* One board. `nodes.table` is the table it draws into, `nodes.pop` the popover
  * every press fills, `nodes.expandAll` the button above the table that opens
@@ -116,11 +109,17 @@ export function createBoard({ nodes, everyRow }) {
     groups,
 
     /* A figure over its own maximum: a score of 8 out of 12 and a depth of 2.7
-     * out of 4 wear the same colour, because the ramp runs over the fraction. */
+     * out of 4 wear the same colour, because the ramp runs over the fraction.
+     *
+     * The figure was light paper on every colour until 23 September 2026, on the
+     * argument that one ink across a table reads as one code. What that cost was
+     * measured: paper on the amber middle of the ramp is 2.2:1, and a figure
+     * nobody can read is no code either. It takes the ink with more contrast on
+     * the colour under it now, on both boards. */
     paint(node, value, max) {
       const rgb = rampAt(value, max);
       node.style.background = `rgb(${rgb.join(" ")})`;
-      node.style.color = FIGURE;
+      node.style.color = inkOver(rgb);
     },
 
     chip(value, max, text = String(value)) {

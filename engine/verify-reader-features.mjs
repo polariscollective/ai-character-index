@@ -1976,6 +1976,66 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
+/* Every figure a board has painted, with the ratio between the ink it was given
+ * and the colour under it, measured in the page rather than computed from the
+ * data: what a reader has to read is what the browser resolved.
+ *
+ * The table's cells only. A chip wears the same paint, by the same line of
+ * board.js, and lives inside a popover that is shut while this runs.
+ *
+ * `share` is the figure over its own maximum, read off the cell's own two spans,
+ * which is what fixes a colour on the ramp: the ramp is the same three stops
+ * over every maximum the two boards use. */
+const inkOn = selector => page.evaluate(selector => {
+  const channel = value => {
+    const part = value / 255;
+    return part <= 0.04045 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = colour => {
+    const [r, g, b] = colour.match(/[\d.]+/g).slice(0, 3).map(Number);
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  };
+  const ratio = (a, b) => {
+    const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+  const DARK = "rgb(35, 40, 27)";
+  const LIGHT = "rgb(241, 239, 227)";
+  return [...document.querySelectorAll(`${selector} .cell-button`)]
+    .filter(node => !node.classList.contains("cell-na"))
+    .map(node => {
+      const style = getComputedStyle(node);
+      const ground = style.backgroundColor;
+      const figure = node.querySelector(".cell-figure")?.textContent ?? "";
+      const max = node.querySelector(".cell-max")?.textContent ?? "";
+      return {
+        what: `${node.dataset.lab ?? ""} ${node.dataset.row ?? ""}`.trim(),
+        figure,
+        max,
+        share: Number(figure) / Number(max.replace("/", "")),
+        ground,
+        ink: style.color,
+        better: ratio(DARK, ground) >= ratio(LIGHT, ground) ? DARK : LIGHT,
+        ratio: Math.round(ratio(style.color, ground) * 100) / 100,
+      };
+    });
+}, selector);
+
+/* The worst cell of a board and the ones that do not reach 4.5:1, which are the
+ * low-scoring end of the ramp and are named rather than counted. */
+const inkReport = cells => {
+  const worst = cells.reduce((low, one) => (one.ratio < low.ratio ? one : low), cells[0]);
+  const under = cells.filter(one => one.ratio < 4.5);
+  return JSON.stringify({
+    cells: cells.length,
+    worst: worst && `${worst.what} ${worst.figure}${worst.max} on ${worst.ground} in ${worst.ink}`
+      + ` at ${worst.ratio}:1`,
+    under: under.length,
+    underShares: [...new Set(under.map(one => Math.round(one.share * 100)))].sort((a, b) => a - b),
+  });
+};
+
+// =============================================================================
 /* The overview's second view, how each lab governs its rules: one table with the
  * companies across and their scores down, each question opening into its
  * checks, and a popover beside whatever was pressed. Its numbers and words are
@@ -2019,25 +2079,50 @@ console.log("== Overview: the governance view ==");
     "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));
 
-  // The board paints every row over its own maximum now. This view's maxima are
-  // its own, so not one of its colours moved. 9.0 of 16 is OpenAI's total and 10
-  // of 18 its best practices, which is the row whose maximum is not four times a
-  // power of two and so the one the arithmetic could have lost.
+  // The board paints every row over its own maximum. 9.0 of 16 is OpenAI's total
+  // and 10 of 18 its best practices, which is the row whose maximum is not four
+  // times a power of two and so the one the arithmetic could have lost. The top
+  // of the ramp was lightened on 23 September 2026, from [76, 140, 63] to
+  // [95, 160, 78], so every colour from half a maximum up moved with it; the
+  // figures themselves did not.
   const colours = await page.evaluate(() => {
-    const paintOf = row => getComputedStyle(
-      document.querySelector(`#gov-heatmap .cell-button[data-row="${row}"]`)).backgroundColor;
+    const cellOf = row => document.querySelector(`#gov-heatmap .cell-button[data-row="${row}"]`);
+    const paintOf = row => getComputedStyle(cellOf(row)).backgroundColor;
     return {
       total: paintOf("total"),
+      totalInk: getComputedStyle(cellOf("total")).color,
       supporting: paintOf("supporting"),
       legend: [...document.querySelectorAll("#gov-legend .swatch")]
         .map(swatch => getComputedStyle(swatch).backgroundColor),
     };
   });
-  check(colours.total === "rgb(199, 159, 42)" && colours.supporting === "rgb(201, 160, 42)"
+  check(colours.total === "rgb(202, 162, 44)" && colours.supporting === "rgb(203, 162, 43)"
       && colours.legend.join(" | ") === "rgb(180, 71, 47) | rgb(199, 117, 43) | rgb(217, 162, 39)"
-        + " | rgb(147, 151, 51) | rgb(76, 140, 63)",
-    "the governance view wears the colours it wore: 9.0 of 16, 10 of 18, and its five swatches",
+        + " | rgb(156, 161, 59) | rgb(95, 160, 78)"
+      && colours.totalInk === "rgb(35, 40, 27)",
+    "the governance view wears the ramp's colours: 9.0 of 16, 10 of 18, its five swatches, and "
+      + "ink on that amber",
     JSON.stringify(colours));
+  /* Every question opened, so the checks under them are painted and measured
+   * too, and not only the six rows a shut board shows. */
+  await page.locator("#gov-expand-all").click();
+  await page.waitForTimeout(100);
+  const govInk = await inkOn("#gov-heatmap");
+  check(govInk.length > 200 && govInk.every(one => one.ink === one.better),
+    "every figure of the governance view takes the ink with more contrast on its own colour",
+    inkReport(govInk));
+  /* What the ramp can and cannot promise. From about 28% of a row's maximum
+   * upwards every colour reaches 4.5:1 with the ink the rule picks. Below that
+   * the ramp passes through its own mid tones, where neither of the palette's
+   * two inks reaches 4.5, and the floor is the crossover itself at 3.62:1. The
+   * check pins that floor so that a change which lowers it fails here. */
+  check(govInk.every(one => one.ratio >= 3.6)
+      && govInk.filter(one => one.share >= 0.28).every(one => one.ratio >= 4.5),
+    "no figure of the governance view falls under the ramp's floor, and every figure from 28% of "
+      + "its maximum up reaches 4.5:1",
+    inkReport(govInk));
+  await page.locator("#gov-expand-all").click();
+  await page.waitForTimeout(100);
 
   // A question opens into its checks.
   await page.locator('.row-toggle[data-question="2"]').click();
@@ -2263,7 +2348,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     return { text: button.querySelector(".cell-figure")?.textContent ?? "",
              max: button.querySelector(".cell-max")?.textContent ?? "",
              label: button.getAttribute("aria-label"),
-             background: getComputedStyle(button).backgroundColor };
+             background: getComputedStyle(button).backgroundColor,
+             ink: getComputedStyle(button).color,
+             cornerInk: getComputedStyle(button.querySelector(".cell-max")).color };
   }, [name, column]);
   const press = (name, column) => page.evaluate(([name, column]) => {
     const row = [...document.querySelectorAll("#board tbody tr")]
@@ -2329,14 +2416,14 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     JSON.stringify([four.keyTitle, four.levels, four.odd]));
   check((await cellOf("Behaviours under test", 0)).label
       === "Acme, behaviours under test: 3.4 out of 4"
-      && (await cellOf("Behaviours under test", 0)).background === "rgb(118, 147, 56)",
+      && (await cellOf("Behaviours under test", 0)).background === "rgb(132, 161, 66)",
     "a category's figure is the plain mean of its behaviours, painted over 4",
     JSON.stringify(await cellOf("Behaviours under test", 0)));
   await fold("Behaviours under test");
-  check((await cellOf("Defined behaviour", 0)).background === "rgb(168, 154, 47)"
+  check((await cellOf("Defined behaviour", 0)).background === "rgb(174, 161, 53)"
       && (await cellOf("Defined behaviour", 0)).label
         === "Acme, defined behaviour: 2.7 out of 4, prescribed",
-    "a behaviour out of four wears the colour it always wore, and its accessible name the rubric's "
+    "a behaviour out of four is painted over 4, and its accessible name carries the rubric's "
     + "word", JSON.stringify(await cellOf("Defined behaviour", 0)));
   check(pageErrors.length === 0, "the board out of four: no console errors", pageErrors.join("; "));
 
@@ -2361,11 +2448,16 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   const final = await cellOf("Final score", 0);
   check(final.text === "11.8" && final.max === "/20"
       && final.label === "Acme, final score: 11.8 out of 20"
-      && final.background === "rgb(192, 158, 43)",
+      && final.background === "rgb(195, 162, 46)",
     "the final score is the behaviours plus the document as a whole, marked out of 20",
     JSON.stringify(final));
+  /* The corner mark takes the figure's ink and stands back by its opacity. It is
+   * decorative and aria-hidden, and it was paper on every cell until the figure
+   * stopped being paper, which would have left it invisible on this amber. */
+  check(final.ink === "rgb(35, 40, 27)" && final.cornerInk === "rgb(35, 40, 27)",
+    "the /20 in the corner follows the figure's ink", JSON.stringify(final));
   const whole = await cellOf("The document as a whole", 0);
-  check(whole.text === "6.0" && whole.max === "/10" && whole.background === "rgb(189, 158, 44)",
+  check(whole.text === "6.0" && whole.max === "/10" && whole.background === "rgb(193, 162, 47)",
     "the document as a whole is its five criteria, out of 10", JSON.stringify(whole));
   const na = await page.evaluate(() => {
     const rows = [...document.querySelectorAll("#board tbody tr")];
@@ -2432,9 +2524,21 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(behaviour.text === "7.3" && behaviour.max === "/10"
       && behaviour.label
         === "Acme, defined behaviour: 7.3 out of 10, prescribed and partly demonstrated"
-      && behaviour.background === "rgb(152, 152, 50)",
+      && behaviour.background === "rgb(161, 161, 57)",
     "a behaviour out of ten is painted over ten, and its accessible name carries the rubric's word",
     JSON.stringify(behaviour));
+  /* The same two rules the governance view is held to, on the board that carries
+   * the higher figures: a depth of 7.3 out of 10 sits on the amber-to-green leg,
+   * which is where paper used to be written over ink's colour. */
+  const boardInk = await inkOn("#board");
+  check(boardInk.length > 20 && boardInk.every(one => one.ink === one.better),
+    "every figure of the board takes the ink with more contrast on its own colour",
+    inkReport(boardInk));
+  check(boardInk.every(one => one.ratio >= 3.6)
+      && boardInk.filter(one => one.share >= 0.28).every(one => one.ratio >= 4.5),
+    "no figure of the board falls under the ramp's floor, and every figure from 28% of its "
+      + "maximum up reaches 4.5:1",
+    inkReport(boardInk));
   await press("Defined behaviour", 0);
   let popover = await readPop();
   check(popover.open && popover.body.includes("7.3 out of 10, prescribed and partly demonstrated")

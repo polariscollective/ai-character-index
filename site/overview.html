@@ -490,13 +490,19 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   place-items: center;
 }
 .board .cell-button .cell-figure { font-size: 16px; }
-/* What the score is out of, small and light grey in the cell's lower right
-   corner, straight on the cell's own colour. */
+/* What the score is out of, small in the cell's lower right corner, straight on
+   the cell's own colour. It inherits the figure's ink and stands back from it
+   by its opacity, so it follows the cell from ink to paper: written as a colour
+   of its own it was paper over every cell, which is invisible on the amber and
+   green ones the figure now takes ink on. The opacity is the .7 it has always
+   been, since it reads at that weight on both inks and a heavier corner mark
+   would compete with the figure it belongs to. */
 .cell-max {
   position: absolute;
   right: 6px;
   bottom: 3px;
-  color: rgb(241 239 227 / .7);
+  color: inherit;
+  opacity: .7;
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 400;

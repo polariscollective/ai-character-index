@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { ORDINALS, level, rankBy, createBoard } from "../../../site/board.js";
-import { rampAt } from "../../../site/depth-scale.js";
+import { rampAt, inkOver, INK_DARK, INK_LIGHT } from "../../../site/depth-scale.js";
 
 const site = name => readFile(new URL(`../../../site/${name}`, import.meta.url), "utf8");
 
@@ -58,7 +58,7 @@ test("painting over a row's own maximum is the colour the share of 4 wore", () =
 function withStubDocument(run) {
   const had = Object.getOwnPropertyDescriptor(globalThis, "document");
   globalThis.document = {
-    createElement: tag => ({ tag, id: "", className: "", textContent: undefined,
+    createElement: tag => ({ tag, id: "", className: "", textContent: undefined, style: {},
                              children: [], append(...kids) { this.children.push(...kids); } }),
   };
   try {
@@ -103,6 +103,40 @@ test("two boards on one page label their headings apart", () => {
     });
     assert.deepEqual(ids, ["gov-pop-title", "cover-pop-title"]);
   });
+});
+
+/* Both boards paint their figures the same way, so the ink rule is read off one
+ * of them here and walked on the page in both by engine/verify-reader-features.mjs.
+ * A cell used to be paper whatever was under it, which is 2.2:1 on the amber
+ * middle of the ramp. */
+test("a painted figure takes the ink with more contrast on its own colour", () => {
+  withStubDocument(() => {
+    const board = createBoard({
+      nodes: { table: null, pop: stubPopover("pop-title"), expandAll: null },
+      everyRow: { show: "Show every row", hide: "Hide every row" },
+    });
+    const painted = (value, max) => {
+      const node = { style: {} };
+      board.paint(node, value, max);
+      return node.style;
+    };
+    assert.equal(painted(0, 10).background, "rgb(180 71 47)");
+    assert.equal(painted(0, 10).color, INK_LIGHT, "the red foot");
+    assert.equal(painted(5, 10).color, INK_DARK, "the amber middle");
+    assert.equal(painted(10, 10).color, INK_DARK, "the green top");
+    for (const max of [2, 4, 10, 16, 18, 20]) {
+      for (let step = 0; step <= max * 10; step += 1) {
+        const value = step / 10;
+        assert.equal(painted(value, max).color, inkOver(rampAt(value, max)), `${value} of ${max}`);
+      }
+    }
+  });
+});
+
+test("the board keeps no ink of its own to overrule that rule with", async () => {
+  const board = await site("board.js");
+  assert.ok(!/#F1EFE3/i.test(board), "a light ink was written back into the board");
+  assert.match(board, /inkOver/);
 });
 
 test("the board writes no popover id of its own", async () => {

@@ -128,9 +128,14 @@ export function depthPhrase(mean, scale) {
  * interpolated in between, so the deepest green is the top alone. Every row of
  * the board is painted over its own maximum: a depth over its publication's
  * scale, a criterion over 2, a final score over 20, a governance score over the
- * 4 that view passes. On the scale of four the stops sit at 0, 2 and 4, as they
- * always did, so no colour there moved. */
-const STOPS = [[180, 71, 47], [217, 162, 39], [76, 140, 63]];
+ * 4 that view passes.
+ *
+ * The top stop was [76, 140, 63] until 23 September 2026. A figure on that
+ * green read 3.69:1 in ink and 3.55:1 in paper, so neither ink reached the
+ * 4.5:1 the framework asks of text, and the cell carrying the highest score on
+ * the board was the hardest one to read. It was lightened until ink cleared
+ * that bar, which it does at 4.76:1. */
+const STOPS = [[180, 71, 47], [217, 162, 39], [95, 160, 78]];
 
 export function rampAt(value, max) {
   const stops = [0, max / 2, max].map((at, i) => ({ at, rgb: STOPS[i] }));
@@ -143,12 +148,38 @@ export function rampAt(value, max) {
     Math.round(channel + across * (upper.rgb[i] - channel)));
 }
 
-/* Dark or light over the ramp, by the luminance underneath rather than by eye:
- * the amber middle needs dark text where both ends need light. Whether the board
- * uses this or the governance view's always-light figure is the open decision in
- * the plan's Global Constraints; the function stays either way, because the
- * reader and the legend use it. */
-export function inkOver([r, g, b]) {
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? "#23281B" : "#F1EFE3";
+/* The two inks a figure can wear. They are the framework's body ink and its
+ * paper, and there is no third: the palette has no mid tone that would pass on
+ * a colour where neither of these does. */
+export const INK_DARK = "#23281B";
+export const INK_LIGHT = "#F1EFE3";
+const INKS = [[INK_DARK, [35, 40, 27]], [INK_LIGHT, [241, 239, 227]]];
+
+/* Relative luminance as WCAG defines it, which is the quantity a contrast ratio
+ * is built on. This function used to weigh the channels 0.299/0.587/0.114 and
+ * switch at 0.62, which is a different quantity read against a threshold nobody
+ * had measured: it left ink on the amber-to-green leg at 2.5:1 where the other
+ * ink would have given 5.3:1. */
+export function relativeLuminance([r, g, b]) {
+  const channel = value => {
+    const part = value / 255;
+    return part <= 0.04045 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** The WCAG ratio between two colours, the larger of the two ways round. */
+export function contrastRatio(a, b) {
+  const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/* Dark or light over a colour, whichever has more contrast on it. The crossover
+ * falls at relative luminance 0.2015 for these two inks, and it is computed here
+ * rather than written down, so that changing an ink moves it. Where the two are
+ * level the ramp is at its worst either way, 3.62:1, which is a fact about a
+ * palette of two inks and not about this choice between them. */
+export function inkOver(rgb) {
+  const [dark, light] = INKS.map(([hex, ink]) => ({ hex, ratio: contrastRatio(ink, rgb) }));
+  return dark.ratio >= light.ratio ? dark.hex : light.hex;
 }
