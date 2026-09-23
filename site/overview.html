@@ -216,6 +216,12 @@ h1::before {
    that wants the room. */
 .lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
 
+/* The two parts of the score, said before any figure. Two paragraphs with their
+   subject in the lead, the way the folds under the board already open. */
+.board-parts { margin: 0 0 22px; max-width: 86ch; }
+.board-parts p { margin: 0 0 10px; color: var(--muted); }
+.board-parts strong { color: var(--ink); }
+
 /* The board. A table because it is one: a row reads across, a constitution
    reads down, and a screen reader needs the headers to say so. Both views draw
    it, so the rules it is made of sit together further down, under .board. */
@@ -711,6 +717,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-pop .aside { margin: 14px 0 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--muted); }
 .gov-pop a { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
 .gov-pop .gov-button { margin-top: 6px; }
+/* The fold that holds the judges' own wording. Discreet: it opens under the
+   sentences a reader came for, and never above them. */
+.gov-pop .detail-fold { margin-top: 16px; }
 /* The working paper's own words, quoted exactly, each under a chartreuse rule. */
 .gov-pop .paper-fold { margin-top: 10px; }
 .paper-name { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
@@ -879,12 +888,23 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   </div>
 
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
-  <h1>How deeply each constitution covers each behaviour</h1>
+  <h1>What each constitution settles, and how far it goes</h1>
   <p class="lede">
-    AI companies publish documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
-    behave. This
-    grid shows, behaviour by behaviour, how far each one actually goes.
-    <br>
+    AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
+    behave. The index reads them and scores each one twice, out of 10 each, and the board leads
+    with the two added together.
+  </p>
+  <div class="board-parts">
+    <p><strong>The document as a whole.</strong> Whether the constitution settles a clash between
+    two of its own rules, whether a reader can tell which rules are absolute and which can be
+    lifted and by whom, whether the rules come with reasons, whether they reach the situations
+    the models are used in, and whether the document contradicts itself somewhere without saying
+    which rule wins.</p>
+    <p><strong>The behaviours.</strong> How far the constitution goes on each behaviour the index
+    asks about, from saying nothing about it to setting rules and showing them applied to worked
+    examples.</p>
+  </div>
+  <p class="lede">
     Missing a constitution, or a behaviour the index should be asking about?
     <a href="/about?propose#propose" target="_blank"
       rel="noopener noreferrer">Propose one</a>.
@@ -894,8 +914,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 
   <div class="gov-toolbar">
     <p class="gov-hint">
-      Press a figure to see the evidence behind it, or a lab or a row&rsquo;s name to read
-      about it. Open a group to see its rows.
+      Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
+      Open a row to see the parts it is made of.
     </p>
     <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
   </div>

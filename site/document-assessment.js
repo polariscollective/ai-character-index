@@ -87,26 +87,28 @@ export const CRITERIA = [
 ];
 
 export const HALVING =
-  "The judges score from 0 to 4; the index halves it so the five criteria add up to 10.";
+  "Each judge scores from 0 to 4, and the index halves the result so the five criteria add up "
+  + "to 10.";
 
 /* The figures here are the ones the anchors carry, in the anchors' own order,
  * and the halved figures are named as halved. Written the other way round, the
  * rule gave 2, 1 and 0 beside a scale whose descriptions sat at 4, 2 and 0, and
  * nothing on the page said which figure was which. */
 export const CONTRADICTIONS_RULE =
-  "Scored from the confirmed contradictions on the judges' scale of 0 to 4: 4 when none is "
-  + "confirmed, 2 for one or two with no absolute rule, 0 for three or more or any absolute one. "
-  + "Halved like the other criteria, so the figure on the board is 2, 1 or 0.";
+  "Scored from the contradictions the judges confirmed, on their scale of 0 to 4: 4 when none is "
+  + "confirmed, 2 for one or two that involve no rule the constitution says can never be "
+  + "overridden, 0 for three or more or any that involves one. Halved like the other criteria, so "
+  + "the figure on the board is 2, 1 or 0.";
 
 /* The second method, which is how every contradiction of a publication on this
  * scale was settled (methodology/document-assessment-rubric.md, "How one is
  * found and confirmed"). The first method, where finding a claim counted as a
  * vote for it, is not what any figure on this page was reached by. */
 export const HOW_SETTLED =
-  "Each seat lists every contradiction it finds; then each of them reads every claim, its own "
-  + "included, and says whether it holds and whether it involves a rule the document calls "
-  + "absolute. A claim is confirmed when two of the three say it holds, and absolute when two "
-  + "say it holds and is absolute.";
+  "Each judge lists the contradictions it finds. Each of them then reads every claim, its own "
+  + "included, and says whether it holds and whether it involves a rule the constitution says can "
+  + "never be overridden. A claim is confirmed when two of the three say it holds, and involves "
+  + "such a rule when two say both.";
 
 export const NOT_REVIEWED = "No person has reviewed the list.";
 
