@@ -210,6 +210,70 @@ const STYLE = `
 @media (prefers-reduced-motion: reduce) {
   .pf-pill, .pf-send, .pf-cancel { transition: none; }
 }
+
+/* ---------- on a phone ----------
+ *
+ * A photograph of a phone is twice as tall as it is wide, so at 390px the
+ * picture alone was 677 pixels of a dialog 794 tall: the comment field, the
+ * address field and Send were all below it, and nothing on the screen said so.
+ * The dialog scrolled, which is to say they were reachable by somebody who
+ * already knew they were there.
+ *
+ * The picture keeps its width, because shrinking it to fit the form beside it
+ * would leave a strip 180 pixels wide to draw a box on with a thumb, and
+ * pointing at the fault is what the picture is for. What changes is that Send
+ * and Cancel stay at the foot of the dialog while it scrolls, so the form is
+ * announced by its own buttons and the primary action is never hunted for.
+ * They are laid over the dialog's side padding by a negative margin, otherwise
+ * the text scrolling past would show through the gutters beside them.
+ *
+ * The fields are set at 16px here and not at the dialog's 14px: iOS zooms the
+ * page in on a field smaller than that as it takes focus, and leaves it zoomed
+ * in on the picture afterwards.
+ *
+ * The tool row, the two colours, Undo, Clear and the close cross grow to what a
+ * thumb can hit. The pill itself is 39px tall, which is enough, so it only
+ * moves in a little.
+ *
+ * The dialog is measured in dvh as well as vh: a phone browser counts its own
+ * toolbars in vh, so a dialog 48px short of 100vh still runs under the address
+ * bar. The vh line stays first for whatever does not know dvh. */
+@media (max-width: 560px) {
+  .pf-pill { right: 12px; bottom: 12px; }
+  /* The pill is fixed, so on a phone it sits on the last thing the page has to
+     say, and on the prose pages that is the footer: the licence line and the
+     link to the standalone original were underneath it. The gutter is asked for
+     here rather than on each page because the pill is what needs it. The
+     reader's own footer is a bar of a fixed height that its shell subtracts
+     from the window, so it is left alone and the pill overlaps the credit
+     there. */
+  footer:not(.site-footer) { padding-bottom: 64px; }
+  .pf-note {
+    width: calc(100vw - 16px);
+    /* A modal dialog is capped by the browser's own max-width, the window less
+       six pixels and two of its own ems. Left alone, that is what decides the
+       width here and the line above decides nothing. */
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px 16px 0;
+  }
+  .pf-note textarea,
+  .pf-note input[type="email"] { font-size: 16px; }
+  .pf-close { min-width: 44px; min-height: 44px; font-size: 22px; }
+  .pf-tool, .pf-swatch, .pf-drop { min-height: 40px; padding: 8px 10px; }
+  .pf-swatch { width: 40px; padding: 8px 0; }
+  .pf-send, .pf-cancel { min-height: 44px; padding: 10px 20px; }
+  .pf-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 16px -16px 0;
+    padding: 8px 16px 16px;
+    border-top: 1px solid #5C6B3C;
+    background: #F1EFE3;
+  }
+}
 `;
 
 function el(tag, props = {}, ...kids) {
@@ -947,7 +1011,7 @@ function build() {
                 textContent: "sam@polariscollective.org" }),
       document.createTextNode(".")),
     said,
-    el("div", { className: "pf-row" }, cancel, sendButton));
+    el("div", { className: "pf-row pf-actions" }, cancel, sendButton));
 
   // Named for a screen reader, the way every other dialog in this repository
   // is. Without it the dialog is announced with no name at all.

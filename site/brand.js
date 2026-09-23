@@ -99,6 +99,55 @@ const STYLE = `
 }
 .older-tag:hover, .older-tag:focus-visible { background: #B7C94B; border-color: #B7C94B; color: #23281B; }
 .older-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
+
+/* ---------- the header on a narrow screen ----------
+ *
+ * The header is a brand at one end and a menu at the other, on one line of a
+ * fixed 54px. At 390px the board pages drew the wordmark over three lines,
+ * clipped it against that height, and carried the whole menu off the right edge
+ * where no finger and no tab key could reach it.
+ *
+ * Two rows rather than a control that hides them. Four links of one or two
+ * words fit on one line at 360px, so a button to reveal them would add a
+ * second press, a focus trap and a state to get wrong, and would buy back
+ * about thirty pixels. The framework asks for a fixed left nav in tools and a
+ * plain header on content pages; a phone has room for neither, so both kinds
+ * of page take the same two rows here.
+ *
+ * It is written here and not in a stylesheet because the five pages that carry
+ * this header keep four stylesheets between them, one of which is shared with
+ * the boards. This file is already on every one of them. about.html and
+ * mcp.html state the same breakpoint in their own sheets, so their headers
+ * still wrap if this module never runs; the board pages and the reader have no
+ * such floor and depend on this block.
+ *
+ * The reader hides every link but the one you are on below 900px, which on a
+ * phone leaves a header with no way out of the page. They come back here.
+ * Matching that rule's specificity is what the :not() is for.
+ */
+@media (max-width: 700px) {
+  .site-header {
+    height: auto;
+    min-height: 54px;
+    padding: 8px 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    /* The header holds over the page while it scrolls, so every row it takes is
+       a row the reading loses for the whole page. At 360px it takes three: the
+       wordmark, the tag beside it, and the menu. Prose leading on all three
+       costs about ten pixels of the screen and buys nothing, because no line
+       here sits above another line of its own. */
+    line-height: 1.3;
+  }
+  .site-header .site-brand { flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  /* Two names and a menu do not fit. The mark carries the collective alone,
+     and its name is still a link in the footer. */
+  .site-header .collective, .site-header .brand-divider { display: none; }
+  .site-header nav { flex: 1 0 100%; flex-wrap: wrap; gap: 6px 18px; }
+  .site-header nav a:not(.active) { display: inline; }
+  .brand-pop { padding: 16px; }
+}
 `;
 
 function node(tag, className, text) {
@@ -265,6 +314,36 @@ async function markOlder(brand) {
   }
 }
 
+/* The header's real height, for whatever has to clear it.
+ *
+ * Three stylesheets place something against --header-height: the board's table
+ * head sticks under it, the reader's shell subtracts it, and the two prose
+ * pages offset their rail and their jumped-to headings by it. All three take it
+ * from a constant of 54px, which stops being true the moment the header wraps
+ * onto two rows.
+ *
+ * Written only while the header is in its wrapped shape, and cleared above it.
+ * Above the breakpoint two of those sheets set the header's own height from this
+ * variable, so measuring the header and writing it back is a loop. Below the
+ * breakpoint the height is whatever the rows come to, and nothing reads back
+ * into it.
+ *
+ * about.html and mcp.html measure their own headers the same way. They arrive
+ * at the same number, so neither undoes the other. */
+function followHeight(header) {
+  const wrapped = window.matchMedia("(max-width: 700px)");
+  const write = () => {
+    if (wrapped.matches) {
+      document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
+    } else {
+      document.documentElement.style.removeProperty("--header-height");
+    }
+  };
+  write();
+  new ResizeObserver(write).observe(header);
+  wrapped.addEventListener("change", write);
+}
+
 function start() {
   document.addEventListener("click", carryPin, true);
   document.addEventListener("auxclick", carryPin, true);
@@ -297,6 +376,8 @@ function start() {
   window.addEventListener("resize", place, { passive: true });
 
   Object.assign(state, { pop, wordmark });
+  const header = wordmark.closest(".site-header");
+  if (header) followHeight(header);
   markOlder(wordmark.closest(".site-brand"));
 }
 
