@@ -275,7 +275,7 @@
     <div class="m-title">MCP</div>
     <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
     these documents by quoting them, rather than from memory. This page has the whole setup, from
-    a settings menu or from a command line. Four tools, read only, no account and no key.</p>
+    a settings menu or from a command line. Seven tools, read only, no account and no key.</p>
   </div>
 
   <section class="m" id="what-this-does">
@@ -371,16 +371,19 @@
 
   <section class="m" id="tools">
     <h2>Tools</h2>
-    <p>Four, and all of them read. Four words recur below. A <b>behaviour</b> is one thing a
-    document might commit a model to, such as deferring to a user&rsquo;s own decisions. A
+    <p>Seven, and all of them read. Five words recur below. A <b>constitution</b> is a document an
+    AI company publishes saying how its models should behave. A <b>behaviour</b> is one thing a
+    constitution might commit a model to, such as deferring to a user&rsquo;s own decisions. A
     <b>locator</b> is the address of a quote inside a document, naming the document, its version,
     the section and the sentences, as in
     <code>openai--model-spec@2026-08-18 &gt; #scope_of_autonomy &gt; &para;14</code>. The
     <b>panel</b> is the three frontier models that read every document for every behaviour and
-    marked the passages. A <b>depth</b> is the score those judges give a document for a behaviour,
-    from 0, absent, to 4, rules with worked examples: it says how much the document gives an
-    evaluation to work with, not how much the company behind it cares.</p>
-    <p><b>about.</b> What the index is, what it does not report, and what the other three tools
+    marked the passages. A <b>depth</b> is the score those judges give a constitution for a
+    behaviour, from 0, where it says nothing about it, to the top of the scale, where it sets
+    rules and shows them applied. It says how much the document gives an evaluation to work with,
+    and nothing about how much the company behind it cares. Every depth comes back with the scale
+    it was given on.</p>
+    <p><b>about.</b> What the index is, what it does not report, and what the other six tools
     return, in one answer meant to be read before anything else is asked. No arguments. It names
     the documents, the behaviours and the sections they sit in, the panel that judged and the
     publication being served, each read from that publication when you ask rather than written
@@ -393,7 +396,7 @@
     hundreds of kilobytes; the source URL is in the answer. Each constitution is one version, and
     its id reads <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
     <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into
-    it.</p>
+    it. The tool keeps its old name so that clients already connected go on working.</p>
     <p><b>list_behaviours.</b> Every behaviour the publication shows, with the section it is
     grouped in, the brief the judge panel was given, the boundary of the construct and where the
     definition came from. Each one also carries, per constitution, how many passages it has, the
@@ -406,8 +409,8 @@
           answer.</li>
       <li><b>model_spec_ids.</b> Optional, every constitution by default. Where a behaviour and
           constitution pair carries a depth, it comes back as the mean the index&rsquo;s panel
-          gave it, on a scale from 0, absent, to 4, rules with worked examples. A pair with no
-          depth comes back with <code>null</code>.</li>
+          gave it, with the scale that mean is on. A pair with no depth comes back with
+          <code>null</code>.</li>
       <li><b>strength.</b> Optional. <code>defining</code> is the document&rsquo;s fullest
           statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
           bears on it without establishing it. Each means that band and stronger.
@@ -428,6 +431,26 @@
     seat&rsquo;s verdicts and depth are then the substitute&rsquo;s.</p>
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
+    <p><b>constitutions_board.</b> Every figure on the overview&rsquo;s first board, each with the
+    scale it is on: the score out of 20, the document as a whole out of 10 with its five criteria,
+    and how far each constitution goes on every behaviour. It carries what each criterion asked
+    and what each level of the depth scale asks for, so a figure can be read without a second
+    call. One argument, <b>company</b>, optional, which narrows it to one company.</p>
+    <p><b>governance_board.</b> The overview&rsquo;s second board: nine companies scored out of 16
+    on four questions about how they govern the rules their models follow, each question split
+    into checks scored 0 to 4, with the descriptions the scores were given against and the
+    paragraph we wrote on what we found. The best practices are there too, shown beside the score
+    and never counted in it. One argument, <b>company</b>, optional. These figures were given by
+    hand from public documents rather than judged by the panel, and this board belongs to no
+    publication and carries its own as-of date.</p>
+    <p><b>compare_documents.</b> Everything one run found between two constitutions on one
+    behaviour: the passages each of them carries, every pair of passages the judges linked with
+    what each judge said, the verdict where two judges disagreed and a third settled it, the
+    passages one document has nothing facing, and a paragraph written from all of it. It takes one
+    <b>behaviour</b> and exactly two <b>model_spec_ids</b>. The answer is long, hundreds of
+    thousands of characters where both documents cover the behaviour fully, so pass <b>detail</b>
+    as <code>counts</code> first: that answers with the size of the full answer and the tally of
+    what is in it.</p>
   </section>
 
   </div>
