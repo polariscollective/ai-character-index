@@ -480,8 +480,7 @@
         deferring to users&rsquo; decisions about their own lives, or not asserting what the model
         believes to be false. Each is written in two parts, what it requires and where it stops,
         so that a careful reader could mark every passage of a constitution that bears on it.
-        The judges work from that description and assess a constitution one behaviour at a
-        time.</p>
+        The index reads a constitution against that description, one behaviour at a time.</p>
         <p>So far the index asks about
         <button type="button" class="glossary-open" id="glossary-open" aria-haspopup="dialog"
         >thirteen behaviours</button>.</p>
@@ -490,7 +489,7 @@
       <dd>
         <p>A paragraph or a run of sentences in a constitution, cited by a locator that names
         the document, its version, its section and the sentences. For each behaviour, every
-        passage the judges mark falls in one of three bands. A defining passage is the
+        passage the index marks falls in one of three bands. A defining passage is the
         document&rsquo;s fullest statement of the behaviour, a core passage establishes it, and a
         related passage bears on it without establishing it.</p>
       </dd>
@@ -498,10 +497,30 @@
       <dd>
         <p>How far a constitution goes on one behaviour. The newest publications score it from 0,
         saying nothing about the behaviour, to 10, setting rules, showing them applied and settling
-        the hard cases. Earlier publications score it from 0 to 4. Each judge gives a figure and
-        the index shows the mean of the three.</p>
+        the hard cases. Earlier publications score it from 0 to 4.</p>
       </dd>
     </dl>
+  </section>
+  <!-- Why the site uses one word for documents their publishers name differently.
+       The last paragraph is there because the question is always asked of a site
+       that says constitution while one of the companies it covers has given its
+       own document that title. -->
+  <section class="m" id="the-word">
+    <h2>Why we say constitution</h2>
+    <p class="lead">These documents go by different names. OpenAI calls its one the Model Spec,
+    Anthropic calls its one Claude&rsquo;s Constitution, Alibaba calls its one the AI Model Spec.
+    The index needs one word for the class of document, and that word is constitution.</p>
+    <p>A constitution is the document that says where authority sits and what may never be done,
+    whoever asks. That is what these documents do. They rank whose instructions win when a
+    company, a developer and a user want different things, and they name what the model must
+    refuse however it is asked. &ldquo;Specification&rdquo; suggests an engineering document a
+    machine can be held to line by line, and none of these is that.
+    &ldquo;Policy&rdquo; suggests a rule the company applies to the people using its
+    products rather than to its own model.</p>
+    <p>The choice has nothing to do with Anthropic calling its own document Claude&rsquo;s
+    Constitution. The index would use the word if Anthropic had never used it, and using it puts
+    no company&rsquo;s document above another. Where a company&rsquo;s own name for its document
+    appears on this site, it appears as that company writes it.</p>
   </section>
   <!-- What the index means to become. An ambition, so no line carries a date. -->
   <section class="m" id="ambition">
@@ -538,34 +557,24 @@
     can be asked.</p>
   </section>
   <section class="m">
-    <h2>What the index reads, and who reads it</h2>
+    <h2>What the index reads</h2>
     <p>As of September 2026 the index reads four constitutions: Claude&rsquo;s Constitution
     (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18) and the
     Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it says
     about any one subject is spread across it.</p>
     <p>Each version is read as a document of its own, named
     <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, so the two OpenAI versions are
-    judged and cited separately. The Alibaba Model Spec is published in Chinese. The index reads an
-    English translation made by Claude Opus 5 and partly revised by Claude Fable 5, and the doc
-    reader shows the original beside every passage.</p>
+    read and cited separately. Alibaba publishes its constitution in Chinese. The index works from
+    an English translation, and the doc reader shows the original beside every passage.</p>
     <p>As of September 2026 the index asks about thirteen behaviours, in four groups: autonomy,
     oversight and authority; harm and safety; helpfulness and judgement; honesty and
     epistemics.</p>
-    <p>Three models from three different companies read each document against the description of
-    each behaviour: GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2. Each of them marks every passage
-    that bears on the behaviour, and gives the document a figure for how far it goes. The index
-    publishes the mean of the three, and the doc reader shows how each of them read each passage.
-    Three readings that agree are closer to a finding than one reading on its own.</p>
-    <p>Sometimes one of the three cannot answer at all, because a filter withholds its reply. A
-    model named in advance then reads in its place, and the index records which one and why. As of
-    September 2026 that happened on harm avoidance to third parties in both OpenAI versions, and on
-    every behaviour of the Alibaba Model Spec, where every Anthropic model was refused.</p>
     <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that bears
     on it is highlighted in the document you are reading, or in two documents side by side. All
     three bands are shown by default, with related passages drawn softer, and each band can be
-    switched off. Clicking a passage shows how each of the three read it. The <b>i</b> beside each
-    behaviour shows the description it was judged against. The export saves the passages you ticked
-    as a file.</p>
+    switched off. Clicking a passage shows why it was cited and how strongly. The <b>i</b> beside
+    each behaviour shows the description the index read it against. The export saves the passages
+    you ticked as a file.</p>
   </section>
   <!-- Two sections, so each kind of proposal has its own place in the rail and its
        own button into the form it needs. The wrapper keeps #propose, which links
@@ -598,8 +607,8 @@
     false, not whether it volunteers everything it knows&rdquo; collects the passages you
     meant.</p>
     <p>Sending a proposal only records it. We read every proposal and decide whether it belongs in
-    the index. If it does, one of us enters it and pays for the reading, we write to tell you, and
-    it appears in the doc reader once a publication that includes it is made public. We cannot
+    the index. If it does, we add it to the index, we write to tell you, and it appears in the doc
+    reader once a publication that includes it is made public. We cannot
     promise to run everything, and if we decide against a proposal we will tell you.</p>
     <p><button type="button" class="open-propose" id="open-propose-behaviour"
     data-kind="behaviour">Propose a new behaviour</button></p>
@@ -613,7 +622,7 @@
     <p>When two companies&rsquo; documents treat a behaviour differently, it is usually because
     they made different choices. A figure measures how much a document gives an evaluation to work
     with.</p>
-    <p>For the Alibaba Model Spec the index reports what the English translation says, and the doc
+    <p>For the Alibaba constitution the index reports what the English translation says, and the doc
     reader shows the original for comparison.</p>
   </section>
   <section class="m">
@@ -635,11 +644,10 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     </figure>
     <p>Adapt the style to your venue, and keep the authors, the publication identifier and the
     date, which let someone else retrieve the same figures.</p>
-    <p><b>The authors are read from the build.</b> Every run records who produced its verdicts and
-    every behaviour records who wrote it, so a publication computes its own credit. The dataset is
-    credited to whoever ran the judging, which as of September 2026 is Polaris Collective. The
-    method has its own line. The rubric, the scale, the prompt and the citation grammar are the
-    work of Andr&eacute;s Cotton and Matt Stults, as are most of the behaviour briefs.</p>
+    <p><b>The credit is read from the publication.</b> The dataset is credited to whoever produced
+    it, which as of September 2026 is Polaris Collective. The method has its own line: the scale,
+    the bands and the citation grammar are the work of Andr&eacute;s Cotton and Matt Stults, as are
+    most of the behaviour descriptions.</p>
     <p><b>Cite each constitution to its publisher.</b> Anthropic and OpenAI release theirs under
     CC0. A quote from the Alibaba Model Spec comes from the index&rsquo;s English translation, so
     say so when you use one. Cite the index for the coverage, meaning which passages address which
@@ -660,17 +668,16 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     <div class="changelog">
       <h3><a href="/spec-reader/?publication=1919ee6b-8a81-4ab5-902a-e949857db028" target="_blank" rel="noopener noreferrer">16 September 2026, publication
       <code>1919ee6b</code></a>, current</h3>
-      <p>It keeps the passage judgements of the publication before it, and every depth figure is
-      judged again. The depth judges had been shown fewer passages than the doc reader shows, and
-      now they see every passage a reader sees, related passages included. One figure, DeepSeek&rsquo;s
-      depth for avoiding both over- and under-caution in the Alibaba Model Spec, was obtained at a
-      different setting from every other figure, and the publication says so.</p>
+      <p>It keeps the passages of the publication before it, and every depth figure is worked out
+      again. The depth figures had rested on fewer passages than the doc reader shows, and they now
+      rest on every passage a reader sees, related passages included. One figure, the depth for
+      avoiding both over- and under-caution in the Alibaba constitution, was arrived at differently
+      from every other figure, and the publication says so.</p>
       <h3><a href="/spec-reader/?publication=07958c5e-eb91-4e31-81f2-32f79c01b84c" target="_blank" rel="noopener noreferrer">15 September 2026, publication
       <code>07958c5e</code></a>, withdrawn</h3>
-      <p>The first publication read by the same three models throughout, over thirteen behaviours
-      and four documents, with a depth from 0 to 4 given by each of them. It was withdrawn on 16
-      September 2026 because its depth figures had been judged from fewer passages than the doc
-      reader shows.</p>
+      <p>The first publication to cover thirteen behaviours over four documents on one method
+      throughout, with a depth from 0 to 4. It was withdrawn on 16 September 2026 because its
+      depth figures rested on fewer passages than the doc reader shows.</p>
     </div>
   </section>
   <!-- The one technical section on the page, and the last. Everything above it is
@@ -684,9 +691,9 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact, and it is
     published at <a href="https://ai-character-index.pages.dev" target="_blank"
     rel="noopener">ai-character-index.pages.dev</a>.</p>
-    <p>Both repositories are public, and either one judges a document on your own machine, with
+    <p>Both repositories are public, and either one reads a document on your own machine, with
     your own documents and behaviours, without an account or a database. The original is built
-    around git: the behaviours, the documents and the verdicts are files, so a change to the index
+    around git: the behaviours, the documents and the results are files, so a change to the index
     is a commit and a contribution is a pull request. It needs Python, a browser and an API
     key.</p>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
@@ -694,24 +701,23 @@ cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
     <p>Ours, <a href="https://github.com/polariscollective/ai-character-index" target="_blank"
     rel="noopener">polariscollective/ai-character-index</a>, serves this site. It adds a hosted
-    database and a portal that runs the judging and publishes the results, which makes it the
-    heavier of the two to clone. It also runs on one machine with one API key:</p>
+    database and an operator&rsquo;s portal, which makes it the heavier of the two to clone. It
+    also runs on one machine with one API key:</p>
     <pre><code>python3 engine/local_run.py \
     --document=my-constitution@2026-09-12:path/to/document.md \
-    --behaviour=path/to/behaviour.json \
-    --panel=frontier_fast</code></pre>
+    --behaviour=path/to/behaviour.json</code></pre>
     <p>A document is any markdown file, and a behaviour is a small JSON file with its name, what it
-    requires and where it stops. Neither needs registering, and they are judged with the same
-    panel, prompt and parser as this site. Nothing is sent to us, and the document goes only to the
-    model providers you call. The results are written to <code>artefacts/</code>, and the README
-    describes each file.</p>
+    requires and where it stops. Neither needs registering, and both are read the same way this
+    site reads them. Nothing is sent to us, and the document goes only to the provider whose key
+    you use. The results are written to <code>artefacts/</code>, and the README describes each
+    file.</p>
   </section>
   </div>
 
 </div>
 
   <!-- Every behaviour the index asks about, opened from the count in the glossary:
-       each with the description the judges read and a way into the doc reader on it.
+       each with the description the index read it against and a way into the doc reader on it.
        Filled from the publication the page is serving. -->
   <dialog class="propose-dialog behaviours-dialog" id="behaviours-dialog"
           aria-labelledby="behaviours-dialog-title">
@@ -1025,7 +1031,7 @@ if (citeText) {
 }
 
 /* The behaviours the glossary counts, in a dialog opened from the count: each
-   one's name, the description the judges read, and a way into the doc reader on
+   one's name, the description the index read it against, and a way into the doc reader on
    it, grouped as the reader's menu groups them. Read from the publication the
    page is serving, so the count and the list are the reader's own. If the read
    fails, the count keeps the number it was written with and the dialog says
