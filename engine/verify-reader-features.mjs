@@ -2019,19 +2019,24 @@ console.log("== Overview: the governance view ==");
     "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));
 
-  // The board paints every row over its own maximum now. This view's maximum is
-  // its own, so not one of its colours moved. 9.0 of 16 is OpenAI's total, the
-  // first on the board.
-  const colours = await page.evaluate(() => ({
-    total: getComputedStyle(document.querySelector('#gov-heatmap .cell-button[data-row="total"]'))
-      .backgroundColor,
-    legend: [...document.querySelectorAll("#gov-legend .swatch")]
-      .map(swatch => getComputedStyle(swatch).backgroundColor),
-  }));
-  check(colours.total === "rgb(199, 159, 42)"
+  // The board paints every row over its own maximum now. This view's maxima are
+  // its own, so not one of its colours moved. 9.0 of 16 is OpenAI's total and 10
+  // of 18 its best practices, which is the row whose maximum is not four times a
+  // power of two and so the one the arithmetic could have lost.
+  const colours = await page.evaluate(() => {
+    const paintOf = row => getComputedStyle(
+      document.querySelector(`#gov-heatmap .cell-button[data-row="${row}"]`)).backgroundColor;
+    return {
+      total: paintOf("total"),
+      supporting: paintOf("supporting"),
+      legend: [...document.querySelectorAll("#gov-legend .swatch")]
+        .map(swatch => getComputedStyle(swatch).backgroundColor),
+    };
+  });
+  check(colours.total === "rgb(199, 159, 42)" && colours.supporting === "rgb(201, 160, 42)"
       && colours.legend.join(" | ") === "rgb(180, 71, 47) | rgb(199, 117, 43) | rgb(217, 162, 39)"
         + " | rgb(147, 151, 51) | rgb(76, 140, 63)",
-    "the governance view wears the colours it wore: 9.0 of 16, and its five swatches",
+    "the governance view wears the colours it wore: 9.0 of 16, 10 of 18, and its five swatches",
     JSON.stringify(colours));
 
   // A question opens into its checks.
@@ -2092,6 +2097,21 @@ console.log("== Overview: the governance view ==");
       && popover.here.join() === "0,2" && !popover.covers,
     "a score opens a popover beside it, and a score of 1 sits between 0 and 2",
     JSON.stringify(popover));
+
+  // The heading the popover is labelled by carries the id the markup names, and
+  // that id belongs to one element in the whole page: a board reads it off its
+  // own popover rather than writing a constant, so a second board cannot claim
+  // the same one.
+  const labelled = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    const named = pop.getAttribute("aria-labelledby");
+    return { named, heading: pop.querySelector("h2")?.id,
+             everywhere: document.querySelectorAll(`[id="${named}"]`).length };
+  });
+  check(labelled.named === "gov-pop-title" && labelled.heading === labelled.named
+      && labelled.everywhere === 1,
+    "the popover is labelled by its own heading, and that id is used once in the page",
+    JSON.stringify(labelled));
 
   // Pressing the same score again closes it rather than opening it once more.
   await cell.click();

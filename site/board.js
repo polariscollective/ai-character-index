@@ -8,7 +8,20 @@
  * implementation: a second copy of a popover is a second set of bugs.
  *
  * A view brings its own data, its own rows and the text of its own popovers.
- * Nothing here knows about a lab, a check, a behaviour or a criterion.
+ * Nothing here knows about a lab, a check, a behaviour or a criterion. What it
+ * does know is where its own popover is: a board takes its nodes, and the id its
+ * headings carry is read off the popover it was given, so two boards on one page
+ * label their popovers apart.
+ *
+ * Three class names are the governance view's, because that view was written
+ * first: `gov-pop-close` on the popover's cross, `gov-button` on the buttons
+ * inside it, and `gov-pop` on the popover itself in the markup. A second board
+ * has to carry the same names to be styled, since the rules that draw them sit
+ * under those selectors in site/overview.html. They were left rather than
+ * renamed: the prototype this series implements
+ * (docs/prototypes/2026-09-22-depth-out-of-ten/index.html) names them the same
+ * way, so renaming would put this file out of step with the design the later
+ * tasks copy from, for no change to anything a reader sees.
  *
  * Nothing is built with innerHTML: every string a model wrote lands as a text
  * node, wherever it came from.
@@ -187,9 +200,15 @@ export function createBoard({ nodes, everyRow }) {
 
     /* ---- What a popover is built from ------------------------------------- */
 
+    /* The heading carries the id its own popover is labelled by, read off that
+     * popover rather than written here: two boards on one page would otherwise
+     * both claim one id, and `aria-labelledby` would resolve to whichever of the
+     * two headings the browser reached first. A view may hand the id in as
+     * `nodes.popTitle` where its markup names it somewhere else. */
     titled(content, title, subtitle) {
       const heading = element("h2", "", title);
-      heading.id = "gov-pop-title";
+      const labelledBy = nodes.popTitle || nodes.pop.getAttribute("aria-labelledby");
+      if (labelledBy) heading.id = labelledBy;
       content.append(heading);
       if (subtitle) content.append(element("p", "subtitle", subtitle));
     },

@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { ORDINALS, level, rankBy } from "../../../site/board.js";
+import { ORDINALS, level, rankBy, createBoard } from "../../../site/board.js";
 import { rampAt } from "../../../site/depth-scale.js";
 
 const site = name => readFile(new URL(`../../../site/${name}`, import.meta.url), "utf8");
@@ -38,13 +38,77 @@ test("nine ordinals, so a board of nine labs can say which place is shared", () 
 /* The governance view painted a score as a share of 4; the board paints every
  * row over its own maximum. The two must be the same colour, or that view
  * changed in a task that was not allowed to change it. */
+/* 18 is the governance view's best practices, out of 2 for each of nine, and the
+ * one maximum on this board that is not 4 times a power of two: its equality is
+ * the one the ramp's arithmetic could lose. */
 test("painting over a row's own maximum is the colour the share of 4 wore", () => {
-  for (const max of [2, 4, 6, 8, 10, 12, 16, 20, 40]) {
+  for (const max of [2, 4, 6, 8, 10, 12, 16, 18, 20, 40]) {
     for (let twice = 0; twice <= max * 2; twice += 1) {
       const value = twice / 2;
       assert.deepEqual(rampAt(value, max), rampAt((value / max) * 4, 4), `${value} of ${max}`);
     }
   }
+});
+
+/* A document just large enough for `titled`, which builds two nodes and never
+ * reads the page back. Two boards live on one page from Task 5 on, so the id
+ * their headings carry has to come from the popover each was given: written as a
+ * constant, both would claim it and aria-labelledby would resolve to whichever
+ * the browser found first. */
+function withStubDocument(run) {
+  const had = Object.getOwnPropertyDescriptor(globalThis, "document");
+  globalThis.document = {
+    createElement: tag => ({ tag, id: "", className: "", textContent: undefined,
+                             children: [], append(...kids) { this.children.push(...kids); } }),
+  };
+  try {
+    return run();
+  } finally {
+    if (had) Object.defineProperty(globalThis, "document", had);
+    else delete globalThis.document;
+  }
+}
+
+const stubPopover = labelledBy => ({
+  getAttribute: name => (name === "aria-labelledby" ? labelledBy : null),
+});
+
+const stubContent = () => ({ children: [], append(...kids) { this.children.push(...kids); } });
+
+test("a popover's heading takes the id that popover is labelled by", () => {
+  withStubDocument(() => {
+    const board = createBoard({
+      nodes: { table: null, pop: stubPopover("gov-pop-title"), expandAll: null },
+      everyRow: { show: "Show every check", hide: "Hide every check" },
+    });
+    const content = stubContent();
+    board.titled(content, "Anthropic", "Ranked 1 of 9.");
+    assert.equal(content.children[0].tag, "h2");
+    assert.equal(content.children[0].id, "gov-pop-title");
+    assert.equal(content.children[0].textContent, "Anthropic");
+    assert.equal(content.children[1].className, "subtitle");
+  });
+});
+
+test("two boards on one page label their headings apart", () => {
+  withStubDocument(() => {
+    const boards = ["gov-pop-title", "cover-pop-title"].map(id => createBoard({
+      nodes: { table: null, pop: stubPopover(id), expandAll: null },
+      everyRow: { show: "Show every row", hide: "Hide every row" },
+    }));
+    const ids = boards.map(board => {
+      const content = stubContent();
+      board.titled(content, "A title");
+      return content.children[0].id;
+    });
+    assert.deepEqual(ids, ["gov-pop-title", "cover-pop-title"]);
+  });
+});
+
+test("the board writes no popover id of its own", async () => {
+  const board = await site("board.js");
+  assert.ok(!/["'`]gov-pop-title["'`]/.test(board), "the id is hardcoded in board.js");
+  assert.match(board, /aria-labelledby/);
 });
 
 test("the governance view keeps no copy of what moved to the board", async () => {
