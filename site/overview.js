@@ -572,4 +572,4 @@ document.querySelector(".views")?.addEventListener("keydown", event => {
 
 showView(viewFromAddress());
 initialize();
-initializeGovernance({ paint });
+initializeGovernance();

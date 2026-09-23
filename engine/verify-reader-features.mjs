@@ -2019,6 +2019,21 @@ console.log("== Overview: the governance view ==");
     "the scores run down from the total, the checks folded, the eight findings under the table",
     JSON.stringify(seen.rows));
 
+  // The board paints every row over its own maximum now. This view's maximum is
+  // its own, so not one of its colours moved. 9.0 of 16 is OpenAI's total, the
+  // first on the board.
+  const colours = await page.evaluate(() => ({
+    total: getComputedStyle(document.querySelector('#gov-heatmap .cell-button[data-row="total"]'))
+      .backgroundColor,
+    legend: [...document.querySelectorAll("#gov-legend .swatch")]
+      .map(swatch => getComputedStyle(swatch).backgroundColor),
+  }));
+  check(colours.total === "rgb(199, 159, 42)"
+      && colours.legend.join(" | ") === "rgb(180, 71, 47) | rgb(199, 117, 43) | rgb(217, 162, 39)"
+        + " | rgb(147, 151, 51) | rgb(76, 140, 63)",
+    "the governance view wears the colours it wore: 9.0 of 16, and its five swatches",
+    JSON.stringify(colours));
+
   // A question opens into its checks.
   await page.locator('.row-toggle[data-question="2"]').click();
   await page.waitForTimeout(100);

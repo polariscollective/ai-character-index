@@ -10,6 +10,10 @@
  * or why a company scored what it did, opens in a popover beside what was
  * pressed, so the table never gives up its width to it.
  *
+ * The table, the popover, the folds and the colours are board.js, which the
+ * coverage view draws from as well: this file brings the data, the rows and the
+ * words of its own popovers, and nothing else.
+ *
  * Everything comes from governance.json: the scores, what each score means, and
  * the text of the research note, lab by lab and question by question. A
  * question is the average of its checks, on their own scale of 0 to 4, and the
@@ -23,6 +27,8 @@
  * Nothing is built with innerHTML, as in overview.js. The text here is ours
  * rather than a model's, but one rule for the whole page is easier to keep.
  */
+
+import { createBoard, element, level, rankBy, ORDINALS } from "./board.js";
 
 /* Per question, the average of its checks; then the overall score, the sum of
  * the four questions; and the best practices, reported beside the overall
@@ -51,7 +57,6 @@ export function totalsFor(data, labId) {
 /* By overall score, and a tie broken on the best practices. That is the research
  * note's own rule. On averages it breaks two ties: OpenAI and Anthropic, and
  * Meta and xAI. */
-const level = (a, b) => Math.abs(a - b) < 1e-9;
 const ahead = (a, b) => (level(a.total, b.total) ? a.supporting > b.supporting : a.total > b.total);
 
 /* Labs level on both the overall score and the best practices share a place:
@@ -60,7 +65,7 @@ export function ranked(data) {
   const labs = data.labs
     .map(lab => ({ ...lab, ...totalsFor(data, lab.id) }))
     .sort((a, b) => (level(a.total, b.total) ? b.supporting - a.supporting : b.total - a.total));
-  return labs.map(lab => ({ ...lab, rank: 1 + labs.filter(other => ahead(other, lab)).length }));
+  return rankBy(labs, ahead);
 }
 
 const SCALE = 4;
@@ -69,153 +74,23 @@ const PRACTICE = 2;
 /* A question or an overall score, to one decimal. A check stays a whole number. */
 const shown = value => value.toFixed(1);
 
-function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-const board = { data: null, labs: [], paint: null, expanded: new Set(), nodes: {}, bestMax: 0 };
+const board = { data: null, labs: [], nodes: {}, bestMax: 0 };
+/* The board this view draws on, built in initializeGovernance. */
+let view = null;
 
 const questionOf = id => board.data.questions.find(q => q.id === id);
 
 /* What opens in the table: each question into its checks, and the supporting
  * practices into theirs, the internal ones included. */
 const GROUPS = { supporting: "Best practices" };
-const groupIds = () => [...board.data.questions.map(q => q.id), ...Object.keys(GROUPS)];
 const groupName = id => GROUPS[id] || questionOf(id).name;
 const partsOf = id => (GROUPS[id] ? "practices" : "checks");
+/* "the practices" for a group with a name of its own, "its checks" for a
+ * question, which is how the button to open one reads in a sentence. */
+const partsPhrase = id => `${GROUPS[id] ? "the" : "its"} ${partsOf(id)}`;
 const rowId = id => `gov-check-${id.replace(".", "-")}`;
 
-/* A score painted the way the board paints a depth, as a share of its maximum,
- * so 8 of 12 wears the colour 2.7 of 4 would. The ramp paints over whatever
- * maximum it is given, and this view gives it 4, its own, so no colour here
- * moved when the depths went to ten. The figure is always light, where the
- * overview picks dark or light by the colour underneath: across one table of
- * scores, figures that change colour from cell to cell read as a second code. */
-const FIGURE = "#F1EFE3";
-const PAINTED_OVER = 4;
-function paintShare(node, value, max) {
-  board.paint(node, (value / max) * PAINTED_OVER, PAINTED_OVER);
-  node.style.color = FIGURE;
-}
-
-function chip(value, max, text = String(value)) {
-  const node = element("span", "chip", text);
-  paintShare(node, value, max);
-  return node;
-}
-
-/* Not assessed: there is no score, so there is no colour either. */
-const naChip = () => element("span", "chip chip-na", "NA");
-
-/* ---- The popover ----------------------------------------------------------- */
-
-const pop = { trigger: null, closedTrigger: null, closedAt: 0 };
-
-/* Beside what opened it, never over it: below if it fits, else above, else to
- * the right or the left, and held inside the window whichever it is. Fixed to
- * the window, so it is placed again when the page scrolls under it. */
-function placePopover() {
-  const node = board.nodes.pop;
-  if (!pop.trigger || !node.matches(":popover-open")) return;
-  const box = pop.trigger.getBoundingClientRect();
-  const width = node.offsetWidth;
-  const height = node.offsetHeight;
-  const gap = 8;
-  const room = { width: window.innerWidth, height: window.innerHeight };
-  const clampTop = top => Math.max(gap, Math.min(top, room.height - height - gap));
-  const clampLeft = left => Math.max(gap, Math.min(left, room.width - width - gap));
-  let top;
-  let left;
-  if (box.bottom + gap + height <= room.height - gap) {
-    [top, left] = [box.bottom + gap, clampLeft(box.left)];
-  } else if (box.top - gap - height >= gap) {
-    [top, left] = [box.top - gap - height, clampLeft(box.left)];
-  } else if (box.right + gap + width <= room.width - gap) {
-    [top, left] = [clampTop(box.top + box.height / 2 - height / 2), box.right + gap];
-  } else if (box.left - gap - width >= gap) {
-    [top, left] = [clampTop(box.top + box.height / 2 - height / 2), box.left - gap - width];
-  } else {
-    // A phone: no side has room, so it takes the window and scrolls inside.
-    [top, left] = [clampTop(box.bottom + gap), clampLeft(box.left)];
-  }
-  node.style.top = `${top}px`;
-  node.style.left = `${left}px`;
-}
-
-/* Fill the popover and show it beside `trigger`. A press on the trigger of an
- * open popover is meant to close it, which the browser's own light dismiss does
- * on the way down; the click that follows must not open it again. */
-function openPopover(trigger, build) {
-  const node = board.nodes.pop;
-  if (trigger === pop.closedTrigger && performance.now() - pop.closedAt < 300) return;
-  if (node.matches(":popover-open")) node.hidePopover();
-
-  const content = document.createDocumentFragment();
-  const close = element("button", "gov-pop-close", "×");
-  close.type = "button";
-  close.setAttribute("aria-label", "Close");
-  close.addEventListener("click", () => node.hidePopover());
-  content.append(close);
-  build(content);
-  node.replaceChildren(content);
-
-  pop.trigger = trigger;
-  trigger.setAttribute("aria-expanded", "true");
-  trigger.classList.add("is-open");
-  node.showPopover();
-  node.scrollTop = 0;
-  placePopover();
-  node.focus({ preventScroll: true });
-}
-
-/* The same popover, same place, new contents: a score's popover leads on to the
- * company's whole profile without the reader losing their place. Closing it on
- * the way marks its trigger as just closed, which is forgotten here, or the
- * reopening would be taken for a press meant to close it. */
-function refill(build) {
-  const trigger = pop.trigger;
-  if (!trigger) return;
-  board.nodes.pop.hidePopover();
-  pop.closedTrigger = null;
-  openPopover(trigger, build);
-}
-
-/* Listened for before the popover closes rather than after: the browser's light
- * dismiss closes it on the press that lands on its own trigger, and the click
- * that follows has to find the trigger already marked as just closed. */
-function wirePopover() {
-  const node = board.nodes.pop;
-  node.addEventListener("beforetoggle", event => {
-    if (event.newState !== "closed") return;
-    const trigger = pop.trigger;
-    pop.trigger = null;
-    if (!trigger) return;
-    trigger.setAttribute("aria-expanded", "false");
-    trigger.classList.remove("is-open");
-    pop.closedTrigger = trigger;
-    pop.closedAt = performance.now();
-    // Back where the reader was, when the popover held the focus.
-    if (node.contains(document.activeElement)) trigger.focus({ preventScroll: true });
-  });
-  window.addEventListener("scroll", placePopover, { passive: true });
-  window.addEventListener("resize", placePopover, { passive: true });
-}
-
-function titled(content, title, subtitle) {
-  const heading = element("h2", "", title);
-  heading.id = "gov-pop-title";
-  content.append(heading);
-  if (subtitle) content.append(element("p", "subtitle", subtitle));
-}
-
-function figure(value, rest) {
-  const line = element("p", "figure");
-  line.append(element("strong", "", String(value)), document.createTextNode(rest));
-  return line;
-}
+/* ---- What each popover is made of ------------------------------------------ */
 
 /* What 0, 2 and 4 mean for one check. Where a score sits on them is marked: on
  * its own description when it is even, on the two either side when it is odd. */
@@ -235,7 +110,7 @@ function checksOf(lab, question) {
   const list = element("ul", "check-list");
   question.checks.forEach(check => {
     const item = element("li");
-    item.append(chip(board.data.scores[lab.id][check.id], 4),
+    item.append(view.chip(board.data.scores[lab.id][check.id], 4),
       element("span", "check-id", check.id), element("span", "", check.label));
     list.append(item);
   });
@@ -246,7 +121,7 @@ function practicesOf(lab) {
   const list = element("ul", "check-list");
   board.data.supporting.forEach(practice => {
     const item = element("li");
-    item.append(chip(board.data.supporting_scores[lab.id][practice.id], PRACTICE),
+    item.append(view.chip(board.data.supporting_scores[lab.id][practice.id], PRACTICE),
       element("span", "check-id", practice.id), element("span", "", practice.label));
     list.append(item);
   });
@@ -259,7 +134,7 @@ function disclosedList(lab) {
   const list = element("ul", "check-list");
   disclosedOf(board.data).forEach(practice => {
     const item = element("li");
-    item.append(chip(board.data.internal_scores[lab.id][practice.id], PRACTICE),
+    item.append(view.chip(board.data.internal_scores[lab.id][practice.id], PRACTICE),
       element("span", "check-id", practice.id),
       element("span", "", board.data.internal_evidence[lab.id][practice.id].sentence));
     list.append(item);
@@ -271,7 +146,7 @@ function internalList(marked) {
   const list = element("ul", "check-list");
   auditOnlyOf(board.data).forEach(practice => {
     const item = element("li");
-    if (marked) item.append(naChip());
+    if (marked) item.append(view.naChip());
     item.append(element("span", "check-id", practice.id), element("span", "", practice.label));
     list.append(item);
   });
@@ -337,20 +212,6 @@ function paperFold(item) {
   return fold;
 }
 
-/* A button that opens a group's rows in the table, from a popover about it. */
-function showInTable(groupId) {
-  const shown = board.expanded.has(groupId);
-  const whose = GROUPS[groupId] ? "the" : "its";
-  const toggle = element("button", "gov-button",
-    `${shown ? "Hide" : "Show"} ${whose} ${partsOf(groupId)} in the table`);
-  toggle.type = "button";
-  toggle.addEventListener("click", () => {
-    board.nodes.pop.hidePopover();
-    setExpanded(groupId, !shown);
-  });
-  return toggle;
-}
-
 /* The note's text, one paragraph per blank line. */
 function paragraphs(text) {
   const fragment = document.createDocumentFragment();
@@ -359,10 +220,8 @@ function paragraphs(text) {
 }
 
 function toProfile(lab, open) {
-  const button = element("button", "gov-button", `The whole profile of ${lab.name}`);
-  button.type = "button";
-  button.addEventListener("click", () => refill(content => profile(content, lab, open)));
-  return button;
+  return view.popButton(`The whole profile of ${lab.name}`,
+    () => view.refill(content => profile(content, lab, open)));
 }
 
 /* ---- What each popover says ------------------------------------------------ */
@@ -370,18 +229,18 @@ function toProfile(lab, open) {
 function profile(content, lab, open) {
   const alongside = board.labs.filter(other => other !== lab && other.rank === lab.rank);
   const text = board.data.profiles[lab.id];
-  titled(content, lab.name, [
+  view.titled(content, lab.name, [
     `Ranked ${lab.rank} of ${board.labs.length}`
       + `${alongside.length ? `, level with ${alongside.map(other => other.name).join(" and ")}` : ""}.`,
     lab.open_weights ? "Its flagship model, or nearly, can be downloaded by anyone (open weights)." : "",
     lab.legal || "",
   ].filter(Boolean).join(" "));
-  content.append(figure(shown(lab.total), ` out of ${OVERALL}`));
+  content.append(view.figure(shown(lab.total), ` out of ${OVERALL}`));
   board.data.questions.forEach(question => {
     const fold = element("details");
     fold.open = open === question.id;
     const summary = element("summary");
-    summary.append(chip(lab.byQuestion[question.id], SCALE, shown(lab.byQuestion[question.id])),
+    summary.append(view.chip(lab.byQuestion[question.id], SCALE, shown(lab.byQuestion[question.id])),
       element("span", "", `${question.name}, ${shown(lab.byQuestion[question.id])} out of ${SCALE}`));
     fold.append(summary, checksOf(lab, question), paragraphs(text[question.id]));
     content.append(fold);
@@ -389,12 +248,12 @@ function profile(content, lab, open) {
   const supporting = element("details");
   supporting.open = open === "supporting";
   const summary = element("summary");
-  summary.append(chip(lab.supporting, board.bestMax),
+  summary.append(view.chip(lab.supporting, board.bestMax),
     element("span", "", `Best practices, ${lab.supporting} out of ${board.bestMax}, not counted`));
   supporting.append(summary, practicesOf(lab), paragraphs(text.supporting),
-    element("h3", "", "What only the company can show"), disclosedList(lab),
+    view.h3("What only the company can show"), disclosedList(lab),
     element("p", "subtitle", `*${board.data.disclosure_note}`),
-    element("h3", "", "Only an internal audit could score this"), internalList(true),
+    view.h3("Only an internal audit could score this"), internalList(true),
     element("p", "", board.data.internal_note));
   content.append(supporting);
   if (text.aside) {
@@ -407,76 +266,76 @@ function profile(content, lab, open) {
 }
 
 function questionScore(content, lab, question) {
-  titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.question);
-  content.append(figure(shown(lab.byQuestion[question.id]), ` out of ${SCALE}`),
+  view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.question);
+  content.append(view.figure(shown(lab.byQuestion[question.id]), ` out of ${SCALE}`),
     element("p", "subtitle", "The average of its checks."), checksOf(lab, question));
-  content.append(element("h3", "", "What we found"),
+  content.append(view.h3("What we found"),
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function checkScore(content, lab, question, check) {
   const value = board.data.scores[lab.id][check.id];
-  titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.id} ${check.label}.`);
-  content.append(figure(value, " out of 4"));
-  content.append(element("h3", "", "What the scores mean for this check"), anchorsList(check, value));
-  content.append(element("h3", "", `What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
+  view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.id} ${check.label}.`);
+  content.append(view.figure(value, " out of 4"));
+  content.append(view.h3("What the scores mean for this check"), anchorsList(check, value));
+  content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
 function supportingScore(content, lab) {
-  titled(content, `${lab.name}: best practices`, "From a second working paper, and left out of the total.");
-  content.append(figure(lab.supporting, ` out of ${board.bestMax}`), practicesOf(lab),
-    element("h3", "", "What we found"), paragraphs(board.data.profiles[lab.id].supporting),
-    element("h3", "", "What only the company can show"), disclosedList(lab),
+  view.titled(content, `${lab.name}: best practices`, "From a second working paper, and left out of the total.");
+  content.append(view.figure(lab.supporting, ` out of ${board.bestMax}`), practicesOf(lab),
+    view.h3("What we found"), paragraphs(board.data.profiles[lab.id].supporting),
+    view.h3("What only the company can show"), disclosedList(lab),
     element("p", "subtitle", `*${board.data.disclosure_note}`),
-    element("h3", "", "Only an internal audit could score this"), internalList(true),
+    view.h3("Only an internal audit could score this"), internalList(true),
     toProfile(lab, "supporting"));
 }
 
 function practiceScore(content, lab, practice) {
   const value = board.data.supporting_scores[lab.id][practice.id];
-  titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
-  content.append(figure(value, ` out of ${PRACTICE}`));
+  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
+  content.append(view.figure(value, ` out of ${PRACTICE}`));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
-  content.append(element("h3", "", "What the scores mean for this practice"), scaleList(value));
-  content.append(element("h3", "", `What we found on ${lab.name}'s best practices`),
+  content.append(view.h3("What the scores mean for this practice"), scaleList(value));
+  content.append(view.h3(`What we found on ${lab.name}'s best practices`),
     paragraphs(board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
 }
 
 function disclosedScore(content, lab, practice) {
   const value = board.data.internal_scores[lab.id][practice.id];
   const found = board.data.internal_evidence[lab.id][practice.id];
-  titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
-  content.append(figure(value, ` out of ${PRACTICE}`), element("p", "", found.sentence));
+  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
+  content.append(view.figure(value, ` out of ${PRACTICE}`), element("p", "", found.sentence));
   if (value === 0) content.append(element("p", "subtitle", `*${board.data.disclosure_note}`));
   if (found.sources.length) {
-    content.append(element("h3", "", `What ${lab.name} publishes`));
+    content.append(view.h3(`What ${lab.name} publishes`));
     found.sources.forEach(source => content.append(sourceQuote(source)));
   }
-  content.append(element("h3", "", "What the scores mean for this practice"),
+  content.append(view.h3("What the scores mean for this practice"),
     scaleList(value, practice.anchors), paperFold(practice), toProfile(lab, "supporting"));
 }
 
 function aboutDisclosedPractice(content, practice) {
-  titled(content, practice.short, `${practice.id} ${practice.label}`);
+  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "One of the best practices only the company can show, scored on what it publishes."),
-    paperFold(practice), element("h3", "", "What the scores mean"), scaleList(null, practice.anchors),
+    paperFold(practice), view.h3("What the scores mean"), scaleList(null, practice.anchors),
     element("p", "subtitle", `*${board.data.disclosure_note}`));
 }
 
 function internalScore(content, lab, practice) {
-  titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
-  content.append(figure("NA", ", not assessed"),
+  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
+  content.append(view.figure("NA", ", not assessed"),
     element("p", "", `Whether ${lab.name} does this cannot be confirmed from what it `
       + "publishes. It would take an internal audit."),
-    element("h3", "", "What an audit would look at"), element("p", "", practice.audit),
+    view.h3("What an audit would look at"), element("p", "", practice.audit),
     toProfile(lab, "supporting"));
 }
 
 function aboutTotal(content) {
-  titled(content, `Overall, out of ${OVERALL}`, "The sum of the four questions.");
+  view.titled(content, `Overall, out of ${OVERALL}`, "The sum of the four questions.");
   content.append(element("p", "", "Each question is scored from 0 to 4, as the average of "
     + "its checks, and the overall score is the sum of the four. Every question weighs "
     + "the same, whatever its number of checks."));
@@ -492,13 +351,13 @@ function aboutTotal(content) {
 }
 
 function aboutQuestion(content, question) {
-  titled(content, question.name, question.question);
+  view.titled(content, question.name, question.question);
   content.append(element("p", "", question.explainer));
   if (question.minimum) {
-    content.append(element("h3", "", "Part of the minimum"), element("p", "", board.data.minimum_note));
+    content.append(view.h3("Part of the minimum"), element("p", "", board.data.minimum_note));
   }
   content.append(paperFold(question));
-  content.append(element("h3", "", "How it is scored"));
+  content.append(view.h3("How it is scored"));
   content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4. `
     + "The question's score is their average. Open a check to see what earns each score."));
   question.checks.forEach(check => {
@@ -508,20 +367,20 @@ function aboutQuestion(content, question) {
     fold.append(summary, anchorsList(check, null));
     content.append(fold);
   });
-  content.append(showInTable(question.id));
+  content.append(view.showInTable(question.id, partsPhrase(question.id)));
 }
 
 function aboutCheck(content, question, check) {
-  titled(content, check.short, `${check.id} ${check.label}.`);
+  view.titled(content, check.short, `${check.id} ${check.label}.`);
   content.append(element("p", "subtitle",
     `One of the checks on the ${question.name.toLowerCase()} question, scored from 0 to 4.`),
   paperFold(check));
-  content.append(element("h3", "", "What the scores mean"), anchorsList(check, null),
+  content.append(view.h3("What the scores mean"), anchorsList(check, null),
     element("p", "subtitle", "A score of 1 or 3 falls between the descriptions either side of it."));
 }
 
 function aboutSupporting(content) {
-  titled(content, `Best practices, out of ${board.bestMax}`, "From a second working paper, and left out of the total.");
+  view.titled(content, `Best practices, out of ${board.bestMax}`, "From a second working paper, and left out of the total.");
   content.append(element("p", "", "Practices taken from Kembery et al., Emerging International "
     + "Best Practices for AI Model Specs. Five can be checked by anyone from public sources. "
     + "Four more only the company can show, and are scored on what it publishes. One only an "
@@ -533,12 +392,12 @@ function aboutSupporting(content) {
     item.append(element("span", "check-id", practice.id), element("span", "", practice.label));
     list.append(item);
   });
-  content.append(list, element("h3", "", "What the scores mean"), scaleList(null),
-    element("h3", "", "What only the company can show"),
+  content.append(list, view.h3("What the scores mean"), scaleList(null),
+    view.h3("What only the company can show"),
     element("p", "", board.data.disclosed_intro), disclosedAbout(),
-    element("h3", "", "Only an internal audit could score this"),
+    view.h3("Only an internal audit could score this"),
     element("p", "", board.data.internal_note), internalList(false),
-    showInTable("supporting"));
+    view.showInTable("supporting", partsPhrase("supporting")));
 }
 
 function disclosedAbout() {
@@ -552,103 +411,38 @@ function disclosedAbout() {
 }
 
 function aboutDisclosed(content) {
-  titled(content, "What only the company can show", "Four of the best practices, scored on what the company publishes.");
+  view.titled(content, "What only the company can show", "Four of the best practices, scored on what the company publishes.");
   content.append(element("p", "", board.data.disclosed_intro), disclosedAbout(),
     element("p", "subtitle", `*${board.data.disclosure_note}`));
 }
 
 function aboutPractice(content, practice) {
-  titled(content, practice.short, `${practice.id} ${practice.label}`);
+  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "One of the best practices, scored 0, 1 or 2 and left out of the total."),
-    paperFold(practice), element("h3", "", "What the scores mean"), scaleList(null));
+    paperFold(practice), view.h3("What the scores mean"), scaleList(null));
 }
 
 function aboutInternal(content) {
-  titled(content, "Only an internal audit could score this", "One of the best practices, not scored.");
+  view.titled(content, "Only an internal audit could score this", "One of the best practices, not scored.");
   content.append(element("p", "", board.data.internal_note), internalList(false));
 }
 
 function aboutInternalPractice(content, practice) {
-  titled(content, practice.short, `${practice.id} ${practice.label}`);
+  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "Not assessed for any company, because no internal audit has been done."),
     paperFold(practice),
-    element("h3", "", "What an audit would look at"), element("p", "", practice.audit));
+    view.h3("What an audit would look at"), element("p", "", practice.audit));
 }
 
 /* ---- The table --------------------------------------------------------------- */
 
-function rowName(name, sub, build, label) {
-  const button = element("button", "row-name");
-  button.type = "button";
-  button.setAttribute("aria-haspopup", "dialog");
-  button.setAttribute("aria-expanded", "false");
-  button.setAttribute("aria-label", label);
-  button.append(element("span", "head-name", name));
-  if (sub) button.append(element("span", "head-sub", sub));
-  button.addEventListener("click", () => openPopover(button, build));
-  return button;
-}
-
-function cellButton(lab, row, label, build, className) {
-  const cell = element("td", "cell");
-  const button = element("button", className);
-  button.type = "button";
-  button.dataset.lab = lab.id;
-  button.dataset.row = row;
-  button.setAttribute("aria-haspopup", "dialog");
-  button.setAttribute("aria-expanded", "false");
-  button.setAttribute("aria-label", label);
-  button.addEventListener("click", () => openPopover(button, build));
-  cell.append(button);
-  return { cell, button };
-}
-
-function scoreCell(lab, rowLabel, value, max, build, row, text = String(value)) {
-  const { cell, button } = cellButton(lab, row,
-    `${lab.name}, ${rowLabel}: ${text} out of ${max}`, build, "cell-button");
-  paintShare(button, value, max);
-  // What the score is out of, small and to the right. The accessible name
-  // already says it, so a screen reader does not hear it twice.
-  const out = element("span", "cell-max", `/${max}`);
-  out.setAttribute("aria-hidden", "true");
-  button.append(element("span", "cell-figure", text), out);
-  return cell;
-}
-
-/* A practice only an internal audit could check: NA, and no colour. */
-function naCell(lab, rowLabel, build, row) {
-  const { cell, button } = cellButton(lab, row,
-    `${lab.name}, ${rowLabel}: not assessed`, build, "cell-button cell-na");
-  button.append(element("span", "cell-figure", "NA"));
-  return cell;
-}
-
-/* The round button that opens a row into the rows under it. */
-function rowToggle(groupId, children) {
-  const toggle = element("button", "row-toggle");
-  toggle.type = "button";
-  toggle.dataset.question = groupId;
-  toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-controls", children.map(child => rowId(child.id)).join(" "));
-  toggle.setAttribute("aria-label", `Show the ${partsOf(groupId)} of ${groupName(groupId)}`);
-  toggle.addEventListener("click", () => setExpanded(groupId, !board.expanded.has(groupId)));
-  return toggle;
-}
-
-/* A check or a practice, folded under the row it belongs to until that opens. */
-function subRow(id, parent, name) {
-  const row = element("tr", "check-row");
-  row.id = rowId(id);
-  row.dataset.parent = parent;
-  row.hidden = true;
-  const head = element("th");
-  head.scope = "row";
-  head.append(name);
-  row.append(head);
-  return row;
-}
+/* One cell of a lab's column: the board wants the lab's name for the accessible
+ * label and its id for the address a walker selects on. */
+const cellFor = (lab, rowLabel, row, rest) => view.scoreCell({
+  name: lab.name, rowLabel, dataset: { lab: lab.id, row }, ...rest,
+});
 
 function headRow() {
   const row = element("tr");
@@ -671,53 +465,48 @@ function headRow() {
       element("span", "company-name", lab.name));
     if (lab.open_weights) button.append(element("span", "company-flag", "Open weights"));
     button.addEventListener("click", () =>
-      openPopover(button, content => profile(content, lab, null)));
+      view.openPopover(button, content => profile(content, lab, null)));
     cell.append(button);
     row.append(cell);
   });
   return row;
 }
 
-/* A row's head: a fold for a question, an empty space the same width for the
- * rows that have nothing to fold, so every name starts on one line. */
-function rowHead(first, name) {
-  const head = element("th");
-  head.scope = "row";
-  const line = element("div", "row-head");
-  line.append(first || element("span", "row-spacer"), name);
-  head.append(line);
-  return head;
-}
-
 function renderTable() {
   const body = document.createDocumentFragment();
 
   const total = element("tr", "total-row");
-  total.append(rowHead(null, rowName("Overall", `out of ${OVERALL}`, aboutTotal,
+  total.append(view.rowHead(null, view.rowName("Overall", `out of ${OVERALL}`, aboutTotal,
     `Overall, out of ${OVERALL}: how it is worked out`)));
-  board.labs.forEach(lab => total.append(scoreCell(lab, "overall", lab.total, OVERALL,
-    content => profile(content, lab, null), "total", shown(lab.total))));
+  board.labs.forEach(lab => total.append(cellFor(lab, "overall", "total", {
+    value: lab.total, max: OVERALL, text: shown(lab.total),
+    build: content => profile(content, lab, null),
+  })));
   body.append(total);
 
   board.data.questions.forEach(question => {
     const row = element("tr", "question-row");
     row.dataset.question = question.id;
-    row.append(rowHead(rowToggle(question.id, question.checks),
-      rowName(question.name, `out of ${SCALE}${question.minimum ? ", part of the minimum" : ""}`,
+    row.append(view.rowHead(
+      view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
+        { parts: partsOf(question.id), name: groupName(question.id) }),
+      view.rowName(question.name, `out of ${SCALE}${question.minimum ? ", part of the minimum" : ""}`,
         content => aboutQuestion(content, question), `${question.name}: what it asks`)));
-    board.labs.forEach(lab => row.append(scoreCell(lab, question.name.toLowerCase(),
-      lab.byQuestion[question.id], SCALE,
-      content => questionScore(content, lab, question), question.id,
-      shown(lab.byQuestion[question.id]))));
+    board.labs.forEach(lab => row.append(cellFor(lab, question.name.toLowerCase(), question.id, {
+      value: lab.byQuestion[question.id], max: SCALE, text: shown(lab.byQuestion[question.id]),
+      build: content => questionScore(content, lab, question),
+    })));
     body.append(row);
 
     question.checks.forEach(check => {
-      const sub = subRow(check.id, question.id, rowName(check.short, check.id,
-        content => aboutCheck(content, question, check),
-        `${check.id} ${check.short}: what its scores mean`));
-      board.labs.forEach(lab => sub.append(scoreCell(lab, check.short.toLowerCase(),
-        board.data.scores[lab.id][check.id], 4,
-        content => checkScore(content, lab, question, check), check.id)));
+      const sub = view.subRow(rowId(check.id), question.id,
+        view.rowName(check.short, check.id,
+          content => aboutCheck(content, question, check),
+          `${check.id} ${check.short}: what its scores mean`));
+      board.labs.forEach(lab => sub.append(cellFor(lab, check.short.toLowerCase(), check.id, {
+        value: board.data.scores[lab.id][check.id], max: 4,
+        build: content => checkScore(content, lab, question, check),
+      })));
       body.append(sub);
     });
   });
@@ -734,101 +523,91 @@ function renderTable() {
   body.append(outside);
 
   const supporting = element("tr", "supporting-row");
-  supporting.append(rowHead(rowToggle("supporting",
-    [...board.data.supporting, { id: "disclosed" }, ...disclosedOf(board.data),
-      { id: "internal" }, ...auditOnlyOf(board.data)]),
-    rowName("Best practices", `out of ${board.bestMax}`, aboutSupporting,
+  supporting.append(view.rowHead(
+    view.rowToggle("supporting",
+      [...board.data.supporting, { id: "disclosed" }, ...disclosedOf(board.data),
+        { id: "internal" }, ...auditOnlyOf(board.data)].map(part => rowId(part.id)),
+      { parts: partsOf("supporting"), name: groupName("supporting") }),
+    view.rowName("Best practices", `out of ${board.bestMax}`, aboutSupporting,
       `Best practices, out of ${board.bestMax}, not counted: what they are`)));
-  board.labs.forEach(lab => supporting.append(scoreCell(lab, "best practices",
-    lab.supporting, board.bestMax, content => supportingScore(content, lab), "supporting")));
+  board.labs.forEach(lab => supporting.append(cellFor(lab, "best practices", "supporting", {
+    value: lab.supporting, max: board.bestMax,
+    build: content => supportingScore(content, lab),
+  })));
   body.append(supporting);
   board.data.supporting.forEach(practice => {
-    const sub = subRow(practice.id, "supporting", rowName(practice.short, practice.id,
-      content => aboutPractice(content, practice),
-      `${practice.id} ${practice.short}: what its scores mean`));
-    board.labs.forEach(lab => sub.append(scoreCell(lab, practice.short.toLowerCase(),
-      board.data.supporting_scores[lab.id][practice.id], PRACTICE,
-      content => practiceScore(content, lab, practice), practice.id)));
+    const sub = view.subRow(rowId(practice.id), "supporting",
+      view.rowName(practice.short, practice.id,
+        content => aboutPractice(content, practice),
+        `${practice.id} ${practice.short}: what its scores mean`));
+    board.labs.forEach(lab => sub.append(cellFor(lab, practice.short.toLowerCase(), practice.id, {
+      value: board.data.supporting_scores[lab.id][practice.id], max: PRACTICE,
+      build: content => practiceScore(content, lab, practice),
+    })));
     body.append(sub);
   });
 
   // The same group goes on, under a line of their own, with the practices only
   // the company can show. The paper asks companies to publish them, so they are
   // scored on what each publishes, and a 0 carries the note that says so.
-  const disclosedLine = subRow("disclosed", "supporting", rowName("What only the company can show*",
-    "scored on what it publishes", aboutDisclosed, "Practices only the company can show: how they are scored"));
+  const disclosedLine = view.subRow(rowId("disclosed"), "supporting",
+    view.rowName("What only the company can show*", "scored on what it publishes",
+      aboutDisclosed, "Practices only the company can show: how they are scored"));
   disclosedLine.classList.add("practice-divider");
   const scoredOn = element("td", "divider-note", `*${board.data.disclosure_note}`);
   scoredOn.colSpan = board.labs.length;
   disclosedLine.append(scoredOn);
   body.append(disclosedLine);
   disclosedOf(board.data).forEach(practice => {
-    const sub = subRow(practice.id, "supporting", rowName(practice.short, practice.id,
-      content => aboutDisclosedPractice(content, practice),
-      `${practice.id} ${practice.short}: what its scores mean`));
-    board.labs.forEach(lab => sub.append(scoreCell(lab, practice.short.toLowerCase(),
-      board.data.internal_scores[lab.id][practice.id], PRACTICE,
-      content => disclosedScore(content, lab, practice), practice.id)));
+    const sub = view.subRow(rowId(practice.id), "supporting",
+      view.rowName(practice.short, practice.id,
+        content => aboutDisclosedPractice(content, practice),
+        `${practice.id} ${practice.short}: what its scores mean`));
+    board.labs.forEach(lab => sub.append(cellFor(lab, practice.short.toLowerCase(), practice.id, {
+      value: board.data.internal_scores[lab.id][practice.id], max: PRACTICE,
+      build: content => disclosedScore(content, lab, practice),
+    })));
     body.append(sub);
   });
 
   // Last, what the paper does not ask anyone to publish. No audit has been
   // done, so every cell is NA, and it counts towards nothing.
-  const divider = subRow("internal", "supporting", rowName("Only an internal audit could score this",
-    "not scored", aboutInternal, "Practices only an internal audit could score: what they are"));
+  const divider = view.subRow(rowId("internal"), "supporting",
+    view.rowName("Only an internal audit could score this", "not scored",
+      aboutInternal, "Practices only an internal audit could score: what they are"));
   divider.classList.add("practice-divider");
   const why = element("td", "divider-note", "No internal audit has been done, so every company is NA.");
   why.colSpan = board.labs.length;
   divider.append(why);
   body.append(divider);
   auditOnlyOf(board.data).forEach(practice => {
-    const sub = subRow(practice.id, "supporting", rowName(practice.short, practice.id,
-      content => aboutInternalPractice(content, practice),
-      `${practice.id} ${practice.short}: what it asks`));
-    board.labs.forEach(lab => sub.append(naCell(lab, practice.short.toLowerCase(),
-      content => internalScore(content, lab, practice), practice.id)));
+    const sub = view.subRow(rowId(practice.id), "supporting",
+      view.rowName(practice.short, practice.id,
+        content => aboutInternalPractice(content, practice),
+        `${practice.id} ${practice.short}: what it asks`));
+    board.labs.forEach(lab => sub.append(view.naCell({
+      name: lab.name, rowLabel: practice.short.toLowerCase(),
+      dataset: { lab: lab.id, row: practice.id },
+      build: content => internalScore(content, lab, practice),
+    })));
     body.append(sub);
   });
 
-  const table = board.nodes.table;
+  const table = view.nodes.table;
   table.tHead.replaceChildren(headRow());
   table.tBodies[0].replaceChildren(body);
-}
-
-/* A question opens into its checks and a group of practices into its
- * practices, and the button above the table opens or shuts them all at once. */
-function setExpanded(groupId, open) {
-  if (open) board.expanded.add(groupId);
-  else board.expanded.delete(groupId);
-  board.nodes.table.querySelectorAll(`tr.check-row[data-parent="${groupId}"]`)
-    .forEach(row => { row.hidden = !open; });
-  const toggle = board.nodes.table.querySelector(`.row-toggle[data-question="${groupId}"]`);
-  toggle.setAttribute("aria-expanded", String(open));
-  toggle.setAttribute("aria-label",
-    `${open ? "Hide" : "Show"} the ${partsOf(groupId)} of ${groupName(groupId)}`);
-  const all = board.expanded.size === groupIds().length;
-  board.nodes.expandAll.setAttribute("aria-pressed", String(all));
-  board.nodes.expandAll.textContent = all ? "Hide every check" : "Show every check";
 }
 
 function renderLegend() {
   const legend = document.createDocumentFragment();
   legend.append(element("span", "", "Colour is the share of the points available:"),
     element("span", "", "none"));
-  const swatches = element("span", "swatches");
-  [0, 1, 2, 3, 4].forEach(level => {
-    const swatch = element("span", "swatch");
-    board.paint(swatch, level, PAINTED_OVER);
-    swatches.append(swatch);
-  });
-  legend.append(swatches, element("span", "", "all"));
+  legend.append(view.swatches([0, 1, 2, 3, 4], SCALE), element("span", "", "all"));
   const na = element("span", "legend-na");
-  na.append(naChip(), document.createTextNode(" not assessed, needs an internal audit"));
+  na.append(view.naChip(), document.createTextNode(" not assessed, needs an internal audit"));
   legend.append(na);
   board.nodes.legend.replaceChildren(legend);
 }
-
-const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth"];
 
 /* The ties the ranking has to break, or cannot, said under the table. */
 function renderTies() {
@@ -910,19 +689,17 @@ async function loadGovernance() {
   }
 }
 
-/* `paint` is the overview's own, given this view's maximum of 4, so a score of
- * 3 out of 4 here wears the colour a depth of 3 out of 4 wears in the other
- * view. */
-export async function initializeGovernance({ paint }) {
+export async function initializeGovernance() {
   const byId = id => document.getElementById(id);
+  view = createBoard({
+    nodes: { table: byId("gov-heatmap"), pop: byId("gov-pop"), expandAll: byId("gov-expand-all") },
+    everyRow: { show: "Show every check", hide: "Hide every check" },
+  });
   board.nodes = {
-    status: byId("gov-status"), table: byId("gov-heatmap"),
-    legend: byId("gov-legend"), findings: byId("gov-findings"), pop: byId("gov-pop"),
-    expandAll: byId("gov-expand-all"), scoring: byId("gov-scoring"),
-    supporting: byId("gov-supporting"), disclosed: byId("gov-disclosed"), internal: byId("gov-internal"),
-    ties: byId("gov-ties"),
+    status: byId("gov-status"), legend: byId("gov-legend"), findings: byId("gov-findings"),
+    scoring: byId("gov-scoring"), supporting: byId("gov-supporting"),
+    disclosed: byId("gov-disclosed"), internal: byId("gov-internal"), ties: byId("gov-ties"),
   };
-  board.paint = paint;
   const data = await loadGovernance();
   if (!data) {
     board.nodes.status.textContent = "The governance scores could not be loaded.";
@@ -936,10 +713,7 @@ export async function initializeGovernance({ paint }) {
   renderTies();
   renderFindings();
   renderScoring();
-  wirePopover();
-  board.nodes.expandAll.addEventListener("click", () => {
-    const open = board.expanded.size !== groupIds().length;
-    groupIds().forEach(id => setExpanded(id, open));
-  });
+  view.wirePopover();
+  view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
   board.nodes.status.textContent = "";
 }

@@ -548,18 +548,19 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* The table. The grid's own cells and colours, so a score reads the same in
    both views; every cell carries its figure, so colour is never alone. Its head
    holds under the site header while the checks are open and the table is long. */
+/* The board: one table with the labs across and the figures down, drawn by site/board.js for both views. Rules that only the governance view's own rows need stay under .gov-heatmap below. */
 /* From the top, so the ranks sit on one line whether a name wraps or carries a
    mark under it. */
-.gov-heatmap thead th {
+.board thead th {
   top: var(--header-height);
   padding: 8px 6px 8px 0;
   vertical-align: top;
 }
-.gov-heatmap thead th.row-col { width: 22%; }
-.gov-heatmap tbody th { padding: 0 10px 0 0; font-weight: 400; vertical-align: middle; }
-.gov-heatmap .cell { padding: 3px 6px 3px 0; }
-.gov-heatmap tbody tr { border-bottom: 1px solid var(--line-light); }
-.gov-heatmap .cell-button {
+.board thead th.row-col { width: 22%; }
+.board tbody th { padding: 0 10px 0 0; font-weight: 400; vertical-align: middle; }
+.board .cell { padding: 3px 6px 3px 0; }
+.board tbody tr { border-bottom: 1px solid var(--line-light); }
+.board .cell-button {
   display: block;
   min-height: 44px;
   padding: 10px 8px;
@@ -567,12 +568,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 /* The figure sits dead centre, across and down. What the score is out of is
    placed on its own in the corner and takes no part in that centring. */
-.gov-heatmap .cell-button {
+.board .cell-button {
   position: relative;
   display: grid;
   place-items: center;
 }
-.gov-heatmap .cell-button .cell-figure { font-size: 16px; }
+.board .cell-button .cell-figure { font-size: 16px; }
 /* What the score is out of, small and light grey in the cell's lower right
    corner, straight on the cell's own colour. */
 .cell-max {
@@ -585,46 +586,50 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   font-weight: 400;
   line-height: 1.2;
 }
-.gov-heatmap .cell-button:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
-.gov-heatmap .cell-button.is-open { outline: 3px solid var(--ink); outline-offset: 2px; }
-.gov-heatmap .cell-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.board .cell-button:hover { outline: 2px solid var(--ink); outline-offset: 1px; }
+.board .cell-button.is-open { outline: 3px solid var(--ink); outline-offset: 2px; }
+.board .cell-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 /* The total leads, and reads as the sum it is: taller, heavier, a rule under it. */
-.gov-heatmap .total-row { border-bottom: 1px solid var(--muted); }
-.gov-heatmap .total-row .cell-button { min-height: 54px; }
-.gov-heatmap .total-row .cell-figure { font-size: 20px; }
-/* The best practices are shown and never counted, so they stand apart, under a
-   line across the table that says so. */
-.gov-heatmap .outside-row { border-top: 2px solid var(--muted); }
-.gov-heatmap .outside-row th, .gov-heatmap .outside-row td { padding-top: 22px; padding-bottom: 6px; }
-.gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
+.board .total-row { border-bottom: 1px solid var(--muted); }
+.board .total-row .cell-button { min-height: 54px; }
+.board .total-row .cell-figure { font-size: 20px; }
 /* Not assessed: no score, so no colour, and a dashed edge so the cell still
    reads as one. */
-.gov-heatmap .cell-button.cell-na {
+.board .cell-button.cell-na {
   border: 1px dashed var(--muted);
   background: transparent;
   color: var(--muted);
 }
-.gov-heatmap .cell-na .cell-figure { font-weight: 400; }
+.board .cell-na .cell-figure { font-weight: 400; }
 .chip-na {
   border: 1px dashed var(--muted);
   color: var(--muted);
   font-weight: 400;
 }
 .legend-na { display: inline-flex; align-items: center; gap: 6px; }
+/* A group's rows, indented under it and a size smaller. */
+.board .check-row th { padding-left: 34px; }
+/* A check's cell starts a fifth of the way into its own column, like the second
+   line of a bullet: an open question reads as the parts its score is the sum of,
+   column by column. */
+.board .check-row .cell-button { width: 80%; margin-left: 20%; }
+.board .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
+.board .check-row .cell-figure { font-size: 14px; }
+.board .check-row { background: rgb(92 107 60 / .05); }
+
+/* The rows only the governance view has, which is why they are not on the board:
+   the line that puts the best practices outside the total, and the line inside
+   them between what anyone can check and what only the company can show. */
+/* The best practices are shown and never counted, so they stand apart, under a
+   line across the table that says so. */
+.gov-heatmap .outside-row { border-top: 2px solid var(--muted); }
+.gov-heatmap .outside-row th, .gov-heatmap .outside-row td { padding-top: 22px; padding-bottom: 6px; }
+.gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
 /* Inside the supporting practices, the line between the five scored from public
    sources and the five only an audit could score. */
 .gov-heatmap .practice-divider { border-top: 1px solid var(--muted); }
 .gov-heatmap .practice-divider th, .gov-heatmap .practice-divider td { padding-top: 12px; padding-bottom: 6px; }
 .gov-heatmap .divider-note { color: var(--muted); font-size: 13px; vertical-align: middle; }
-/* A question's checks, indented under it and a size smaller. */
-.gov-heatmap .check-row th { padding-left: 34px; }
-/* A check's cell starts a fifth of the way into its own column, like the second
-   line of a bullet: an open question reads as the parts its score is the sum of,
-   column by column. */
-.gov-heatmap .check-row .cell-button { width: 80%; margin-left: 20%; }
-.gov-heatmap .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
-.gov-heatmap .check-row .cell-figure { font-size: 14px; }
-.gov-heatmap .check-row { background: rgb(92 107 60 / .05); }
 
 .row-head { display: flex; gap: 8px; align-items: center; min-height: 44px; }
 .row-name, .company-button {
@@ -971,7 +976,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every check</button>
   </div>
   <div class="matrix-wrap">
-    <table class="gov-heatmap" id="gov-heatmap">
+    <table class="gov-heatmap board" id="gov-heatmap">
       <caption class="visually-hidden">Each company's scores, overall and question by question, with each question's checks available to open</caption>
       <thead></thead>
       <tbody></tbody>
