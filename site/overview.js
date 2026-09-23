@@ -1,4 +1,4 @@
-/* The overview: how each lab's specification scores, behaviour by behaviour and
+/* The overview: how each lab's constitution scores, behaviour by behaviour and
  * as a document.
  *
  * Four sources, and only the last two are ours to lose. The payload and the
@@ -36,16 +36,16 @@ import { CRITERIA, CRITERION_MAX, SHOWN_MAX, WHOLE_MAX, FINAL_MAX, HALVING, CONT
          finalFigure, judgesOf, orderedClaims, yesNo, methodFacts }
   from "./document-assessment.js";
 
-/* Labs the index carries no specification for. They are shown at nought across
+/* Labs the index carries no constitution for. They are shown at nought across
  * every behaviour, which is what was asked for, and pressing one says why: a
  * nought here is the absence of a document to read, not a document that was
  * read and found to say nothing. Those are different claims and the board must
  * not let one pass for the other.
  *
  * Mistral AI, Moonshot AI and DeepSeek joined in September 2026, when the
- * governance view took them on: none publishes a model spec either, and a lab
+ * governance view took them on: none publishes a constitution either, and a lab
  * the other view ranks should not be missing from this one. */
-const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
+const WITHOUT_A_CONSTITUTION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
   "DeepSeek"];
 
 const byId = id => document.getElementById(id);
@@ -98,9 +98,9 @@ async function loadJSON(url, fallback) {
   }
 }
 
-/* One column per specification at its newest version. A document id is the
- * specification and its version, and versions are dated strings, so the highest
- * string is the newest. Keyed by specification rather than by lab: they are the
+/* One column per constitution at its newest version. A document id is the
+ * constitution and its version, and versions are dated strings, so the highest
+ * string is the newest. Keyed by constitution rather than by lab: they are the
  * same thing while each lab carries one document, and a lab that publishes a
  * second one deserves a column rather than being folded into the other. */
 function newestPerSpecification(documents) {
@@ -117,14 +117,14 @@ function newestPerSpecification(documents) {
   // of its own, and a reader looking for a lab should find it where its name
   // falls rather than where its coverage does.
   return [...newest.values()]
-    .concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })))
+    .concat(WITHOUT_A_CONSTITUTION.map(lab => ({ lab, absent: true })))
     .sort((a, b) => a.lab.localeCompare(b.lab, "en", { sensitivity: "base" }));
 }
 
 /* A version whose day is 00 has no day recorded, so it is shown without one.
  * "2026-04-00" is a date nobody can read, and that nought is the absence of a
  * day rather than a day. Written as a rule rather than a case, so the next
- * specification dated to the month is handled without an edit here. */
+ * constitution dated to the month is handled without an edit here. */
 const shownVersion = version => String(version || "").replace(/-00$/, "");
 
 /* ---- The figures, and what each row is out of ------------------------------- */
@@ -287,7 +287,7 @@ function noteUnder(heading, text) {
   const fragment = document.createDocumentFragment();
   fragment.append(board.h3(heading));
   if (!text) {
-    fragment.append(paragraph("Not written yet for this specification and behaviour.", "missing"));
+    fragment.append(paragraph("Not written yet for this constitution and behaviour.", "missing"));
     return fragment;
   }
   text.split(/\n{2,}/).forEach(block => {
@@ -340,7 +340,7 @@ function aboutFinal(content) {
   });
   table.append(head, rows);
   content.append(table, element("p", "", "Labs are ranked by this score. Labs level on it share a "
-    + "place and the next rank skips. A lab with no specification has no whole-document total to "
+    + "place and the next rank skips. A lab with no constitution has no whole-document total to "
     + "add, so it has no final score and comes after, unranked."));
 }
 
@@ -370,8 +370,8 @@ function finalScore(content, column, final) {
  * company's: every group folded, with the rows it is made of. */
 function profile(content, column) {
   if (column.absent) {
-    board.titled(content, column.lab, "No published specification.");
-    content.append(element("p", "", `We know of no model behaviour specification from `
+    board.titled(content, column.lab, "No published constitution.");
+    content.append(element("p", "", `We know of no constitution from `
       + `${column.lab}, and none appears to have been published, so there is no public document `
       + "to set beside the others. Its behaviours stand at nought for that absence"
       + `${state.assessment ? ", and the rows that assess a document are NA" : ""}.`));
@@ -443,10 +443,10 @@ function profile(content, column) {
 
 /* A row that assesses a document, where there is no assessment to show. Two
  * absences reach this, and they are different claims. A lab the index holds no
- * specification for has nothing to assess at all, and asking for one is the
+ * constitution for has nothing to assess at all, and asking for one is the
  * thing to do. A document the index does carry, whose assessment this
  * publication leaves out, is on the shelf: telling its reader that no
- * specification from that lab has been published would be false, and the
+ * constitution from that lab has been published would be false, and the
  * propose link would ask for a document the reader can already open. */
 function notAssessed(content, column, row, more) {
   const tail = more ? ` ${more}` : "";
@@ -455,7 +455,7 @@ function notAssessed(content, column, row, more) {
   content.append(board.figure("NA", ", not assessed"));
   if (column.absent) {
     content.append(element("p", "",
-      `There is no published specification from ${column.lab} to assess.${tail}`), proposeLine());
+      `There is no published constitution from ${column.lab} to assess.${tail}`), proposeLine());
     return;
   }
   content.append(element("p", "",
@@ -463,7 +463,7 @@ function notAssessed(content, column, row, more) {
 }
 
 /* What we know, rather than what the lab has done. "Meta has published no
- * specification" is a claim about Meta; "we know of none" is a claim about us,
+ * constitution" is a claim about Meta; "we know of none" is a claim about us,
  * and it is the only one of the two this index can stand behind. */
 function proposeLine() {
   const ask = element("p");
@@ -480,12 +480,12 @@ function proposeLine() {
  * was read and found to say nothing. The board cannot show that difference in a
  * figure, so pressing one says it in words. */
 function absentScore(content, column, subject, these) {
-  board.titled(content, `${column.lab}: ${lowerFirst(subject)}`, "No published specification.");
+  board.titled(content, `${column.lab}: ${lowerFirst(subject)}`, "No published constitution.");
   content.append(board.figure(shown(0), ` out of ${categoryMax()}`),
-    element("p", "", `We know of no model behaviour specification from ${column.lab}, and none `
+    element("p", "", `We know of no constitution from ${column.lab}, and none `
       + "appears to have been published, so there is no public document to set beside the others."),
     element("p", "subtitle", "The nought therefore stands for that absence. Nobody has examined a "
-      + `${column.lab} specification and found it silent on ${these}.`),
+      + `${column.lab} constitution and found it silent on ${these}.`),
     proposeLine());
 }
 
@@ -681,7 +681,7 @@ function aboutBehaviour(content, behaviour) {
   content.append(board.h3("What a depth means"), depthScale(null));
 }
 
-/* A figure's note: how it was reached, then where this specification stands
+/* A figure's note: how it was reached, then where this constitution stands
  * beside the others. The readings come from the publication and are always
  * there; the two paragraphs are written from the comparisons already made
  * between each pair and may not be, in which case the note says so rather than
@@ -697,7 +697,7 @@ function behaviourScore(content, column, behaviour, depth) {
   }
   const key = `${behaviour.slug}\n${column.id}`;
   content.append(noteUnder("Why this figure", state.depths[key]?.text));
-  content.append(noteUnder("Where this specification stands", state.passages[key]?.text));
+  content.append(noteUnder("Where this constitution stands", state.passages[key]?.text));
   content.append(board.h3("Where this figure sits"), depthScale(depth.mean));
   const read = element("p");
   read.append(link(readerLink({ behavior: behaviour.slug, spec: column.id }),
@@ -843,12 +843,12 @@ function headRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", column.rank
       ? `${column.lab}, ranked ${column.rank}: its profile`
-      : `${column.lab}, ${column.absent ? "no published specification" : "unranked"}: its profile`);
+      : `${column.lab}, ${column.absent ? "no published constitution" : "unranked"}: its profile`);
     // A blank where a rank would be, so every lab's name starts on one line.
     button.append(element("span", "rank", column.rank ? String(column.rank) : " "));
     button.append(element("span", "company-name", column.lab));
     button.append(column.absent
-      ? element("span", "company-flag", "No specification")
+      ? element("span", "company-flag", "No constitution")
       : element("span", "company-flag mono", shownVersion(column.version)));
     button.addEventListener("click", () =>
       board.openPopover(button, content => profile(content, column)));
@@ -1000,7 +1000,7 @@ function renderTable() {
           value: mean, max: state.scale, text: shown(mean),
           // The rubric's word for the figure, which the scale under the table
           // spells out and the cell has no room for. Not on a lab with no
-          // specification: its nought stands for a document nobody holds, and
+          // constitution: its nought stands for a document nobody holds, and
           // "absent" is the rubric's word for a document that says nothing.
           note: column.absent ? null : depthWords(mean, state.scale),
           build: column.absent
@@ -1026,7 +1026,7 @@ function renderLegend() {
   if (state.assessment) {
     const na = element("span", "legend-na");
     na.append(board.naChip(),
-      document.createTextNode(" no published specification to assess"));
+      document.createTextNode(" no published constitution to assess"));
     legend.append(na);
   }
   nodes.legend.replaceChildren(legend);
@@ -1230,7 +1230,7 @@ nodes.sheet.addEventListener("click", event => {
   if (event.target === nodes.sheet) nodes.sheet.close();
 });
 
-/* Two views of one index, behind tabs: what the specifications say, and how
+/* Two views of one index, behind tabs: what the constitutions say, and how
  * they are governed. The view has an address, ?view=governance, so a link can
  * open on it; the first view is the one with no parameter, which keeps every
  * link already shared pointing where it did.

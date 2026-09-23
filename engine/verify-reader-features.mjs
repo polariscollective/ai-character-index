@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tier-1 feature harness for the site's spec reader (site/spec-reader/),
+// Tier-1 feature harness for the site's doc reader (site/spec-reader/),
 // driven against TWO data states: the bundled payloads that ship in the repo,
 // against the fixture index served through two of the reader's routes (the
 // payload and the documents; the links route is not staged, so the reader
@@ -2013,7 +2013,7 @@ console.log("== Overview: the governance view ==");
     "the nine companies run across in the note's order, both ties broken as the note breaks them, "
       + "each overall score out of 16, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.rows.join(", ") === "Overall, Model behaviour specification, Change log, Guardrails, "
+  check(seen.rows.join(", ") === "Overall, Published constitution, Change log, Guardrails, "
         + "Hard constraints, Best practices"
       && seen.findings === 8,
     "the scores run down from the total, the checks folded, the eight findings under the table",
@@ -2378,11 +2378,11 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && na.final.every(one => one.na === (one.text === "NA"))
       && na.final.some(one => one.label === "Acme, final score: not assessed")
       && na.final.some(one => one.label === "Meta, final score: not assessed"),
-    "a document with no assessment and a lab with no specification read NA on both rows",
+    "a document with no assessment and a lab with no constitution read NA on both rows",
     JSON.stringify(na.final.map(one => [one.text, one.label])));
 
   /* The two absences behind one NA. The board cannot show the difference in a
-   * cell, so pressing one has to say which it is: a lab whose specification the
+   * cell, so pressing one has to say which it is: a lab whose constitution the
    * index does not hold, and a document it does hold that this publication
    * leaves unassessed. Telling a reader the second is the first would deny a
    * document they can open from the same page. */
@@ -2392,7 +2392,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && carried.subtitle === "Second document, 2026-02-01."
       && carried.body.includes("The index carries this document, and this publication does not "
         + "assess it as a whole.")
-      && !carried.body.includes("no published specification")
+      && !carried.body.includes("no published constitution")
       && !carried.links.some(href => href.includes("propose")),
     "a document the index carries, left unassessed, says so and asks for nothing",
     JSON.stringify([carried.title, carried.subtitle, carried.links]));
@@ -2400,9 +2400,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   await pressCell("Final score", "Meta");
   const nothing = await readPop();
   check(nothing.open && nothing.title === "Meta: final score"
-      && nothing.body.includes("There is no published specification from Meta to assess.")
+      && nothing.body.includes("There is no published constitution from Meta to assess.")
       && nothing.links.some(href => href.includes("propose")),
-    "a lab the index holds no specification for keeps its words and its invitation",
+    "a lab the index holds no constitution for keeps its words and its invitation",
     JSON.stringify([nothing.title, nothing.links]));
   await closePop();
 
@@ -2441,7 +2441,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && popover.here.join() === "prescribed,demonstrated"
       && popover.judges.length === 3
       && popover.headings.includes("Why this figure")
-      && popover.headings.includes("Where this specification stands"),
+      && popover.headings.includes("Where this constitution stands"),
     "a figure opens on its words, its readings, its place on the scale and both notes",
     JSON.stringify([popover.headings, popover.here]));
   await closePop();

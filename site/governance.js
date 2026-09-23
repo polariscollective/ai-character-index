@@ -21,7 +21,7 @@
  * weighs the same whatever its number of checks and the overall score reads as
  * a different kind of figure. They are computed here rather than stored, so the
  * ranking cannot disagree with the checks it is made of, and a profile's opening
- * line, "Model behaviour specification, 2.7 out of 4", is written from the same
+ * line, "Published constitution, 2.7 out of 4", is written from the same
  * averages rather than typed beside them.
  *
  * Nothing is built with innerHTML, as in overview.js. The text here is ours
