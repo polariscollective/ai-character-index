@@ -57,8 +57,8 @@ jobs:
 
       # Also runs the node app.js harnesses (test_appjs_fallthrough.js,
       # _tiers, _quotes, _wiring, _depth, _locator, _opening, _translation,
-      # _feedback): test_panel.py's TestAppJS* cases subprocess out to node
-      # for each.
+      # _feedback, _publisher_focus): test_panel.py's TestAppJS* cases
+      # subprocess out to node for each.
       - name: Panel suites (includes the app.js harnesses)
         run: python3 -m unittest discover -s engine/panel -p "test_*.py"
 

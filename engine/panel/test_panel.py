@@ -651,6 +651,26 @@ class TestAppJSTranslation(unittest.TestCase):
         self.assertIn("19 checks, 0 failures", out.stdout, out.stdout)
 
 
+class TestAppJSPublisherFocus(unittest.TestCase):
+    """Where focus lands after a publisher is chosen: choosePublisher. Choosing
+    one rebuilds the reader, which replaces the button that was pressed, so the
+    focus has to be put back after the rebuild and not before. Choosing a
+    document is asynchronous, the focus was not waiting for it, and a keyboard
+    user was left on the body. Skips (not fails) without `node`."""
+
+    HARNESS = HERE / "test_appjs_publisher_focus.js"
+
+    def setUp(self):
+        if shutil.which("node") is None:
+            self.skipTest("node is not available")
+
+    def test_publisher_focus_in_appjs(self):
+        out = subprocess.run(["node", str(self.HARNESS)],
+                             capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("7 checks, 0 failures", out.stdout, out.stdout)
+
+
 class TestRunlogPathResolution(unittest.TestCase):
     """--runlog= must reach the spawned whole_doc.py cells as an absolute
     path: cells run with cwd=engine/panel, so a caller-relative path would

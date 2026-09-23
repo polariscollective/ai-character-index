@@ -4433,18 +4433,32 @@ elements.documentReader.addEventListener("click", event => {
  * The rebuild takes the focused button away with the header, which would drop a
  * keyboard user at the top of the page, so focus goes back to the same publisher
  * in the same panel afterwards. The panel is found by position rather than by
- * document id: comparing, both sides may carry the same document. */
-elements.documentReader.addEventListener("click", event => {
-  const button = event.target.closest?.(".provider-tab");
-  if (!button) return;
+ * document id: comparing, both sides may carry the same document.
+ *
+ * Afterwards means awaited, and that is the whole of it. Choosing a document
+ * fetches the document and its bubbles before rebuildReader draws the panels
+ * again, so the rebuild is always a turn away: focus put back before it went on
+ * a button that replaceChildren then took out of the document, and a browser
+ * whose focused element leaves gives the focus to the body. The tier toggles
+ * beside this never had to think about it, toggleBand being synchronous, which
+ * is why only the publishers dropped the reader at the top of the page.
+ *
+ * The side is read before the await for the same reason: the panel this button
+ * sits in is one of the panels the rebuild is about to replace. */
+async function choosePublisher(button) {
   const panel = button.closest(".document-panel");
   const side = panels().indexOf(panel);
   const lab = button.dataset.lab;
   const latest = latestOfLab(lab);
-  if (latest && latest.id !== panel?.dataset.documentId) chooseSpec(panel, latest.id);
+  if (latest && latest.id !== panel?.dataset.documentId) await chooseSpec(panel, latest.id);
   panels()[side]
     ?.querySelector(`.provider-tab[data-lab="${CSS.escape(lab)}"]`)
     ?.focus({ preventScroll: true });
+}
+
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".provider-tab");
+  if (button) choosePublisher(button);
 });
 
 /* Comparison is one mode over both panels, so it has one switch rather than one in
