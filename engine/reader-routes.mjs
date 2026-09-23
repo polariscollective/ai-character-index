@@ -28,8 +28,20 @@ export const CURRENT_PUBLICATION = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
  */
 export const DRAFT_PUBLICATION = "8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37";
 
+/**
+ * A publication on the depth scale of ten, answered only to a pin: the current
+ * publication's documents and links under a payload out of ten, which carries
+ * an assessment of one of its two documents. Only its payload differs, so it
+ * reads the other two files from the current publication's directory.
+ */
+export const TEN_PUBLICATION = "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14";
+
 /** Where each publication's files sit, relative to the reader's data directory. */
-const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "draft" };
+const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "draft",
+                           [TEN_PUBLICATION]: "ten" };
+
+/** The files a publication shares with the current one rather than carrying its own. */
+const SHARED_WITH_THE_CURRENT = { [TEN_PUBLICATION]: new Set(["documents.json", "links.json"]) };
 
 
 /**
@@ -90,7 +102,8 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
   }
 
   try {
-    const dir = join(dataDir, PUBLICATION_DIRS[pin ?? CURRENT_PUBLICATION]);
+    const shared = SHARED_WITH_THE_CURRENT[pin]?.has(file);
+    const dir = join(dataDir, shared ? "." : PUBLICATION_DIRS[pin ?? CURRENT_PUBLICATION]);
     const body = await readFile(join(dir, file));
     response.writeHead(200, { "content-type": "application/json" });
     response.end(body);

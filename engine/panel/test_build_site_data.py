@@ -424,5 +424,79 @@ class DepthPromptTest(unittest.TestCase):
         self.assertIn(FOUR, message)
 
 
+import assessment_run            # noqa: E402
+
+ROOT = HERE.parents[1]
+FIXTURE_OF_TEN = ROOT / "tests" / "fixtures" / "reader" / "ten" / "behaviours.json"
+
+
+def shape(value, parent=None):
+    """Every key path in a value, a list read through all of its items and a
+    judge's seat as <seat>, so two values built the same way have the same shape
+    whatever they hold."""
+    if isinstance(value, dict):
+        paths = set()
+        for key, item in value.items():
+            name = "<seat>" if parent == "judges" else key
+            paths |= {(name,)} | {(name,) + rest for rest in shape(item, key)}
+        return paths
+    if isinstance(value, list):
+        return {("[]",) + rest for item in value for rest in shape(item, parent)}
+    return set()
+
+
+class ReaderFixtureOfTenTest(unittest.TestCase):
+    """tests/fixtures/reader/ten/behaviours.json is the walkers' publication out
+    of ten, written by hand. It is held here to what this builder writes, so the
+    board is never tested against a shape no publication has."""
+
+    def setUp(self):
+        self.fixture = json.loads(FIXTURE_OF_TEN.read_text(encoding="utf-8"))
+
+    def test_it_is_on_the_scale_of_ten_and_every_depth_says_so(self):
+        self.assertEqual(list(self.fixture)[:5], ["generatedFrom", "provenance", "depthScale",
+                                                  "assessment", "behaviours"])
+        self.assertEqual(self.fixture["depthScale"], 10)
+        depths = [cell["depth"] for behaviour in self.fixture["behaviours"]
+                  for cell in behaviour["coverage"].values() if cell["depth"]]
+        self.assertTrue(depths)
+        for depth in depths:
+            self.assertEqual(set(depth), {"mean", "judges", "scale"})
+            self.assertEqual(depth["scale"], 10)
+
+    def test_every_behaviour_carries_the_category_the_board_groups_by(self):
+        categories = {behaviour["category"] for behaviour in self.fixture["behaviours"]}
+        self.assertGreaterEqual(len(categories), 2, "the board's groups need more than one")
+
+    def test_its_assessment_has_the_shape_document_assessment_writes(self):
+        built = shape(bs.document_assessment(RUN, CALLS, SCORES, CLAIMS, VERDICTS, PASSAGE_TEXT))
+        written = set().union(*(shape(one) for one in self.fixture["assessment"].values()))
+        self.assertEqual(written, built)
+
+    def test_its_means_and_totals_add_up_as_the_builder_adds_them(self):
+        for document, assessed in self.fixture["assessment"].items():
+            means = []
+            for name, criterion in assessed["criteria"].items():
+                scores = [judge["score"] for judge in criterion["judges"].values()]
+                means.append(sum(scores) / len(scores))
+                self.assertEqual(criterion["mean"], round(means[-1], 1), f"{document} {name}")
+            self.assertEqual(assessed["total"],
+                             round(sum(means) + assessed["contradictions"]["score"], 1), document)
+
+    def test_each_claim_is_settled_and_scored_by_the_second_method(self):
+        """Every seat reads every claim; two readings that say it holds confirm
+        it. Whether a seat found it does not settle anything."""
+        for assessed in self.fixture["assessment"].values():
+            claims = assessed["contradictions"]["claims"]
+            for claim in claims:
+                holds = sum(1 for reading in claim["readings"] if reading["holds"])
+                absolute = sum(1 for reading in claim["readings"]
+                               if reading["holds"] and reading["absolute"])
+                self.assertEqual(claim["confirmed"], holds >= 2)
+                self.assertEqual(bool(claim["absolute"]), absolute >= 2)
+            self.assertEqual(assessed["contradictions"]["score"],
+                             assessment_run.confirm_score(claims))
+
+
 if __name__ == "__main__":
     unittest.main()
