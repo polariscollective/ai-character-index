@@ -18,8 +18,13 @@
  * learns what a figure means in one place, and a popover is then short enough to
  * read where it opens.
  *
+ * The file's sentences carry a light markup, which this file turns into real
+ * elements: paragraphs, bold inside a sentence, bullets and a small heading. It
+ * is there so that a popover can be scanned rather than read from the top.
+ *
  * Nothing is built with innerHTML: every sentence the file carries lands as a
- * text node.
+ * text node, and the markup is read by the parser below rather than handed to
+ * the browser.
  */
 
 import { createBoard, element, mono, paragraph, ORDINALS, level, rankBy } from "./board.js";
@@ -150,11 +155,117 @@ function link(href, text) {
   return node;
 }
 
+/* ---- The light markup the file's prose carries ------------------------------- */
+
+/* The file's sentences are written for a reader who is scanning, so they carry
+ * four marks and no more: a blank line between paragraphs, `**bold**` inside a
+ * sentence, a line opening `- ` as a bullet, and a line opening `### ` as a
+ * small heading. Anything else is prose.
+ *
+ * The parser is kept apart from the drawing, and returns what to draw rather
+ * than drawing it, for two reasons. The page builds every block with
+ * `document.createElement` and text nodes, so the strings the file carries can
+ * never be read as markup by the browser however they were written; and the
+ * browser walker holds the board to the file through this same reading, rather
+ * than through a second copy of it written beside the walker, which is how a
+ * figure on this site came to be published wrong once already.
+ */
+
+const BOLD = /\*\*(.+?)\*\*/g;
+
+/* A sentence cut at its bold spans: each run is a string and whether it is
+ * bold. Unpaired asterisks are left where they are and read as text. */
+function runsOf(text) {
+  const runs = [];
+  let at = 0;
+  for (const match of text.matchAll(BOLD)) {
+    if (match.index > at) runs.push({ text: text.slice(at, match.index), bold: false });
+    runs.push({ text: match[1], bold: true });
+    at = match.index + match[0].length;
+  }
+  if (at < text.length) runs.push({ text: text.slice(at), bold: false });
+  return runs;
+}
+
+/* The blocks of one field, in the order the page draws them: a paragraph, a
+ * heading, or a list with its items. Lines that are neither a heading nor a
+ * bullet and sit together make one paragraph, so a field wrapped over several
+ * lines reads as the sentence it is. */
+export function markupBlocks(text) {
+  const blocks = [];
+  let lines = [];
+  const closeParagraph = () => {
+    if (lines.length) blocks.push({ kind: "paragraph", runs: runsOf(lines.join(" ")) });
+    lines = [];
+  };
+  String(text == null ? "" : text).split(/\r?\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) {
+      closeParagraph();
+      return;
+    }
+    if (line.startsWith("### ")) {
+      closeParagraph();
+      blocks.push({ kind: "heading", runs: runsOf(line.slice(4).trim()) });
+      return;
+    }
+    if (line.startsWith("- ")) {
+      closeParagraph();
+      const item = runsOf(line.slice(2).trim());
+      const last = blocks[blocks.length - 1];
+      if (last && last.kind === "list") last.items.push(item);
+      else blocks.push({ kind: "list", items: [item] });
+      return;
+    }
+    lines.push(line);
+  });
+  closeParagraph();
+  return blocks;
+}
+
+const plainOf = runs => runs.map(run => run.text).join("");
+
+/* One string per block the page draws, with a list given as its items, and the
+ * marks gone. This is what a reader sees, and what the walker compares the
+ * popover against. */
+export function markupPlain(text) {
+  return markupBlocks(text).flatMap(block =>
+    (block.kind === "list" ? block.items.map(plainOf) : [plainOf(block.runs)]));
+}
+
+function filled(node, runs) {
+  runs.forEach(run => node.append(run.bold
+    ? element("strong", null, run.text)
+    : document.createTextNode(run.text)));
+  return node;
+}
+
+/* The blocks of one field, drawn into `parent`. `className` is carried by every
+ * block of it, which is how a field the popover shows as an aside stays muted
+ * once it is more than one paragraph. */
+export function renderMarkup(parent, text, className) {
+  markupBlocks(text).forEach(block => {
+    if (block.kind === "heading") {
+      parent.append(filled(element("h3", className), block.runs));
+      return;
+    }
+    if (block.kind === "list") {
+      /* The framework's own bullet, a chartreuse circle, which the reference
+       * text under the board already draws with this class. */
+      const list = element("ul", ["gov-bullets", className].filter(Boolean).join(" "));
+      block.items.forEach(item => list.append(filled(element("li"), item)));
+      parent.append(list);
+      return;
+    }
+    parent.append(filled(element("p", className), block.runs));
+  });
+}
+
 /* A sentence the file may not carry: an empty string is left out rather than
  * printed as a blank paragraph. */
 function sentences(content, ...blocks) {
   const written = blocks.filter(block => typeof block === "string" && block.trim());
-  written.forEach(block => content.append(paragraph(block.trim())));
+  written.forEach(block => renderMarkup(content, block.trim()));
   return written.length;
 }
 
@@ -309,7 +420,9 @@ function aboutWhole(content) {
     const fold = element("details");
     const summary = element("summary");
     summary.append(element("span", "", criterion.name));
-    fold.append(summary, paragraph(criterion.what_it_is), paragraph(criterion.why_it_matters));
+    fold.append(summary);
+    renderMarkup(fold, criterion.what_it_is);
+    renderMarkup(fold, criterion.why_it_matters);
     content.append(fold);
   });
   content.append(board.showInTable("whole", "the criteria"));
@@ -348,7 +461,7 @@ function criterionScore(content, company, criterion) {
   const entry = company.whole?.criteria?.[criterion.id] || {};
   board.titled(content, `${company.name}: ${lowerFirst(criterion.name)}`, documentLine(company));
   content.append(board.figure(shown(part), ` out of ${shownMax()}`));
-  content.append(element("p", "subtitle", criterion.what_it_is));
+  renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
 }
 
@@ -382,8 +495,10 @@ function categoryScore(content, company, category) {
 
 function aboutBehaviour(content, behaviour) {
   board.titled(content, behaviour.name, behaviour.category);
-  content.append(board.h3("What it covers"), paragraph(behaviour.is),
-    board.h3("What it does not"), paragraph(behaviour.is_not));
+  content.append(board.h3("What it covers"));
+  renderMarkup(content, behaviour.is);
+  content.append(board.h3("What it does not"));
+  renderMarkup(content, behaviour.is_not);
 }
 
 /* One cell, and the shortest popover on the board: what the constitution says on

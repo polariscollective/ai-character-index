@@ -23,6 +23,11 @@ import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
          servePageFeedbackRoute, lastPageFeedbackReceived,
          CURRENT_PUBLICATION, DRAFT_PUBLICATION, TEN_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
+/* The board of constitutions reads a light markup out of its own file. The
+ * expected words below are read through that same parser rather than through a
+ * copy of it here: this repository has published wrong figures off exactly that
+ * kind of duplication before. */
+import { markupPlain } from "../site/constitutions.js";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -2317,6 +2322,9 @@ console.log("== Overview: the constitutions board ==");
   /* The file wraps its paragraphs, and the DOM is read back with the whitespace
    * collapsed, so both sides are collapsed before they are compared. */
   const flat = text => String(text).replace(/\s+/g, " ").trim();
+  /* A field of the file as the board draws it: one string per block, a list
+   * given as its items, and the marks gone. */
+  const written = (...fields) => fields.flatMap(field => markupPlain(field).map(flat));
   const version = company => String(company.document.version).replace(/-00$/, "");
   const lowerFirst = text =>
     (/^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
@@ -2431,7 +2439,11 @@ console.log("== Overview: the constitutions board ==");
    * block in the popover tests. */
   const readPop = () => page.evaluate(() => ({
     open: document.querySelector("#grid-pop").matches(":popover-open"),
+    /* A bullet list of the file's prose is read back item by item, so a field
+     * the file writes as a list is compared against the items it names rather
+     * than against them run together. */
     blocks: [...document.querySelector("#grid-pop .gov-pop-body").children]
+      .flatMap(node => (node.matches("ul.gov-bullets") ? [...node.children] : [node]))
       .map(node => node.textContent.replace(/\s+/g, " ").trim()),
     anchors: document.querySelectorAll("#grid-pop .anchors").length,
   }));
@@ -2454,9 +2466,10 @@ console.log("== Overview: the constitutions board ==");
   await pressCell(behaviour.name, withDocument.id);
   let popover = await readPop();
   check(popover.open && popover.blocks.join(" | ") === [
-      `${withDocument.name}: ${lowerFirst(behaviour.name)}`, documentLine(withDocument),
-      `${shown(entry.score)} out of ${depthTop}`, entry.says, entry.compared, entry.why,
-    ].map(flat).join(" | ") && popover.anchors === 0,
+      flat(`${withDocument.name}: ${lowerFirst(behaviour.name)}`), flat(documentLine(withDocument)),
+      flat(`${shown(entry.score)} out of ${depthTop}`),
+      ...written(entry.says, entry.compared, entry.why),
+    ].join(" | ") && popover.anchors === 0,
     "a behaviour's cell says what the document says, how it stands beside the others and why "
     + "the figure is what it is, in the file's words and no others, with the scale left under "
     + "the table", JSON.stringify(popover.blocks.slice(0, 3)));
@@ -2467,18 +2480,18 @@ console.log("== Overview: the constitutions board ==");
   await pressCell(criterion.name, withDocument.id);
   popover = await readPop();
   check(popover.open && popover.blocks.join(" | ") === [
-      `${withDocument.name}: ${lowerFirst(criterion.name)}`, documentLine(withDocument),
-      `${shown(scored.score / 2)} out of ${criterionTop / 2}`, criterion.what_it_is,
-      scored.what_the_document_does, scored.why,
-    ].map(flat).join(" | "),
+      flat(`${withDocument.name}: ${lowerFirst(criterion.name)}`), flat(documentLine(withDocument)),
+      flat(`${shown(scored.score / 2)} out of ${criterionTop / 2}`),
+      ...written(criterion.what_it_is, scored.what_the_document_does, scored.why),
+    ].join(" | "),
     "a criterion's cell gives what the criterion asks, what the document does and why the "
     + "figure is what it is", JSON.stringify(popover.blocks.slice(0, 3)));
   await closePop();
 
   await pressName(behaviour.name);
   popover = await readPop();
-  check(popover.open && popover.blocks.includes(flat(behaviour.is))
-      && popover.blocks.includes(flat(behaviour.is_not)),
+  check(popover.open && written(behaviour.is, behaviour.is_not)
+      .every(block => popover.blocks.includes(block)),
     "a behaviour's name opens what it covers and what it does not, in the file's words",
     JSON.stringify(popover.blocks));
   await closePop();
@@ -2491,9 +2504,10 @@ console.log("== Overview: the constitutions board ==");
   await pressCell(behaviour.name, without.id);
   popover = await readPop();
   check(popover.open && popover.blocks.join(" | ") === [
-      `${without.name}: ${lowerFirst(behaviour.name)}`, "No published constitution.",
-      `${shown(without.behaviours[behaviour.slug].score)} out of ${depthTop}`, without.profile,
-    ].map(flat).join(" | "),
+      flat(`${without.name}: ${lowerFirst(behaviour.name)}`), "No published constitution.",
+      flat(`${shown(without.behaviours[behaviour.slug].score)} out of ${depthTop}`),
+      ...written(without.profile),
+    ].join(" | "),
     "a company that publishes no constitution scores nought and says so in the file's words",
     JSON.stringify(popover.blocks));
   await closePop();
