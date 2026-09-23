@@ -2240,6 +2240,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
         rank: button.querySelector(".rank")?.textContent.trim(),
         lab: button.querySelector(".company-name")?.textContent,
       })),
+      caption: document.querySelector("#board caption")?.textContent ?? "",
       names: rows.map(tr => tr.querySelector(".head-name")?.textContent),
       subs: rows.map(tr => tr.querySelector(".head-sub")?.textContent ?? ""),
       folded: rows.filter(tr => tr.classList.contains("check-row")).every(tr => tr.hidden),
@@ -2310,6 +2311,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(four.names[0] === "Behaviours under test" && four.subs[0] === "out of 4, 2 behaviours"
       && four.folded,
     "its categories are the board's groups, folded", JSON.stringify([four.names, four.subs]));
+  check(four.caption === "Each lab's behaviours by category, with each group's rows available "
+      + "to open",
+    "the caption promises the rows a publication of four has, and no others", four.caption);
   check(four.keyTitle === "Depth of a behaviour, out of 4"
       && four.levels.join() === "0,1,2,3,4" && four.conditions.length === 0 && four.odd === "",
     "the scale under the table is the scale of four, with no conditions and no line on odd figures",
@@ -2335,6 +2339,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && ten.folded,
     "the final score leads, the document as a whole follows, and every group starts folded",
     JSON.stringify([ten.names, ten.subs, ten.folded]));
+  check(ten.caption === "Each lab's final score, its document as a whole and its behaviours by "
+      + "category, with each group's rows available to open",
+    "the caption names the two rows a publication of ten adds", ten.caption);
   check(ten.heads[0].rank === "1" && ten.heads[0].lab === "Acme",
     "the rank sits above the lab's name", JSON.stringify(ten.heads.slice(0, 3)));
   const final = await cellOf("Final score", 0);

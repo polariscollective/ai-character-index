@@ -781,6 +781,14 @@ function renderTable() {
   const columns = state.columns;
   const empty = () => element("td", "cell");
 
+  /* What the table says it holds, built from the publication like every other
+   * conditional string on this page. A publication of four carries no
+   * assessment, so it has neither of the two rows the other caption names. */
+  board.nodes.table.caption.textContent = state.assessment
+    ? "Each lab's final score, its document as a whole and its behaviours by category, with each "
+      + "group's rows available to open"
+    : "Each lab's behaviours by category, with each group's rows available to open";
+
   /* The final score, a single row above every group, as the governance view's
    * total. Only a publication that carries an assessment has one: without it
    * there is no whole-document figure to add to the behaviours'. */

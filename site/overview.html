@@ -896,7 +896,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   </div>
   <div class="matrix-wrap">
     <table class="board" id="board">
-      <caption class="visually-hidden">Each lab&rsquo;s final score, its document as a whole and its behaviours by category, with each group&rsquo;s rows available to open</caption>
+      <!-- Written by renderTable from the publication on screen: a publication
+           with no assessment has neither a final score nor a document as a
+           whole, and a caption that named them would promise a screen reader
+           rows it will never reach. -->
+      <caption class="visually-hidden"></caption>
       <thead></thead>
       <tbody></tbody>
     </table>
