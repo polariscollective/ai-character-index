@@ -102,37 +102,52 @@ const STYLE = `
 
 /* ---------- the header on a narrow screen ----------
  *
- * The header is a brand at one end and a menu at the other, on one line of a
- * fixed 54px. At 390px the board pages drew the wordmark over three lines,
- * clipped it against that height, and carried the whole menu off the right edge
- * where no finger and no tab key could reach it.
+ * The header is a brand at one end and a menu at the other, held on one line of
+ * a fixed 54px. Everything it holds comes to about 880px, so below that the
+ * line has to give somewhere, and it was giving in the worst way it could: at
+ * 390px the board pages drew the wordmark over three lines, clipped all three
+ * against the 54px, and carried the whole menu off the right edge where no
+ * finger and no tab key could reach it.
  *
- * Two rows rather than a control that hides them. Four links of one or two
- * words fit on one line at 360px, so a button to reveal them would add a
- * second press, a focus trap and a state to get wrong, and would buy back
- * about thirty pixels. The framework asks for a fixed left nav in tools and a
- * plain header on content pages; a phone has room for neither, so both kinds
- * of page take the same two rows here.
+ * It wraps instead. The height follows what it holds, the collective's name
+ * goes (it is still a link in the footer), and the menu drops to a second row
+ * the moment the two do not fit side by side. Rows rather than a control that
+ * hides the menu: four links of one or two words fit on one line at 360px, so a
+ * button to reveal them would add a press, a focus trap and a state to get
+ * wrong, and would buy back about thirty pixels. The framework asks for a fixed
+ * left nav in tools and a plain header on content pages; a phone has room for
+ * neither, so both kinds of page take the same rows here.
+ *
+ * The reader hides every link but the one you are on below 900px, which leaves
+ * a header with no way out of the page. They come back. Matching that rule's
+ * specificity is what the :not() is for, and 900px is this block's width
+ * because that is where the reader takes them away.
  *
  * It is written here and not in a stylesheet because the five pages that carry
  * this header keep four stylesheets between them, one of which is shared with
  * the boards. This file is already on every one of them. about.html and
- * mcp.html state the same breakpoint in their own sheets, so their headers
- * still wrap if this module never runs; the board pages and the reader have no
- * such floor and depend on this block.
- *
- * The reader hides every link but the one you are on below 900px, which on a
- * phone leaves a header with no way out of the page. They come back here.
- * Matching that rule's specificity is what the :not() is for.
+ * mcp.html state a narrower version of this in their own sheets, so their
+ * headers still wrap if this module never runs; the board pages and the reader
+ * have no such floor and depend on this block.
  */
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .site-header {
     height: auto;
     min-height: 54px;
-    padding: 8px 16px;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 12px;
+    gap: 4px 16px;
+  }
+  .site-header .site-brand { flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  /* Two names and a menu do not fit. The mark carries the collective alone. */
+  .site-header .collective, .site-header .brand-divider { display: none; }
+  .site-header nav { flex-wrap: wrap; gap: 6px 18px; }
+  .site-header nav a:not(.active) { display: inline; }
+}
+
+@media (max-width: 700px) {
+  .site-header {
+    padding: 8px 16px;
     /* The header holds over the page while it scrolls, so every row it takes is
        a row the reading loses for the whole page. At 360px it takes three: the
        wordmark, the tag beside it, and the menu. Prose leading on all three
@@ -140,12 +155,6 @@ const STYLE = `
        here sits above another line of its own. */
     line-height: 1.3;
   }
-  .site-header .site-brand { flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-  /* Two names and a menu do not fit. The mark carries the collective alone,
-     and its name is still a link in the footer. */
-  .site-header .collective, .site-header .brand-divider { display: none; }
-  .site-header nav { flex: 1 0 100%; flex-wrap: wrap; gap: 6px 18px; }
-  .site-header nav a:not(.active) { display: inline; }
   .brand-pop { padding: 16px; }
 }
 `;
@@ -323,15 +332,14 @@ async function markOlder(brand) {
  * onto two rows.
  *
  * Written only while the header is in its wrapped shape, and cleared above it.
- * Above the breakpoint two of those sheets set the header's own height from this
- * variable, so measuring the header and writing it back is a loop. Below the
- * breakpoint the height is whatever the rows come to, and nothing reads back
- * into it.
+ * Above 900px two of those sheets set the header's own height from this
+ * variable, so measuring the header and writing it back is a loop. Below 900px
+ * the height is whatever the rows come to, and nothing reads back into it.
  *
  * about.html and mcp.html measure their own headers the same way. They arrive
  * at the same number, so neither undoes the other. */
 function followHeight(header) {
-  const wrapped = window.matchMedia("(max-width: 700px)");
+  const wrapped = window.matchMedia("(max-width: 900px)");
   const write = () => {
     if (wrapped.matches) {
       document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
