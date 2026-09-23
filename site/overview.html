@@ -216,7 +216,13 @@ h1::before {
    that wants the room. */
 .lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
 
-/* The board. A table because it is one: a row reads across, a specification
+/* The two parts of the score, said before any figure. Two paragraphs with their
+   subject in the lead, the way the folds under the board already open. */
+.board-parts { margin: 0 0 22px; max-width: 86ch; }
+.board-parts p { margin: 0 0 10px; color: var(--muted); }
+.board-parts strong { color: var(--ink); }
+
+/* The board. A table because it is one: a row reads across, a constitution
    reads down, and a screen reader needs the headers to say so. Both views draw
    it, so the rules it is made of sit together further down, under .board. */
 thead th {
@@ -225,7 +231,7 @@ thead th {
   z-index: 1;
   background: var(--paper);
 }
-/* Fixed layout so every specification gets the same width whatever its name or
+/* Fixed layout so every constitution gets the same width whatever its name or
    its version is: columns that size themselves to their contents make one lab
    look more considered than another for no reason but the length of a word.
    No minimum width, so the table is exactly its container and never scrolls
@@ -717,6 +723,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-pop .aside { margin: 14px 0 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--muted); }
 .gov-pop a { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
 .gov-pop .gov-button { margin-top: 6px; }
+/* The fold that holds the judges' own wording. Discreet: it opens under the
+   sentences a reader came for, and never above them. */
+.gov-pop .detail-fold { margin-top: 16px; }
 /* The working paper's own words, quoted exactly, each under a chartreuse rule. */
 .gov-pop .paper-fold { margin-top: 10px; }
 .paper-name { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
@@ -878,7 +887,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <div class="views" role="tablist" aria-label="Views of the index">
     <button type="button" class="view-tab" role="tab" id="tab-coverage"
       aria-controls="view-coverage" aria-selected="true"
-      data-view="coverage">What the specifications say</button>
+      data-view="coverage">What the constitutions say</button>
     <button type="button" class="view-tab" role="tab" id="tab-governance"
       aria-controls="view-governance" aria-selected="false" tabindex="-1"
       data-view="governance">How they are governed</button>
@@ -887,11 +896,22 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
   <h1>What each constitution says, and how well it is built</h1>
   <p class="lede">
-    AI companies publish documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
-    behave. A document's score here has two halves: how far it goes on each
-    behaviour it governs, and how well it holds together as a set of rules.
-    <br>
-    Missing a specification, or a behaviour the index should be asking about?
+    AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
+    behave. The index reads them and scores each one twice, out of 10 each, and the board leads
+    with the two added together.
+  </p>
+  <div class="board-parts">
+    <p><strong>The document as a whole.</strong> Whether the constitution settles a clash between
+    two of its own rules, whether a reader can tell which rules are absolute and which can be
+    lifted and by whom, whether the rules come with reasons, whether they reach the situations
+    the models are used in, and whether the document contradicts itself somewhere without saying
+    which rule wins.</p>
+    <p><strong>The behaviours.</strong> How far the constitution goes on each behaviour the index
+    asks about, from saying nothing about it to setting rules and showing them applied to worked
+    examples.</p>
+  </div>
+  <p class="lede">
+    Missing a constitution, or a behaviour the index should be asking about?
     <a href="/about?propose#propose" target="_blank"
       rel="noopener noreferrer">Propose one</a>.
   </p>
@@ -900,8 +920,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 
   <div class="gov-toolbar">
     <p class="gov-hint">
-      Press a figure to see the evidence behind it, or a lab or a row&rsquo;s name to read
-      about it. Open a group to see its rows.
+      Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
+      Open a row to see the parts it is made of.
     </p>
     <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
   </div>
@@ -955,7 +975,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
   <h1>How each company governs the rules its models follow</h1>
   <p class="lede gov-lede">
-    Some AI companies publish a model behaviour specification, a document setting out how their
+    Some AI companies publish a constitution, a document setting out how their
     models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores whether each company publishes
     one, what it covers, whether changes to it can be seen, and whether the public gets a say
     before it is weakened. It covers nine companies as of September 2026, and the scores are
@@ -1006,9 +1026,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       <summary>How to read this ranking</summary>
       <div class="gov-more-body">
         <p>
-          <strong>Having a specification and covering models with it are scored
-          separately.</strong> Alibaba's specification names no model, and on a single
-          "has a specification" column it would score the same as one that binds a
+          <strong>Having a constitution and covering models with it are scored
+          separately.</strong> Alibaba's constitution names no model, and on a single
+          "has a constitution" column it would score the same as one that binds a
           company's products.
         </p>
         <p>
@@ -1028,8 +1048,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
         </p>
         <p>
           <strong>The bottom of the ranking comes down to the first
-          question.</strong> Six of the nine companies publish no model behaviour
-          specification, so most of the grid cannot apply to them and they sit at
+          question.</strong> Six of the nine companies publish no constitution,
+          so most of the grid cannot apply to them and they sit at
           the bottom for that reason. Among the companies that do publish, the
           change log is what separates them, while the totals show the case for
           publishing at all.
@@ -1054,7 +1074,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           split into checks scored from 0 to 4: three for each of the first two
           questions and two for the others. The first two are what the proposal
           calls its minimum, the asks it expects of every company before the
-          other two: a published model behaviour specification for every model in
+          other two: a published constitution for every model in
           use, and one public change log. A question's score is the average of its checks,
           from 0 to 4, and the overall score is the sum of the four questions,
           out of 16, so every question weighs the same.
@@ -1115,7 +1135,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
         </p>
         <ul class="gov-bullets">
           <li>
-            <strong>Alibaba's model behaviour specification was not read at its own
+            <strong>Alibaba's constitution was not read at its own
             address.</strong> The page at s.alibaba.com/aaig/specification is
             built in the browser, and our tools could not retrieve it. The text we
             used comes from this index, which holds 210 passages of the document,
@@ -1157,7 +1177,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           </li>
           <li>
             <strong>Some details of Claude Mythos</strong> rest partly on
-            secondary sources, though the absence of a published model behaviour specification for it
+            secondary sources, though the absence of a published constitution for it
             is confirmed from Anthropic's own pages.
           </li>
           <li>
@@ -1181,7 +1201,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
     <details id="gov-sources" class="gov-sources">
       <summary>Sources</summary>
       <div class="gov-more-body">
-        <h3>The model behaviour specifications</h3>
+        <h3>The constitutions</h3>
         <ul class="gov-bullets">
           <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
           <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
@@ -1189,7 +1209,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
           <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
         </ul>
-        <h3>How the specifications are run</h3>
+        <h3>How the constitutions are run</h3>
         <ul class="gov-bullets">
           <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
           <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
@@ -1222,7 +1242,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
           <li><a href="https://docs.mistral.ai/capabilities/guardrailing" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
           <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
         </ul>
-        <h3>Tests of whether models follow their specification, and outside assessments</h3>
+        <h3>Tests of whether models follow their constitution, and outside assessments</h3>
         <ul class="gov-bullets">
           <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
           <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>

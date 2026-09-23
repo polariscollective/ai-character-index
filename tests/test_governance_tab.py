@@ -252,13 +252,13 @@ class TheProseAgreesWithTheData(unittest.TestCase):
             self.assertEqual(sum(stated), sum(scored), lab)
 
     def test_the_first_finding_quotes_the_combined_minimum(self):
-        # "OpenAI has the best pair, 2.7 on the specification and 2.3 on the
+        # "OpenAI has the best pair, 2.7 on the constitution and 2.3 on the
         # change log. Anthropic ... scores 3.0 and 1.0."
         combined = {lab: totals(lab)[0]["1"] + totals(lab)[0]["2"] for lab in NOTE_ORDER}
         self.assertEqual(max(combined.values()), combined["openai"])
         first = DATA["findings"][0]["text"]
         openai, anthropic = totals("openai")[0], totals("anthropic")[0]
-        self.assertIn(f"OpenAI has the best pair, {shown(openai['1'])} on the specification "
+        self.assertIn(f"OpenAI has the best pair, {shown(openai['1'])} on the constitution "
                       f"and {shown(openai['2'])} on the change log", first)
         self.assertIn(f"scores {shown(anthropic['1'])} and {shown(anthropic['2'])}.", first)
         # The minimum is the first two questions, and the finding says what

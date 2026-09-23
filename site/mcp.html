@@ -387,36 +387,36 @@
     into this page, so it is current whenever it is called. Most assistants never show a
     server&rsquo;s own instructions to the model, so this is the same text where the model will
     see it.</p>
-    <p><b>list_model_specs.</b> Every specification the current publication carries: id,
+    <p><b>list_model_specs.</b> Every constitution the current publication carries: id,
     laboratory, title, version, source URL, how many behaviours were judged against it and how
-    many passages it holds. No arguments. It does not return the specification text, which runs to
-    hundreds of kilobytes; the source URL is in the answer. Each specification is one version, and
+    many passages it holds. No arguments. It does not return the constitution text, which runs to
+    hundreds of kilobytes; the source URL is in the answer. Each constitution is one version, and
     its id reads <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
     <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into
     it.</p>
     <p><b>list_behaviours.</b> Every behaviour the publication shows, with the section it is
     grouped in, the brief the judge panel was given, the boundary of the construct and where the
-    definition came from. Each one also carries, per specification, how many passages it has, the
+    definition came from. Each one also carries, per constitution, how many passages it has, the
     strongest band any of them reaches and the panel&rsquo;s mean depth. No arguments. The slugs it returns are what the next tool takes.</p>
-    <p><b>retrieve_passages.</b> The passages of a specification that bear on a behaviour, quoted
+    <p><b>retrieve_passages.</b> The passages of a constitution that bear on a behaviour, quoted
     verbatim and located. Each one comes back with its locator, its quote, the band it sits in and
     the verdict every judge gave it.</p>
     <ul>
       <li><b>behaviours.</b> Required, at least one slug. It is what bounds the size of the
           answer.</li>
-      <li><b>model_spec_ids.</b> Optional, every specification by default. Where a behaviour and
-          specification pair carries a depth, it comes back as the mean the index&rsquo;s panel
+      <li><b>model_spec_ids.</b> Optional, every constitution by default. Where a behaviour and
+          constitution pair carries a depth, it comes back as the mean the index&rsquo;s panel
           gave it, on a scale from 0, absent, to 4, rules with worked examples. A pair with no
           depth comes back with <code>null</code>.</li>
       <li><b>strength.</b> Optional. <code>defining</code> is the document&rsquo;s fullest
           statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
           bears on it without establishing it. Each means that band and stronger.
-          <code>related</code> by default, so every band comes back, which is what the spec
+          <code>related</code> by default, so every band comes back, which is what the doc
           reader shows before you touch a toggle. Every passage carries its strength, so pass
           <code>core</code> or <code>defining</code> to narrow the answer. A judge&rsquo;s own
           verdict of <code>adjacent</code> is the band named <code>related</code> here.</li>
       <li><b>limit.</b> Optional, 40 by default, 200 at most. It is a page budget in passages: an
-          answer holds whole behaviour and specification pairs, never split, strongest passage
+          answer holds whole behaviour and constitution pairs, never split, strongest passage
           first.</li>
       <li><b>cursor.</b> Optional, the <code>next_cursor</code> of the previous page. It names the
           publication it was issued against, so a walk that spans a new publication stops rather

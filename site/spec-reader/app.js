@@ -790,7 +790,7 @@ function setCompareFirst(percent, persist = false) {
     resizer.setAttribute("aria-valuemin", String(Math.ceil(minimum)));
     resizer.setAttribute("aria-valuemax", String(Math.floor(maximum)));
     resizer.setAttribute("aria-valuenow", String(Math.round(state.compareFirst)));
-    resizer.setAttribute("aria-valuetext", `First specification ${Math.round(state.compareFirst)} percent wide`);
+    resizer.setAttribute("aria-valuetext", `First constitution ${Math.round(state.compareFirst)} percent wide`);
   }
   if (persist) saveNumber("aci-compare-first", state.compareFirst);
   requestAnimationFrame(updateRails);
@@ -838,7 +838,7 @@ const KEY_NOTES = {
       "a reader citing one single place would be sent to. The bar is relative to " +
       "the document rather than absolute. A judge who finds no passage standing " +
       "above the rest is told to award no 3 at all, and most behaviours draw " +
-      "between none and three across a whole specification.",
+      "between none and three across a whole constitution.",
     reader:
       "Drawn when the panel's total clears unanimous core by at least a point, " +
       "which takes a 3 from some judge on top of a panel that all called it core. " +
@@ -894,7 +894,7 @@ const KEY_NOTES = {
       "behaviour was registered, not of any passage or any verdict.",
     reader:
       "Marks the rows of the General Guidelines group. Those behaviours are defined " +
-      "by a filter laid over the specifications rather than by a norm either " +
+      "by a filter laid over the constitutions rather than by a norm either " +
       "document names, so their passages bear on the subject without ever naming " +
       "it. Their margin rule is broken rather than solid, and that texture is the " +
       "only thing telling them apart in the text.",
@@ -1051,7 +1051,7 @@ function createDocumentResizer() {
   resizer.className = "column-resizer document-resizer";
   resizer.role = "separator";
   resizer.tabIndex = 0;
-  resizer.setAttribute("aria-label", "Resize specification panels");
+  resizer.setAttribute("aria-label", "Resize constitution panels");
   resizer.setAttribute("aria-orientation", "vertical");
   resizer.setAttribute("aria-valuemin", "0");
   resizer.setAttribute("aria-valuemax", "100");
@@ -1220,7 +1220,7 @@ function openDepthNote(trigger, note) {
       if (cell.stands) {
         const label = document.createElement("h4");
         label.className = "depth-note-section";
-        label.textContent = "Where this specification stands";
+        label.textContent = "Where this constitution stands";
         body.append(label, ...comparisonNodes(cell.stands));
       }
     });
@@ -1301,7 +1301,7 @@ function renderBehaviourList() {
     elements.behaviourList.innerHTML = `
       <div class="behaviour-empty">
         <strong>No behaviours under test yet.</strong>
-        <p>Every specification is shown here in full, with no passages highlighted.
+        <p>Every constitution is shown here in full, with no passages highlighted.
         Behaviours appear in this menu once their passage mappings are published to this reader.</p>
       </div>`;
     updateExportControl();
@@ -1723,15 +1723,15 @@ function passagesMarkdown() {
   const behaviours = selectedBehaviours();
   const documents = state.payload?.documents || [];
   const lines = [
-    "# LLM panel -- specification passages",
+    "# LLM panel -- constitution passages",
     "",
     `Exported from the AI Constitutions Index LLM panel on ${today()}.`,
     "",
     `Behaviours: ${behaviours.map(behaviour => `${paddedNumber(behaviour)} ${behaviour.name}`).join(", ")}.`,
     "",
-    `Specifications read: ${documents.map(doc => `${doc.lab} · ${doc.title} (${doc.version})`).join("; ")}.`,
+    `Constitutions read: ${documents.map(doc => `${doc.lab} · ${doc.title} (${doc.version})`).join("; ")}.`,
     "",
-    "Each passage is quoted verbatim from the specification version named above; the locator"
+    "Each passage is quoted verbatim from the constitution version named above; the locator"
     + " pins it to the section it was read in, and the role sentence records why it was cited.",
   ];
 
@@ -1753,7 +1753,7 @@ function passagesMarkdown() {
       if (!coverage.passages.length) {
         lines.push(
           "",
-          "No mapped passages in this specification."
+          "No mapped passages in this constitution."
           + " Absence of coverage is an index finding, not missing data.",
         );
         return;
@@ -3536,7 +3536,7 @@ function renderDocument(doc, side = 0) {
   if (doc.textWithheld || typeof doc.markdown !== "string") {
     const panel = elements.template.content.firstElementChild.cloneNode(true);
     panel.querySelector(".document-body").textContent =
-      "This specification's text has not loaded. Reload the page to try again.";
+      "This constitution's text has not loaded. Reload the page to try again.";
     panel.dataset.documentId = doc.id;
     return panel;
   }
@@ -3748,7 +3748,7 @@ function updatePanelMeta(panel, doc) {
         : withheld
         ? `<div class="zero-coverage" role="note">
             <strong>Passages not loaded.</strong>
-            <span>The passages for the selected behaviours have not been loaded for this document. That is not a statement about the specification.</span>
+            <span>The passages for the selected behaviours have not been loaded for this document. That is not a statement about the constitution.</span>
           </div>`
         : filtered > 0
         ? `<div class="zero-coverage" role="note">
@@ -3757,8 +3757,8 @@ function updatePanelMeta(panel, doc) {
           </div>`
         : `<div class="zero-coverage" role="note">
             <strong>${several
-              ? "None of the selected behaviours map to a passage in this specification."
-              : "No mapped passages in this specification."}</strong>
+              ? "None of the selected behaviours map to a passage in this constitution."
+              : "No mapped passages in this constitution."}</strong>
             <span>Absence of coverage is an index finding, not missing data.</span>
           </div>`,
     );

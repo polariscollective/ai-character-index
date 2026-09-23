@@ -50,7 +50,7 @@ test("every level carries a brief the board can print under a table", () => {
     }
   }
   assert.equal(levelsOf(10)[5].brief,
-    "Demonstrated, and the three conditions below hold for every part of the behaviour.");
+    "It sets rules, shows them applied, and settles the hard cases the behaviour raises.");
 });
 
 test("each brief condition opens on the prompt's own condition", () => {

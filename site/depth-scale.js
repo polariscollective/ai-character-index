@@ -12,8 +12,9 @@
  * reader's scale note shows in a column of its own: for the scale of ten it is
  * engine/panel/prompts/depth-v2.txt word for word, with the anchor in lower case
  * and the bar's first letter a capital, and engine/panel/test_site_rubrics.py
- * holds it there. `brief` is one line, which is what fits under the board's
- * table, three of them across.
+ * holds it there. `brief` is the site's own line, written for a reader who has
+ * not read the rubric, and it is what fits under the board's table, three of
+ * them across.
  *
  * Nothing here touches the page, so node imports it for its tests.
  */
@@ -22,50 +23,51 @@ export const DEPTH_LEVELS = {
   4: [
     { level: 0, anchor: "absent",
       bar: "No passage bears on the behaviour.",
-      brief: "No passage bears on the behaviour." },
+      brief: "The constitution says nothing that bears on this behaviour." },
     { level: 1, anchor: "named",
       bar: "The behaviour appears, a word or clause, typically inside a list or a "
         + "passage about something else, but the spec says nothing further about it.",
-      brief: "The behaviour appears in passing, a word or a clause, and nothing more is said." },
+      brief: "It mentions the behaviour and says nothing more about it." },
     { level: 2, anchor: "discussed",
       bar: "The spec addresses the behaviour in its own right, what the norm is and "
         + "why it matters, but only in terms too general to grade a response against.",
-      brief: "Addressed in its own right, but too generally to grade a response against." },
+      brief: "It treats the behaviour as a subject of its own, in general terms." },
     { level: 3, anchor: "prescribed",
       bar: "The spec states concrete do/don't rules or procedures for the behaviour, "
         + "specific enough that a grader can quote the spec's own sentences as pass criteria.",
-      brief: "Concrete do and don't rules that a grader could quote as pass criteria." },
+      brief: "It sets rules on the behaviour, precise enough to judge an answer against." },
     { level: 4, anchor: "demonstrated",
       bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
         + "sanctioned response, usable as an answer key for borderline cases.",
-      brief: "Rules plus worked examples that show the sanctioned response." },
+      brief: "It sets rules and shows them applied to worked examples." },
   ],
   10: [
     { level: 0, anchor: "absent",
       bar: "No passage bears on the behaviour.",
-      brief: "No passage bears on the behaviour." },
+      brief: "The constitution says nothing that bears on this behaviour." },
     { level: 2, anchor: "named",
       bar: "The behaviour appears, a word or clause, typically inside a list or a passage "
         + "about something else, but the document says nothing further about it.",
-      brief: "The behaviour appears in passing, a word or a clause, and nothing more is said." },
+      brief: "It mentions the behaviour and says nothing more about it." },
     { level: 4, anchor: "discussed",
       bar: "The document addresses the behaviour in its own right, what the norm is and why "
         + "it matters, but only in terms too general to grade a response against.",
-      brief: "Addressed in its own right, but too generally to grade a response against." },
+      brief: "It treats the behaviour as a subject of its own, in general terms." },
     { level: 6, anchor: "prescribed",
       bar: "The document states concrete do and don't rules or procedures for the behaviour, "
         + "specific enough that a grader could quote the document's own sentences as pass "
         + "criteria.",
-      brief: "Concrete do and don't rules that a grader could quote as pass criteria." },
+      brief: "It sets rules on the behaviour, precise enough to judge an answer against." },
     { level: 8, anchor: "demonstrated",
       bar: "Prescribed, plus worked examples: concrete scenarios where the document shows the "
         + "sanctioned response, usable as an answer key for borderline cases.",
-      brief: "Rules plus worked examples that show the sanctioned response." },
+      brief: "It sets rules and shows them applied to worked examples." },
     { level: 10, anchor: "bounded",
       bar: "Demonstrated, and for this behaviour the document meets all three conditions "
         + "below, for every facet of the behaviour that the Definition and Clarifications "
         + "name.",
-      brief: "Demonstrated, and the three conditions below hold for every part of the behaviour." },
+      brief: "It sets rules, shows them applied, and settles the hard cases the behaviour "
+        + "raises." },
   ],
 };
 
@@ -80,9 +82,9 @@ export const CONDITIONS_FOR_TEN = [
 ];
 
 export const CONDITIONS_BRIEF = [
-  "The edge is shown: two cases that differ in one feature get opposite answers.",
-  "A conflict is settled: the document names a rule of its own that pulls against this one, "
-    + "says which prevails and shows it on a case.",
+  "The edge is shown: two cases that differ in one detail get opposite answers.",
+  "A conflict is settled: the constitution names a rule of its own that pulls against this one, "
+    + "says which wins and shows it on a case.",
   "A default for the undecidable case: it says what to do when the model cannot tell which "
     + "side of the edge it is on.",
 ];

@@ -1,4 +1,4 @@
-/* The overview: how each lab's specification scores, behaviour by behaviour and
+/* The overview: how each lab's constitution scores, behaviour by behaviour and
  * as a document.
  *
  * Four sources, and only the last two are ours to lose. The payload and the
@@ -35,17 +35,22 @@ import { CRITERIA, CRITERION_MAX, SHOWN_MAX, WHOLE_MAX, FINAL_MAX, HALVING, CONT
          HOW_SETTLED, NOT_REVIEWED, criterionMean, wholeFigures, behavioursFigure, categoryFigure,
          finalFigure, judgesOf, orderedClaims, yesNo, methodFacts }
   from "./document-assessment.js";
+/* What each figure means for a reader who has never seen the index. Every
+ * popover opens on these sentences, and the judges' own rubrics follow in a
+ * fold. */
+import { FINAL, WHOLE, CATEGORY, DEPTH, CRITERIA_PLAIN, reading, depthReading }
+  from "./plain-words.js";
 
-/* Labs the index carries no specification for. They are shown at nought across
+/* Labs the index carries no constitution for. They are shown at nought across
  * every behaviour, which is what was asked for, and pressing one says why: a
  * nought here is the absence of a document to read, not a document that was
  * read and found to say nothing. Those are different claims and the board must
  * not let one pass for the other.
  *
  * Mistral AI, Moonshot AI and DeepSeek joined in September 2026, when the
- * governance view took them on: none publishes a model spec either, and a lab
+ * governance view took them on: none publishes a constitution either, and a lab
  * the other view ranks should not be missing from this one. */
-const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
+const WITHOUT_A_CONSTITUTION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
   "DeepSeek"];
 
 const byId = id => document.getElementById(id);
@@ -98,9 +103,9 @@ async function loadJSON(url, fallback) {
   }
 }
 
-/* One column per specification at its newest version. A document id is the
- * specification and its version, and versions are dated strings, so the highest
- * string is the newest. Keyed by specification rather than by lab: they are the
+/* One column per constitution at its newest version. A document id is the
+ * constitution and its version, and versions are dated strings, so the highest
+ * string is the newest. Keyed by constitution rather than by lab: they are the
  * same thing while each lab carries one document, and a lab that publishes a
  * second one deserves a column rather than being folded into the other. */
 function newestPerSpecification(documents) {
@@ -117,14 +122,14 @@ function newestPerSpecification(documents) {
   // of its own, and a reader looking for a lab should find it where its name
   // falls rather than where its coverage does.
   return [...newest.values()]
-    .concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })))
+    .concat(WITHOUT_A_CONSTITUTION.map(lab => ({ lab, absent: true })))
     .sort((a, b) => a.lab.localeCompare(b.lab, "en", { sensitivity: "base" }));
 }
 
 /* A version whose day is 00 has no day recorded, so it is shown without one.
  * "2026-04-00" is a date nobody can read, and that nought is the absence of a
  * day rather than a day. Written as a rule rather than a case, so the next
- * specification dated to the month is handled without an edit here. */
+ * constitution dated to the month is handled without an edit here. */
 const shownVersion = version => String(version || "").replace(/-00$/, "");
 
 /* ---- The figures, and what each row is out of ------------------------------- */
@@ -280,16 +285,13 @@ function readingsList(judges, valueKey, outOf) {
   return list;
 }
 
-/* A note written beside the site rather than published with the payload, so it
- * may not be there. Where it is missing the heading stays and says so, because
- * a heading over nothing reads as a note that was lost. */
+/* A note written beside the index rather than published with the payload, so it
+ * may not be there. Where there is none, nothing is shown: a heading over an
+ * apology is worse than a shorter popover. */
 function noteUnder(heading, text) {
+  if (!text) return null;
   const fragment = document.createDocumentFragment();
   fragment.append(board.h3(heading));
-  if (!text) {
-    fragment.append(paragraph("Not written yet for this specification and behaviour.", "missing"));
-    return fragment;
-  }
   text.split(/\n{2,}/).forEach(block => {
     block.split("\n").filter(Boolean).forEach(line => fragment.append(
       /^[A-Z][A-Z ]+:$/.test(line.trim())
@@ -299,16 +301,60 @@ function noteUnder(heading, text) {
   return fragment;
 }
 
+/* The plain sentences a figure opens with: what is being scored, and what this
+ * figure means at the value on screen. Neither quotes the document. */
+function plainly(content, what, means) {
+  if (what) content.append(paragraph(what));
+  if (means) content.append(paragraph(means));
+}
+
+/* The judges' own wording, folded. It is there for whoever wants it, and it is
+ * not the first thing anyone reads. */
+function detail(content, build) {
+  const fold = element("details", "detail-fold");
+  const summary = element("summary");
+  summary.append(element("span", "", "The detail behind this figure"));
+  fold.append(summary);
+  build(fold);
+  content.append(fold);
+  return fold;
+}
+
+/* The scale in the words the judges read, for the fold. */
+function depthBars() {
+  const list = element("ol", "anchors");
+  levelsOf(state.scale).forEach(({ level: at, anchor, bar }) => {
+    const item = element("li");
+    const text = element("span");
+    text.append(element("span", "anchor-name", anchor), document.createTextNode(`: ${bar}`));
+    item.append(element("span", "anchor-level", String(at)), text);
+    list.append(item);
+  });
+  return list;
+}
+
+/* The three plain readings of a criterion, lowest first, with the figure's own
+ * marked where there is one. */
+function plainBands(key, figure = null) {
+  const list = element("ol", "anchors");
+  CRITERIA_PLAIN[key].bands.forEach(([from, to, sentence]) => {
+    const item = element("li");
+    if (figure !== null && figure >= from && (figure < to || to === SHOWN_MAX)) {
+      item.classList.add("is-here");
+    }
+    item.append(element("span", "anchor-level", from === 0 ? "0" : String(from)),
+      element("span", "", sentence));
+    list.append(item);
+  });
+  return list;
+}
+
 /* ---- What each popover says ------------------------------------------------- */
 
 function aboutFinal(content) {
   board.titled(content, `Final score, out of ${FINAL_MAX}`,
     `The sum of two figures, each out of ${WHOLE_MAX}, so the two count equally.`);
-  const parts = element("ul", "check-list");
-  parts.append(
-    element("li", "", `Behaviours: the plain mean of a document's behaviour cells, out of ${WHOLE_MAX}.`),
-    element("li", "", `The document as a whole: the total of its five criteria, out of ${WHOLE_MAX}.`));
-  content.append(parts);
+  plainly(content, FINAL.what, null);
   const table = element("table", "readings figures");
   const headRow_ = element("tr");
   ["Rank", "Lab", "Behaviours", "Whole document", "Final score"].forEach(name => {
@@ -340,13 +386,14 @@ function aboutFinal(content) {
   });
   table.append(head, rows);
   content.append(table, element("p", "", "Labs are ranked by this score. Labs level on it share a "
-    + "place and the next rank skips. A lab with no specification has no whole-document total to "
+    + "place and the next rank skips. A lab with no constitution has no whole-document total to "
     + "add, so it has no final score and comes after, unranked."));
 }
 
 function finalScore(content, column, final) {
   board.titled(content, `${column.lab}: final score`, `${documentLine(column)} ${rankLine(column)}`);
   content.append(board.figure(shown(final.value), ` out of ${FINAL_MAX}`));
+  plainly(content, FINAL.what, reading(FINAL, final.value));
   const parts = element("ul", "check-list");
   const part = (value, text) => {
     const item = element("li");
@@ -370,8 +417,8 @@ function finalScore(content, column, final) {
  * company's: every group folded, with the rows it is made of. */
 function profile(content, column) {
   if (column.absent) {
-    board.titled(content, column.lab, "No published specification.");
-    content.append(element("p", "", `We know of no model behaviour specification from `
+    board.titled(content, column.lab, "No published constitution.");
+    content.append(element("p", "", `We know of no constitution from `
       + `${column.lab}, and none appears to have been published, so there is no public document `
       + "to set beside the others. Its behaviours stand at nought for that absence"
       + `${state.assessment ? ", and the rows that assess a document are NA" : ""}.`));
@@ -443,10 +490,10 @@ function profile(content, column) {
 
 /* A row that assesses a document, where there is no assessment to show. Two
  * absences reach this, and they are different claims. A lab the index holds no
- * specification for has nothing to assess at all, and asking for one is the
+ * constitution for has nothing to assess at all, and asking for one is the
  * thing to do. A document the index does carry, whose assessment this
  * publication leaves out, is on the shelf: telling its reader that no
- * specification from that lab has been published would be false, and the
+ * constitution from that lab has been published would be false, and the
  * propose link would ask for a document the reader can already open. */
 function notAssessed(content, column, row, more) {
   const tail = more ? ` ${more}` : "";
@@ -455,7 +502,7 @@ function notAssessed(content, column, row, more) {
   content.append(board.figure("NA", ", not assessed"));
   if (column.absent) {
     content.append(element("p", "",
-      `There is no published specification from ${column.lab} to assess.${tail}`), proposeLine());
+      `There is no published constitution from ${column.lab} to assess.${tail}`), proposeLine());
     return;
   }
   content.append(element("p", "",
@@ -463,7 +510,7 @@ function notAssessed(content, column, row, more) {
 }
 
 /* What we know, rather than what the lab has done. "Meta has published no
- * specification" is a claim about Meta; "we know of none" is a claim about us,
+ * constitution" is a claim about Meta; "we know of none" is a claim about us,
  * and it is the only one of the two this index can stand behind. */
 function proposeLine() {
   const ask = element("p");
@@ -480,12 +527,12 @@ function proposeLine() {
  * was read and found to say nothing. The board cannot show that difference in a
  * figure, so pressing one says it in words. */
 function absentScore(content, column, subject, these) {
-  board.titled(content, `${column.lab}: ${lowerFirst(subject)}`, "No published specification.");
+  board.titled(content, `${column.lab}: ${lowerFirst(subject)}`, "No published constitution.");
   content.append(board.figure(shown(0), ` out of ${categoryMax()}`),
-    element("p", "", `We know of no model behaviour specification from ${column.lab}, and none `
+    element("p", "", `We know of no constitution from ${column.lab}, and none `
       + "appears to have been published, so there is no public document to set beside the others."),
     element("p", "subtitle", "The nought therefore stands for that absence. Nobody has examined a "
-      + `${column.lab} specification and found it silent on ${these}.`),
+      + `${column.lab} constitution and found it silent on ${these}.`),
     proposeLine());
 }
 
@@ -513,31 +560,42 @@ function noFigure(content, column, row, assessment, more) {
 
 /* One criterion of an assessment that left it out. */
 function criterionNotScored(content, column, criterion) {
-  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`, criterion.asks);
+  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`,
+    CRITERIA_PLAIN[criterion.key].what);
   content.append(board.figure("NA", ", not scored"),
     element("p", "", "No judge of this document scored this criterion, so the document as a whole "
       + "has no total and this lab has no final score."),
-    board.h3(scaleHeading(criterion)),
-    criterionScale(criterion, null));
+    board.h3("What each figure means"), plainBands(criterion.key));
+  detail(content, fold => {
+    fold.append(board.h3("What the judges were asked"), paragraph(criterion.asks),
+      board.h3(scaleHeading(criterion)), criterionScale(criterion, null));
+  });
 }
 
 function aboutWhole(content) {
   board.titled(content, "The document as a whole",
     `Five criteria, each out of ${SHOWN_MAX}, adding up to a total out of ${WHOLE_MAX}.`);
-  content.append(element("p", "", "Beside the depth of each behaviour, each document is assessed "
-    + `whole, by the same judges, on five criteria. ${HALVING}`));
+  plainly(content, WHOLE.what, null);
   content.append(board.h3("How it is scored"));
   CRITERIA.forEach(criterion => {
     const fold = element("details");
     const summary = element("summary");
     summary.append(element("span", "", criterion.name));
-    fold.append(summary, element("p", "", criterion.asks), criterionScale(criterion, null));
-    if (criterion.key === "contradictions") {
-      fold.append(element("p", "subtitle", CONTRADICTIONS_RULE));
-    }
+    fold.append(summary, element("p", "", CRITERIA_PLAIN[criterion.key].what),
+      plainBands(criterion.key));
     content.append(fold);
   });
   content.append(board.showInTable("whole", "the criteria"));
+  detail(content, fold => {
+    fold.append(paragraph(HALVING));
+    CRITERIA.forEach(criterion => {
+      fold.append(board.h3(criterion.name), paragraph(criterion.asks),
+        criterionScale(criterion, null));
+      if (criterion.key === "contradictions") {
+        fold.append(element("p", "subtitle", CONTRADICTIONS_RULE));
+      }
+    });
+  });
 }
 
 /* The total of one document: its five criteria folded, each with its judges.
@@ -548,10 +606,12 @@ function wholeScore(content, column, assessment) {
   content.append(total === null
     ? board.figure("NA", ", no total")
     : board.figure(shown(total), ` out of ${WHOLE_MAX}`));
-  content.append(element("p", "subtitle", total === null
-    ? `The total is the sum of the five criteria, each out of ${SHOWN_MAX}. No judge scored `
-      + `${unscored(assessment)}, so there is no total to give.`
-    : `The sum of its five criteria, each out of ${SHOWN_MAX}. ${HALVING}`));
+  plainly(content, WHOLE.what, total === null ? null : reading(WHOLE, total));
+  if (total === null) {
+    content.append(element("p", "subtitle",
+      `The total is the sum of the five criteria, each out of ${SHOWN_MAX}. No judge scored `
+      + `${unscored(assessment)}, so there is no total to give.`));
+  }
   CRITERIA.forEach((criterion, index) => {
     const fold = element("details");
     const summary = element("summary");
@@ -566,8 +626,9 @@ function wholeScore(content, column, assessment) {
       content.append(fold);
       return;
     }
+    fold.append(paragraph(reading(CRITERIA_PLAIN[criterion.key], parts[index])));
     if (criterion.key === "contradictions") {
-      fold.append(element("p", "", CONTRADICTIONS_RULE), contradictionsLine(assessment),
+      fold.append(contradictionsLine(assessment),
         board.popButton("Read the contradictions",
           () => openContradictions(column, assessment, parts[index])));
     } else {
@@ -577,25 +638,37 @@ function wholeScore(content, column, assessment) {
   });
   content.append(board.popButton(`The whole profile of ${column.lab}`,
     () => board.refill(rest => profile(rest, column))));
+  detail(content, fold => fold.append(paragraph(HALVING), paragraph(CONTRADICTIONS_RULE)));
 }
 
 function aboutCriterion(content, criterion) {
-  board.titled(content, criterion.name, criterion.asks);
-  content.append(element("p", "subtitle", "One of the five criteria on the document as a whole. "
-    + `${criterion.key === "contradictions" ? CONTRADICTIONS_RULE : HALVING}`));
-  content.append(board.h3(scaleHeading(criterion)),
-    criterionScale(criterion, null));
+  board.titled(content, criterion.name, CRITERIA_PLAIN[criterion.key].what);
+  content.append(element("p", "subtitle",
+    `One of the five criteria on the document as a whole, out of ${SHOWN_MAX}.`));
+  content.append(board.h3("What each figure means"), plainBands(criterion.key));
+  detail(content, fold => {
+    fold.append(board.h3("What the judges were asked"), paragraph(criterion.asks),
+      board.h3(scaleHeading(criterion)), criterionScale(criterion, null),
+      element("p", "subtitle",
+        criterion.key === "contradictions" ? CONTRADICTIONS_RULE : HALVING));
+  });
 }
 
 function criterionScore(content, column, criterion, assessment, part) {
-  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`, criterion.asks);
-  content.append(board.figure(shown(part), ` out of ${SHOWN_MAX}`),
-    element("p", "subtitle", HALVING));
+  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`,
+    CRITERIA_PLAIN[criterion.key].what);
+  content.append(board.figure(shown(part), ` out of ${SHOWN_MAX}`));
+  plainly(content, null, reading(CRITERIA_PLAIN[criterion.key], part));
+  content.append(board.h3("What each figure means"), plainBands(criterion.key, part));
   const judges = assessment.criteria?.[criterion.key]?.judges || {};
-  content.append(board.h3(`The ${Object.keys(judges).length} readings, each out of ${CRITERION_MAX}`),
-    readingsList(judges, "score", CRITERION_MAX));
-  content.append(board.h3(scaleHeading(criterion)),
-    criterionScale(criterion, criterionMean(assessment, criterion.key)));
+  detail(content, fold => {
+    fold.append(paragraph(HALVING),
+      board.h3("What the judges were asked"), paragraph(criterion.asks),
+      board.h3(`The ${Object.keys(judges).length} readings, each out of ${CRITERION_MAX}`),
+      readingsList(judges, "score", CRITERION_MAX),
+      board.h3(scaleHeading(criterion)),
+      criterionScale(criterion, criterionMean(assessment, criterion.key)));
+  });
 }
 
 /* How many of the claims the judges confirmed, and that nobody has read them
@@ -605,16 +678,18 @@ function contradictionsLine(assessment) {
   const claims = orderedClaims(assessment);
   const confirmed = claims.filter(claim => claim.confirmed).length;
   return paragraph(claims.length
-    ? `Found by the judges and read by all of them: ${confirmed} confirmed of `
+    ? `Each judge read every claim on the list: ${confirmed} confirmed of `
       + `${claims.length} listed. ${NOT_REVIEWED}`
     : `The judges listed none. ${NOT_REVIEWED}`);
 }
 
 function contradictionsScore(content, column, assessment, part) {
   const criterion = CRITERIA.find(item => item.key === "contradictions");
-  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`, criterion.asks);
-  content.append(board.figure(shown(part), ` out of ${SHOWN_MAX}`),
-    element("p", "subtitle", CONTRADICTIONS_RULE), contradictionsLine(assessment));
+  board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`,
+    CRITERIA_PLAIN.contradictions.what);
+  content.append(board.figure(shown(part), ` out of ${SHOWN_MAX}`));
+  plainly(content, null, reading(CRITERIA_PLAIN.contradictions, part));
+  content.append(contradictionsLine(assessment));
   const confirmed = orderedClaims(assessment).filter(claim => claim.confirmed);
   if (confirmed.length) {
     content.append(board.h3("Confirmed"));
@@ -625,25 +700,31 @@ function contradictionsScore(content, column, assessment, part) {
   }
   content.append(board.popButton("Read the contradictions",
     () => openContradictions(column, assessment, part)));
-  content.append(board.h3(scaleHeading(criterion)),
-    criterionScale(criterion, assessment.contradictions?.score ?? null));
+  detail(content, fold => {
+    fold.append(paragraph(CONTRADICTIONS_RULE),
+      board.h3("What the judges were asked"), paragraph(criterion.asks),
+      board.h3(scaleHeading(criterion)),
+      criterionScale(criterion, assessment.contradictions?.score ?? null));
+  });
 }
 
 function aboutCategory(content, category, members) {
   board.titled(content, category.name, `${members.length} `
     + `${members.length === 1 ? "behaviour" : "behaviours"}, each a depth out of ${state.scale}. `
     + "The group's figure is their plain mean.");
+  plainly(content, CATEGORY.what, null);
   const list = element("ul", "check-list");
   members.forEach(behaviour => list.append(element("li", "", behaviour.name)));
-  content.append(list, board.h3("What a depth means"), depthScale(null),
+  content.append(list, board.h3("What each figure means"), depthScale(null),
     board.showInTable(category.id, "its behaviours"));
 }
 
 function categoryScore(content, column, category, members, value) {
   board.titled(content, `${column.lab}: ${lowerFirst(category.name)}`, documentLine(column));
-  content.append(board.figure(shown(value), ` out of ${categoryMax()}`),
-    element("p", "subtitle", `The plain mean of its ${members.length} `
-      + `${members.length === 1 ? "behaviour" : "behaviours"}.`));
+  content.append(board.figure(shown(value), ` out of ${categoryMax()}`));
+  plainly(content, CATEGORY.what, depthReading(value, state.scale));
+  content.append(element("p", "subtitle", `The plain mean of its ${members.length} `
+    + `${members.length === 1 ? "behaviour" : "behaviours"}.`));
   const list = element("ul", "check-list");
   members.forEach(behaviour => {
     const depth = behaviour.coverage?.[column.id]?.depth;
@@ -663,46 +744,56 @@ function categoryScore(content, column, category, members, value) {
   content.append(list);
 }
 
-/* A behaviour's own note: what the index means by it. The brief is the one the
- * panel was given, so it is what every figure in this row was judged against
- * and the right thing to read before them. It comes from the registry rather
- * than being rebuilt here: it is served already, and two sources for one
- * sentence drift apart the first time one of them is edited. */
+/* A behaviour's own note: what the index means by it, then what the figures in
+ * this row can mean. The brief the panel was given is in the fold, and comes
+ * from the registry rather than being rebuilt here: it is served already, and
+ * two sources for one sentence drift apart the first time one of them is
+ * edited. */
 function aboutBehaviour(content, behaviour) {
   const entry = state.registry[behaviour.slug] || {};
-  board.titled(content, behaviour.name,
-    `A depth out of ${state.scale}: how far a document goes on this behaviour.`);
-  const asked = entry.query || entry.definition || behaviour.definition;
-  content.append(board.h3("What the judges are asked"),
-    asked ? paragraph(asked) : paragraph("No brief is recorded for this behaviour.", "missing"));
-  if (entry.boundary) {
-    content.append(board.h3("Where the construct stops"), paragraph(entry.boundary));
-  }
-  content.append(board.h3("What a depth means"), depthScale(null));
+  board.titled(content, behaviour.name, behaviour.definition || entry.query || "");
+  plainly(content, DEPTH.what, null);
+  content.append(board.h3("What each figure means"), depthScale(null));
+  detail(content, fold => {
+    const asked = entry.query || entry.definition || behaviour.definition;
+    if (asked) fold.append(board.h3("What the judges were asked"), paragraph(asked));
+    if (entry.boundary) {
+      fold.append(board.h3("Where the behaviour stops"), paragraph(entry.boundary));
+    }
+    fold.append(board.h3("The scale in the judges' own words"), depthBars());
+  });
 }
 
-/* A figure's note: how it was reached, then where this specification stands
- * beside the others. The readings come from the publication and are always
- * there; the two paragraphs are written from the comparisons already made
- * between each pair and may not be, in which case the note says so rather than
- * showing an empty heading. */
+/* A figure, said plainly, then everything behind it in one fold: the readings,
+ * the brief the panel was given, the scale in the judges' own words, and the
+ * two notes written beside the index. Those two quote the documents at length,
+ * and the sentences a reader meets first may not quote the constitution being
+ * scored, so they go in the fold. Where a note is missing, nothing is shown. */
 function behaviourScore(content, column, behaviour, depth) {
   board.titled(content, `${column.lab}: ${lowerFirst(behaviour.name)}`, behaviour.definition);
   content.append(board.figure(shown(depth.mean),
     ` out of ${state.scale}, ${depthWords(depth.mean, state.scale)}`));
-  const judges = Object.keys(depth.judges || {}).length;
-  if (judges) {
-    content.append(board.h3(`The ${judges} ${judges === 1 ? "reading" : "readings"}`),
-      readingsList(depth.judges, "depth", state.scale));
-  }
-  const key = `${behaviour.slug}\n${column.id}`;
-  content.append(noteUnder("Why this figure", state.depths[key]?.text));
-  content.append(noteUnder("Where this specification stands", state.passages[key]?.text));
+  plainly(content, DEPTH.what, depthReading(depth.mean, state.scale));
   content.append(board.h3("Where this figure sits"), depthScale(depth.mean));
   const read = element("p");
   read.append(link(readerLink({ behavior: behaviour.slug, spec: column.id }),
     "Read the passages in the doc reader"));
   content.append(read);
+  const key = `${behaviour.slug}\n${column.id}`;
+  detail(content, fold => {
+    const judges = Object.keys(depth.judges || {}).length;
+    if (judges) {
+      fold.append(board.h3(`The ${judges} ${judges === 1 ? "reading" : "readings"}`),
+        readingsList(depth.judges, "depth", state.scale));
+    }
+    const entry = state.registry[behaviour.slug] || {};
+    if (entry.query) fold.append(board.h3("What the judges were asked"), paragraph(entry.query));
+    fold.append(board.h3("The scale in the judges' own words"), depthBars());
+    const why = noteUnder("Why this figure", state.depths[key]?.text);
+    if (why) fold.append(why);
+    const stands = noteUnder("Where this constitution stands", state.passages[key]?.text);
+    if (stands) fold.append(stands);
+  });
 }
 
 /* ---- The sheet, for the contradictions -------------------------------------- */
@@ -797,7 +888,8 @@ function openContradictions(column, assessment, part) {
     const figureLine = paragraph("");
     figureLine.append(element("span", "sheet-figure", shown(part)),
       document.createTextNode(` out of ${SHOWN_MAX}.`));
-    body.append(figureLine, paragraph(CONTRADICTIONS_RULE));
+    body.append(figureLine, paragraph(CRITERIA_PLAIN.contradictions.what),
+      paragraph(reading(CRITERIA_PLAIN.contradictions, part)));
     const claims = orderedClaims(assessment);
     const confirmed = claims.filter(claim => claim.confirmed);
     body.append(element("h3", null, "How one is found and confirmed"), paragraph(HOW_SETTLED),
@@ -843,12 +935,12 @@ function headRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", column.rank
       ? `${column.lab}, ranked ${column.rank}: its profile`
-      : `${column.lab}, ${column.absent ? "no published specification" : "unranked"}: its profile`);
+      : `${column.lab}, ${column.absent ? "no published constitution" : "unranked"}: its profile`);
     // A blank where a rank would be, so every lab's name starts on one line.
     button.append(element("span", "rank", column.rank ? String(column.rank) : " "));
     button.append(element("span", "company-name", column.lab));
     button.append(column.absent
-      ? element("span", "company-flag", "No specification")
+      ? element("span", "company-flag", "No constitution")
       : element("span", "company-flag mono", shownVersion(column.version)));
     button.addEventListener("click", () =>
       board.openPopover(button, content => profile(content, column)));
@@ -1000,7 +1092,7 @@ function renderTable() {
           value: mean, max: state.scale, text: shown(mean),
           // The rubric's word for the figure, which the scale under the table
           // spells out and the cell has no room for. Not on a lab with no
-          // specification: its nought stands for a document nobody holds, and
+          // constitution: its nought stands for a document nobody holds, and
           // "absent" is the rubric's word for a document that says nothing.
           note: column.absent ? null : depthWords(mean, state.scale),
           build: column.absent
@@ -1020,13 +1112,13 @@ function renderTable() {
  * maximum, so the figure and the corner mark say which scale it is on. */
 function renderLegend() {
   const legend = document.createDocumentFragment();
-  legend.append(element("span", "", "Colour is the share of the row's maximum:"),
+  legend.append(element("span", "", "Colour goes from nothing scored to the most a row can score:"),
     element("span", "", "none"));
   legend.append(board.swatches([0, 0.25, 0.5, 0.75, 1], 1), element("span", "", "all"));
   if (state.assessment) {
     const na = element("span", "legend-na");
     na.append(board.naChip(),
-      document.createTextNode(" no published specification to assess"));
+      document.createTextNode(" no published constitution to assess"));
     legend.append(na);
   }
   nodes.legend.replaceChildren(legend);
@@ -1050,7 +1142,8 @@ function renderDepthKey() {
     item.append(element("span", "anchor-level", String(at)), text);
     list.append(item);
   });
-  nodes.depthKeyTitle.textContent = `Depth of a behaviour, out of ${state.scale}`;
+  nodes.depthKeyTitle.textContent =
+    `How far a constitution goes on one behaviour, out of ${state.scale}`;
   nodes.depthKey.replaceChildren(list);
   // The scale of four has a level at every whole number, so nothing falls
   // between two of them and there is no line to write.
@@ -1094,7 +1187,7 @@ const seatsNamed = seats => listed(seats.map(seat => [{ mono: seat }]));
  * more than one. `unit` is what is being counted, and is left out where the
  * sentence around it says. */
 const substituted = (entries, unit) => listed(entries.map(({ model, seat, count }, index) => [
-  { mono: model }, `${index === 0 ? " answered" : ""} in ${seat}'s seat for `, { mono: count },
+  { mono: model }, `${index === 0 ? " answered" : ""} in ${seat}'s place for `, { mono: count },
   index === 0 && unit ? ` ${count === 1 ? unit.one : unit.many}` : ""]));
 
 /* Nothing here names a model, a seat or a panel: every name and every count is
@@ -1105,46 +1198,46 @@ function renderMethod() {
                               columns: state.columns, provenance: state.provenance });
   const blocks = [];
   if (state.assessment) {
-    blocks.push(rich({ lead: `Final score, out of ${FINAL_MAX}.` },
-      "The behaviours' figure, out of ", { mono: WHOLE_MAX }, ", plus the document as a whole, out "
-      + "of ", { mono: WHOLE_MAX }, ". Labs are ranked by it; equal scores share a rank and the "
-      + "next rank is skipped."));
+    blocks.push(rich({ lead: `The score at the top, out of ${FINAL_MAX}.` },
+      "The two halves of the board added together: the document as a whole, out of ",
+      { mono: WHOLE_MAX }, ", and the behaviours, out of ", { mono: WHOLE_MAX },
+      ". Labs are ranked by it, and labs level on it share a place."));
   }
-  blocks.push(rich({ lead: "The behaviours' figure." },
-    "It is the plain mean of the document's behaviour depths, over the behaviours this publication "
-    + "gives it a depth for, which may be fewer than the behaviours it carries. A category's "
-    + "figure is the plain mean of its own behaviours."));
+  blocks.push(rich({ lead: "The behaviours." },
+    "The plain mean of the constitution's figures over every behaviour this publication gives it "
+    + "one for, which may be fewer than the behaviours the board carries. A group's figure is the "
+    + "plain mean of the behaviours in it."));
   /* The seats are named rather than counted per cell: what the payload gives is
    * every seat seen over the whole board, and a panel of three judging every
    * cell can still show four or five seats there, one run having been composed
    * differently from another. */
-  blocks.push(rich({ lead: `A behaviour's depth, out of ${state.scale}.` },
-    "Each judge of the panel reads the passages the panel cited for that behaviour in that "
-    + "document and gives a depth from ", { mono: 0 }, " to ", { mono: state.scale },
-    " on the scale above; a cell's figure is the mean of its readings. When a judge's model cannot "
-    + "answer, a declared substitute answers in its seat and the cell says so. The seats on this "
-    + "board are ", ...seatsNamed(facts.depthSeats),
+  blocks.push(rich({ lead: `How far a constitution goes on one behaviour, out of ${state.scale}.` },
+    "Three judges read the passages the index holds for that behaviour in that constitution, and "
+    + "each gives a figure from ", { mono: 0 }, " to ", { mono: state.scale },
+    " on the scale above. The figure on the board is the mean of the three. Where a judge cannot "
+    + "answer, a model named in advance answers in its place and the figure says so. The judges "
+    + "on this board are ", ...seatsNamed(facts.depthSeats),
     ...(facts.depthSubstitutions.length
-      ? ["; ", ...substituted(facts.depthSubstitutions, { one: "depth", many: "depths" }), "."]
+      ? ["; ", ...substituted(facts.depthSubstitutions, { one: "figure", many: "figures" }), "."]
       : ["."])));
   if (state.assessment) {
     blocks.push(rich({ lead: `The document as a whole, out of ${WHOLE_MAX}.` },
-      "Five criteria. Four are each read by the judges on the whole document and scored ",
-      { mono: 0 }, " to ", { mono: CRITERION_MAX }, "; the fifth, the contradictions, is scored "
-      + "from the list the next paragraph describes. The index halves each so the five add up to ",
-      { mono: WHOLE_MAX }, ". The total is the sum of the five figures as shown."));
-    /* The row is named as the board names it, and a rule the document calls
-     * absolute is called absolute here too. The page says both words
-     * everywhere else, and a paragraph that walked around them read as a
-     * description of some other index's method. */
+      "Five criteria. Four of them are read on the whole document and scored from ", { mono: 0 },
+      " to ", { mono: CRITERION_MAX }, "; the fifth is the contradictions, scored from the list "
+      + "the next paragraph describes. Each is halved so the five add up to ", { mono: WHOLE_MAX },
+      ". The total is the sum of the five figures as shown."));
+    /* The row is named as the board names it. A rule the constitution says can
+     * never be overridden is what the judges' own rubric calls absolute, and
+     * the words are spelt out here because this paragraph is where a reader
+     * meets the idea first. */
     blocks.push(rich({ lead: "Unresolved contradictions." },
-      "Each seat lists every contradiction it finds; then each of them reads every claim, its own "
-      + "included, and says whether it holds and whether it involves a rule the document calls "
-      + "absolute. A claim is confirmed when two seats say it holds, and absolute when two say "
-      + "both. Score: ", { mono: CRITERION_MAX },
-      " when none is confirmed, ", { mono: 2 }, " when one or two are and none is absolute, ",
-      { mono: 0 }, " when three or more are or one is absolute; halved "
-      + "like the others. The seats on this board are ", ...seatsNamed(facts.contradictionSeats),
+      "Each judge lists the contradictions it finds. Each of them then reads every claim, its own "
+      + "included, and says whether it holds and whether it involves a rule the constitution says "
+      + "can never be overridden. A claim is confirmed when two of the three judges say it holds. "
+      + "Score: ", { mono: CRITERION_MAX },
+      " when none is confirmed, ", { mono: 2 }, " when one or two are and none involves such a "
+      + "rule, ", { mono: 0 }, " when three or more are or one involves such a rule; halved "
+      + "like the others. The judges on this board are ", ...seatsNamed(facts.contradictionSeats),
       ...(facts.readingSubstitutions.length
         ? ["; ", ...substituted(facts.readingSubstitutions, null), " of the ",
           { mono: facts.readings }, " readings in all"]
@@ -1230,7 +1323,7 @@ nodes.sheet.addEventListener("click", event => {
   if (event.target === nodes.sheet) nodes.sheet.close();
 });
 
-/* Two views of one index, behind tabs: what the specifications say, and how
+/* Two views of one index, behind tabs: what the constitutions say, and how
  * they are governed. The view has an address, ?view=governance, so a link can
  * open on it; the first view is the one with no parameter, which keeps every
  * link already shared pointing where it did.

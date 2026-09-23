@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tier-1 feature harness for the site's spec reader (site/spec-reader/),
+// Tier-1 feature harness for the site's doc reader (site/spec-reader/),
 // driven against TWO data states: the bundled payloads that ship in the repo,
 // against the fixture index served through two of the reader's routes (the
 // payload and the documents; the links route is not staged, so the reader
@@ -2073,7 +2073,7 @@ console.log("== Overview: the governance view ==");
     "the nine companies run across in the note's order, both ties broken as the note breaks them, "
       + "each overall score out of 16, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
-  check(seen.rows.join(", ") === "Overall, Model behaviour specification, Change log, Guardrails, "
+  check(seen.rows.join(", ") === "Overall, Published constitution, Change log, Guardrails, "
         + "Hard constraints, Best practices"
       && seen.findings === 8,
     "the scores run down from the total, the checks folded, the eight findings under the table",
@@ -2426,7 +2426,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(four.caption === "Each lab's behaviours by category, with each group's rows available "
       + "to open",
     "the caption promises the rows a publication of four has, and no others", four.caption);
-  check(four.keyTitle === "Depth of a behaviour, out of 4"
+  check(four.keyTitle === "How far a constitution goes on one behaviour, out of 4"
       && four.levels.join() === "0,1,2,3,4" && four.conditions.length === 0 && four.odd === "",
     "the scale under the table is the scale of four, with no conditions and no line on odd figures",
     JSON.stringify([four.keyTitle, four.levels, four.odd]));
@@ -2486,11 +2486,11 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && na.final.every(one => one.na === (one.text === "NA"))
       && na.final.some(one => one.label === "Acme, final score: not assessed")
       && na.final.some(one => one.label === "Meta, final score: not assessed"),
-    "a document with no assessment and a lab with no specification read NA on both rows",
+    "a document with no assessment and a lab with no constitution read NA on both rows",
     JSON.stringify(na.final.map(one => [one.text, one.label])));
 
   /* The two absences behind one NA. The board cannot show the difference in a
-   * cell, so pressing one has to say which it is: a lab whose specification the
+   * cell, so pressing one has to say which it is: a lab whose constitution the
    * index does not hold, and a document it does hold that this publication
    * leaves unassessed. Telling a reader the second is the first would deny a
    * document they can open from the same page. */
@@ -2500,7 +2500,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && carried.subtitle === "Second document, 2026-02-01."
       && carried.body.includes("The index carries this document, and this publication does not "
         + "assess it as a whole.")
-      && !carried.body.includes("no published specification")
+      && !carried.body.includes("no published constitution")
       && !carried.links.some(href => href.includes("propose")),
     "a document the index carries, left unassessed, says so and asks for nothing",
     JSON.stringify([carried.title, carried.subtitle, carried.links]));
@@ -2508,9 +2508,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   await pressCell("Final score", "Meta");
   const nothing = await readPop();
   check(nothing.open && nothing.title === "Meta: final score"
-      && nothing.body.includes("There is no published specification from Meta to assess.")
+      && nothing.body.includes("There is no published constitution from Meta to assess.")
       && nothing.links.some(href => href.includes("propose")),
-    "a lab the index holds no specification for keeps its words and its invitation",
+    "a lab the index holds no constitution for keeps its words and its invitation",
     JSON.stringify([nothing.title, nothing.links]));
   await closePop();
 
@@ -2526,7 +2526,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     "a column the payload knows nothing about says so from its head",
     JSON.stringify([unbuilt.title, unbuilt.subtitle]));
   await closePop();
-  check(ten.keyTitle === "Depth of a behaviour, out of 10"
+  check(ten.keyTitle === "How far a constitution goes on one behaviour, out of 10"
       && ten.levels.join() === "0,2,4,6,8,10"
       && ten.anchors.join() === "absent,named,discussed,prescribed,demonstrated,bounded"
       && ten.conditions.length === 3
@@ -2558,11 +2558,11 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   await press("Defined behaviour", 0);
   let popover = await readPop();
   check(popover.open && popover.body.includes("7.3 out of 10, prescribed and partly demonstrated")
+      && popover.body.includes("Part of what the next level asks for is there as well.")
       && popover.here.join() === "prescribed,demonstrated"
       && popover.judges.length === 3
-      && popover.headings.includes("Why this figure")
-      && popover.headings.includes("Where this specification stands"),
-    "a figure opens on its words, its readings, its place on the scale and both notes",
+      && popover.headings.includes("The scale in the judges' own words"),
+    "a figure opens on its words, its plain reading, its place on the scale and the fold",
     JSON.stringify([popover.headings, popover.here]));
   await closePop();
 
@@ -2608,7 +2608,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(sheet.open && sheet.title === "Acme: Unresolved contradictions"
       && sheet.statuses.join(" | ") === "Confirmed | Not confirmed",
     "the list opens in the sheet, confirmed first", JSON.stringify([sheet.title, sheet.statuses]));
-  check(sheet.body.includes("Each seat lists every contradiction it finds")
+  check(sheet.body.includes("Each judge lists the contradictions it finds")
       && sheet.body.includes("reads every claim, its own included")
       && !sheet.body.includes("put to the others"),
     "the sheet says how a contradiction was settled, by the second method",
@@ -2635,8 +2635,8 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     sheetHead);
   await closeSheet();
 
-  check(ten.method.includes("Final score, out of 20")
-      && ten.method.includes("the plain mean of the document's behaviour depths")
+  check(ten.method.includes("The score at the top, out of 20")
+      && ten.method.includes("The plain mean of the constitution's figures")
       && ten.method.includes("reads every claim, its own included")
       && !ten.method.includes("put to the others")
       /* On word boundaries: without them "sol" matched inside "absolute" and
@@ -2644,7 +2644,7 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
        * answered by rewriting the page rather than the seat names. */
       && !/\b(sol|fable|deepseek|kimi)\b/.test(ten.method)
       && ten.method.includes("Unresolved contradictions.")
-      && ten.method.includes("a rule the document calls absolute")
+      && ten.method.includes("a rule the constitution says can never be overridden")
       && ten.methodOpen === false,
     "how the scores are made is folded, says the second method in the board's own words, and "
     + "names the payload's own seats", ten.method.slice(0, 300));
