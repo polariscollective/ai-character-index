@@ -2197,6 +2197,19 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 /* The display above would otherwise beat the hidden attribute. */
 .document-translation[hidden] { display: none; }
+/* The band beside it, in the same chrome and without the rust rule. The notice
+   above warns about the text a reader is looking at; this states two facts about
+   the document, so it is drawn quietly. */
+.document-context {
+  margin: 0;
+  padding: 6px 12px 6px 22px;
+  border-bottom: 1px solid var(--line-light);
+  background: var(--chrome-deep);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+}
 .translation-text { flex: 1; min-width: 0; }
 /* The notice's close control: a plain ×, in the band's own ink, centred at its
    right end. The negative margins keep the band no taller for it. */

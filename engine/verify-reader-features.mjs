@@ -2361,6 +2361,10 @@ console.log("== Overview: the constitutions board ==");
       rank: button.querySelector(".rank")?.textContent.trim(),
       name: button.querySelector(".company-name")?.textContent,
       flag: button.querySelector(".company-flag")?.textContent,
+      // The head's second flag, where the file gives the company one: a few
+      // words under the version.
+      note: [...button.querySelectorAll(".company-flag")].slice(1)
+        .map(node => node.textContent).join(" "),
       label: button.getAttribute("aria-label"),
       mark: button.querySelector(".company-mark")?.tagName.toLowerCase() ?? null,
       markHidden: button.querySelector(".company-mark")?.getAttribute("aria-hidden"),
@@ -2397,15 +2401,18 @@ console.log("== Overview: the constitutions board ==");
     JSON.stringify([board.heads.map(head => head.id), columns.map(one => one.id)]));
   check(board.heads.every(head => {
       const company = columns.find(one => one.id === head.id);
-      return head.flag === (company.document ? version(company) : "No published constitution");
+      return head.flag === (company.document ? version(company) : "No published constitution")
+        && head.note === (company.note || "");
     }),
-    "each column carries its document's version, or says the company publishes none",
-    JSON.stringify(board.heads.map(head => [head.id, head.flag])));
+    "each column carries its document's version, or says the company publishes none, and the "
+    + "company the file gives a note carries it under the version",
+    JSON.stringify(board.heads.map(head => [head.id, head.flag, head.note])));
   /* The marks. They are drawn, so they are hidden from assistive technology and
    * the company's name is what is announced; a company the set carries no mark
    * for keeps the box, so every name in the row starts on one line. */
   check(board.heads.every(head => head.mark && head.markHidden === "true"
-        && head.label === `${head.name}, ranked ${head.rank}: its profile`)
+        && head.label === `${head.name}, ranked ${head.rank}`
+          + `${head.note ? `, ${lowerFirst(head.note)}` : ""}: its profile`)
       && board.heads.filter(head => head.mark === "svg").length >= 7
       && board.governanceMarks === 9,
     "every column carries a mark above its name, hidden from assistive technology, on both "
