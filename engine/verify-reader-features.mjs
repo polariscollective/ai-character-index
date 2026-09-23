@@ -2351,8 +2351,13 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   check(ten.caption === "Each lab's final score, its document as a whole and its behaviours by "
       + "category, with each group's rows available to open",
     "the caption names the two rows a publication of ten adds", ten.caption);
-  check(ten.heads[0].rank === "1" && ten.heads[0].lab === "Acme",
-    "the rank sits above the lab's name", JSON.stringify(ten.heads.slice(0, 3)));
+  /* Two documents are assessed and they are level, so the ranking is walked
+   * rather than asserted against a board with one figure on it: both carry
+   * rank 1, and the document that has depths but no assessment carries none. */
+  check(ten.heads.slice(0, 3).map(one => `${one.rank || "-"} ${one.lab}`).join(" | ")
+      === "1 Acme | 1 Zenith | - Acme",
+    "the rank sits above the lab's name, labs level on the final score share it, and a document "
+    + "with no final score carries none", JSON.stringify(ten.heads.slice(0, 3)));
   const final = await cellOf("Final score", 0);
   check(final.text === "11.8" && final.max === "/20"
       && final.label === "Acme, final score: 11.8 out of 20"
@@ -2467,12 +2472,17 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && ten.method.includes("the plain mean of the document's behaviour depths")
       && ten.method.includes("reads every claim, its own included")
       && !ten.method.includes("put to the others")
-      && !/sol|fable|deepseek|kimi/.test(ten.method)
+      /* On word boundaries: without them "sol" matched inside "absolute" and
+       * "unresolved", so the check fired on the page's own vocabulary and was
+       * answered by rewriting the page rather than the seat names. */
+      && !/\b(sol|fable|deepseek|kimi)\b/.test(ten.method)
+      && ten.method.includes("Unresolved contradictions.")
+      && ten.method.includes("a rule the document calls absolute")
       && ten.methodOpen === false,
-    "how the scores are made is folded, says the second method, and names the payload's own seats",
-    ten.method.slice(0, 300));
-  check(ten.ties === "" || /share (first|second|third)/.test(ten.ties),
-    "the ties line says which place is shared, or says nothing", ten.ties);
+    "how the scores are made is folded, says the second method in the board's own words, and "
+    + "names the payload's own seats", ten.method.slice(0, 300));
+  check(ten.ties === "Acme and Zenith tie on 11.8, so they share first place.",
+    "the ties line names the labs level on the final score and the place they share", ten.ties);
   check(pageErrors.length === 0, "the board out of ten: no console errors", pageErrors.join("; "));
 
   pageErrors = [];

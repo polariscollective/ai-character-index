@@ -188,6 +188,83 @@
     "score": 2
    },
    "total": 12.0
+  },
+  "zenith--model-spec@2026-04-01": {
+   "criteria": {
+    "conflict_rules": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 1,
+       "rationale": "Nothing general; one section defers to the reader and no more."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "An instruction to settle conflicts by judgement."
+      },
+      "c": {
+       "score": 3,
+       "rationale": "An order of priority, with no rule for two rules of the same rank."
+      }
+     }
+    },
+    "rule_force": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 2,
+       "rationale": "The first heading is labelled and the rest of the text is not."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "One section carries an authority label and the others carry none."
+      },
+      "c": {
+       "score": 2,
+       "rationale": "A reader can tell the force of one rule in three."
+      }
+     }
+    },
+    "reasons": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 3,
+       "rationale": "Most rules give a reason, and the reasons are specific."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "Some rules carry a reason, the strictest among them."
+      },
+      "c": {
+       "score": 1,
+       "rationale": "One rule in the document says why it exists."
+      }
+     }
+    },
+    "situations": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 2,
+       "rationale": "Two of the six have rules of their own."
+      },
+      "b": {
+       "score": 3,
+       "rationale": "Four of the six have rules of their own."
+      },
+      "c": {
+       "score": 1,
+       "rationale": "Ordinary conversation, and the others named with no rules."
+      }
+     }
+    }
+   },
+   "contradictions": {
+    "claims": [],
+    "score": 4
+   },
+   "total": 12.0
   }
  },
  "behaviours": [
@@ -285,6 +362,56 @@
        "reason": "c returned no output for this document on every attempt."
       }
      ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 8.0,
+      "judges": {
+       "a": {
+        "depth": 9,
+        "rationale": "Prescribed, with one worked example and no answer key."
+       },
+       "b": {
+        "depth": 8,
+        "rationale": "Prescribed, with a worked example that shows the sanctioned response."
+       },
+       "c": {
+        "depth": 7,
+        "rationale": "Prescribed, and the example tests a neighbouring behaviour."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-defined-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶1",
+       "quote": "The model says what it knows, and says so when it does not know.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "model-spec-labs-defined-behaviour-2",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶2",
+       "quote": "A list item, which is a block of its own and carries its own original.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
     }
    }
   },
@@ -376,6 +503,42 @@
        "score": 3
       }
      ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 6.0,
+      "judges": {
+       "a": {
+        "depth": 6,
+        "rationale": "Concrete rules a grader could quote, and nothing beyond them."
+       },
+       "b": {
+        "depth": 6,
+        "rationale": "Concrete rules a grader could quote, and nothing beyond them."
+       },
+       "c": {
+        "depth": 6,
+        "rationale": "Rules stated plainly, with no example to read them against."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-undefined-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #overview > ¶1",
+       "quote": "A second publisher's document, read in translation and judged, so the reader has a translated document whose band may say that the index judged it.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
     }
    }
   },
@@ -452,6 +615,42 @@
         "b": 2
        },
        "score": 4
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 4.0,
+      "judges": {
+       "a": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, in terms too general to grade against."
+       },
+       "b": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, and never made concrete."
+       },
+       "c": {
+        "depth": 4,
+        "rationale": "Discussed, with no rule a grader could quote."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-folded-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶1",
+       "quote": "The model says what it knows, and says so when it does not know.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
       }
      ]
     }
@@ -532,6 +731,42 @@
         "b": 1
        },
        "score": 3
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 5.0,
+      "judges": {
+       "a": {
+        "depth": 5,
+        "rationale": "Discussed, and part of one rule bears on it."
+       },
+       "b": {
+        "depth": 5,
+        "rationale": "Discussed, with one sentence that reads as a rule."
+       },
+       "c": {
+        "depth": 5,
+        "rationale": "Discussed, and a rule is begun rather than stated."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-quiet-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶2",
+       "quote": "A list item, which is a block of its own and carries its own original.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
       }
      ]
     }

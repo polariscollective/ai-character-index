@@ -1104,13 +1104,17 @@ function renderMethod() {
       { mono: 0 }, " to ", { mono: CRITERION_MAX }, "; the fifth, the contradictions, is scored "
       + "from the list the next paragraph describes. The index halves each so the five add up to ",
       { mono: WHOLE_MAX }, ". The total is the sum of the five figures as shown."));
-    blocks.push(rich({ lead: "Contradictions." },
+    /* The row is named as the board names it, and a rule the document calls
+     * absolute is called absolute here too. The page says both words
+     * everywhere else, and a paragraph that walked around them read as a
+     * description of some other index's method. */
+    blocks.push(rich({ lead: "Unresolved contradictions." },
       "Each seat lists every contradiction it finds; then each of them reads every claim, its own "
-      + "included, and says whether it holds and whether it involves a rule the document says can "
-      + "never be overridden. A claim is confirmed when two seats say it holds, and marked as one "
-      + "of those rules when two say both. Score: ", { mono: CRITERION_MAX },
-      " when none is confirmed, ", { mono: 2 }, " when one or two are and no such rule is "
-      + "involved, ", { mono: 0 }, " when three or more are or one involves such a rule; halved "
+      + "included, and says whether it holds and whether it involves a rule the document calls "
+      + "absolute. A claim is confirmed when two seats say it holds, and absolute when two say "
+      + "both. Score: ", { mono: CRITERION_MAX },
+      " when none is confirmed, ", { mono: 2 }, " when one or two are and none is absolute, ",
+      { mono: 0 }, " when three or more are or one is absolute; halved "
       + "like the others. The seats on this board are ", ...seatsNamed(facts.contradictionSeats),
       ...(facts.readingSubstitutions.length
         ? ["; ", ...substituted(facts.readingSubstitutions, null), " of the ",
