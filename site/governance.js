@@ -645,12 +645,16 @@ function renderTies() {
   board.nodes.ties.textContent = lines.join(" ");
 }
 
+/* The findings, open. They were folds until 23 September 2026, which put them in
+ * the same shape as the reference sections under them and made a reader press
+ * eight times to learn what the table shows. The detail is folded below instead,
+ * and this is read straight down. */
 function renderFindings() {
   const list = document.createDocumentFragment();
   board.data.findings.forEach(finding => {
-    const fold = element("details");
-    fold.append(element("summary", "", finding.title), element("p", "", finding.text));
-    list.append(fold);
+    const block = element("div", "finding");
+    block.append(element("h3", "", finding.title), element("p", "", finding.text));
+    list.append(block);
   });
   board.nodes.findings.replaceChildren(list);
 }

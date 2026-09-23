@@ -2062,7 +2062,10 @@ console.log("== Overview: the governance view ==");
       .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
     rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
       .map(n => n.textContent),
-    findings: document.querySelectorAll("#gov-findings details").length,
+    findings: document.querySelectorAll("#gov-findings .finding").length,
+    findingsFolded: document.querySelectorAll("#gov-findings details").length,
+    appendices: [...document.querySelectorAll(".gov-more > details > summary")]
+      .map(node => node.textContent),
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
@@ -2075,9 +2078,14 @@ console.log("== Overview: the governance view ==");
     `${seen.companies.join(", ")} / ${seen.overall.join(",")}`);
   check(seen.rows.join(", ") === "Overall, Published constitution, Change log, Guardrails, "
         + "Hard constraints, Best practices"
-      && seen.findings === 8,
-    "the scores run down from the total, the checks folded, the eight findings under the table",
-    JSON.stringify(seen.rows));
+      && seen.findings === 8 && seen.findingsFolded === 0,
+    "the scores run down from the total, the checks folded, the eight findings open under the "
+      + "table", JSON.stringify(seen.rows));
+  /* The reference text is two appendices under the findings rather than four folds
+   * mixed in with them: how the scoring works, and what was read for each company. */
+  check(seen.appendices.join(" | ") === "How the scoring works | Sources, company by company",
+    "the method and the sources are the two folded appendices under the findings",
+    JSON.stringify(seen.appendices));
 
   // The board paints every row over its own maximum. 9.0 of 16 is OpenAI's total
   // and 10 of 18 its best practices, which is the row whose maximum is not four

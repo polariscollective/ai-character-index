@@ -607,7 +607,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   cursor: pointer;
 }
 .row-toggle:hover { background: var(--energy); border-color: var(--energy); }
-.row-toggle::before, .gov-findings summary::before, .gov-pop summary::before {
+.row-toggle::before, .gov-pop summary::before {
   content: "";
   width: 7px;
   height: 7px;
@@ -617,7 +617,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   transition: transform .15s ease;
 }
 .row-toggle[aria-expanded="true"]::before,
-.gov-findings details[open] > summary::before,
 .gov-pop details[open] > summary::before { transform: rotate(45deg); }
 .row-spacer { flex: none; width: 26px; }
 
@@ -647,7 +646,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .depth-key-conditions li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
 .depth-key .gov-foot { margin-top: 8px; }
 
-/* The six findings, under the table: headlines that open. */
+/* The findings, under the table. They are open: a reader who has just read the
+   table should meet what it shows without pressing anything, and the detail that
+   used to sit beside them is folded into the two appendices below. */
 .gov-findings { margin-top: 40px; }
 .gov-findings h2 {
   margin: 0 0 12px;
@@ -663,14 +664,17 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   margin-bottom: 12px;
   background: var(--energy);
 }
-.gov-findings-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 40px;
-  border-top: 1px solid rgb(92 107 60 / .2);
+.gov-findings-list { border-top: 1px solid rgb(92 107 60 / .2); }
+.gov-findings .finding { padding: 14px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-findings .finding h3 {
+  margin: 0 0 6px;
+  max-width: 72ch;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
 }
-.gov-findings details { border-bottom: 1px solid rgb(92 107 60 / .2); }
-.gov-findings summary, .gov-pop summary {
+.gov-findings .finding p { margin: 0; max-width: 72ch; font-size: 15px; line-height: 1.6; }
+.gov-pop summary {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -679,11 +683,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   list-style: none;
   cursor: pointer;
 }
-.gov-findings summary::-webkit-details-marker, .gov-pop summary::-webkit-details-marker { display: none; }
-.gov-findings summary::before, .gov-pop summary::before { flex: none; margin: 0 4px 0 2px; }
-.gov-findings summary:hover, .gov-pop summary:hover { color: var(--muted); }
-.gov-findings summary:focus-visible, .gov-pop summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
-.gov-findings details p { margin: 0 0 14px 21px; max-width: 72ch; font-size: 15px; line-height: 1.6; }
+.gov-pop summary::-webkit-details-marker { display: none; }
+.gov-pop summary::before { flex: none; margin: 0 4px 0 2px; }
+.gov-pop summary:hover { color: var(--muted); }
+.gov-pop summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 
 /* The popover. Placed by governance.js beside what opened it; the browser keeps
    it above everything and closes it on Escape or a press elsewhere. */
@@ -866,9 +869,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 @media (max-width: 880px) {
   .depth-key-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 760px) {
-  .gov-findings-list { grid-template-columns: 1fr; }
-}
 @media (max-width: 640px) {
   .depth-key-list { grid-template-columns: 1fr; }
 }
@@ -885,5 +885,5 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
-  .gov-findings summary::before, .gov-pop summary::before { transition: none; }
+  .gov-pop summary::before { transition: none; }
 }

@@ -121,10 +121,11 @@
 
   <!-- The governance view, from the research note "Spec governance ranking: six
        frontier labs" of 18 September 2026, rewritten for readers who are not
-       technical. A dashboard rather than a document: the heat map is the view,
-       and every sentence of the note is one press away in the panel beside it.
-       The numbers and the lab-by-lab text are in governance.json, which
-       governance.js reads; the long reference text sits folded under the board.
+       technical. What a reader meets is the board, the findings and one sentence
+       saying where the questions come from; the method and the sources are two
+       folded appendices under them. Every sentence of the note is one press away
+       in the panel beside the board. The numbers and the lab-by-lab text are in
+       governance.json, which governance.js reads;
        tests/test_governance_tab.py holds the two to each other. -->
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
   <h1>How each company governs the rules its models follow</h1>
@@ -182,52 +183,14 @@
        placed beside it. The browser closes it on Escape or a press elsewhere. -->
   <div class="gov-pop" id="gov-pop" popover role="dialog" aria-labelledby="gov-pop-title" tabindex="-1"></div>
 
-  <!-- The reference text, folded: a reader who wants it opens it, and a reader
-       who does not is not made to scroll past it to reach the board. -->
+  <!-- Two appendices, folded, after the findings: how the scoring works, and what
+       was read for each company. Everything that was in four folds mixed with the
+       findings is still here, moved and with its framing shortened. -->
   <div class="gov-more">
-    <details id="gov-reading">
-      <summary>How to read this ranking</summary>
-      <div class="gov-more-body">
-        <p>
-          <strong>Publishing a constitution and covering models with it are scored
-          separately.</strong> Alibaba's constitution names no model, and on a single
-          "has a constitution" column it would score the same as one that binds a
-          company's products.
-        </p>
-        <p>
-          <strong>The checks say more than the overall score.</strong> OpenAI and
-          Anthropic have the same overall score and fall short in opposite ways.
-          OpenAI keeps a record of its versions and does not list the things its
-          models must never do, while Anthropic lists them and keeps no record of
-          its versions.
-        </p>
-        <p>
-          <strong>Companies whose models anyone can download are marked.</strong>
-          Mistral AI, Moonshot AI and DeepSeek take three of the five lowest
-          places. These questions have no way to reach a model once it has been
-          downloaded, so the table marks these companies "Open weights".
-        </p>
-        <p>
-          <strong>The bottom of the ranking comes down to the first
-          question.</strong> Six of the nine companies publish no constitution, so
-          most of the grid cannot apply to them and they sit at the bottom for that
-          reason. Among the companies that do publish, the change log is what
-          separates them.
-        </p>
-        <p>
-          <strong>A caveat.</strong> The four questions were written to argue for
-          change, and scoring them gives them more precision than they were
-          designed for. The descriptions of each score are ours, and a different
-          reading could move a company by a few points. The wider picture would
-          stay: all nine fall short on the change log, none offers a comment window
-          before one of the things a model must never do is weakened, and none
-          covers government, defence and other special deployments.
-        </p>
-      </div>
-    </details>
     <details id="gov-method">
-      <summary>How we scored</summary>
+      <summary>How the scoring works</summary>
       <div class="gov-more-body">
+        <h3>The four questions</h3>
         <p>
           The four questions are the four asks of Polaris Collective's working
           paper, in its draft of 10 September 2026. Each is split into checks
@@ -273,6 +236,33 @@
           assessed, and it counts towards nothing.
         </p>
         <ul class="gov-bullets" id="gov-internal"></ul>
+        <h3>How to read the scores</h3>
+        <p>
+          <strong>Publishing a constitution and covering models with it are scored
+          separately.</strong> Alibaba's constitution names no model, and on a single
+          "has a constitution" column it would score the same as one that binds a
+          company's products.
+        </p>
+        <p>
+          <strong>The checks say more than the overall score.</strong> OpenAI and
+          Anthropic have the same overall score and fall short in opposite ways.
+          OpenAI keeps a record of its versions and does not list the things its
+          models must never do, while Anthropic lists them and keeps no record of
+          its versions.
+        </p>
+        <p>
+          <strong>Companies whose models anyone can download are marked.</strong>
+          Mistral AI, Moonshot AI and DeepSeek take three of the five lowest
+          places. These questions have no way to reach a model once it has been
+          downloaded, so the table marks these companies "Open weights".
+        </p>
+        <p>
+          <strong>The bottom of the ranking comes down to the first
+          question.</strong> Six of the nine companies publish no constitution, so
+          most of the grid cannot apply to them and they sit at the bottom for that
+          reason. Among the companies that do publish, the change log is what
+          separates them.
+        </p>
         <h3>Who the companies are</h3>
         <p>
           Some trading names mislead, so here are the companies behind three of
@@ -282,19 +272,24 @@
           High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI
           SAS, of Paris.
         </p>
-      </div>
-    </details>
-    <details id="gov-limits">
-      <summary>What we could not check</summary>
-      <div class="gov-more-body">
+        <h3>What could not be established</h3>
         <p>
-          Every score rests on a document we found and dated, as of 18 September
+          The four questions were written to argue for change, and scoring them
+          gives them more precision than they were designed for. The descriptions
+          of each score are ours, and a different reading could move a company by
+          a few points. The wider picture would stay: all nine fall short on the
+          change log, none offers a comment window before one of the things a
+          model must never do is weakened, and none covers government, defence and
+          other special deployments.
+        </p>
+        <p>
+          Every score rests on a document found and dated, as of 18 September
           2026. These points are open.
         </p>
         <ul class="gov-bullets">
           <li>
-            <strong>We did not read Alibaba's constitution at its own
-            address.</strong> The text we used is the copy this index holds, 210
+            <strong>Alibaba's constitution was not read at its own
+            address.</strong> The text used is the copy this index holds, 210
             passages of it, word for word, at
             <a href="/spec-reader/?spec=alibaba--model-spec@2026-04-00">its April
             2026 version</a>. The index keeps only passages that bear on a
@@ -305,17 +300,18 @@
             in the preface would change Alibaba's score on check 1.2.
           </li>
           <li>
-            <strong>We did not find older copies of the undated pages.</strong>
+            <strong>No older copies of the undated pages were found.</strong>
             Where a page carries no date and no earlier copy, a quiet edit to it
             would not show. This matters most for Google, where three of the
             relevant documents carry no date at all, and for DeepSeek, whose
-            disclosure page has no earlier copy we could find.
+            disclosure page has no earlier copy anyone could find.
           </li>
           <li>
-            <strong>We did not find the Chinese regulatory filings.</strong> The
-            Cyberspace Administration of China publishes its lists as attachments we
-            did not find. So when we say Moonshot AI publishes no filing number, we
-            mean we found none on its own sites.
+            <strong>The Chinese regulatory filings were not found.</strong> The
+            Cyberspace Administration of China publishes its lists as attachments
+            that could not be retrieved. So when this board says Moonshot AI
+            publishes no filing number, it means none appears on Moonshot AI's own
+            sites.
           </li>
           <li>
             <strong>Whether Anthropic has signed the EU Code of Practice is
@@ -335,9 +331,9 @@
             confirmed from Anthropic's own pages.
           </li>
           <li>
-            <strong>We did not find what Meta's log of updates to its Community
-            Standards contains</strong>, so our view that it does not cover AI is an
-            inference we have not checked.
+            <strong>What Meta's log of updates to its Community Standards contains
+            could not be established</strong>, so the reading that it does not
+            cover AI is an inference nobody has checked.
           </li>
           <li>
             <strong>The release date of Kimi K3 is disputed</strong> between
@@ -353,75 +349,91 @@
       </div>
     </details>
     <details id="gov-sources" class="gov-sources">
-      <summary>Sources</summary>
+      <summary>Sources, company by company</summary>
       <div class="gov-more-body">
-        <h3>The constitutions</h3>
+        <p>
+          What was read for each company, with the address of each document. The
+          last group holds the sources that cover more than one company.
+        </p>
+        <h3>OpenAI</h3>
         <ul class="gov-bullets">
           <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
           <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
-          <li><a href="https://www.anthropic.com/constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, 21 January 2026</a></li>
-          <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
-          <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
-        </ul>
-        <h3>How the constitutions are run</h3>
-        <ul class="gov-bullets">
           <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
           <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
+          <li><a href="https://openai.com/index/introducing-gpt-oss-safeguard/" target="_blank" rel="noopener noreferrer">OpenAI, gpt-oss-safeguard, 29 October 2025</a></li>
+          <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
+        </ul>
+        <h3>Anthropic</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://www.anthropic.com/constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, 21 January 2026</a></li>
+          <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
           <li><a href="https://www.anthropic.com/rsp-updates" target="_blank" rel="noopener noreferrer">Anthropic, Responsible Scaling Policy update history</a></li>
           <li><a href="https://platform.claude.com/docs/en/release-notes/system-prompts" target="_blank" rel="noopener noreferrer">Anthropic, release notes for its system prompts</a></li>
-          <li><a href="https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2" target="_blank" rel="noopener noreferrer">Meta, Advanced AI Scaling Framework v2, 7 April 2026</a></li>
-          <li><a href="https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/" target="_blank" rel="noopener noreferrer">Meta, Muse Spark Safety and Preparedness Report, 26 May 2026</a></li>
+          <li><a href="https://www.anthropic.com/research/next-generation-constitutional-classifiers" target="_blank" rel="noopener noreferrer">Anthropic, next-generation constitutional classifiers, 9 January 2026</a></li>
+        </ul>
+        <h3>Alibaba</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
+        </ul>
+        <h3>Google DeepMind</h3>
+        <ul class="gov-bullets">
           <li><a href="https://gemini.google/policy-guidelines/" target="_blank" rel="noopener noreferrer">Google, Gemini app safety and policy guidelines</a></li>
           <li><a href="https://gemini.google/intl/en/our-approach/" target="_blank" rel="noopener noreferrer">Google, Our approach to the Gemini app</a></li>
           <li><a href="https://blog.google/technology/ai/ai-principles/" target="_blank" rel="noopener noreferrer">Google, AI Principles of 2018, replaced, with a banner</a></li>
           <li><a href="https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/strengthening-our-frontier-safety-framework/frontier-safety-framework_3-1.pdf" target="_blank" rel="noopener noreferrer">Google DeepMind, Frontier Safety Framework v3.1, 17 April 2026</a></li>
-          <li><a href="https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf" target="_blank" rel="noopener noreferrer">xAI, Frontier AI Framework, 30 June 2026</a></li>
-          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, system prompts for Grok</a></li>
-          <li><a href="https://legal.mistral.ai/terms/usage-policy" target="_blank" rel="noopener noreferrer">Mistral AI, usage policy, in effect from 11 June 2026</a></li>
-          <li><a href="https://legal.mistral.ai/ai-governance/models" target="_blank" rel="noopener noreferrer">Mistral AI, AI compliance hub and documentation for each model</a></li>
-          <li><a href="https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512/raw/main/SYSTEM_PROMPT.txt" target="_blank" rel="noopener noreferrer">Mistral AI, the published system prompt of Mistral Large 3</a></li>
-          <li><a href="https://platform.kimi.ai/docs/agreement/modeluse.md" target="_blank" rel="noopener noreferrer">Moonshot AI, terms of service of the Kimi platform</a></li>
-          <li><a href="https://platform.kimi.com/docs/agreement/userservice" target="_blank" rel="noopener noreferrer">Moonshot AI, 用户服务协议 (user agreement), updated 24 August 2026, in effect from 31 August 2026</a></li>
-          <li><a href="https://platform.kimi.ai/docs/overview.md" target="_blank" rel="noopener noreferrer">Moonshot AI, the default system prompt in its API quickstart</a></li>
-          <li><a href="https://cdn.deepseek.com/policies/zh-CN/model-algorithm-disclosure.html" target="_blank" rel="noopener noreferrer">DeepSeek, 模型原理与训练方法说明 (its disclosure on how its models work), undated</a></li>
-          <li><a href="https://cdn.deepseek.com/policies/en-US/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in English</a></li>
-          <li><a href="https://cdn.deepseek.com/policies/zh-CN/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in Chinese, with a different date</a></li>
-        </ul>
-        <h3>Guardrails</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://openai.com/index/introducing-gpt-oss-safeguard/" target="_blank" rel="noopener noreferrer">OpenAI, gpt-oss-safeguard, 29 October 2025</a></li>
-          <li><a href="https://www.anthropic.com/research/next-generation-constitutional-classifiers" target="_blank" rel="noopener noreferrer">Anthropic, next-generation constitutional classifiers, 9 January 2026</a></li>
           <li><a href="https://ai.google.dev/gemini-api/docs/safety-settings" target="_blank" rel="noopener noreferrer">Google, Gemini API safety settings</a></li>
-          <li><a href="https://huggingface.co/meta-llama/Llama-Guard-4-12B" target="_blank" rel="noopener noreferrer">Meta, Llama Guard 4</a></li>
-          <li><a href="https://docs.mistral.ai/capabilities/guardrailing" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
-          <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
-        </ul>
-        <h3>Tests of whether models follow their constitution, and outside assessments</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
-          <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
-          <li><a href="https://arxiv.org/html/2507.20534v1" target="_blank" rel="noopener noreferrer">Moonshot AI, Kimi K2 technical report, safety evaluation in section 4.3</a></li>
-          <li><a href="https://arxiv.org/abs/2604.03121" target="_blank" rel="noopener noreferrer">Independent safety evaluation of Kimi K2.5, arXiv 2604.03121</a></li>
-          <li><a href="https://www.aisi.gov.uk/blog/preliminary-assessment-of-kimi-k3-s-cyber-capabilities" target="_blank" rel="noopener noreferrer">UK AI Security Institute and US CAISI, preliminary assessment of Kimi K3, 23 July 2026</a></li>
-          <li><a href="https://www.nist.gov/system/files/documents/2025/09/30/CAISI_Evaluation_of_DeepSeek_AI_Models.pdf" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek models, 30 September 2025</a></li>
-          <li><a href="https://www.nist.gov/news-events/news/2026/05/caisi-evaluation-deepseek-v4-pro" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek V4 Pro, 1 May 2026</a></li>
-          <li><a href="https://concordia-ai.com/wp-content/uploads/2026/07/State-of-AI-Safety-in-China-2026.pdf" target="_blank" rel="noopener noreferrer">Concordia AI, State of AI Safety in China 2026, July 2026</a></li>
-          <li><a href="https://crfm.stanford.edu/fmti/December-2025/company-reports/Mistral_FinalReport_FMTI2025.html" target="_blank" rel="noopener noreferrer">Stanford Foundation Model Transparency Index, report on Mistral AI, December 2025</a></li>
-          <li><a href="https://futureoflife.org/ai-safety-index-summer-2026/" target="_blank" rel="noopener noreferrer">Future of Life Institute, AI Safety Index, summer 2026</a></li>
-        </ul>
-        <h3>Regulation</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai" target="_blank" rel="noopener noreferrer">European Commission, signatories of the General-Purpose AI Code of Practice, updated 31 July 2026</a></li>
-          <li><a href="https://code-of-practice.ai/" target="_blank" rel="noopener noreferrer">General-Purpose AI Code of Practice, Measure 7.1</a></li>
-        </ul>
-        <h3>Weakenings made without notice</h3>
-        <ul class="gov-bullets">
           <li><a href="https://blog.google/technology/ai/responsible-ai-2024-report-ongoing-work/" target="_blank" rel="noopener noreferrer">Google, the AI Principles rewritten, 4 February 2025</a></li>
           <li><a href="https://www.markey.senate.gov/news/press-releases/senators-markey-merkley-welch-press-google-on-changes-to-ai-commitments" target="_blank" rel="noopener noreferrer">Senators Markey, Merkley and Welch to Google, 19 February 2025</a></li>
           <li><a href="https://www.theregister.com/2025/05/08/google_gemini_update_prevents_disabling/" target="_blank" rel="noopener noreferrer">The Register, an unannounced Gemini guardrail change overrides developers' settings, May 2025</a></li>
-          <li><a href="https://www.pbs.org/newshour/world/grok-blocked-from-undressing-images-with-ai-in-places-where-its-illegal-x-says" target="_blank" rel="noopener noreferrer">PBS, xAI restricts Grok's image editing by statement to the press, 15 January 2026</a></li>
-          <li><a href="https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/" target="_blank" rel="noopener noreferrer">TechCrunch, Meta's GenAI Content Risk Standards leaked, 14 August 2025</a></li>
+        </ul>
+        <h3>Mistral AI</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://legal.mistral.ai/terms/usage-policy" target="_blank" rel="noopener noreferrer">Mistral AI, usage policy, in effect from 11 June 2026</a></li>
+          <li><a href="https://legal.mistral.ai/ai-governance/models" target="_blank" rel="noopener noreferrer">Mistral AI, AI compliance hub and documentation for each model</a></li>
+          <li><a href="https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512/raw/main/SYSTEM_PROMPT.txt" target="_blank" rel="noopener noreferrer">Mistral AI, the published system prompt of Mistral Large 3</a></li>
+          <li><a href="https://docs.mistral.ai/capabilities/guardrailing" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
+          <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
+          <li><a href="https://crfm.stanford.edu/fmti/December-2025/company-reports/Mistral_FinalReport_FMTI2025.html" target="_blank" rel="noopener noreferrer">Stanford Foundation Model Transparency Index, report on Mistral AI, December 2025</a></li>
           <li><a href="https://www.newsguardtech.com/special-reports/mistral-le-chat-ai-chatbot-repeats-falsehoods-half-the-time-when-prompted-on-state-sponsored-iran-war-disinformation/" target="_blank" rel="noopener noreferrer">NewsGuard, audit of Mistral's Le Chat, 28 April 2026</a></li>
+        </ul>
+        <h3>Meta</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2" target="_blank" rel="noopener noreferrer">Meta, Advanced AI Scaling Framework v2, 7 April 2026</a></li>
+          <li><a href="https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/" target="_blank" rel="noopener noreferrer">Meta, Muse Spark Safety and Preparedness Report, 26 May 2026</a></li>
+          <li><a href="https://huggingface.co/meta-llama/Llama-Guard-4-12B" target="_blank" rel="noopener noreferrer">Meta, Llama Guard 4</a></li>
+          <li><a href="https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/" target="_blank" rel="noopener noreferrer">TechCrunch, Meta's GenAI Content Risk Standards leaked, 14 August 2025</a></li>
+        </ul>
+        <h3>xAI</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf" target="_blank" rel="noopener noreferrer">xAI, Frontier AI Framework, 30 June 2026</a></li>
+          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, system prompts for Grok</a></li>
+          <li><a href="https://www.pbs.org/newshour/world/grok-blocked-from-undressing-images-with-ai-in-places-where-its-illegal-x-says" target="_blank" rel="noopener noreferrer">PBS, xAI restricts Grok's image editing by statement to the press, 15 January 2026</a></li>
+        </ul>
+        <h3>Moonshot AI</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://platform.kimi.ai/docs/agreement/modeluse.md" target="_blank" rel="noopener noreferrer">Moonshot AI, terms of service of the Kimi platform</a></li>
+          <li><a href="https://platform.kimi.com/docs/agreement/userservice" target="_blank" rel="noopener noreferrer">Moonshot AI, 用户服务协议 (user agreement), updated 24 August 2026, in effect from 31 August 2026</a></li>
+          <li><a href="https://platform.kimi.ai/docs/overview.md" target="_blank" rel="noopener noreferrer">Moonshot AI, the default system prompt in its API quickstart</a></li>
+          <li><a href="https://arxiv.org/html/2507.20534v1" target="_blank" rel="noopener noreferrer">Moonshot AI, Kimi K2 technical report, safety evaluation in section 4.3</a></li>
+          <li><a href="https://arxiv.org/abs/2604.03121" target="_blank" rel="noopener noreferrer">Independent safety evaluation of Kimi K2.5, arXiv 2604.03121</a></li>
+          <li><a href="https://www.aisi.gov.uk/blog/preliminary-assessment-of-kimi-k3-s-cyber-capabilities" target="_blank" rel="noopener noreferrer">UK AI Security Institute and US CAISI, preliminary assessment of Kimi K3, 23 July 2026</a></li>
+        </ul>
+        <h3>DeepSeek</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://cdn.deepseek.com/policies/zh-CN/model-algorithm-disclosure.html" target="_blank" rel="noopener noreferrer">DeepSeek, 模型原理与训练方法说明 (its disclosure on how its models work), undated</a></li>
+          <li><a href="https://cdn.deepseek.com/policies/en-US/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in English</a></li>
+          <li><a href="https://cdn.deepseek.com/policies/zh-CN/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in Chinese, with a different date</a></li>
+          <li><a href="https://www.nist.gov/system/files/documents/2025/09/30/CAISI_Evaluation_of_DeepSeek_AI_Models.pdf" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek models, 30 September 2025</a></li>
+          <li><a href="https://www.nist.gov/news-events/news/2026/05/caisi-evaluation-deepseek-v4-pro" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek V4 Pro, 1 May 2026</a></li>
+        </ul>
+        <h3>More than one company</h3>
+        <ul class="gov-bullets">
+          <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
+          <li><a href="https://concordia-ai.com/wp-content/uploads/2026/07/State-of-AI-Safety-in-China-2026.pdf" target="_blank" rel="noopener noreferrer">Concordia AI, State of AI Safety in China 2026, July 2026</a></li>
+          <li><a href="https://futureoflife.org/ai-safety-index-summer-2026/" target="_blank" rel="noopener noreferrer">Future of Life Institute, AI Safety Index, summer 2026</a></li>
+          <li><a href="https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai" target="_blank" rel="noopener noreferrer">European Commission, signatories of the General-Purpose AI Code of Practice, updated 31 July 2026</a></li>
+          <li><a href="https://code-of-practice.ai/" target="_blank" rel="noopener noreferrer">General-Purpose AI Code of Practice, Measure 7.1</a></li>
         </ul>
       </div>
     </details>
