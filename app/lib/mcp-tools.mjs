@@ -573,11 +573,12 @@ export function compareDocuments({ publication, payload, documents, notes },
  * nothing here may name a document, a count or a panel. Everything of that kind
  * is `about`'s, derived from the publication in hand.
  */
-export const INSTRUCTIONS = `The AI Constitutions Index reports where model specifications
-address a behaviour, and how strongly. It holds published specifications, a set
-of behaviours, and passages of those specifications that a panel of language
-model judges marked as bearing on each behaviour. It reports what those
-documents say, not how the models behave.
+export const INSTRUCTIONS = `The AI Constitutions Index reports where the constitutions AI
+companies publish address a behaviour, and how strongly. A constitution is the
+document in which a company sets out how its models are meant to behave. The
+index holds published constitutions, a set of behaviours, and passages of those
+constitutions that a panel of language model judges marked as bearing on each
+behaviour. It reports what those documents say, not how the models behave.
 
 A passage carries a strength: defining is the document's fullest statement of
 the behaviour, core establishes it there, related bears on it without
@@ -585,12 +586,13 @@ establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
 retrieve_passages answers with every band unless its strength argument narrows
-it, which is what the spec reader shows before any toggle is touched. Every
+it, which is what the doc reader shows before any toggle is touched. Every
 passage carries its strength, so a client can also filter what comes back.
 
-Where a behaviour and specification pair carries a depth, it is the mean the
-index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
-with no depth answers null.
+Where a behaviour and constitution pair carries a depth, it is the mean the
+index's panel gave it: 0 is absent and the top of the scale is rules with worked
+examples. A publication says which scale its depths are on, and
+constitutions_board names it. A pair with no depth answers null.
 
 Where one judge of the panel could not answer a pair at all, another model judged
 it in that seat, and the pair carries substitutions: the seat, the substitute and
@@ -615,6 +617,14 @@ comparison split across pages is one a client has to reassemble before it can
 say anything. Pass detail counts first, which costs about 2,600 characters and
 reports the exact size of the full answer rather than an estimate of it, and
 decide from that whether to ask for the whole thing.
+
+constitutions_board and governance_board answer with the two boards a reader
+sees on the overview: every figure, the scale it is on, and what a figure at
+that value means. Both take an optional company. The first carries the
+publication's own figures, judged by the panel. The second carries nine
+companies scored on four questions about how they govern the rules their models
+follow; those scores were given by hand from public documents, and that board
+belongs to no publication.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
@@ -684,8 +694,8 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "nothing. Everything below is read from the publication being served rather "
     + "than written down, and it changes when a new publication is made public.",
     "",
-    "The documents. A specification is a document a laboratory publishes saying "
-    + "how its models should behave. Each version is a document of its own, named "
+    "The documents. A constitution is a document a company publishes saying how "
+    + "its models should behave. Each version is a document of its own, named "
     + "<lab>--<document>@<version>, which is also the head of every locator into "
     + "it, so two versions of one document are two documents and a citation says "
     + `which of them it read. This publication carries `
@@ -754,6 +764,17 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "behaviours you name and the documents you choose. Reach for it to answer a "
     + "question about what a document says. It needs at least one slug from "
     + "list_behaviours, which is what bounds the size of the answer.",
+    "  constitutions_board: every figure of the index's first board with the "
+    + "scale it is on and what it means, for every constitution or for one "
+    + "company. Reach for it to answer how far a constitution goes, or how two of "
+    + "them compare.",
+    "  governance_board: nine companies scored on four questions about how they "
+    + "govern the rules their models follow. Those figures were given by hand "
+    + "from public documents rather than judged by the panel. It belongs to no "
+    + "publication and carries its own as-of date.",
+    "  compare_documents: everything one run found between two documents on one "
+    + "behaviour, passage by passage. Its full answer runs to hundreds of "
+    + "thousands of characters, so pass detail counts first.",
     "",
     "Citing. These figures belong to one publication and change when a new one is "
     + `made public, so name the one you read: publication ${publication.id}`
