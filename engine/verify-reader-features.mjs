@@ -2316,8 +2316,11 @@ console.log("== Overview: the constitutions board ==");
   const root = new URL("/", base).href;
   const file = JSON.parse(readFileSync(join(SITE, "constitutions.json"), "utf8"));
   const depthTop = file.scale.depth[file.scale.depth.length - 1].level;
-  const criterionTop = file.scale.criterion[file.scale.criterion.length - 1].score;
-  const wholeTop = file.criteria.length * (criterionTop / 2);
+  /* Each part of a document is shown out of 2, which is also the top of the
+   * scale beside it, so the five parts add up to 10. The page states these
+   * rather than reading them off the scale list. */
+  const criterionTop = 2;
+  const wholeTop = file.criteria.length * criterionTop;
   const shown = value => value.toFixed(1);
   /* The file wraps its paragraphs, and the DOM is read back with the whitespace
    * collapsed, so both sides are collapsed before they are compared. */
@@ -2428,9 +2431,8 @@ console.log("== Overview: the constitutions board ==");
       && board.scales.criterion.join() === file.scale.criterion.map(one => one.score).join(),
     "both scales are written out under the table, level by level, in the file's own words",
     JSON.stringify(board.scales));
-  check(board.asOf === `As of ${file.as_of}`
-      && board.coverage === `/coverage?publication=${file.publication}`,
-    "the board says what it is as of, and leads to the coverage board on its own publication",
+  check(board.asOf === `As of ${file.as_of}` && !board.coverage,
+    "the board says what it is as of, and links to the coverage board nowhere",
     JSON.stringify([board.asOf, board.coverage]));
 
   /* A cell's popover, held to the file word for word. Nothing is checked here
@@ -2481,7 +2483,7 @@ console.log("== Overview: the constitutions board ==");
   popover = await readPop();
   check(popover.open && popover.blocks.join(" | ") === [
       flat(`${withDocument.name}: ${lowerFirst(criterion.name)}`), flat(documentLine(withDocument)),
-      flat(`${shown(scored.score / 2)} out of ${criterionTop / 2}`),
+      flat(`${shown(scored.score / 2)} out of ${criterionTop}`),
       ...written(criterion.what_it_is, scored.what_the_document_does, scored.why),
     ].join(" | "),
     "a criterion's cell gives what the criterion asks, what the document does and why the "
