@@ -413,16 +413,18 @@
 
   <div id="said-page" hidden></div>
 
-  <!-- The page opens on what the index is. Every section below is written to the
-       user's rules for English prose: plain declarative sentences, one antithesis
-       for the whole page (the TL;DR's, because that contrast is the point), no
-       triads where two items would do, no closing punchlines. -->
+  <!-- The page opens on what the index is, for someone who has not seen the site
+       and is not technical. Every section below is written to the user's rules for
+       English prose: plain declarative sentences, one antithesis for the whole page
+       (the opening section's third sentence, because that contrast is the whole
+       caveat), no triads where two items would do, no closing punchlines. -->
   <section class="m" id="tldr">
-    <h2>TL;DR</h2>
-    <p class="lead">AI companies publish long documents saying how their models should<a class="asterisk" href="#why" aria-label="What should means here">*</a>
-    behave. This index reads them one behaviour at a time and shows every passage that bears on
-    each behaviour, quoted, with its exact place in the document. As of September 2026 it reports
-    what those documents say, not how the models behave.</p>
+    <h2>What this is</h2>
+    <p class="lead">AI companies publish constitutions: long documents saying how their models
+    should<a class="asterisk" href="#why" aria-label="What should means here">*</a> behave. This
+    index reads them one behaviour at a time and shows every passage that bears on each behaviour,
+    quoted, with its exact place in the document. As of September 2026 it reports what those
+    documents say, not how the models behave.</p>
     <!-- The document is named in the link as well as in the sentence. Without a
          ?spec= the reader opens on its preferred lab, which is Anthropic, so this
          example promised the OpenAI Model Spec and landed on the constitution.
@@ -433,12 +435,10 @@
     The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power&amp;spec=anthropic--constitution@2026-01-20">doc
     reader</a> shows those passages together and can set them beside what another company&rsquo;s
     document says.</p>
-    <p>The <a href="/">overview</a> shows the index in two heat maps. The first,
-    <a href="/">what the constitutions say</a>, shows how deeply each company&rsquo;s
-    constitution covers each behaviour, on a scale from 0 to 4. The second,
-    <a href="/?view=governance">how they are governed</a>, scores whether each company publishes
-    a constitution, what it covers, whether changes to it can be seen, and whether the public
-    gets a say before it is weakened.</p>
+    <p>The <a href="/">overview</a> holds two boards. The first,
+    <a href="/">what the constitutions say</a>, scores each constitution as a document and
+    behaviour by behaviour. The second, <a href="/?view=governance">how they are governed</a>,
+    asks four questions of nine companies about the rules their models follow.</p>
   </section>
   <!-- Why the index exists, for a reader who has not seen how these models are
        made. The asterisk beside the first "should" on the site points here. -->
@@ -470,20 +470,9 @@
     <dl class="glossary">
       <dt>AI Constitutions Index</dt>
       <dd>
-        <p>We call it a constitutions index because of what these documents could become: one
-        place that sets down the values a model should hold, how it is trained and later
-        evaluated against them, and the internal rules by which the company that made it answers
-        for them. No document does all of that today, and the name is the direction we think
-        they should take.</p>
-        <p>Anthropic calls its own document Claude&rsquo;s Constitution. The name of this index
-        refers to that document no more than to any other.</p>
-      </dd>
-      <dt>Constitution</dt>
-      <dd>
-        <p>Our word for the documents in which AI companies set out how their models should
-        behave. OpenAI calls its own the Model Spec and Anthropic calls its own Claude&rsquo;s
-        Constitution. Both are constitutions, as is any other document that describes how a
-        model should behave.</p>
+        <p>AI companies publish documents setting down the values their models should hold and the
+        rules they have to follow. We call these documents constitutions, and the index is named
+        after them.</p>
       </dd>
       <dt>Behaviour</dt>
       <dd>
@@ -507,8 +496,10 @@
       </dd>
       <dt>Depth</dt>
       <dd>
-        <p>How far a constitution goes on one behaviour, from 0, absent, to 4, rules with worked
-        examples. Each judge gives one, and the index shows their mean.</p>
+        <p>How far a constitution goes on one behaviour. The newest publications score it from 0,
+        saying nothing about the behaviour, to 10, setting rules, showing them applied and settling
+        the hard cases. Earlier publications score it from 0 to 4. Each judge gives a figure and
+        the index shows the mean of the three.</p>
       </dd>
     </dl>
   </section>
@@ -547,41 +538,34 @@
     can be asked.</p>
   </section>
   <section class="m">
-    <h2>Documents, behaviours and how they are read</h2>
-    <p>As of September 2026 the index reads four constitutions: Claude&rsquo;s
-    Constitution (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18)
-    and the Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it
-    says about any one subject is spread across it.</p>
-    <p>Each version is a document of its own, named
+    <h2>What the index reads, and who reads it</h2>
+    <p>As of September 2026 the index reads four constitutions: Claude&rsquo;s Constitution
+    (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18) and the
+    Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it says
+    about any one subject is spread across it.</p>
+    <p>Each version is read as a document of its own, named
     <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, so the two OpenAI versions are
     judged and cited separately. The Alibaba Model Spec is published in Chinese. The index reads an
-    English machine translation made by Claude Opus 5 and partly revised by Claude Fable 5, and
-    the reader shows the original beside every passage.</p>
-    <p>As of September 2026 the index asks about thirteen behaviours, in four groups: Autonomy,
-    oversight and authority; Harm and safety; Helpfulness and judgement; Honesty and
+    English translation made by Claude Opus 5 and partly revised by Claude Fable 5, and the doc
+    reader shows the original beside every passage.</p>
+    <p>As of September 2026 the index asks about thirteen behaviours, in four groups: autonomy,
+    oversight and authority; harm and safety; helpfulness and judgement; honesty and
     epistemics.</p>
-    <p>Three frontier models, GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2, read each document
-    against the description of each behaviour. They form the panel called
-    <code>frontier_fast</code> and judge under rubric v5. Each judge places every passage of the
-    document in a band, from the document&rsquo;s fullest statement of the behaviour down to
-    unrelated. Several models agreeing on the same description and document is closer to a
-    finding than one model&rsquo;s view, and the reader shows how each judge voted on each
-    passage.</p>
-    <p>Each judge then gives the document one depth for the behaviour, on a scale from 0, absent,
-    to 4, rules with worked examples. The index publishes the mean of the three.</p>
-    <p>Sometimes a judge cannot answer at all, because a content filter withholds its output. A
-    model declared in advance for that seat then judges in its place, and the substitution is
-    recorded with its reason. For Claude Fable 5&rsquo;s seat, the declared substitutes are Claude
-    Opus 4.8 and then Kimi K3. As of September 2026, Opus holds that seat on harm avoidance to
-    third parties in both OpenAI versions, and Kimi holds it on every behaviour of the Alibaba
-    Model Spec, where every Anthropic model was refused. The behaviour&rsquo;s note in the reader
-    records this.</p>
-    <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that
-    bears on it is highlighted in the document you are reading, or in two documents side by side.
-    All three bands are shown by default, with related passages drawn softer, and each band can be
-    switched off. Clicking a passage shows each judge&rsquo;s verdict on it. The <b>i</b> beside
-    each behaviour shows the description it was judged against. The export saves the passages you
-    ticked as a file.</p>
+    <p>Three models from three different companies read each document against the description of
+    each behaviour: GPT-5.6 Sol, Claude Fable 5 and DeepSeek V3.2. Each of them marks every passage
+    that bears on the behaviour, and gives the document a figure for how far it goes. The index
+    publishes the mean of the three, and the doc reader shows how each of them read each passage.
+    Three readings that agree are closer to a finding than one reading on its own.</p>
+    <p>Sometimes one of the three cannot answer at all, because a filter withholds its reply. A
+    model named in advance then reads in its place, and the index records which one and why. As of
+    September 2026 that happened on harm avoidance to third parties in both OpenAI versions, and on
+    every behaviour of the Alibaba Model Spec, where every Anthropic model was refused.</p>
+    <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that bears
+    on it is highlighted in the document you are reading, or in two documents side by side. All
+    three bands are shown by default, with related passages drawn softer, and each band can be
+    switched off. Clicking a passage shows how each of the three read it. The <b>i</b> beside each
+    behaviour shows the description it was judged against. The export saves the passages you ticked
+    as a file.</p>
   </section>
   <!-- Two sections, so each kind of proposal has its own place in the rail and its
        own button into the form it needs. The wrapper keeps #propose, which links
@@ -614,10 +598,9 @@
     false, not whether it volunteers everything it knows&rdquo; collects the passages you
     meant.</p>
     <p>Sending a proposal only records it. We read every proposal and decide whether it belongs in
-    the index. If it does, one of us enters it in the index&rsquo;s portal and pays for the run,
-    we write to tell you, and it appears in the reader once a publication that includes it is made
-    public. We cannot promise to run everything, and if we decide against a proposal we will tell
-    you.</p>
+    the index. If it does, one of us enters it and pays for the reading, we write to tell you, and
+    it appears in the doc reader once a publication that includes it is made public. We cannot
+    promise to run everything, and if we decide against a proposal we will tell you.</p>
     <p><button type="button" class="open-propose" id="open-propose-behaviour"
     data-kind="behaviour">Propose a new behaviour</button></p>
   </section>
@@ -625,13 +608,13 @@
   <section class="m">
     <h2>What it does not tell you</h2>
     <p>The index reports what a document says. A constitution that covers a behaviour thoroughly
-    is no evidence that the model follows it, which is a separate measurement that the citations
+    is no evidence that the model follows it, and measuring that is separate work the citations
     here can feed.</p>
-    <p>When two companies&rsquo; documents address a behaviour differently, it is usually because
-    they made different choices. A depth measures how much a document gives an evaluation to work
+    <p>When two companies&rsquo; documents treat a behaviour differently, it is usually because
+    they made different choices. A figure measures how much a document gives an evaluation to work
     with.</p>
-    <p>For the Alibaba Model Spec the index reports what the English translation says. The judges
-    read the translation, and the reader shows the original for comparison.</p>
+    <p>For the Alibaba Model Spec the index reports what the English translation says, and the doc
+    reader shows the original for comparison.</p>
   </section>
   <section class="m">
     <h2>Citing what you find</h2>
@@ -641,9 +624,7 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
     <p>A locator names the company, the document and its version, the section and the sentences.
     Because the version is part of the document&rsquo;s name, a locator keeps pointing at the same
     words after the company reissues the document, since a reissue is a new document, as with the
-    two OpenAI versions. Anyone can resolve a locator back to its text. A scheduled job resolves
-    every published citation against the stored document and fails if a single quote has
-    moved.</p>
+    two OpenAI versions. Anyone can resolve a locator back to its text.</p>
     <p>The reader&rsquo;s export writes each quote with its locator.</p>
     <h3>Citing the index itself</h3>
     <p>The index changes over time, so a citation of it has to name the build it read. This
@@ -686,59 +667,44 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
       different setting from every other figure, and the publication says so.</p>
       <h3><a href="/spec-reader/?publication=07958c5e-eb91-4e31-81f2-32f79c01b84c" target="_blank" rel="noopener noreferrer">15 September 2026, publication
       <code>07958c5e</code></a>, withdrawn</h3>
-      <p>The first publication judged by a single panel, <code>frontier_fast</code>, with a depth
-      from 0 to 4 given by each judge, over thirteen behaviours and four documents. It was
-      withdrawn on 16 September 2026 because its depth figures had been judged from fewer passages
-      than the doc reader shows.</p>
+      <p>The first publication read by the same three models throughout, over thirteen behaviours
+      and four documents, with a depth from 0 to 4 given by each of them. It was withdrawn on 16
+      September 2026 because its depth figures had been judged from fewer passages than the doc
+      reader shows.</p>
     </div>
   </section>
-  <section class="m">
-    <h2>Andr&eacute;s&rsquo;s original tool</h2>
+  <!-- The one technical section on the page, and the last. Everything above it is
+       written for a reader who will never clone anything. -->
+  <section class="m" id="run-it-yourself">
+    <h2>The repository, and running it yourself</h2>
     <p><b>This index began as the AI Character Index, created by
     <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
     Cotton</a> with the help of <a href="https://github.com/MattStults" target="_blank"
-    rel="noopener">Matt Stults</a>, and most of what is described here is their work.</b> The
-    judging pipeline, the citation resolver and the first version of this reader come from it.
-    That work was supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact,
-    and it is published at <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">Matt Stults</a>, and most of what is described here is their work.</b> It was
+    supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact, and it is
+    published at <a href="https://ai-character-index.pages.dev" target="_blank"
     rel="noopener">ai-character-index.pages.dev</a>.</p>
-    <p>The original is built around git. The behaviours, the constitutions and the verdicts are
-    files in the repository, so a change to the index is a commit and a contribution is a pull
-    request. Two runs of the same behaviour against two drafts of a document differ by exactly the
-    lines that changed.</p>
-    <p>It needs only Python, a browser and an API key, and it does not depend on us. If you want to
-    run the panel yourself, it is the repository to clone.</p>
-  </section>
-  <section class="m">
-    <h2>Run it yourself</h2>
-    <p class="lead">You can run the same judging on your own machine, with your own documents and
-    behaviours, without an account or a database.</p>
-    <h3>The original</h3>
+    <p>Both repositories are public, and either one judges a document on your own machine, with
+    your own documents and behaviours, without an account or a database. The original is built
+    around git: the behaviours, the documents and the verdicts are files, so a change to the index
+    is a commit and a contribution is a pull request. It needs Python, a browser and an API
+    key.</p>
     <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
 cd ai-character-index
 python3 -m http.server 8080 --directory site</code></pre>
-    <p>You can point it at any document, including an unpublished draft. Nothing is sent to us, and
-    the document goes only to the model providers you call.</p>
-    <h3>Or ours</h3>
-    <p><a href="https://github.com/polariscollective/ai-character-index" target="_blank"
-    rel="noopener">polariscollective/ai-character-index</a>, which serves this site, is public too.
-    It adds infrastructure to the original, a hosted database for the index and a portal that
-    launches the judging and publishes the results, which makes it the heavier of the two to
-    clone.</p>
-    <p>It also runs locally with one API key:</p>
+    <p>Ours, <a href="https://github.com/polariscollective/ai-character-index" target="_blank"
+    rel="noopener">polariscollective/ai-character-index</a>, serves this site. It adds a hosted
+    database and a portal that runs the judging and publishes the results, which makes it the
+    heavier of the two to clone. It also runs on one machine with one API key:</p>
     <pre><code>python3 engine/local_run.py \
-    --document=my-spec@2026-09-12:path/to/spec.md \
+    --document=my-constitution@2026-09-12:path/to/document.md \
     --behaviour=path/to/behaviour.json \
     --panel=frontier_fast</code></pre>
     <p>A document is any markdown file, and a behaviour is a small JSON file with its name, what it
-    requires and where it stops. Neither needs registering. They are judged with the same panel,
-    prompt and parser as this site.</p>
-    <p>The results are written to <code>artefacts/</code>. They hold every reply as it came back,
-    every verdict with its locator and the text it judged, and the cost of each call. The README
+    requires and where it stops. Neither needs registering, and they are judged with the same
+    panel, prompt and parser as this site. Nothing is sent to us, and the document goes only to the
+    model providers you call. The results are written to <code>artefacts/</code>, and the README
     describes each file.</p>
-    <p>A local run gives the passages and each judge&rsquo;s verdict on them, but it does not ask
-    for the 0 to 4 depth or build a site. Publishing an index with fixed citations and a coverage
-    map in the reader is what the hosted version is for.</p>
   </section>
   </div>
 
