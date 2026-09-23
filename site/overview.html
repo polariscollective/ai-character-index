@@ -373,7 +373,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .passage-cite a { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 
 .readings { width: 100%; margin: 2px 0 10px; font-size: 13px; line-height: 1.45; table-layout: auto; }
+/* Not stuck: the rule above pins every table head on the page to the top of the
+   window, which is what the board wants and what a small table inside a popover
+   or the sheet does not. Pinned there, the head left its own table and sat over
+   the page. */
 .readings th {
+  position: static;
   padding: 4px 10px 4px 0;
   border-bottom: 1px solid var(--muted);
   color: var(--muted);

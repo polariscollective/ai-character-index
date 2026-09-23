@@ -89,10 +89,14 @@ export const CRITERIA = [
 export const HALVING =
   "The judges score from 0 to 4; the index halves it so the five criteria add up to 10.";
 
+/* The figures here are the ones the anchors carry, in the anchors' own order,
+ * and the halved figures are named as halved. Written the other way round, the
+ * rule gave 2, 1 and 0 beside a scale whose descriptions sat at 4, 2 and 0, and
+ * nothing on the page said which figure was which. */
 export const CONTRADICTIONS_RULE =
-  "Scored from the confirmed contradictions, from 0 to 4, and halved like the other criteria: "
-  + "2 when none is confirmed, 1 for one or two with no absolute rule, 0 for three or more or "
-  + "any absolute one.";
+  "Scored from the confirmed contradictions on the judges' scale of 0 to 4: 4 when none is "
+  + "confirmed, 2 for one or two with no absolute rule, 0 for three or more or any absolute one. "
+  + "Halved like the other criteria, so the figure on the board is 2, 1 or 0.";
 
 /* The second method, which is how every contradiction of a publication on this
  * scale was settled (methodology/document-assessment-rubric.md, "How one is

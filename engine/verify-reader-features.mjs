@@ -2335,9 +2335,9 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   await fold("Behaviours under test");
   check((await cellOf("Defined behaviour", 0)).background === "rgb(168, 154, 47)"
       && (await cellOf("Defined behaviour", 0)).label
-        === "Acme, defined behaviour: 2.7 out of 4",
-    "a behaviour out of four wears the colour it always wore",
-    JSON.stringify(await cellOf("Defined behaviour", 0)));
+        === "Acme, defined behaviour: 2.7 out of 4, prescribed",
+    "a behaviour out of four wears the colour it always wore, and its accessible name the rubric's "
+    + "word", JSON.stringify(await cellOf("Defined behaviour", 0)));
   check(pageErrors.length === 0, "the board out of four: no console errors", pageErrors.join("; "));
 
   // ---- the publication of ten
@@ -2405,6 +2405,19 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     "a lab the index holds no specification for keeps its words and its invitation",
     JSON.stringify([nothing.title, nothing.links]));
   await closePop();
+
+  /* A document the index carries that this publication was not built from. Its
+   * whole column is blank, so its head is the only place that can say why. */
+  await page.evaluate(() => document.querySelector(
+    '#board thead .company-button[data-lab="acme--translated@2026-03-01"]').click());
+  const unbuilt = await readPop();
+  check(unbuilt.open && unbuilt.title === "Acme"
+      && unbuilt.subtitle === "Translated document, 2026-03-01."
+      && unbuilt.body.includes("This publication carries no figures for this document")
+      && unbuilt.links.some(href => href.includes("/spec-reader/")),
+    "a column the payload knows nothing about says so from its head",
+    JSON.stringify([unbuilt.title, unbuilt.subtitle]));
+  await closePop();
   check(ten.keyTitle === "Depth of a behaviour, out of 10"
       && ten.levels.join() === "0,2,4,6,8,10"
       && ten.anchors.join() === "absent,named,discussed,prescribed,demonstrated,bounded"
@@ -2417,9 +2430,11 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   await fold("Behaviours under test");
   const behaviour = await cellOf("Defined behaviour", 0);
   check(behaviour.text === "7.3" && behaviour.max === "/10"
-      && behaviour.label === "Acme, defined behaviour: 7.3 out of 10"
+      && behaviour.label
+        === "Acme, defined behaviour: 7.3 out of 10, prescribed and partly demonstrated"
       && behaviour.background === "rgb(152, 152, 50)",
-    "a behaviour out of ten is painted over ten", JSON.stringify(behaviour));
+    "a behaviour out of ten is painted over ten, and its accessible name carries the rubric's word",
+    JSON.stringify(behaviour));
   await press("Defined behaviour", 0);
   let popover = await readPop();
   check(popover.open && popover.body.includes("7.3 out of 10, prescribed and partly demonstrated")
@@ -2430,6 +2445,23 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     "a figure opens on its words, its readings, its place on the scale and both notes",
     JSON.stringify([popover.headings, popover.here]));
   await closePop();
+
+  /* A behaviour a document carries no depth for, in a document that carries
+   * depths elsewhere: a dash, and not a nought and not an NA. */
+  const dashes = await page.evaluate(() => {
+    const labs = [...document.querySelectorAll("#board thead .company-button")]
+      .map(button => button.dataset.lab);
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === "Undefined behaviour");
+    const cells = [...row.querySelectorAll("td")];
+    const at = lab => cells[labs.indexOf(lab)]?.textContent ?? null;
+    return { second: at("acme--second@2026-02-01"), corpus: at("acme--corpus@2026-01-01"),
+             translated: at("acme--translated@2026-03-01") };
+  });
+  check(dashes.second === "–" && dashes.corpus.startsWith("10.0")
+      && dashes.translated === "",
+    "a cell with no depth in a document that has others is a dash, and a document the payload "
+    + "knows nothing about is left blank", JSON.stringify(dashes));
 
   await fold("The document as a whole");
   const criterion = await cellOf("Unresolved contradictions", 0);
@@ -2442,6 +2474,14 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && popover.buttons.includes("Read the contradictions"),
     "the contradictions say how many were confirmed, that nobody reviewed them, and open the list",
     JSON.stringify([popover.body.slice(0, 200), popover.buttons]));
+  /* The rule and the anchors under it are on different scales, and the popover
+   * has to say which is which: the rule's figures are the anchors' own, and the
+   * halved figure is named as the one in the cell. */
+  check(popover.body.includes("4 when none is confirmed")
+      && popover.body.includes("the figure on the board is 2, 1 or 0")
+      && popover.headings.includes("What the score means, before halving, 0 to 4"),
+    "the contradictions say which figure is halved and which scale the anchors are on",
+    JSON.stringify(popover.headings));
   await page.evaluate(() => [...document.querySelectorAll("#grid-pop .gov-button")]
     .find(button => button.textContent === "Read the contradictions").click());
   const sheet = await readSheet();
@@ -2466,6 +2506,13 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
       && sheet.readings.filter(row => row.includes("|Yes|")).length >= 2,
     "every seat's reading is there, and a substitute is named in its seat",
     JSON.stringify(sheet.readings));
+  /* The page pins every table head to the top of the window, which is what the
+   * board wants and what a five-column table inside a scrolling sheet does not:
+   * pinned, the head left its own table and sat over the page. */
+  const sheetHead = await page.evaluate(() =>
+    getComputedStyle(document.querySelector("#sheet-body .readings th")).position);
+  check(sheetHead === "static", "a small table inside the sheet keeps its head in place",
+    sheetHead);
   await closeSheet();
 
   check(ten.method.includes("Final score, out of 20")

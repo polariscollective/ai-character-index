@@ -269,10 +269,14 @@ export function createBoard({ nodes, everyRow }) {
       return { cell, button };
     },
 
-    scoreCell({ name, rowLabel, value, max, text = String(value), build, dataset,
+    /* `note` is what the view has to say about the figure beyond the figure
+     * itself, and it lands at the end of the accessible name: a depth's rubric
+     * word, which the scale under the table spells out and which a cell four
+     * characters wide cannot. */
+    scoreCell({ name, rowLabel, value, max, text = String(value), note, build, dataset,
                 className = "cell-button" }) {
       const { cell, button } = board.cellButton(dataset,
-        `${name}, ${rowLabel}: ${text} out of ${max}`, build, className);
+        `${name}, ${rowLabel}: ${text} out of ${max}${note ? `, ${note}` : ""}`, build, className);
       board.paint(button, value, max);
       // What the score is out of, small and to the right. The accessible name
       // already says it, so a screen reader does not hear it twice.

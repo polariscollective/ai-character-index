@@ -245,6 +245,14 @@ function criterionScale(criterion, mean04) {
   return fragment;
 }
 
+/* The heading over a criterion's anchors. It says "before halving" because the
+ * figure in the cell above it is halved and these anchors are not, and the
+ * contradictions are not said to be the judges' because no judge scores them:
+ * that figure is computed from the claims the panel confirmed. */
+const scaleHeading = criterion => (criterion.key === "contradictions"
+  ? `What the score means, before halving, 0 to ${CRITERION_MAX}`
+  : `What the judges' scores mean, 0 to ${CRITERION_MAX}`);
+
 /* "a", or "d in the b seat" where a declared substitute answered. The keys are
  * the payload's own: nothing here guesses which seat an unfamiliar one sat in. */
 function judgeName(seat, model) {
@@ -373,6 +381,19 @@ function profile(content, column) {
   const final = finalFigure(state.behaviours, assessmentOf(column), column);
   board.titled(content, column.lab,
     `${documentLine(column)}${column.rank ? ` ${rankLine(column)}` : ""}`);
+  /* A document this publication was not built from. Its whole column is blank,
+   * and a blank column with nothing said about it reads as a fault in the
+   * page. The cells stay blank rather than going to nought, because a nought
+   * would say the document was read and found silent. */
+  if (!hasFigures(column)) {
+    content.append(element("p", "", "This publication carries no figures for this document: no "
+      + "panel judged it for this publication, so its cells are left empty rather than set at "
+      + "nought."));
+    const open = element("p");
+    open.append(link(readerLink({ spec: column.id }), "Read the document in the doc reader"));
+    content.append(open);
+    return;
+  }
   if (final) content.append(board.figure(shown(final.value), ` out of ${FINAL_MAX}`));
   const assessment = assessmentOf(column);
   if (assessment) {
@@ -496,7 +517,7 @@ function criterionNotScored(content, column, criterion) {
   content.append(board.figure("NA", ", not scored"),
     element("p", "", "No judge of this document scored this criterion, so the document as a whole "
       + "has no total and this lab has no final score."),
-    board.h3(`What the judges' scores mean, 0 to ${CRITERION_MAX}`),
+    board.h3(scaleHeading(criterion)),
     criterionScale(criterion, null));
 }
 
@@ -562,7 +583,7 @@ function aboutCriterion(content, criterion) {
   board.titled(content, criterion.name, criterion.asks);
   content.append(element("p", "subtitle", "One of the five criteria on the document as a whole. "
     + `${criterion.key === "contradictions" ? CONTRADICTIONS_RULE : HALVING}`));
-  content.append(board.h3(`What the judges' scores mean, 0 to ${CRITERION_MAX}`),
+  content.append(board.h3(scaleHeading(criterion)),
     criterionScale(criterion, null));
 }
 
@@ -573,7 +594,7 @@ function criterionScore(content, column, criterion, assessment, part) {
   const judges = assessment.criteria?.[criterion.key]?.judges || {};
   content.append(board.h3(`The ${Object.keys(judges).length} readings, each out of ${CRITERION_MAX}`),
     readingsList(judges, "score", CRITERION_MAX));
-  content.append(board.h3(`What the judges' scores mean, 0 to ${CRITERION_MAX}`),
+  content.append(board.h3(scaleHeading(criterion)),
     criterionScale(criterion, criterionMean(assessment, criterion.key)));
 }
 
@@ -604,7 +625,7 @@ function contradictionsScore(content, column, assessment, part) {
   }
   content.append(board.popButton("Read the contradictions",
     () => openContradictions(column, assessment, part)));
-  content.append(board.h3(`What the judges' scores mean, 0 to ${CRITERION_MAX}`),
+  content.append(board.h3(scaleHeading(criterion)),
     criterionScale(criterion, assessment.contradictions?.score ?? null));
 }
 
@@ -967,7 +988,9 @@ function renderTable() {
         if (!column.absent && !Number.isFinite(depth?.mean)) {
           const cell = empty();
           // A document that carries figures elsewhere and none here says so
-          // with a dash; one the payload knows nothing about says nothing.
+          // with a dash; one the payload knows nothing about says nothing. The
+          // dash is written as an escape, because this repository keeps long
+          // dashes out of its source.
           if (hasFigures(column)) cell.append(element("span", "cell-empty", "–"));
           sub.append(cell);
           return;
@@ -975,6 +998,11 @@ function renderTable() {
         const mean = depth ? depth.mean : 0;
         sub.append(cellFor(column, lowerFirst(behaviour.name), behaviour.slug, {
           value: mean, max: state.scale, text: shown(mean),
+          // The rubric's word for the figure, which the scale under the table
+          // spells out and the cell has no room for. Not on a lab with no
+          // specification: its nought stands for a document nobody holds, and
+          // "absent" is the rubric's word for a document that says nothing.
+          note: column.absent ? null : depthWords(mean, state.scale),
           build: column.absent
             ? content => absentScore(content, column, behaviour.name, "this behaviour")
             : content => behaviourScore(content, column, behaviour, depth),
@@ -1083,8 +1111,9 @@ function renderMethod() {
       + "next rank is skipped."));
   }
   blocks.push(rich({ lead: "The behaviours' figure." },
-    "It is the plain mean of the document's behaviour depths, over every behaviour the publication "
-    + "carries. A category's figure is the plain mean of its own behaviours."));
+    "It is the plain mean of the document's behaviour depths, over the behaviours this publication "
+    + "gives it a depth for, which may be fewer than the behaviours it carries. A category's "
+    + "figure is the plain mean of its own behaviours."));
   /* The seats are named rather than counted per cell: what the payload gives is
    * every seat seen over the whole board, and a panel of three judging every
    * cell can still show four or five seats there, one run having been composed
