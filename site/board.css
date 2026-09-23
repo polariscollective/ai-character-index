@@ -899,7 +899,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
      wide layout takes, spent 62 of those 358 pixels on margin. */
   .shell { width: 100%; }
 
-  .board { min-width: 0; width: max-content; }
+  /* The thousand-pixel floor the wider layout gives this table is what left the
+     names 220 wide inside a window of 296. Gone here, and nothing replaces it:
+     a fixed table is as wide as its columns come to, and the two widths under
+     this are what they come to. */
+  .board { min-width: 0; }
   .board thead th.row-col { width: 136px; }
   .board thead th { width: 72px; }
   /* A company's name is drawn in the head of its own column, so the longest word
