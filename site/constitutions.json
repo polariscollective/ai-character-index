@@ -9,19 +9,9 @@
     "plain": "Nothing in the document bears on the behaviour."
    },
    {
-    "level": 1,
-    "name": "touched in passing",
-    "plain": "A passage bears on the behaviour only indirectly."
-   },
-   {
     "level": 2,
     "name": "named",
     "plain": "The behaviour is mentioned, usually inside a list or a passage about something else, and nothing further is said about it."
-   },
-   {
-    "level": 3,
-    "name": "named, with a little said",
-    "plain": "The behaviour is mentioned and the document adds a sentence or two about it."
    },
    {
     "level": 4,
@@ -29,19 +19,9 @@
     "plain": "The document takes the behaviour up in its own right and says what it expects and why, in terms too general to grade an answer against."
    },
    {
-    "level": 5,
-    "name": "discussed, with a few firm rules",
-    "plain": "Discussed, and a few rules are precise enough to quote, too few to settle most cases."
-   },
-   {
     "level": 6,
     "name": "prescribed",
     "plain": "The document states concrete do and don't rules, precise enough that anyone testing a model could quote its own sentences as the standard."
-   },
-   {
-    "level": 7,
-    "name": "prescribed, with thin examples",
-    "plain": "Prescribed, and the examples are too few or they turn on a neighbouring behaviour."
    },
    {
     "level": 8,
@@ -49,24 +29,9 @@
     "plain": "The rules come with worked cases showing the response the document sanctions, close enough to settle a borderline answer."
    },
    {
-    "level": 9,
-    "name": "demonstrated, bounded in part",
-    "plain": "Demonstrated, and the three conditions for 10 hold for some of the behaviour."
-   },
-   {
     "level": 10,
     "name": "bounded",
     "plain": "Demonstrated, and for every part of the behaviour the document shows where the line falls, names one of its own rules that pulls against this one and says which prevails, and says what to do when the case cannot be decided."
-   }
-  ],
-  "criterion": [
-   {
-    "score": 0,
-    "plain": "The constitution does not do this."
-   },
-   {
-    "score": 2,
-    "plain": "It does this in full."
    }
   ]
  },

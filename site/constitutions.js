@@ -652,7 +652,8 @@ function renderLegend() {
   nodes.legend.replaceChildren(legend);
 }
 
-/* The two scales, under the table and nowhere else. */
+/* The scale a behaviour is read on, under the table and nowhere else. A
+ * document's parts are read out of 2, which each row says beside its name. */
 function renderScales() {
   const behaviours = document.createDocumentFragment();
   state.data.scale.depth.forEach(({ level: at, name, plain }) => {
@@ -665,18 +666,6 @@ function renderScales() {
   nodes.behaviourScaleTitle.textContent =
     `How far a constitution goes on one behaviour, out of ${depthMax()}`;
   nodes.behaviourScale.replaceChildren(behaviours);
-
-  const criteria = document.createDocumentFragment();
-  state.data.scale.criterion.forEach(({ score, plain }) => {
-    const item = element("li");
-    item.append(element("span", "anchor-level", String(score)), element("span", "", plain));
-    criteria.append(item);
-  });
-  nodes.criterionScaleTitle.textContent = "How the document is built, out of 2 for each part";
-  nodes.criterionScale.replaceChildren(criteria);
-  nodes.criterionNote.textContent =
-    `A figure between 0 and 2 means the constitution does part of what that part asks. The `
-    + `${state.data.criteria.length} parts add up to ${wholeMax()}.`;
 }
 
 /* The ties the ranking cannot break, said under the table. There is one figure
@@ -705,9 +694,6 @@ export async function initializeConstitutions() {
     legend: byId("legend"),
     behaviourScale: byId("behaviour-scale"),
     behaviourScaleTitle: byId("behaviour-scale-title"),
-    criterionScale: byId("criterion-scale"),
-    criterionScaleTitle: byId("criterion-scale-title"),
-    criterionNote: byId("criterion-note"),
     ties: byId("ties"),
     asOf: byId("as-of"),
   });
