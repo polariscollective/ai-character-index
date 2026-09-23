@@ -235,6 +235,11 @@ table { border-collapse: collapse; width: 100%; table-layout: fixed; }
   font-size: 13px;
   line-height: 1.5;
 }
+/* The sentence saying the board slides sideways. The phone block at the foot of
+   this file is what shows it, because that is where it is true: on a screen wide
+   enough to hold every company there is nothing to slide, and the note would
+   send a reader looking for a movement that never comes. */
+.slides-note { display: none; margin-top: 8px; }
 th, td { text-align: left; padding: 0; }
 thead th {
   padding: 0 10px 8px;
@@ -865,6 +870,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   /* Held at the left only. The top the wide layout gives the head, to clear the
      site header, would push this one cell down inside the frame. */
   .board thead th.row-col { top: auto; }
+  /* The edge the figures pass behind. A column that is held while the rest
+     slides says so with a rule, or the first sign that the board moved is a
+     figure appearing from under a name. */
+  .board tbody th, .board thead th.row-col { border-right: 1px solid var(--line); }
 }
 @media (max-width: 880px) {
   .depth-key-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -872,9 +881,156 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 @media (max-width: 640px) {
   .depth-key-list { grid-template-columns: 1fr; }
 }
-/* A phone: the readings of a contradiction stop being a table and become
-   labelled lines, since five columns of yes and no cannot set in 360 pixels. */
+/* A phone. The board is still a board: the companies read across and the rows
+   read down, and comparing two companies side by side is what it is for. What
+   changes is the budget. At 390 pixels, with the framework's gutter either side,
+   there are 358 to spend, and a board that opens on nothing but row names has
+   failed however well it scrolls. So the names take 136 and each company 72,
+   which puts three companies on screen before anything slides. The 72 is what
+   the longest company name needs to set on one line: a head that breaks a name
+   across two is a head nobody reads.
+
+   The names give way for it, at the size the framework gives a dense tool and
+   over as many lines as they need. Nothing is renamed and nothing is cut: a row
+   name opens a popover carrying it in full, as it does at every width. */
 @media (max-width: 560px) {
+  /* The full width of the window, less the framework's 16px gutter, which the
+     shell's own padding already is. A share of the window, which is what the
+     wide layout takes, spent 62 of those 358 pixels on margin. */
+  .shell { width: 100%; }
+
+  .board { min-width: 0; width: max-content; }
+  .board thead th.row-col { width: 136px; }
+  .board thead th { width: 72px; }
+  /* A company's name is drawn in the head of its own column, so the longest word
+     in it sets how wide that column can be asked to be. Broken anywhere, the
+     name is free to wrap and every column comes out the width it was given,
+     which is what keeps one company from looking wider than another. */
+  .board thead th .company-name { font-size: 13px; overflow-wrap: anywhere; }
+  .board .row-name .head-name { font-size: 14px; overflow-wrap: anywhere; }
+  .board .row-name .head-sub, .board .company-flag { font-size: 11px; }
+  /* The indent that shows a check belongs to the row above it, at the width a
+     phone can lend it: 34px of a 136px column is a quarter of the room the name
+     has to set in. */
+  .board .check-row th { padding-left: 14px; }
+  /* A cell carries a figure of four characters, and that is all it has room for.
+     What the figure is out of is said in the row's own name, under it, and again
+     in the popover the figure opens, so the corner mark is the one place of the
+     three that can go. It was never read aloud: the accessible name carries it. */
+  .cell-max { display: none; }
+  /* Full width, like every other cell, and the padding either side of a figure
+     cut to four pixels. The step into the column that shows a check as a part
+     of its question costs a fifth of 72, which is the difference between a
+     figure that fits and one that does not. */
+  .board .check-row .cell-button, #board .check-row .cell-button {
+    width: 100%;
+    margin-left: 0;
+    min-height: 40px;
+    padding: 6px 4px;
+  }
+  .board .cell-button { padding-left: 4px; padding-right: 4px; }
+  .board .total-row .cell-figure { font-size: 18px; }
+  /* The fold stays the size it is drawn, since a larger ring would take the room
+     the name needs, and takes the press from 44 pixels around it. The rows are
+     44 pixels tall at the least, so the reach of one fold stops where the next
+     one begins. */
+  .row-toggle { position: relative; }
+  .row-toggle::after { content: ""; position: absolute; inset: -9px; }
+
+  /* Two tabs, side by side and each on half the width, wrapping inside itself.
+     One above the other they would read as a list of links; what says they are
+     tabs is the rule under the one you are on, and that rule has to be as wide
+     as the tab. */
+  .views { gap: 0 12px; }
+  .view-tab { flex: 1 1 0; min-width: 0; text-align: left; }
+  /* The pill above the board, at the height a thumb finds. Its 33 pixels are
+     about right for a pointer and under what a finger reliably hits. */
+  .gov-button { padding: 9px 16px; }
+
+  /* The popover takes the screen. board.js places it beside whatever was
+     pressed, which is what there is no room for here, and it writes the two
+     offsets on the element itself: they are taken back rather than asked for,
+     so that file needs to know nothing about phones. */
+  .gov-pop {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right));
+    width: auto;
+    /* As tall as it needs and no taller, up to the window: a note of two
+       sentences in a box the height of a phone is an empty box, and a long one
+       scrolls inside itself as it does at every width. */
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top))
+                     - max(8px, env(safe-area-inset-bottom)));
+  }
+  /* The one control on a popover that now fills the screen, at the size a thumb
+     finds. It sits in the row above the body, so it is in reach however far the
+     body has been scrolled. */
+  .gov-pop-close, .sheet-close {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 24px;
+  }
+  .gov-pop-close { margin: 0 4px 0 12px; }
+  /* The same, for the sheet the coverage board opens: as much of the window as
+     the browser's own cap on a modal allows, rather than a box floating in the
+     middle of it. Named by its id and not by its tag, because the feedback
+     bubble's dialog is on this page too and carries its own sizing.
+
+     The head is a row of its own above the body, so the cross stays in view
+     however far a long sheet has been scrolled. It used to be the body that
+     carried the height, worked out by subtracting a head of 62 pixels: at this
+     width the title wraps and the head is taller than that, so the sheet ran
+     past the foot of the window. The two are a column now and the body takes
+     what is left. The vh line is there for whatever does not know dvh. */
+  #sheet {
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top))
+                     - max(16px, env(safe-area-inset-bottom)));
+  }
+  #sheet[open] { display: flex; flex-direction: column; }
+  .sheet-head { flex: none; padding: 8px 16px 0; }
+  .sheet-topline { align-items: center; }
+  .sheet-body { flex: 1 1 auto; min-height: 0; max-height: none; padding: 6px 16px 18px; }
+
+  /* Said once, under the board, in the tone of the board's other notes: a table
+     that slides with nothing to say so reads as a table with three columns. */
+  .slides-note { display: block; }
+
+  /* The anchor tables under "How the scoring works" stop being tables, for the
+     reason the readings below do: four columns of prose cannot set in 358
+     pixels. A second thing sliding sideways inside a page that already has one
+     is worse than either alone, so a check becomes its name and the three
+     descriptions under it, each marked with the score it earns. */
+  .gov-scoring-table { min-width: 0; }
+  .gov-scoring-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .gov-scoring-table, .gov-scoring-table tbody, .gov-scoring-table tr,
+  .gov-scoring-table tbody th, .gov-scoring-table td { display: block; width: 100%; }
+  .gov-scoring-table tr { padding: 10px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
+  .gov-scoring-table tbody th { padding: 0 0 6px; border: 0; }
+  .gov-scoring-table td { padding: 2px 0 2px 24px; border: 0; }
+  .gov-scoring-table td::before {
+    display: inline-block;
+    width: 24px;
+    margin-left: -24px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .gov-scoring-table td:nth-of-type(1)::before { content: "0"; }
+  .gov-scoring-table td:nth-of-type(2)::before { content: "2"; }
+  .gov-scoring-table td:nth-of-type(3)::before { content: "4"; }
+
+  /* The readings of a contradiction stop being a table and become labelled
+     lines, since five columns of yes and no cannot set in 360 pixels. */
   .readings thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .readings, .readings tbody, .readings tr, .readings td { display: block; width: 100%; }
   .readings tr { padding: 8px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
