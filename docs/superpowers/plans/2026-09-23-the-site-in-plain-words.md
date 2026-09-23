@@ -1984,3 +1984,635 @@ Claude-Session: https://claude.ai/code/session_01SyUZkS2ecDtKxgjs1CxSG7"
 ```
 
 ---
+
+### Task 8: The two boards over MCP
+
+Two new tools give a client the content of the two boards: the figures, the scales, and the explanations, with an optional filter by company.
+
+**Files:**
+- Create: `app/lib/board-tools.mjs`
+- Create: `app/lib/__tests__/board-tools.test.mjs`
+- Modify: `site/governance.js` (export `meansAt`, written in Task 4)
+- Modify: `app/lib/mcp-tools.mjs:576-619` (`INSTRUCTIONS`) and `:744-756` (the tools `about` names)
+- Modify: `app/api/mcp/route.js:18-20`, `:68-171`
+- Modify: `app/lib/__tests__/mcp-tools.test.mjs:598-603`
+
+**Interfaces:**
+- Consumes: `FINAL`, `WHOLE`, `BEHAVIOURS`, `CATEGORY`, `DEPTH`, `CRITERIA_PLAIN`, `reading`, `depthReading` from `site/plain-words.js` (Task 3); `questions[].plain` and `origin` from `site/governance.json` (Task 4); `ranked` and `meansAt` from `site/governance.js`.
+- Produces:
+  - `constitutionsBoard(snapshot, { company } = {})`, answering `{ publication, measures, constitutions }`.
+  - `governanceBoard({ company } = {})`, answering `{ as_of, origin, measures, companies }`.
+  Both throw `ToolError` where a company name matches nothing.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `app/lib/__tests__/board-tools.test.mjs`:
+
+```js
+/**
+ * The two boards, as answers. Against the reader fixtures, so nothing here
+ * touches a network and no figure of the real index is written down.
+ *
+ * Run: node --test app/lib/__tests__/board-tools.test.mjs
+ */
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { readFile } from "node:fs/promises";
+import { constitutionsBoard, governanceBoard } from "../board-tools.mjs";
+import { ToolError } from "../mcp-tools.mjs";
+
+const read = async name => JSON.parse(await readFile(
+  new URL(`../../../tests/fixtures/reader/${name}`, import.meta.url), "utf8"));
+
+const payload = await read("ten/behaviours.json");
+const documents = await read("documents.json");
+const snapshot = () => ({
+  publication: { id: "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14",
+                 published_at: "2026-09-21T10:00:00+00:00" },
+  payload, documents, notes: {},
+});
+
+test("the board of constitutions answers every figure with its scale and its meaning", () => {
+  const answer = constitutionsBoard(snapshot());
+  assert.equal(answer.publication.id, "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14");
+  assert.equal(answer.measures.depth.max, 10);
+  assert.equal(answer.measures.depth.levels.length, 6);
+  for (const level of answer.measures.depth.levels) {
+    assert.ok(level.means.endsWith("."), level.anchor);
+    assert.ok(level.asked.length > level.means.length - 40, level.anchor);
+  }
+  assert.equal(answer.measures.whole_document.criteria.length, 5);
+  const one = answer.constitutions.find(item => item.score);
+  assert.ok(one, "no constitution carries a score");
+  assert.equal(one.score.max, 20);
+  assert.ok(one.score.means.endsWith("."));
+  assert.equal(one.whole_document.criteria.length, 5);
+  assert.ok(one.behaviours.cells.every(cell => cell.means && cell.max === 10));
+});
+
+test("a company argument narrows it, and an unknown one says what there is", () => {
+  const all = constitutionsBoard(snapshot());
+  const named = constitutionsBoard(snapshot(), { company: all.constitutions[0].lab.toLowerCase() });
+  assert.ok(named.constitutions.length >= 1);
+  assert.ok(named.constitutions.length <= all.constitutions.length);
+  assert.throws(() => constitutionsBoard(snapshot(), { company: "nobody at all" }),
+                error => error instanceof ToolError && /This publication carries/.test(error.message));
+});
+
+test("the board of governance answers the nine companies in the board's own order", () => {
+  const answer = governanceBoard();
+  assert.equal(answer.companies.length, 9);
+  assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 1, 3]);
+  assert.equal(answer.companies[0].overall.max, 16);
+  assert.equal(answer.measures.questions.length, 4);
+  for (const question of answer.measures.questions) {
+    assert.ok(question.means.endsWith("."), question.id);
+    assert.ok(question.checks.length >= 2, question.id);
+  }
+  assert.match(answer.origin, /Kembery/);
+  assert.equal(answer.as_of, "September 2026");
+});
+
+test("a company argument narrows the governance board too", () => {
+  const answer = governanceBoard({ company: "anthropic" });
+  assert.equal(answer.companies.length, 1);
+  assert.equal(answer.companies[0].name, "Anthropic");
+  assert.ok(answer.companies[0].questions[0].found.length > 0, "the paragraph we wrote is there");
+  assert.throws(() => governanceBoard({ company: "nobody at all" }),
+                error => error instanceof ToolError && /This board carries/.test(error.message));
+});
+
+test("the route registers both, and about names them", async () => {
+  const route = await readFile(new URL("../../api/mcp/route.js", import.meta.url), "utf8");
+  assert.match(route, /registerTool\("constitutions_board"/);
+  assert.match(route, /registerTool\("governance_board"/);
+});
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `node --test app/lib/__tests__/board-tools.test.mjs`
+Expected: FAIL, `Cannot find module .../app/lib/board-tools.mjs`.
+
+- [ ] **Step 3: Write the module**
+
+Create `app/lib/board-tools.mjs`:
+
+```js
+/**
+ * The two boards of the overview, as answers.
+ *
+ * A client asking the index what it holds should be able to get what a reader
+ * sees: the figures, the scale each one is on, and the sentence that says what
+ * a figure means. Both functions are built from the files the pages are built
+ * from, so a client and a reader are never told different things.
+ *
+ *   site/document-assessment.js  the figures of the first board
+ *   site/plain-words.js          what each of them means, in plain words
+ *   site/governance.js           the ranking of the second board
+ *   site/governance.json         its scores and its words
+ *
+ * Pure, as app/lib/mcp-tools.mjs is: the first takes a snapshot, the second
+ * takes nothing, and a fixture exercises both with no network. The JSON is
+ * imported the way app/lib/admin-data.mjs imports the panel's configuration.
+ */
+import governance from "../../site/governance.json" with { type: "json" };
+import { ranked as rankedCompanies, meansAt } from "../../site/governance.js";
+import { CRITERIA, SHOWN_MAX, WHOLE_MAX, FINAL_MAX, wholeFigures, behavioursFigure,
+         categoryFigure, finalFigure } from "../../site/document-assessment.js";
+import { depthScaleOf, levelsOf } from "../../site/depth-scale.js";
+import { FINAL, WHOLE, BEHAVIOURS, DEPTH, CRITERIA_PLAIN, reading, depthReading }
+  from "../../site/plain-words.js";
+import { ToolError } from "./mcp-tools.mjs";
+
+const OVERALL = 16;
+const PRACTICE = 2;
+
+/** A company named in an argument, matched loosely: "openai" finds OpenAI. */
+const matches = (name, wanted) =>
+  !wanted || String(name).toLowerCase().includes(String(wanted).toLowerCase().trim());
+
+/** The behaviours of one publication, grouped as the board groups them. */
+function groupsOf(behaviours) {
+  const byName = new Map();
+  behaviours.forEach(behaviour => {
+    const name = behaviour.category || "Behaviours under test";
+    if (!byName.has(name)) byName.set(name, []);
+    byName.get(name).push(behaviour);
+  });
+  return [...byName].map(([name, members]) => ({ name, members }));
+}
+
+export function constitutionsBoard({ publication, payload, documents }, args = {}) {
+  const scale = depthScaleOf(payload);
+  const behaviours = payload.behaviours || [];
+  const assessment = payload.assessment && typeof payload.assessment === "object"
+    ? payload.assessment : null;
+  const groups = groupsOf(behaviours);
+  const all = documents.documents || [];
+  const columns = all.filter(document => matches(document.lab, args.company));
+  if (!columns.length) {
+    throw new ToolError(`no constitution from ${args.company}. This publication carries: `
+      + `${all.map(document => document.lab).join(", ")}`);
+  }
+  return {
+    publication,
+    measures: {
+      score: { max: FINAL_MAX, means: FINAL.what },
+      whole_document: {
+        max: WHOLE_MAX,
+        means: WHOLE.what,
+        criteria: CRITERIA.map(criterion => ({
+          key: criterion.key,
+          name: criterion.name,
+          max: SHOWN_MAX,
+          means: CRITERIA_PLAIN[criterion.key].what,
+          asked: criterion.asks,
+          anchors: criterion.anchors,
+        })),
+      },
+      behaviours: { max: scale, means: BEHAVIOURS.what },
+      depth: {
+        max: scale,
+        means: DEPTH.what,
+        levels: levelsOf(scale).map(({ level, anchor, brief, bar }) =>
+          ({ level, anchor, means: brief, asked: bar })),
+      },
+    },
+    constitutions: columns.map(column => {
+      const held = assessment?.[column.id] ?? null;
+      const final = finalFigure(behaviours, held, column);
+      const figure = behavioursFigure(behaviours, column);
+      const whole = held ? wholeFigures(held) : null;
+      return {
+        id: column.id,
+        lab: column.lab,
+        title: column.title,
+        version: column.version,
+        source_url: column.sourceUrl ?? null,
+        score: final
+          ? { figure: final.value, max: FINAL_MAX, means: reading(FINAL, final.value) }
+          : null,
+        whole_document: whole
+          ? {
+            figure: whole.total,
+            max: WHOLE_MAX,
+            means: reading(WHOLE, whole.total),
+            criteria: CRITERIA.map((criterion, index) => ({
+              key: criterion.key,
+              figure: whole.parts[index],
+              max: SHOWN_MAX,
+              means: reading(CRITERIA_PLAIN[criterion.key], whole.parts[index]),
+            })),
+          }
+          : null,
+        behaviours: figure
+          ? {
+            figure: figure.value,
+            max: scale,
+            over: figure.count,
+            means: depthReading(figure.value, scale),
+            groups: groups.map(group => {
+              const value = categoryFigure(group.members, column);
+              return value === null
+                ? null
+                : { name: group.name, figure: value, max: scale,
+                    means: depthReading(value, scale) };
+            }).filter(Boolean),
+            cells: behaviours.map(behaviour => {
+              const depth = behaviour.coverage?.[column.id]?.depth;
+              return Number.isFinite(depth?.mean)
+                ? { behaviour: behaviour.slug, name: behaviour.name,
+                    group: behaviour.category ?? null, figure: depth.mean, max: scale,
+                    means: depthReading(depth.mean, scale) }
+                : null;
+            }).filter(Boolean),
+          }
+          : null,
+      };
+    }),
+  };
+}
+
+/* The second board is not part of any publication: it is nine companies scored
+ * on four questions, as of the date the data carries. */
+export function governanceBoard(args = {}) {
+  const companies = rankedCompanies(governance)
+    .filter(company => matches(company.name, args.company));
+  if (!companies.length) {
+    throw new ToolError(`no company called ${args.company}. This board carries: `
+      + `${governance.labs.map(lab => lab.name).join(", ")}`);
+  }
+  const asked = governance.internal.filter(practice => practice.asked_to_publish);
+  const practices = [...governance.supporting, ...governance.internal];
+  return {
+    as_of: governance.as_of,
+    origin: governance.origin,
+    measures: {
+      overall: { max: OVERALL, means: "The four questions added together, each out of 4." },
+      questions: governance.questions.map(question => ({
+        id: question.id,
+        name: question.name,
+        max: 4,
+        means: question.plain,
+        asked: question.question,
+        part_of_the_minimum: Boolean(question.minimum),
+        checks: question.checks.map(check => ({
+          id: check.id, name: check.short, max: 4,
+          means: `${check.label}.`, anchors: check.anchors,
+        })),
+      })),
+      best_practices: {
+        max: PRACTICE * (governance.supporting.length + asked.length),
+        means: "Practices shown beside the score and never counted in it.",
+        practices: practices.map(practice => ({
+          id: practice.id,
+          name: practice.short,
+          means: practice.label,
+          scored: practice.asked_to_publish !== false,
+          anchors: practice.anchors || governance.supporting_scale,
+        })),
+      },
+    },
+    companies: companies.map(company => ({
+      id: company.id,
+      name: company.name,
+      rank: company.rank,
+      open_weights: Boolean(company.open_weights),
+      overall: { figure: company.total, max: OVERALL },
+      questions: governance.questions.map(question => ({
+        id: question.id,
+        figure: company.byQuestion[question.id],
+        max: 4,
+        checks: question.checks.map(check => ({
+          id: check.id,
+          figure: governance.scores[company.id][check.id],
+          max: 4,
+          means: meansAt(check.anchors, governance.scores[company.id][check.id]),
+        })),
+        found: governance.profiles[company.id][question.id],
+      })),
+      best_practices: {
+        figure: company.supporting,
+        max: PRACTICE * (governance.supporting.length + asked.length),
+        practices: practices.map(practice => ({
+          id: practice.id,
+          figure: governance.supporting_scores[company.id]?.[practice.id]
+            ?? governance.internal_scores[company.id]?.[practice.id] ?? null,
+          max: PRACTICE,
+        })),
+        found: governance.profiles[company.id].supporting,
+      },
+    })),
+  };
+}
+```
+
+In `site/governance.js`, `meansAt` is declared `export function meansAt(anchors, score)` so this module and the page share one rule.
+
+- [ ] **Step 4: Register the two tools**
+
+In `app/api/mcp/route.js`, after `retrieve_passages` and before `compare_documents`:
+
+```js
+    server.registerTool("constitutions_board", {
+      title: "The board of constitutions",
+      description:
+        "Every figure on the index's first board, each with the scale it is on "
+        + "and a plain sentence saying what it means: the score out of 20, the "
+        + "document as a whole out of 10 with its five criteria, and how far each "
+        + "constitution goes on every behaviour. Pass company to narrow it to one "
+        + "company, such as OpenAI. This is what a reader sees on the overview.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as OpenAI. Every constitution "
+          + "by default."),
+      }),
+    }, args => answer(snapshot => constitutionsBoard(snapshot, args)));
+
+    server.registerTool("governance_board", {
+      title: "The board of governance",
+      description:
+        "The index's second board: nine companies scored out of 16 on four "
+        + "questions about how they govern the rules their models follow, each "
+        + "question split into checks scored 0 to 4, with what each score means, "
+        + "the paragraph we wrote on what we found, and the best practices shown "
+        + "beside the score and never counted in it. Pass company to narrow it to "
+        + "one company. It belongs to no publication and carries its own as-of "
+        + "date.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as Anthropic. All nine by "
+          + "default."),
+      }),
+    }, args => answer(() => governanceBoard(args)));
+```
+
+and the import at the top:
+
+```js
+import { constitutionsBoard, governanceBoard } from "../../lib/board-tools.mjs";
+```
+
+- [ ] **Step 5: The server's own words**
+
+In `app/lib/mcp-tools.mjs`, `INSTRUCTIONS` keeps its shape and says constitution. Its first paragraph:
+
+```
+The AI Constitutions Index reports where the constitutions AI companies publish
+address a behaviour, and how strongly. It holds published constitutions, a set
+of behaviours, and passages of those constitutions that a panel of language
+model judges marked as bearing on each behaviour. It reports what those
+documents say, not how the models behave.
+```
+
+and one new paragraph before the last line:
+
+```
+constitutions_board and governance_board answer with the two boards a reader
+sees on the overview: every figure, the scale it is on, and a plain sentence
+saying what it means. Both take an optional company. The first is the
+publication's own figures; the second is nine companies scored on four
+questions about how they govern the rules their models follow, and belongs to no
+publication.
+```
+
+The last line stays `Start with list_behaviours to learn the slugs, then retrieve_passages.`
+
+In `about()`, the list of the other tools gains two entries, and the sentence introducing the documents says constitution:
+
+```js
+    "  constitutions_board: every figure of the index's first board with the "
+    + "scale it is on and what it means, for every constitution or for one "
+    + "company. Reach for it to answer how far a constitution goes, or how two "
+    + "of them compare.",
+    "  governance_board: nine companies scored on four questions about how they "
+    + "govern the rules their models follow. It belongs to no publication and "
+    + "carries its own as-of date.",
+```
+
+- [ ] **Step 6: Move the test that lists the tools**
+
+In `app/lib/__tests__/mcp-tools.test.mjs:598`:
+
+```js
+test("about names the other tools, so the list is not the only thing explaining them", () => {
+  const answer = about(snapshot());
+  for (const tool of ["list_model_specs", "list_behaviours", "retrieve_passages",
+                      "constitutions_board", "governance_board"]) {
+    assert.ok(answer.includes(tool), `the answer does not name ${tool}`);
+  }
+});
+```
+
+The test at `:505` is unchanged: `about` is still registered first, and `"Start here to understand this index and its other tools."` is still its description word for word.
+
+- [ ] **Step 7: Run the tests**
+
+Run: `node --test app/lib/__tests__/board-tools.test.mjs app/lib/__tests__/mcp-tools.test.mjs`
+Expected: `# fail 0`.
+
+- [ ] **Step 8: Ask the running server**
+
+The server on 4617 serves this application, so the endpoint is live:
+
+```sh
+curl -s http://127.0.0.1:4617/api/mcp -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | head -c 400
+```
+
+Expected: a list naming seven tools, `about` first.
+
+- [ ] **Step 9: Run the battery and commit**
+
+Run each of the four commands. Expected: `OK`; `OK`; `# fail 0`; `ALL FEATURE CHECKS PASSED.`
+
+```bash
+git add app/lib/board-tools.mjs app/lib/__tests__/board-tools.test.mjs app/lib/mcp-tools.mjs app/lib/__tests__/mcp-tools.test.mjs app/api/mcp/route.js site/governance.js
+git commit -m "The MCP server answers with the two boards
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SyUZkS2ecDtKxgjs1CxSG7"
+```
+
+---
+
+### Task 9: The MCP page
+
+The page says what the server really carries. It says four tools today and the server registers five; after Task 8 it registers seven.
+
+**Files:**
+- Modify: `site/mcp.html:274-279` (the opening), `:372-431` (the tools)
+
+**Interfaces:**
+- Consumes: the two tools of Task 8 and their descriptions.
+- Produces: nothing other tasks read.
+
+- [ ] **Step 1: The opening**
+
+```html
+  <div class="m-head">
+    <div class="m-title">MCP</div>
+    <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
+    these documents by quoting them. This page has the whole setup, from a settings menu or from a
+    command line. Seven tools, read only, no account and no key.</p>
+  </div>
+```
+
+- [ ] **Step 2: The tools**
+
+Replace the opening of the tools section and add the three tools the page has never named:
+
+```html
+    <h2>Tools</h2>
+    <p>Seven, and all of them read. Four words recur below. A <b>constitution</b> is a document an
+    AI company publishes saying how its models should behave. A <b>behaviour</b> is one thing a
+    constitution might commit a model to, such as deferring to a user&rsquo;s own decisions. A
+    <b>locator</b> is the address of a quote inside a document, naming the document, its version,
+    the section and the sentences, as in
+    <code>openai--model-spec@2026-08-18 &gt; #scope_of_autonomy &gt; &para;14</code>. A
+    <b>depth</b> is how far a constitution goes on a behaviour, from 0, saying nothing about it,
+    to 10, setting rules, showing them applied and settling the hard cases.</p>
+```
+
+The paragraphs on `about`, `list_model_specs`, `list_behaviours` and `retrieve_passages` keep their text with the word settled in Task 1, and the sentence about `list_model_specs` says why its name is what it is:
+
+```html
+    <p><b>list_model_specs.</b> Every constitution the current publication carries: id, company,
+    title, version, source URL, how many behaviours were judged against it and how many passages it
+    holds. No arguments. It does not return the text of the document, which runs to hundreds of
+    kilobytes; the source URL is in the answer. Each one is a single version, and its id reads
+    <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
+    <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into it.
+    The tool keeps its name so that clients already connected go on working.</p>
+```
+
+and three new paragraphs after `retrieve_passages` and its arguments:
+
+```html
+    <p><b>constitutions_board.</b> Every figure on the overview&rsquo;s first board, each with the
+    scale it is on and a plain sentence saying what it means: the score out of 20, the document as
+    a whole out of 10 with its five criteria, and how far each constitution goes on every
+    behaviour. One argument, <b>company</b>, optional, which narrows it to one company.</p>
+    <p><b>governance_board.</b> The overview&rsquo;s second board: nine companies scored out of 16
+    on four questions about how they govern the rules their models follow, each question split into
+    checks scored 0 to 4, with what each score means and the paragraph we wrote on what we found.
+    The best practices are there too, shown beside the score and never counted in it. One argument,
+    <b>company</b>, optional. This board belongs to no publication and carries its own as-of
+    date.</p>
+    <p><b>compare_documents.</b> Everything one run found between two constitutions on one
+    behaviour: the passages each of them carries, every pair of passages the judges linked with what
+    each judge said, the verdict where two judges disagreed and a third settled it, the passages one
+    document has nothing facing, and a paragraph written from all of it. It takes one
+    <b>behaviour</b> and exactly two <b>model_spec_ids</b>. The answer is long, hundreds of
+    thousands of characters where both documents cover the behaviour fully, so pass
+    <b>detail</b> as <code>counts</code> first: that answers with the size of the full answer and
+    the tally of what is in it.</p>
+```
+
+- [ ] **Step 3: Run the battery**
+
+Run each of the four commands. Expected: `OK`; `OK`; `# fail 0`; `ALL FEATURE CHECKS PASSED.`
+
+`tests/test_site_words.py` reads this page, so `model_spec_ids` and `list_model_specs` must stay inside `<code>` or `<b>` elements where they are today, which is where the guard does not read.
+
+- [ ] **Step 4: Look at it, and commit**
+
+Open `http://127.0.0.1:4617/mcp` and count the tools named against the tools the server lists.
+
+```bash
+git add site/mcp.html
+git commit -m "The MCP page says what the server carries
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SyUZkS2ecDtKxgjs1CxSG7"
+```
+
+---
+
+### Task 10: Read the whole site as a stranger
+
+The last task changes no copy of its own unless the reading finds something. It runs every check the repository has for these files and reads the four pages end to end against the brief.
+
+**Files:**
+- Modify: `site/OVERVIEW.md` (one paragraph on the word and the guard)
+- Modify: whatever the reading finds
+
+**Interfaces:**
+- Consumes: every task above.
+- Produces: nothing.
+
+- [ ] **Step 1: Run every check that touches these files**
+
+```sh
+python3 -m unittest discover -s tests
+python3 engine/panel/test_site_rubrics.py
+node --test app/lib/__tests__/*.test.mjs
+node engine/verify-reader-test.mjs
+node engine/verify-reader-features.mjs
+```
+
+Expected: `OK`; `OK`; `# fail 0`; the reader walker's own pass line; `ALL FEATURE CHECKS PASSED.`
+
+- [ ] **Step 2: Read the four pages**
+
+Open, in order, `http://127.0.0.1:4617/`, `?view=governance`, `/about`, `/mcp` and `/spec-reader/`. Against the brief, check each of these and fix what fails:
+
+- Nothing on any page is written for the people who built the site. No agent, no script, no run, no job, no "could not be opened".
+- Every figure a reader can press opens on what is being scored and what the figure means, in one or two sentences, before anything technical.
+- No explanation of a figure quotes the constitution being scored.
+- The word is constitution everywhere but in a company's own name, a paper's title and a quotation.
+- Sentence case, British spelling, no long dash, no `--` used as a dash.
+- No antithesis but the one on the about page, no triad where two items would do, no closing punchline.
+
+- [ ] **Step 3: Say where the word is held**
+
+In `site/OVERVIEW.md`, under the description of the site's files:
+
+```markdown
+The site calls these documents constitutions, everywhere it speaks in its own
+voice. A company's own name for its document stays as that company writes it,
+and a quotation stays verbatim. `tests/test_site_words.py` holds the pages, the
+scripts and `site/governance.json` to that. The judges' own rubrics are the
+exception, in `site/depth-scale.js` and `site/document-assessment.js`, which
+`engine/panel/test_site_rubrics.py` holds to the prompts the judges read.
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add site/OVERVIEW.md
+git commit -m "Say where the site's own word is held
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SyUZkS2ecDtKxgjs1CxSG7"
+```
+
+---
+
+## Notes on the plan itself
+
+- Task 9, step 3: the guard in `tests/test_site_words.py` reads the text of `<b>` as well as ordinary text. `list_model_specs` and `model_spec_ids` pass it because an underscore is a word character, so the pattern finds no word boundary before `spec`. The elements the guard skips are `script`, `style`, `code` and `pre`.
+- Task 3 writes `detail(content, build)` inside `site/overview.js` and Task 4 moves it into `site/board.js` as `board.detail`, where both views share it. An implementer taking Task 3 and Task 4 in one sitting can write it in `site/board.js` straight away.
+- `site/plain-words.js` is imported by a browser page and by `app/lib/board-tools.mjs`. Node prints a `MODULE_TYPELESS_PACKAGE_JSON` warning when a test imports a `site/*.js` module, because the root `package.json` names no `"type"`. The warning is expected and already appears for `site/depth-scale.js`.
+- The two new MCP tools read `site/governance.json` with an import attribute, the way `app/lib/admin-data.mjs` already reads `engine/panel/panel-config.json`. If the bundler refuses it, read it with `createRequire` rather than moving the data.
+
+## Questions the plan cannot settle without the owner
+
+1. The badge appears only where the publication on screen is not public or the deployment is a development one, and the two new sentences are a claim about the whole index: should it now appear on the published site as well?
+2. The two sentences and nothing more mean the note no longer says that this build is unpublished and unreviewed, and no longer offers the published index: is that accepted on a development deployment, or should that warning stay there?
+3. The notes written beside the index for each cell ("Why this figure", "Where this constitution stands") quote two or three documents at length: this plan puts them inside the fold, and they could as well be dropped from the score popover.
+4. Is the doc reader's own interface copy in this pass? It says specification in about twenty visible strings, and the scale of four in `site/depth-scale.js` says "the spec" because the judges' rubric does.
+5. Do the machine names keep the word, as this plan assumes: `list_model_specs`, `model_spec_ids`, `?spec=`, `kind=specification` and the form ids behind it?
+6. The five criteria keep their names on the board, "Conflict rules" and "Force of each rule" among them, with the plain sentence in the popover: should the rows be renamed instead?
+7. Question 1 of the governance board is renamed "Published constitution", which is the site's name for one of the working paper's four asks: is that the name the owner wants on the board?
+
+## What the rewrite cannot keep, and cannot replace without a decision
+
+- **The development warning.** `site/dev-tag.js` today says that this deployment shows builds nobody has published, that the readings are provisional, and where the published index is. The badge's two sentences carry none of that, and what raises the badge is unchanged. Nothing else on the site tells a reader that the figures in front of them were never reviewed.
+- **The name as an aspiration.** The glossary says "No document does all of that today, and the name is the direction we think they should take", and beside it "Anthropic calls its own document Claude's Constitution. The name of this index refers to that document no more than to any other." The second goes by instruction. The first cannot stand beside a site that says these documents are constitutions and does not hedge, and `site/brand.js` shows this entry behind the wordmark on every page, so something has to stand there. Task 6 writes a replacement, and it is the sentence to read first.
+- **The judges' own words, on the board itself.** A reader meets "prescribed", "demonstrated" and "bounded" under the table and beside every figure. They are the anchors of `engine/panel/prompts/depth-v2.txt`, and `engine/panel/test_site_rubrics.py` holds the site to them, so they cannot be replaced with plainer words while the figures were produced against them. The same holds for the five criteria's questions and anchors. This plan adds a plain line to each and leaves the anchor word standing.
+- **The per-cell notes.** The 39 notes the current publication carries under "Where this constitution stands" quote two or three documents at length and are written for a reader who already knows the index. They are evidence and they are useful, and they are the one thing in a score popover that the rule against quoting reaches.
+- **"Spec" on the MCP page.** `list_model_specs` and `model_spec_ids` are named on that page because a client has to type them. The page can say why the name is what it is, and the word stays visible there.
+- **The scale of four.** `site/depth-scale.js` still says "the spec" in the bars of the scale of four, which `app/lib/__tests__/depth-scale.test.mjs` pins word for word and which surface only in the doc reader. They stay until the doc reader is in scope.

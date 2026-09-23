@@ -2287,7 +2287,16 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
     judges: [...document.querySelectorAll("#grid-pop .judges .who")]
       .map(n => n.textContent.replace(/\s+/g, " ").trim()),
     buttons: [...document.querySelectorAll("#grid-pop .gov-button")].map(b => b.textContent),
+    links: [...document.querySelectorAll("#grid-pop a")].map(a => a.getAttribute("href")),
   }));
+  /* A cell by the column it belongs to rather than by its place in the row: the
+   * board orders its columns by rank, so an index would move the day a fixture
+   * scored differently. */
+  const pressCell = (name, lab) => page.evaluate(([name, lab]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    row.querySelector(`td .cell-button[data-lab="${lab}"]`).click();
+  }, [name, lab]);
   const readSheet = () => page.evaluate(() => ({
     open: document.querySelector("#sheet").open,
     title: document.querySelector("#sheet-title").textContent,
@@ -2362,9 +2371,35 @@ console.log("== Overview: the board, on the scale of four and on the scale of te
   });
   check(na.final.filter(one => one.na).length === 7 && na.whole.filter(one => one.na).length === 7
       && na.final.every(one => one.na === (one.text === "NA"))
-      && na.final.some(one => one.label === "Nowhere, final score: not assessed") === false,
+      && na.final.some(one => one.label === "Acme, final score: not assessed")
+      && na.final.some(one => one.label === "Meta, final score: not assessed"),
     "a document with no assessment and a lab with no specification read NA on both rows",
-    JSON.stringify(na.final.map(one => one.text)));
+    JSON.stringify(na.final.map(one => [one.text, one.label])));
+
+  /* The two absences behind one NA. The board cannot show the difference in a
+   * cell, so pressing one has to say which it is: a lab whose specification the
+   * index does not hold, and a document it does hold that this publication
+   * leaves unassessed. Telling a reader the second is the first would deny a
+   * document they can open from the same page. */
+  await pressCell("Final score", "acme--second@2026-02-01");
+  const carried = await readPop();
+  check(carried.open && carried.title === "Acme: final score"
+      && carried.subtitle === "Second document, 2026-02-01."
+      && carried.body.includes("The index carries this document, and this publication does not "
+        + "assess it as a whole.")
+      && !carried.body.includes("no published specification")
+      && !carried.links.some(href => href.includes("propose")),
+    "a document the index carries, left unassessed, says so and asks for nothing",
+    JSON.stringify([carried.title, carried.subtitle, carried.links]));
+  await closePop();
+  await pressCell("Final score", "Meta");
+  const nothing = await readPop();
+  check(nothing.open && nothing.title === "Meta: final score"
+      && nothing.body.includes("There is no published specification from Meta to assess.")
+      && nothing.links.some(href => href.includes("propose")),
+    "a lab the index holds no specification for keeps its words and its invitation",
+    JSON.stringify([nothing.title, nothing.links]));
+  await closePop();
   check(ten.keyTitle === "Depth of a behaviour, out of 10"
       && ten.levels.join() === "0,2,4,6,8,10"
       && ten.anchors.join() === "absent,named,discussed,prescribed,demonstrated,bounded"

@@ -415,13 +415,25 @@ function profile(content, column) {
   content.append(read);
 }
 
-/* A row that assesses a document, for a lab that has none. */
+/* A row that assesses a document, where there is no assessment to show. Two
+ * absences reach this, and they are different claims. A lab the index holds no
+ * specification for has nothing to assess at all, and asking for one is the
+ * thing to do. A document the index does carry, whose assessment this
+ * publication leaves out, is on the shelf: telling its reader that no
+ * specification from that lab has been published would be false, and the
+ * propose link would ask for a document the reader can already open. */
 function notAssessed(content, column, row, more) {
-  board.titled(content, `${column.lab}: ${lowerFirst(row)}`, "Not assessed.");
-  content.append(board.figure("NA", ", not assessed"),
-    element("p", "", `There is no published specification from ${column.lab} to assess.`
-      + `${more ? ` ${more}` : ""}`));
-  content.append(proposeLine());
+  const tail = more ? ` ${more}` : "";
+  board.titled(content, `${column.lab}: ${lowerFirst(row)}`,
+    column.absent ? "Not assessed." : documentLine(column));
+  content.append(board.figure("NA", ", not assessed"));
+  if (column.absent) {
+    content.append(element("p", "",
+      `There is no published specification from ${column.lab} to assess.${tail}`), proposeLine());
+    return;
+  }
+  content.append(element("p", "",
+    `The index carries this document, and this publication does not assess it as a whole.${tail}`));
 }
 
 /* What we know, rather than what the lab has done. "Meta has published no
