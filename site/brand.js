@@ -336,15 +336,21 @@ async function markOlder(brand) {
  * variable, so measuring the header and writing it back is a loop. Below 900px
  * the height is whatever the rows come to, and nothing reads back into it.
  *
- * about.html and mcp.html measure their own headers the same way. They arrive
- * at the same number, so neither undoes the other. */
+ * about.html and mcp.html measure their own headers the same way, and going the
+ * other way this takes back only what it put there: a value one of them wrote is
+ * left where it is, so this cannot quietly undo a measurement somebody else made
+ * for a reason of their own. */
 function followHeight(header) {
   const wrapped = window.matchMedia("(max-width: 900px)");
+  const root = document.documentElement;
+  let written = null;
   const write = () => {
     if (wrapped.matches) {
-      document.documentElement.style.setProperty("--header-height", `${header.offsetHeight}px`);
-    } else {
-      document.documentElement.style.removeProperty("--header-height");
+      written = `${header.offsetHeight}px`;
+      root.style.setProperty("--header-height", written);
+    } else if (written !== null && root.style.getPropertyValue("--header-height") === written) {
+      root.style.removeProperty("--header-height");
+      written = null;
     }
   };
   write();
