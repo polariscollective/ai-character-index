@@ -855,7 +855,20 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* Nine companies need about a thousand pixels. Narrower than that the table
    scrolls sideways in its own frame, with the names of the rows held at its left
    edge so a score never loses its row. The head no longer holds at the top
-   there: a frame that can scroll is what a sticky head would stick to. */
+   there: a frame that can scroll is what a sticky head would stick to, and this
+   one scrolls away with the page.
+
+   `overflow-y: clip` looks like the way out of that and is not, which is worth
+   writing down because it is the obvious thing to try. A frame is meant to stop
+   being a vertical scroll container under it, freeing the head to hold against
+   the window instead. But the two axes are settled against each other when they
+   compute: with one of them `auto` or `scroll`, a `clip` on the other computes
+   to `hidden`, and `hidden` is a scroll container like any other. Measured in
+   Chrome 153, `overflow-x: auto; overflow-y: clip` computes to `auto/hidden`
+   and the head holds against the frame exactly as before. The one pairing that
+   frees it is `clip` on both axes, which takes the sideways scrolling with it.
+   So the head holds where the page is the scroller and nowhere else, and a
+   figure's column is read from the name its press opens. */
 @media (max-width: 1180px) {
   .matrix-wrap { overflow-x: auto; }
   .board { min-width: 1000px; }
