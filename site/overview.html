@@ -32,6 +32,12 @@
   --accent: #333D22;
   --energy: #B7C94B;
   --on-accent: #F1EFE3;
+  /* The two status colours, for the contradictions in the sheet: the rust marks
+     a claim the judges confirmed, the grey one they did not. They are the
+     framework's functional colours, and they never carry a claim alone: the
+     word beside the mark says which it is. */
+  --fail: #A0522D;
+  --neutral: #8A8F7A;
   --footer-height: 30px;
   /* The page's measure, and the gutter that aligns a full-bleed bar with it.
      The bars run edge to edge because their ground should; their contents must
@@ -210,30 +216,9 @@ h1::before {
    that wants the room. */
 .lede { margin: 0 0 22px; max-width: 108ch; color: var(--muted); }
 
-/* The grid. A table because it is one: a behaviour reads across, a
-   specification reads down, and a screen reader needs the headers to say so. */
-/* Five rows and then scroll, with the head held in place or the columns lose
-   their names on the way down. A height in pixels rather than a count of rows,
-   because the stylesheet cannot count rows: if a row's height changes this
-   number has to change with it. */
-/* The height the window leaves it, set by fitGrid in overview.js. The 430px
-   below is what it falls back to before that runs, and what it keeps if the
-   script never does: a guess at a laptop, which is what this was everywhere
-   until the grid learned to measure. */
-.grid-scroll {
-  overflow: auto;
-  max-height: var(--grid-max, 430px);
-  border-bottom: 1px solid var(--line);
-}
-/* How many rows are still below, under the grid on the left. Kept in the flow
-   even when empty so that reaching the end does not shift the page. */
-.grid-remaining {
-  margin: 8px 0 0;
-  min-height: 1.4em;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--faint);
-}
+/* The board. A table because it is one: a row reads across, a specification
+   reads down, and a screen reader needs the headers to say so. Both views draw
+   it, so the rules it is made of sit together further down, under .board. */
 thead th {
   position: sticky;
   top: 0;
@@ -261,33 +246,12 @@ thead th {
   color: var(--muted);
   vertical-align: bottom;
 }
-thead th.subject { width: 21%; }
-thead th .lab { display: block; }
-thead th .version {
-  display: block;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--faint);
-}
 tbody tr { border-bottom: 1px solid var(--line-light); }
 tbody th {
   padding: 0;
   font-weight: 400;
   vertical-align: middle;
 }
-.subject-button {
-  width: 100%;
-  padding: 10px 10px 10px 0;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.subject-button:hover span,
-.subject-button:focus-visible span { background: var(--energy); }
 .cell { padding: 4px 6px 4px 0; }
 .cell-button {
   width: 100%;
@@ -308,87 +272,11 @@ tbody th {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-/* The grid's cells carry the figure alone, centred: nine specifications leave
-   no room for the rubric's word beside it, and the scale says the word. */
-#grid .cell-button {
-  display: grid;
-  place-items: center;
-  min-height: 44px;
-  padding: 8px 4px;
-}
-#grid .cell-figure { font-size: 16px; }
-/* Nine columns: the heads give up some padding so "unpublished" and a full date
-   fit on one line. */
-#grid thead th:not(.subject) { padding: 0 4px 8px; }
-.cell-empty { padding: 8px 10px; color: var(--faint); font-family: var(--mono); }
-
-/* The line between one group of behaviours and the next. The reader's menu heads
-   its groups the same way -- 12px, semibold, muted -- so the two pages read as
-   one set carved once rather than two sets that happen to agree. The rule under
-   it is the divider; the name sits on it rather than floating above the rows it
-   introduces. */
-.group-row th {
-  padding: 20px 0 6px;
-  border-bottom: 1px solid var(--muted);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: left;
-}
-/* The first group opens the grid and needs no air above it: the header's own
-   rule is directly overhead. */
-.group-row:first-child th { padding-top: 4px; }
-
-/* The scale, under the grid rather than beside it: it is read once and then
-   rarely, and the rubric's own words are what it says. */
-.layout { display: flex; gap: 28px; align-items: flex-start; }
-.grid-area { flex: 1; min-width: 0; }
-/* Not sticky any more: with every bar of the rubric written out the rail is
-   taller than the window, and a column that cannot fit has nothing to stick. */
-.scale-rail {
-  flex: none;
-  /* A share of the width rather than a fixed column: it holds five sentences,
-     and at 220px on a wide screen they set as narrow ribbons while the grid
-     beside them had room to spare. Floored so the sentences never set in a
-     gutter, capped so they never set as a page. */
-  width: clamp(230px, 20%, 340px);
-  padding-right: 18px;
-  border-right: 1px solid var(--line);
-}
-@media (max-width: 880px) {
-  .layout { display: block; }
-  .scale-rail {
-    width: auto;
-    position: static;
-    margin-bottom: 22px;
-    padding: 0 0 16px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .scale-rail ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-}
-.scale-rail h2 { margin: 0 0 10px; font-family: var(--display); font-size: 15px; font-weight: 600; }
-.scale-rail ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
-.scale-rail li { font-size: 13px; }
-.scale-head { display: flex; gap: 10px; align-items: baseline; }
-/* The rubric's own sentence under its level, small: it is the difference
-   between a colour a reader recognises and a colour a reader trusts. */
-.scale-bar {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--faint);
-}
-.scale-rail .swatch {
-  flex: none;
-  width: 30px;
-  height: 16px;
-  border-radius: 2px;
-  background: rgb(51 61 34 / var(--tint));
-}
-.scale-rail .level { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* A cell of a document that carries figures elsewhere but none here. A column
+   whose document the payload says nothing about at all is left empty instead,
+   because a dash in every one of its cells would read as a document that was
+   examined and found silent. */
+.cell-empty { color: var(--faint); font-family: var(--mono); }
 
 dialog {
   width: min(720px, calc(100vw - 32px));
@@ -458,23 +346,46 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* The asterisk after "should", a way to the note on About that says what the
    word means for a model that nobody programs directly. */
 .lede a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; }
+.sheet-body h4 { margin: 14px 0 4px; font-size: 12px; font-weight: 600; color: var(--faint); }
+.sheet-sub { color: var(--faint); font-size: 13px; }
 .sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
-.judges { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-.judges li { padding-left: 14px; border-left: 2px solid var(--line); }
-.judges .who { font-family: var(--mono); font-size: 12px; color: var(--faint); }
-/* The panel's own readings, closed. The paragraph above is written from them and
-   names nobody; these are what it was written from, kept reachable rather than
-   kept in the way. */
-.panel-readings { margin: 2px 0 0; }
-.panel-readings summary {
-  width: fit-content;
-  color: var(--faint);
-  font-size: 12px;
-  cursor: pointer;
-}
-.panel-readings summary:hover { color: var(--ink); }
-.panel-readings[open] summary { margin-bottom: 10px; }
+/* What a judge said: the figure and the model's name in mono, the reason in the
+   line tone, each reading against a rule of its own. */
+.judges { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.judges li { padding: 2px 0 2px 12px; border-left: 3px solid var(--line); }
+.judges .who { display: block; font-size: 12px; color: var(--faint); }
+.judges .who .mono { font-size: 12px; }
+.judges p { margin: 0; }
 .missing { color: var(--faint); }
+
+/* One contradiction in the sheet: what the judges made of it, the situation,
+   the two passages quoted with a way into the reader, and every seat's reading.
+   The mark beside the word never carries the claim on its own. */
+.claims-count { color: var(--muted); font-size: 13px; }
+.claim { padding: 14px 0 6px; border-top: 1px solid var(--muted); }
+.claim-status { display: flex; align-items: center; gap: 8px; margin-bottom: 4px !important; font-weight: 600; }
+.status-glyph { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--neutral); }
+.status-glyph.is-confirmed { background: var(--fail); }
+.claim-absolute { font-size: 13px; color: var(--ink); }
+.passage { margin: 0 0 4px; padding-left: 14px; border-left: 2px solid var(--line); }
+.passage p { margin: 0; white-space: pre-line; font-size: 14px; line-height: 1.55; }
+.passage-cite { margin: 0 0 12px 16px !important; font-size: 12px; color: var(--faint); }
+.passage-cite a { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.readings { width: 100%; margin: 2px 0 10px; font-size: 13px; line-height: 1.45; table-layout: auto; }
+.readings th {
+  padding: 4px 10px 4px 0;
+  border-bottom: 1px solid var(--muted);
+  color: var(--muted);
+  font-weight: 600;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+.readings td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgb(92 107 60 / .2); vertical-align: top; }
+.readings td.yes-no { white-space: nowrap; }
+.readings .judge-model { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; }
+.readings.figures th:not(:nth-child(-n+2)), .readings td.numeric { text-align: right; }
+.readings td.numeric .mono, .readings td.rank-cell .mono { font-size: 13px; }
 
 /* The two views. The selected tab carries the chartreuse rule the header's menu
    gives the page you are on, so the two levels of navigation speak one idiom.
@@ -516,7 +427,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    more, what a question asks or why a company scored what it did, opens in a
    popover beside what was pressed, so the table is never pushed aside by it. */
 .gov-lede { max-width: 96ch; margin-bottom: 26px; }
-#gov-status:empty { display: none; }
+#gov-status:empty, #status:empty { display: none; }
 
 .gov-toolbar {
   display: flex;
@@ -614,6 +525,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    column by column. */
 .board .check-row .cell-button { width: 80%; margin-left: 20%; }
 .board .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
+/* A little more room on the right than the governance view needs, which only
+   ever marks "/4": "/10" is wider, and touched the figure. The coverage board
+   alone, so no cell of the other moves. */
+#board .check-row .cell-button { padding-right: 20px; }
 .board .check-row .cell-figure { font-size: 14px; }
 .board .check-row { background: rgb(92 107 60 / .05); }
 
@@ -690,7 +605,21 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-legend .swatches { display: flex; gap: 2px; }
 .gov-legend .swatch { width: 26px; height: 12px; border-radius: 2px; }
 .gov-foot { margin: 10px 0 0; max-width: 90ch; color: var(--muted); font-size: 13px; }
+.gov-foot:empty { display: none; }
 .gov-date { margin: 6px 0 0; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* The depth of a behaviour, written out under the table in the tone of the
+   board's other notes there: small, muted, the level and its word carrying the
+   weight. Three columns wide, one on a phone. */
+.depth-key { margin: 16px 0 0; max-width: 1100px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.depth-key h2 { margin: 0 0 8px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink); }
+.depth-key-list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 28px; }
+.depth-key-list > li { display: flex; gap: 8px; align-items: baseline; }
+.depth-key .anchor-level { flex: none; width: 1.4em; font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.depth-key .anchor-name { font-weight: 600; color: var(--ink); }
+.depth-key-conditions { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; }
+.depth-key-conditions li { position: relative; padding-left: 13px; }
+.depth-key-conditions li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+.depth-key .gov-foot { margin-top: 8px; }
 
 /* The six findings, under the table: headlines that open. */
 .gov-findings { margin-top: 40px; }
@@ -800,6 +729,22 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .anchors li { display: flex; gap: 12px; padding: 4px 8px; border-radius: 3px; line-height: 1.45; }
 .anchors li.is-here { background: rgb(183 201 75 / .25); }
 .anchor-level { flex: none; width: 1.2em; font-family: var(--mono); font-weight: 600; }
+.anchor-name { font-weight: 600; }
+/* A behaviour named inside a category's popover, which opens its own popover in
+   place rather than sending the reader back to the table to find its cell. */
+.inline-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline 1px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.inline-button:hover { background: var(--energy); }
 
 /* The reference text under the board, folded. */
 .gov-more { margin-top: 40px; border-top: 1px solid var(--muted); }
@@ -854,21 +799,38 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    there: a frame that can scroll is what a sticky head would stick to. */
 @media (max-width: 1180px) {
   .matrix-wrap { overflow-x: auto; }
-  .gov-heatmap { min-width: 1000px; }
-  .gov-heatmap thead th { position: static; }
-  .gov-heatmap tbody th, .gov-heatmap thead th.row-col {
+  .board { min-width: 1000px; }
+  .board thead th { position: static; }
+  .board tbody th, .board thead th.row-col {
     position: sticky;
     left: 0;
     z-index: 1;
     background: var(--paper);
   }
-  .gov-heatmap .check-row th { background: #EAE8DB; }
+  .board .check-row th { background: #EAE8DB; }
   /* Held at the left only. The top the wide layout gives the head, to clear the
      site header, would push this one cell down inside the frame. */
-  .gov-heatmap thead th.row-col { top: auto; }
+  .board thead th.row-col { top: auto; }
+}
+@media (max-width: 880px) {
+  .depth-key-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .gov-findings-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .depth-key-list { grid-template-columns: 1fr; }
+}
+/* A phone: the readings of a contradiction stop being a table and become
+   labelled lines, since five columns of yes and no cannot set in 360 pixels. */
+@media (max-width: 560px) {
+  .readings thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .readings, .readings tbody, .readings tr, .readings td { display: block; width: 100%; }
+  .readings tr { padding: 8px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
+  .readings td { padding: 1px 0; border: 0; text-align: left !important; }
+  .readings td[data-label]:not(.judge)::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 600; }
+  .readings td.judge { font-weight: 600; }
+  .readings td.reason { margin-top: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
@@ -923,29 +885,48 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
       rel="noopener noreferrer">Propose one</a>.
   </p>
 
-  <div class="layout">
-    <!-- The scale in the margin, beside the grid it explains rather than under
-         it: a reader meeting an unfamiliar tint should not have to scroll past
-         the thing they are reading to find out what it means. The long form of
-         the rubric opens in the note instead, because five bars of prose in a
-         two hundred pixel rail is prose nobody reads. -->
-    <aside class="scale-rail" id="legend" hidden aria-label="The scale">
-      <h2>The scale</h2>
-      <ol id="legend-list"></ol>
-    </aside>
+  <p class="grid-note" id="status" aria-live="polite">Loading.</p>
 
-    <div class="grid-area">
-      <div class="grid-scroll" id="grid-scroll">
-        <table id="grid">
-          <thead><tr id="grid-head"></tr></thead>
-          <tbody id="grid-body"></tbody>
-        </table>
-      </div>
-      <p class="grid-remaining" id="grid-remaining" aria-live="polite"></p>
-      <!-- Outside the table rather than its caption: inside, it sat in the
-           scrolling box and left the view with the rows it describes. -->
-      <p class="grid-note" id="grid-caption">Loading.</p>
-    </div>
+  <div class="gov-toolbar">
+    <p class="gov-hint">
+      Press a figure to see the evidence behind it, or a lab or a row&rsquo;s name to read
+      about it. Open a group to see its rows.
+    </p>
+    <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
+  </div>
+  <div class="matrix-wrap">
+    <table class="board" id="board">
+      <caption class="visually-hidden">Each lab&rsquo;s final score, its document as a whole and its behaviours by category, with each group&rsquo;s rows available to open</caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="gov-legend" id="legend" aria-hidden="true"></div>
+  <!-- The scale under the table rather than beside it: the board is read across
+       first, and a rail down the side took a fifth of the width from it. -->
+  <section class="depth-key" aria-labelledby="depth-key-title">
+    <h2 id="depth-key-title"></h2>
+    <ol class="depth-key-list" id="depth-key"></ol>
+    <p class="gov-foot" id="depth-key-odd"></p>
+  </section>
+  <p class="gov-foot" id="ties"></p>
+
+  <!-- One popover for the whole board, filled with whatever was pressed and
+       placed beside it. The browser closes it on Escape or a press elsewhere.
+       The governance view has its own, a few hundred lines below: two boards on
+       one page cannot share a popover, because each places its own beside the
+       cell that was pressed in it. -->
+  <div class="gov-pop" id="grid-pop" popover role="dialog" aria-labelledby="grid-pop-title" tabindex="-1"></div>
+
+  <!-- How the scores are made, folded: a reader who wants it opens it, and a
+       reader who does not is not made to scroll past it to reach the board.
+       Written by renderMethod from the payload, so its counts and its seats
+       cannot disagree with the board above. -->
+  <div class="gov-more">
+    <details id="method">
+      <summary>How the scores are made</summary>
+      <div class="gov-more-body" id="method-body"></div>
+    </details>
   </div>
   </section>
 

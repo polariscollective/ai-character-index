@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
          servePageFeedbackRoute, lastPageFeedbackReceived,
-         CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+         CURRENT_PUBLICATION, DRAFT_PUBLICATION, TEN_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
@@ -2207,6 +2207,251 @@ const rustIn = async png => page.evaluate(async encoded => {
   return rust;
 }, png.toString("base64"));
 
+// =============================================================================
+console.log("== Overview: the board, on the scale of four and on the scale of ten ==");
+/* The board reads its scale and its assessment from the publication. The
+ * current fixture is out of four and carries no assessment, so the board is its
+ * categories and nothing else; the publication of ten, answered to a pin,
+ * carries the final score, the document as a whole and its contradictions. */
+{
+  const root = new URL("/", base).href;
+  const S1 = "corpus@2026-01-01 > #sentences > ¶1";
+  const S2 = "corpus@2026-01-01 > #sentences > ¶2";
+  const B2 = "corpus@2026-01-01 > #blocks > ¶2";
+  const openBoard = async query => {
+    pageErrors = [];
+    await page.goto(`${root}${query}`, { waitUntil: "networkidle" });
+    await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+      undefined, { timeout: 10000 }).catch(() => {});
+  };
+  const readBoard = () => page.evaluate(() => {
+    const rows = [...document.querySelectorAll("#board tbody tr")];
+    const rowOf = name => rows.find(tr => tr.querySelector(".head-name")?.textContent === name);
+    const read = button => (button ? {
+      text: button.querySelector(".cell-figure")?.textContent ?? "",
+      max: button.querySelector(".cell-max")?.textContent ?? "",
+      label: button.getAttribute("aria-label"),
+      background: getComputedStyle(button).backgroundColor,
+    } : null);
+    const cell = (name, column) =>
+      read(rowOf(name)?.querySelectorAll("td")[column]?.querySelector(".cell-button"));
+    return {
+      heads: [...document.querySelectorAll("#board thead .company-button")].map(button => ({
+        rank: button.querySelector(".rank")?.textContent.trim(),
+        lab: button.querySelector(".company-name")?.textContent,
+      })),
+      names: rows.map(tr => tr.querySelector(".head-name")?.textContent),
+      subs: rows.map(tr => tr.querySelector(".head-sub")?.textContent ?? ""),
+      folded: rows.filter(tr => tr.classList.contains("check-row")).every(tr => tr.hidden),
+      cell,
+      levels: [...document.querySelectorAll("#depth-key > li .anchor-level")].map(n => n.textContent),
+      anchors: [...document.querySelectorAll("#depth-key > li .anchor-name")].map(n => n.textContent),
+      conditions: [...document.querySelectorAll("#depth-key .depth-key-conditions li")]
+        .map(n => n.textContent),
+      keyTitle: document.querySelector("#depth-key-title")?.textContent,
+      odd: document.querySelector("#depth-key-odd")?.textContent ?? "",
+      ties: document.querySelector("#ties")?.textContent ?? "",
+      method: document.querySelector("#method-body")?.textContent ?? "",
+      methodOpen: document.querySelector("#method")?.open,
+    };
+  });
+  const cellOf = async (name, column) => page.evaluate(([name, column]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    const button = row.querySelectorAll("td")[column].querySelector(".cell-button");
+    return { text: button.querySelector(".cell-figure")?.textContent ?? "",
+             max: button.querySelector(".cell-max")?.textContent ?? "",
+             label: button.getAttribute("aria-label"),
+             background: getComputedStyle(button).backgroundColor };
+  }, [name, column]);
+  const press = (name, column) => page.evaluate(([name, column]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    (column === null ? row.querySelector(".row-name")
+      : row.querySelectorAll("td")[column].querySelector(".cell-button")).click();
+  }, [name, column]);
+  const fold = name => page.evaluate(name => {
+    [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelector(".row-toggle").click();
+  }, name);
+  const readPop = () => page.evaluate(() => ({
+    open: document.querySelector("#grid-pop").matches(":popover-open"),
+    title: document.querySelector("#grid-pop h2")?.textContent,
+    subtitle: document.querySelector("#grid-pop .subtitle")?.textContent,
+    body: document.querySelector("#grid-pop").textContent.replace(/\s+/g, " ").trim(),
+    headings: [...document.querySelectorAll("#grid-pop h3")].map(h => h.textContent),
+    here: [...document.querySelectorAll("#grid-pop .anchors li.is-here .anchor-name")]
+      .map(n => n.textContent),
+    judges: [...document.querySelectorAll("#grid-pop .judges .who")]
+      .map(n => n.textContent.replace(/\s+/g, " ").trim()),
+    buttons: [...document.querySelectorAll("#grid-pop .gov-button")].map(b => b.textContent),
+  }));
+  const readSheet = () => page.evaluate(() => ({
+    open: document.querySelector("#sheet").open,
+    title: document.querySelector("#sheet-title").textContent,
+    body: document.querySelector("#sheet-body").textContent.replace(/\s+/g, " ").trim(),
+    statuses: [...document.querySelectorAll("#sheet-body .claim-status")]
+      .map(n => n.textContent.trim()),
+    links: [...document.querySelectorAll("#sheet-body .passage-cite a")]
+      .map(a => a.getAttribute("href")),
+    readings: [...document.querySelectorAll("#sheet-body .readings tbody tr")]
+      .map(tr => [...tr.querySelectorAll("td")].map(td => td.textContent.trim()).join("|")),
+  }));
+  const closeSheet = () => page.evaluate(() => document.querySelector("#sheet").close());
+  const closePop = () => page.evaluate(() => document.querySelector("#grid-pop").hidePopover());
+
+  // ---- the publication of four
+  await openBoard("");
+  const four = await readBoard();
+  check(!four.names.includes("Final score") && !four.names.includes("The document as a whole"),
+    "a publication of four has no final score and no document as a whole",
+    JSON.stringify(four.names));
+  check(four.names[0] === "Behaviours under test" && four.subs[0] === "out of 4, 2 behaviours"
+      && four.folded,
+    "its categories are the board's groups, folded", JSON.stringify([four.names, four.subs]));
+  check(four.keyTitle === "Depth of a behaviour, out of 4"
+      && four.levels.join() === "0,1,2,3,4" && four.conditions.length === 0 && four.odd === "",
+    "the scale under the table is the scale of four, with no conditions and no line on odd figures",
+    JSON.stringify([four.keyTitle, four.levels, four.odd]));
+  check((await cellOf("Behaviours under test", 0)).label
+      === "Acme, behaviours under test: 3.4 out of 4"
+      && (await cellOf("Behaviours under test", 0)).background === "rgb(118, 147, 56)",
+    "a category's figure is the plain mean of its behaviours, painted over 4",
+    JSON.stringify(await cellOf("Behaviours under test", 0)));
+  await fold("Behaviours under test");
+  check((await cellOf("Defined behaviour", 0)).background === "rgb(168, 154, 47)"
+      && (await cellOf("Defined behaviour", 0)).label
+        === "Acme, defined behaviour: 2.7 out of 4",
+    "a behaviour out of four wears the colour it always wore",
+    JSON.stringify(await cellOf("Defined behaviour", 0)));
+  check(pageErrors.length === 0, "the board out of four: no console errors", pageErrors.join("; "));
+
+  // ---- the publication of ten
+  await openBoard(`?publication=${TEN_PUBLICATION}`);
+  const ten = await readBoard();
+  check(ten.names.slice(0, 2).join(" | ") === "Final score | The document as a whole"
+      && ten.subs.slice(0, 2).join(" | ") === "out of 20 | out of 10, five criteria"
+      && ten.folded,
+    "the final score leads, the document as a whole follows, and every group starts folded",
+    JSON.stringify([ten.names, ten.subs, ten.folded]));
+  check(ten.heads[0].rank === "1" && ten.heads[0].lab === "Acme",
+    "the rank sits above the lab's name", JSON.stringify(ten.heads.slice(0, 3)));
+  const final = await cellOf("Final score", 0);
+  check(final.text === "11.8" && final.max === "/20"
+      && final.label === "Acme, final score: 11.8 out of 20"
+      && final.background === "rgb(192, 158, 43)",
+    "the final score is the behaviours plus the document as a whole, marked out of 20",
+    JSON.stringify(final));
+  const whole = await cellOf("The document as a whole", 0);
+  check(whole.text === "6.0" && whole.max === "/10" && whole.background === "rgb(189, 158, 44)",
+    "the document as a whole is its five criteria, out of 10", JSON.stringify(whole));
+  const na = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll("#board tbody tr")];
+    const cells = name => [...rows.find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelectorAll("td .cell-button")].map(b => ({ text: b.textContent,
+        na: b.classList.contains("cell-na"), label: b.getAttribute("aria-label") }));
+    return { final: cells("Final score"), whole: cells("The document as a whole") };
+  });
+  check(na.final.filter(one => one.na).length === 7 && na.whole.filter(one => one.na).length === 7
+      && na.final.every(one => one.na === (one.text === "NA"))
+      && na.final.some(one => one.label === "Nowhere, final score: not assessed") === false,
+    "a document with no assessment and a lab with no specification read NA on both rows",
+    JSON.stringify(na.final.map(one => one.text)));
+  check(ten.keyTitle === "Depth of a behaviour, out of 10"
+      && ten.levels.join() === "0,2,4,6,8,10"
+      && ten.anchors.join() === "absent,named,discussed,prescribed,demonstrated,bounded"
+      && ten.conditions.length === 3
+      && ten.conditions[0].startsWith("The edge is shown:")
+      && ten.odd === "An odd figure means the level below is fully met and part of the next.",
+    "the scale of ten sits under the table, with the three conditions under 10 and the odd line",
+    JSON.stringify([ten.levels, ten.conditions, ten.odd]));
+
+  await fold("Behaviours under test");
+  const behaviour = await cellOf("Defined behaviour", 0);
+  check(behaviour.text === "7.3" && behaviour.max === "/10"
+      && behaviour.label === "Acme, defined behaviour: 7.3 out of 10"
+      && behaviour.background === "rgb(152, 152, 50)",
+    "a behaviour out of ten is painted over ten", JSON.stringify(behaviour));
+  await press("Defined behaviour", 0);
+  let popover = await readPop();
+  check(popover.open && popover.body.includes("7.3 out of 10, prescribed and partly demonstrated")
+      && popover.here.join() === "prescribed,demonstrated"
+      && popover.judges.length === 3
+      && popover.headings.includes("Why this figure")
+      && popover.headings.includes("Where this specification stands"),
+    "a figure opens on its words, its readings, its place on the scale and both notes",
+    JSON.stringify([popover.headings, popover.here]));
+  await closePop();
+
+  await fold("The document as a whole");
+  const criterion = await cellOf("Unresolved contradictions", 0);
+  check(criterion.text === "1.0" && criterion.max === "/2",
+    "each criterion is shown out of 2", JSON.stringify(criterion));
+  await press("Unresolved contradictions", 0);
+  popover = await readPop();
+  check(popover.body.includes("1 confirmed of 2 listed")
+      && popover.body.includes("No person has reviewed the list.")
+      && popover.buttons.includes("Read the contradictions"),
+    "the contradictions say how many were confirmed, that nobody reviewed them, and open the list",
+    JSON.stringify([popover.body.slice(0, 200), popover.buttons]));
+  await page.evaluate(() => [...document.querySelectorAll("#grid-pop .gov-button")]
+    .find(button => button.textContent === "Read the contradictions").click());
+  const sheet = await readSheet();
+  check(sheet.open && sheet.title === "Acme: Unresolved contradictions"
+      && sheet.statuses.join(" | ") === "Confirmed | Not confirmed",
+    "the list opens in the sheet, confirmed first", JSON.stringify([sheet.title, sheet.statuses]));
+  check(sheet.body.includes("Each seat lists every contradiction it finds")
+      && sheet.body.includes("reads every claim, its own included")
+      && !sheet.body.includes("put to the others"),
+    "the sheet says how a contradiction was settled, by the second method",
+    sheet.body.slice(0, 300));
+  const links = sheet.links.map(href => new URL(href, root));
+  check(links.length === 4
+      && links.every(url => url.pathname === "/spec-reader/"
+        && url.searchParams.get("publication") === TEN_PUBLICATION)
+      && links.map(url => url.searchParams.get("passage")).join(" | ")
+        === [S2, B2, S1, S2].join(" | "),
+    "each claim quotes both its passages, each a link into the reader on that passage",
+    JSON.stringify(sheet.links));
+  check(sheet.readings.length === 6
+      && sheet.readings.some(row => row.startsWith("b answered by d|"))
+      && sheet.readings.filter(row => row.includes("|Yes|")).length >= 2,
+    "every seat's reading is there, and a substitute is named in its seat",
+    JSON.stringify(sheet.readings));
+  await closeSheet();
+
+  check(ten.method.includes("Final score, out of 20")
+      && ten.method.includes("the plain mean of the document's behaviour depths")
+      && ten.method.includes("reads every claim, its own included")
+      && !ten.method.includes("put to the others")
+      && !/sol|fable|deepseek|kimi/.test(ten.method)
+      && ten.methodOpen === false,
+    "how the scores are made is folded, says the second method, and names the payload's own seats",
+    ten.method.slice(0, 300));
+  check(ten.ties === "" || /share (first|second|third)/.test(ten.ties),
+    "the ties line says which place is shared, or says nothing", ten.ties);
+  check(pageErrors.length === 0, "the board out of ten: no console errors", pageErrors.join("; "));
+
+  pageErrors = [];
+  await page.goto(links[0].href, { waitUntil: "networkidle" });
+  await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(700);
+  const opened = await page.evaluate(() => {
+    const status = document.querySelector("#reader-status");
+    return {
+      document: document.querySelector(".document-panel")?.dataset.documentId ?? null,
+      current: document.querySelector(".document-panel [data-passage-id].current")
+        ?.dataset.locators?.split("\n") ?? [],
+      status: status.classList.contains("visible") ? status.textContent : "",
+    };
+  });
+  check(opened.document === DOC_ID && opened.current.includes(S2) && opened.status === ""
+      && pageErrors.length === 0,
+    "a contradiction's passage opens the reader on that passage, in the same publication",
+    `${JSON.stringify(opened)} ${pageErrors.join("; ")}`);
+}
+
 /* The bubble at the bottom right of every public page. What a walker can show
  * that no unit test can is that the pill is there on a page that is not the
  * reader, that the dialog refuses to send without both fields, and that what
@@ -2880,18 +3125,32 @@ console.log("== Every page: the feedback bubble ==");
    * layer included: a pill raised into it with showPopover is drawn above the
    * backdrop and still refuses a click, measured against this application. So
    * the pill moves into whatever modal is open, which is the one place the
-   * platform leaves operable. The overview opens its evidence panel with
-   * showModal, and somebody who wants to report that panel has to reach the
-   * pill while looking at it. */
-  await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
+   * platform leaves operable. The overview opens the contradictions of a
+   * document in a modal sheet, and somebody who wants to report that sheet has
+   * to reach the pill while looking at it.
+   *
+   * Under the pin, because that sheet holds a publication's assessment and the
+   * fixture the front page answers with carries none. Every other press on the
+   * board opens a popover, which is not a modal and takes nothing in. */
+  await page.goto(`${root}?publication=${TEN_PUBLICATION}`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(400);
   const atRest = await page.evaluate(() =>
     document.querySelector("#pf-pill")?.parentElement?.tagName);
   check(atRest === "BODY", "with nothing open the pill lives on the body", atRest);
 
-  const panelButton = page.locator("table button").first();
-  if (await panelButton.count()) {
-    await panelButton.click();
+  const openedTheSheet = await page.evaluate(() => {
+    const rowOf = name => [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    rowOf("The document as a whole")?.querySelector(".row-toggle")?.click();
+    rowOf("Unresolved contradictions")?.querySelector("td .cell-button")?.click();
+    const read = [...document.querySelectorAll("#grid-pop .gov-button")]
+      .find(button => button.textContent === "Read the contradictions");
+    read?.click();
+    return Boolean(read);
+  });
+  if (openedTheSheet) {
     await page.waitForTimeout(300);
     const tookItIn = await page.evaluate(() => {
       const pill = document.querySelector("#pf-pill");
