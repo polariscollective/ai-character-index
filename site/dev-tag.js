@@ -1,27 +1,25 @@
-/* The mark beside the wordmark on a deployment showing unpublished work.
+/* The mark beside the wordmark, on every deployment.
  *
- * WHAT DECIDES IT
+ * WHAT IT SAYS
  *
- * Not the domain, and not a build-time variable. These pages are static files
- * copied into public/, identical in every environment, so nothing the platform
- * knows reaches them at build time. What reaches them is a route, and the route
- * already answers the question that matters: /api/reader/publication carries
- * is_public, which is an operator saying they have looked at this build. A
- * development deployment serves the newest build whether or not anyone has.
+ * The index is being built in the open. A figure on any page of it may move,
+ * and a reader who is about to quote one is owed that before they do. So the
+ * tag is raised everywhere, production included, and says in two sentences what
+ * a figure here is worth: that what is published may still change, and where
+ * the method and the figures come from.
  *
- * Two conditions, either of which raises it.
+ * WHICH BUILD IS ON SCREEN
  *
- * The publication on screen has not been published -- a claim about what you are
- * reading -- or this deployment serves development, which is a claim about where
- * you are. The first alone was not enough, and the reason is worth keeping: a
- * development deployment serves the NEWEST build whether or not anyone published
- * it, so when the newest happens to be public there is nothing for is_public to
- * say and the dev site looked exactly like production. It is still the place
- * unreviewed work lands, and a reader following a shared link deserves to know
- * that before they quote a figure from it.
+ * These pages are static files copied into public/, identical in every
+ * environment, so nothing the platform knows reaches them at build time. What
+ * reaches them is a route: /api/reader/publication answers with the build this
+ * page is serving and says where it stands, published, not yet published, or
+ * superseded by a later one. The note carries that sentence, and a superseded
+ * build also raises a second tag beside the first, because a reader who follows
+ * a shared link has no other way to know the figures have moved on.
  *
- * A request that fails changes nothing. A warning raised because the network
- * stuttered would teach a reader to ignore it.
+ * A request that fails changes nothing but the sentence it would have added.
+ * The two sentences hold whatever the network does.
  *
  * WHY IT IS ONE FILE
  *
@@ -33,7 +31,7 @@
 
 /* Where the published index lives. Written down rather than derived: a
  * deployment showing unpublished work cannot know the address of the one that
- * does, and a reader who has just been told this build is provisional is owed
+ * does, and a reader who has just been told this build is unpublished is owed
  * somewhere to go. */
 const PUBLISHED = "https://ai-constitutions-index.polariscollective.org";
 
@@ -55,6 +53,32 @@ const STYLE = `
 }
 .dev-tag:hover { background: #A0522D; color: #F1EFE3; }
 .dev-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
+.dev-ask {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 1px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: 1px;
+}
+.dev-older {
+  align-self: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid #5C6B3C;
+  border-radius: 999px;
+  color: #5C6B3C;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: .01em;
+}
 .dev-note {
   /* What centres a modal is its auto margin, and two of the four pages carry a
      universal reset that zeroes every margin: without this the note opens in the
@@ -83,7 +107,7 @@ const STYLE = `
   font-weight: 600;
 }
 .dev-note p { margin: 0 0 10px; }
-.dev-note p:last-of-type { margin-bottom: 14px; }
+.dev-note .dev-more p:last-child { margin-bottom: 14px; }
 .dev-note a { color: #23281B; text-decoration: underline 2px #B7C94B; text-underline-offset: 3px; }
 .dev-note a:hover { background: #B7C94B; }
 .dev-note .dev-close {
@@ -99,16 +123,20 @@ const STYLE = `
 .dev-note .dev-close:hover { background: #B7C94B; }
 `;
 
-/* Said about the index rather than about this branch: whoever reads it is being
- * told what a figure on this page is worth, not what a team is working on. */
+/* Said about the index rather than about this build: whoever reads it is being
+ * told what a figure on this page is worth. */
 const LINES = [
-  "This deployment shows builds of the index before anyone has published them. "
-  + "What is on screen has not been reviewed, and it is here so that it can be.",
-  "Treat the readings as provisional. A judgement may rest on a method still "
-  + "being settled, and a figure or a comparison shown here may never have been "
-  + "read a second time, nor checked against models from a different provider. "
-  + "Nothing here has been through the review a published build goes through.",
+  "What is published here may still change.",
+  "The method comes from working papers, and the figures come from a panel of "
+  + "three judges from different model families, whose readings are combined.",
 ];
+
+/* Where the build on screen stands, in the route's own words. */
+const STANDING = {
+  published: "This page shows the index as published.",
+  unpublished: "This page shows a build that nobody has published yet.",
+  superseded: "This page shows an earlier publication of the index.",
+};
 
 function paragraph(text) {
   const node = document.createElement("p");
@@ -116,6 +144,8 @@ function paragraph(text) {
   return node;
 }
 
+/* The tag, the note behind it, and an empty block inside the note for whatever
+ * the route turns out to say. */
 function build(brand) {
   const style = document.createElement("style");
   style.textContent = STYLE;
@@ -124,22 +154,10 @@ function build(brand) {
   const note = document.createElement("dialog");
   note.className = "dev-note";
   const title = document.createElement("h2");
-  title.textContent = "This is a development build";
-  note.append(title, ...LINES.map(paragraph));
-
-  const out = document.createElement("p");
-  const link = document.createElement("a");
-  link.href = PUBLISHED;
-  // Its own tab: whoever is reading a development build is usually in the middle
-  // of looking at something, and sending them away from it to check a figure
-  // against the published one costs them their place. noopener because a page
-  // opened this way otherwise keeps a handle on the one that opened it.
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.textContent = "the published index";
-  out.append(document.createTextNode("For readings that have been published, see "),
-             link, document.createTextNode("."));
-  note.append(out);
+  title.textContent = "Work in progress";
+  const more = document.createElement("div");
+  more.className = "dev-more";
+  note.append(title, ...LINES.map(paragraph), more);
 
   const close = document.createElement("button");
   close.type = "button";
@@ -151,30 +169,70 @@ function build(brand) {
   const tag = document.createElement("button");
   tag.type = "button";
   tag.className = "dev-tag";
-  tag.textContent = "Development";
-  tag.title = "This deployment shows unpublished builds";
+  // The question mark is the whole of the invitation: a pill that says nothing
+  // else looks like a label, and nobody presses a label.
+  const ask = document.createElement("span");
+  ask.className = "dev-ask";
+  ask.setAttribute("aria-hidden", "true");
+  ask.textContent = "?";
+  tag.append(document.createTextNode("Work in progress "), ask);
+  tag.title = "What this means";
   tag.addEventListener("click", () => note.showModal());
 
   brand.append(tag);
   document.body.append(note);
+  return more;
 }
 
-async function start() {
-  const brand = document.querySelector(".site-brand");
-  if (!brand) return;
+/* The sentence about the build on screen, and the one about the deployment.
+ * Both are added once the route answers, so the note is complete from the
+ * moment it opens for anyone but the fastest reader. */
+async function describe(more, brand) {
+  const pin = new URLSearchParams(location.search).get("publication");
   try {
-    const response = await fetch("/api/reader/publication");
+    const response = await fetch("/api/reader/publication"
+      + (pin ? `?publication=${encodeURIComponent(pin)}` : ""));
     if (!response.ok) return;
     const publication = await response.json();
-    /* Exactly false and exactly true, never merely falsy or truthy: a route that
-     * answered without either field would otherwise raise a warning it has no
-     * grounds for, or withhold one it does. */
-    if (publication.is_public === false || publication.development === true) {
-      build(brand);
+    if (STANDING[publication.standing]) {
+      more.append(paragraph(STANDING[publication.standing]));
+    }
+    if (publication.standing === "superseded") {
+      const older = document.createElement("span");
+      older.className = "dev-older";
+      older.textContent = "Older version";
+      brand.append(older);
+    }
+    /* Exactly true, never merely truthy: a route that answered without the
+     * field would otherwise make a claim about where you are that nobody has
+     * grounds for. */
+    if (publication.development === true) {
+      more.append(paragraph(
+        "This deployment shows builds of the index before anyone has published them."));
+      const out = document.createElement("p");
+      const link = document.createElement("a");
+      link.href = PUBLISHED;
+      // Its own tab: whoever is reading an unpublished build is usually in the
+      // middle of looking at something, and sending them away from it to check a
+      // figure against the published one costs them their place. noopener
+      // because a page opened this way otherwise keeps a handle on the one that
+      // opened it.
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "the published index";
+      out.append(document.createTextNode("For readings that have been published, see "),
+                 link, document.createTextNode("."));
+      more.append(out);
     }
   } catch {
     // No answer is no claim.
   }
+}
+
+function start() {
+  const brand = document.querySelector(".site-brand");
+  if (!brand) return;
+  describe(build(brand), brand);
 }
 
 start();
