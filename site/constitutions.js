@@ -555,13 +555,11 @@ function renderScales() {
     item.append(element("span", "anchor-level", String(score)), element("span", "", plain));
     criteria.append(item);
   });
-  nodes.criterionScaleTitle.textContent =
-    `How the document is built, criterion by criterion, out of ${criterionMax()}`;
+  nodes.criterionScaleTitle.textContent = "How the document is built, out of 2 for each part";
   nodes.criterionScale.replaceChildren(criteria);
   nodes.criterionNote.textContent =
-    `Each criterion is shown at half its score, out of ${shownMax()}, so the `
-    + `${state.data.criteria.length} of them add up to ${wholeMax()}. A figure between two of `
-    + "these falls between the two descriptions.";
+    `A figure between 0 and 2 means the constitution does part of what that part asks. The `
+    + `${state.data.criteria.length} parts add up to ${wholeMax()}.`;
 }
 
 /* The ties the ranking cannot break, said under the table. There is one figure

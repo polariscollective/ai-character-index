@@ -62,23 +62,11 @@
   "criterion": [
    {
     "score": 0,
-    "plain": "The document does not meet the criterion at all."
-   },
-   {
-    "score": 1,
-    "plain": "A trace of what the criterion asks, well short of halfway."
+    "plain": "The constitution does not do this."
    },
    {
     "score": 2,
-    "plain": "Halfway: the document does some of what the criterion asks, and what is missing matters."
-   },
-   {
-    "score": 3,
-    "plain": "Most of what the criterion asks, short of the top."
-   },
-   {
-    "score": 4,
-    "plain": "The document meets the criterion in full, across the whole text."
+    "plain": "It does this in full."
    }
   ]
  },
