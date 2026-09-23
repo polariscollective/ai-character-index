@@ -693,19 +693,9 @@ function renderTies() {
     .join(" ");
 }
 
-/* The board this one leads, in one line. Its figures come from the index's own
- * publication, which the file names, so the line carries that publication and
- * opens on the one the figures here were written beside. */
-function renderCoverageLine() {
-  const where = element("a", null, "Open the coverage board");
-  where.href = state.data.publication
-    ? `/coverage?publication=${encodeURIComponent(state.data.publication)}`
-    : "/coverage";
-  nodes.coverageLine.replaceChildren(
-    document.createTextNode("The coverage board sets the same documents against the same "
-      + "behaviours, and every figure on it opens on the passages behind it. "),
-    where, document.createTextNode("."));
-}
+/* The coverage board, built from the index's own publication, stays reachable at
+ * /coverage and is linked from nowhere: it carries the readings behind each
+ * figure, which are working material rather than what the index publishes. */
 
 /* ---- Loading ---------------------------------------------------------------- */
 
@@ -720,7 +710,6 @@ export async function initializeConstitutions() {
     criterionNote: byId("criterion-note"),
     ties: byId("ties"),
     asOf: byId("as-of"),
-    coverageLine: byId("coverage-line"),
   });
   board = createBoard({
     nodes: { table: byId("board"), pop: byId("grid-pop"), expandAll: byId("expand-all") },
@@ -758,7 +747,6 @@ export async function initializeConstitutions() {
   renderLegend();
   renderScales();
   renderTies();
-  renderCoverageLine();
   nodes.asOf.textContent = data.as_of ? `As of ${data.as_of}` : "";
   board.wirePopover([document.querySelector("#view-coverage .matrix-wrap")]);
   board.nodes.expandAll.addEventListener("click", () => board.expandEvery());
