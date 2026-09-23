@@ -154,16 +154,22 @@ const handler = createMcpHandler(
     server.registerTool("governance_board", {
       title: "The board of governance",
       description:
-        "The index's second board: nine companies scored out of 16 on four "
-        + "questions about how they govern the rules their models follow, each "
-        + "question split into checks scored 0 to 4 with the descriptions the "
-        + "scores were given against, the paragraph we wrote on what we found "
-        + "for each company, and the best practices shown beside the score and "
-        + "never counted in it. Pass company to narrow it to one company. These "
-        + "figures were given by hand from public documents rather than judged "
-        + "by the panel, and the board belongs to no publication and carries its "
-        + "own as-of date. All nine companies come to about 83,000 characters, "
-        + "and one company to about 12,000, as of September 2026.",
+        "The index's second board: nine companies scored on two figures out of "
+        + "10 each about how they govern the rules their models follow. What is "
+        + "published is the four asks of our own working paper, each split into "
+        + "checks scored 0 to 4 with the descriptions the scores were given "
+        + "against, plus the licence on the published text; it is the figure the "
+        + "companies are ranked by. What it engages is eight best practices "
+        + "scored 0, 1 or 2 on what each company publishes about its own "
+        + "training, testing and monitoring. The two are never added, and the "
+        + "answer carries the reason. It also carries the paragraph we wrote on "
+        + "what we found for each company. Pass company to narrow it to one "
+        + "company. These figures were given by hand from public documents "
+        + "rather than judged by the panel, and the board belongs to no "
+        + "publication and carries its own as-of date. All nine companies come "
+        + "to about 90,000 characters; one company answers with the same "
+        + "measures and one company's figures, about 30,000, as of September "
+        + "2026.",
       inputSchema: z.object({
         company: z.string().optional().describe(
           "One company's name, or part of it, such as Anthropic. All nine by "

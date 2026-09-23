@@ -27,9 +27,10 @@ import { CRITERIA, SHOWN_MAX, WHOLE_MAX, FINAL_MAX, CONTRADICTIONS_RULE, HALVING
 import { depthScaleOf, levelsOf } from "../../site/depth-scale.js";
 import { ToolError } from "./mcp-tools.mjs";
 
-/* The second board's own maxima: four questions of 4, and 2 for each practice
- * that carries a score. */
-const OVERALL = 16;
+/* The second board's own maxima: 4 for a question and each of its checks, 2 for
+ * each practice that carries a score. The two figures a company gets are out of
+ * 10 each and are never added, which the answer says in so many words. */
+const SCALE = 4;
 const PRACTICE = 2;
 
 /** A company named in an argument, matched loosely: "openai" finds OpenAI. */
@@ -187,15 +188,20 @@ export function constitutionsBoard({ publication, payload, documents }, args = {
   };
 }
 
-/* The practices shown beside the second board's score: the five anyone can
- * check, and the four a company is asked to publish. The fifth internal
- * practice is scored for nobody, and carries its own note saying why. */
-const askedToPublish = () => governance.internal.filter(practice => practice.asked_to_publish);
-const practicesOf = () => [...governance.supporting, ...governance.internal];
-const practiceMax = () => PRACTICE * (governance.supporting.length + askedToPublish().length);
+/* A practice by its id, from either list, and whether any figure counts it. The
+ * one the paper raises as an open problem is counted in neither. */
+const practiceOf = id => governance.supporting.find(practice => practice.id === id)
+  || governance.internal.find(practice => practice.id === id);
+const practiceScore = (labId, id) => governance.supporting_scores[labId]?.[id]
+  ?? governance.internal_scores[labId]?.[id] ?? null;
+const unscoredIds = () => governance.columns.flatMap(column => column.unscored || []);
+
+/* One column's rows, in the order the board shows them: its questions with
+ * their checks, then its practices. */
+const questionOf = id => governance.questions.find(question => question.id === id);
 
 /**
- * The board of governance: nine companies on four questions.
+ * The board of governance: nine companies on two figures.
  *
  * It belongs to no publication. Nothing in it was judged by a panel: the scores
  * were given by hand from public documents, as of the date the data carries,
@@ -208,7 +214,6 @@ export function governanceBoard(args = {}) {
     throw new ToolError(`no company called ${args.company}. This board carries: `
       + `${governance.labs.map(lab => lab.name).join(", ")}`);
   }
-  const practices = practicesOf();
   return {
     as_of: governance.as_of,
     researched: governance.researched,
@@ -216,15 +221,29 @@ export function governanceBoard(args = {}) {
       + "figures, and a different reading could move a company by a few points.",
     papers: governance.papers,
     measures: {
-      overall: {
-        max: OVERALL,
-        means: "The four questions added together, each of them the mean of its checks.",
-      },
+      /* Two figures side by side, never added. The answer carries the reason in
+       * the board's own words, because a client that added them would publish a
+       * number nobody scored. */
+      figures: governance.columns.map(column => ({
+        id: column.id,
+        name: column.name,
+        max: column.out_of,
+        means: column.plain,
+        reading: column.about,
+        ranks_the_companies: column.ranks === true,
+        made_of: {
+          questions: column.questions,
+          practices: column.practices,
+          counted_in_no_figure: column.unscored || [],
+        },
+      })),
+      not_added: governance.not_added,
       minimum: governance.minimum_note,
       questions: governance.questions.map(question => ({
         id: question.id,
         name: question.name,
-        max: 4,
+        max: SCALE,
+        from: governance.papers[question.paper].credit,
         means: question.explainer,
         asked: question.question,
         reading: question.reading,
@@ -232,20 +251,21 @@ export function governanceBoard(args = {}) {
         checks: question.checks.map(check => ({
           id: check.id,
           name: check.short,
-          max: 4,
+          max: SCALE,
           means: check.label,
           reading: check.reading,
           anchors: check.anchors,
         })),
       })),
       best_practices: {
-        max: practiceMax(),
-        means: "Practices shown beside the score and never counted in it.",
+        max: PRACTICE,
+        means: "Practices scored 0, 1 or 2, each counted in one of the two figures.",
         note: governance.disclosure_note,
-        practices: practices.map(practice => ({
+        practices: [...governance.supporting, ...governance.internal].map(practice => ({
           id: practice.id,
           name: practice.short,
           max: practice.asked_to_publish === false ? null : PRACTICE,
+          from: governance.papers[practice.paper].credit,
           means: practice.label,
           reading: practice.reading,
           anchors: practice.anchors || governance.supporting_scale,
@@ -260,31 +280,37 @@ export function governanceBoard(args = {}) {
       name: company.name,
       rank: company.rank,
       open_weights: company.open_weights === true,
-      overall: { figure: company.total, max: OVERALL },
-      questions: governance.questions.map(question => ({
-        id: question.id,
-        figure: company.byQuestion[question.id],
-        max: 4,
-        checks: question.checks.map(check => ({
-          id: check.id,
-          figure: governance.scores[company.id][check.id],
-          max: 4,
+      figures: governance.columns.map(column => ({
+        id: column.id,
+        figure: company.byColumn[column.id],
+        max: column.out_of,
+        ranks_the_companies: column.ranks === true,
+        questions: column.questions.map(id => ({
+          id,
+          figure: company.byQuestion[id],
+          max: SCALE,
+          checks: questionOf(id).checks.map(check => ({
+            id: check.id,
+            figure: governance.scores[company.id][check.id],
+            max: SCALE,
+          })),
+          found: governance.profiles[company.id][id],
         })),
-        found: governance.profiles[company.id][question.id],
+        practices: column.practices.map(id => ({
+          id,
+          figure: practiceScore(company.id, id),
+          max: PRACTICE,
+          evidence: governance.internal_evidence[company.id]?.[id] ?? null,
+          note: governance.supporting_notes[company.id]?.[id] ?? null,
+        })),
+        found: governance.profiles[company.id][column.prose],
       })),
-      best_practices: {
-        figure: company.supporting,
-        max: practiceMax(),
-        practices: practices.map(practice => ({
-          id: practice.id,
-          figure: governance.supporting_scores[company.id]?.[practice.id]
-            ?? governance.internal_scores[company.id]?.[practice.id] ?? null,
-          max: practice.asked_to_publish === false ? null : PRACTICE,
-          evidence: governance.internal_evidence[company.id]?.[practice.id] ?? null,
-          note: governance.supporting_notes[company.id]?.[practice.id] ?? null,
-        })),
-        found: governance.profiles[company.id].supporting,
-      },
+      counted_in_no_figure: unscoredIds().map(id => ({
+        id,
+        name: practiceOf(id).short,
+        figure: null,
+        not_assessed: governance.internal_note,
+      })),
     })),
   };
 }

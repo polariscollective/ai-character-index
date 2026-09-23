@@ -1,28 +1,40 @@
-/* The overview's second view: how each lab governs the rules its models follow.
+/* The overview's second view: how each company governs the rules its models follow.
  *
  * A board rather than a document: one table that takes the whole width, the
- * companies across in rank order, and down the side the total, the four
- * questions and, outside the total, the best practices (called supporting
- * practices in the data). Each question opens into its checks. The best
- * practices open into the five anyone can check, the four only the company can
- * show, scored on what it publishes, and the one only an internal audit could
- * show, NA for every company. Anything more, what a row asks, how it is scored,
- * or why a company scored what it did, opens in a popover beside what was
- * pressed, so the table never gives up its width to it.
+ * companies across in rank order, and down the side two figures, each out of
+ * ten, each with the rows it is made of under it.
+ *
+ * "What is published" is what a reader can check without being let in: the ten
+ * checks of the four asks, which open under their questions, and the licence on
+ * the published text. It is the figure the companies are ranked by. "What it
+ * engages" is whether the document binds the models: eight practices, scored on
+ * what each company publishes about its own, sitting beside the first figure and
+ * entering no rank. A ninth practice is counted in neither, because nobody
+ * outside could check it, and the row says so.
+ *
+ * The two are never added. The checks carry a written description of 0, 2 and 4
+ * on every line; the practices are scored 0, 1 or 2 against one generic scale
+ * with no line of its own, so a single total would read as more precise than
+ * the scores behind it are. The board says that under the table, in
+ * governance.json's own words.
+ *
+ * Each figure is the mean of its rows' shares of their own maximum, times ten,
+ * which is the one rule that lets a row out of 4 and a row out of 2 sit in one
+ * column without either being rescored.
+ *
+ * Anything more, what a row asks, how it is scored, or why a company scored what
+ * it did, opens in a popover beside what was pressed, so the table never gives
+ * up its width to it.
  *
  * The table, the popover, the folds and the colours are board.js, which the
  * coverage view draws from as well: this file brings the data, the rows and the
  * words of its own popovers, and nothing else.
  *
  * Everything comes from governance.json: the scores, what each score means, and
- * the text of the research note, lab by lab and question by question. A
- * question is the average of its checks, on their own scale of 0 to 4, and the
- * overall score is the sum of the four questions, out of 16, so every question
- * weighs the same whatever its number of checks and the overall score reads as
- * a different kind of figure. They are computed here rather than stored, so the
- * ranking cannot disagree with the checks it is made of, and a profile's opening
- * line, "Published constitution, 2.7 out of 4", is written from the same
- * averages rather than typed beside them.
+ * the text of the research note, company by company and row by row. The figures
+ * are computed here rather than stored, so the ranking cannot disagree with the
+ * rows it is made of, and a profile's opening line, "Published constitution, 2.7
+ * out of 4", is written from the same averages rather than typed beside them.
  *
  * Nothing is built with innerHTML, as in overview.js. The text here is ours
  * rather than a model's, but one rule for the whole page is easier to keep.
@@ -33,64 +45,77 @@ import { createBoard, element, level, rankBy, ORDINALS } from "./board.js";
  * says where the drawings come from and which two companies have none. */
 import { companyMark } from "./company-marks.js";
 
-/* Per question, the average of its checks; then the overall score, the sum of
- * the four questions; and the best practices, reported beside the overall
- * score and never in it. */
+const SCALE = 4;      // a question, and each of its checks
+const PRACTICE = 2;   // a best practice, wherever it is counted
+/* A question or a column's figure, to one decimal. A check and a practice stay
+ * whole numbers. */
+const shown = value => value.toFixed(1);
+
 const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
 
-/* The practices that only a company can show: four the paper asks it to
- * publish, scored on what it publishes, and one it does not, left NA. */
-const disclosedOf = data => data.internal.filter(practice => practice.asked_to_publish);
-const auditOnlyOf = data => data.internal.filter(practice => !practice.asked_to_publish);
+const board = { data: null, labs: [], nodes: {} };
 
+const questionOf = id => board.data.questions.find(question => question.id === id);
+/* A practice by its id, from either list: the five anyone can check and the
+ * five only the company can show are one vocabulary to everything below. */
+const practiceOf = (data, id) =>
+  data.supporting.find(practice => practice.id === id)
+  || data.internal.find(practice => practice.id === id);
+/* Whether a practice is one of those the company alone can show, which decides
+ * where its score is read from and whether its 0 carries the note. */
+const onlyTheCompany = (data, id) => data.internal.some(practice => practice.id === id);
+const practiceScoreOf = (data, labId, id) => (onlyTheCompany(data, id)
+  ? data.internal_scores[labId][id] : data.supporting_scores[labId][id]);
+const columnOf = (data, id) => data.columns.find(column => column.practices.includes(id));
+/* Which working paper a row comes from, in two words, for the line under its
+ * name. Said on the row itself because the two papers sit in one column. */
+const creditOf = (data, row) => data.papers[row.paper].credit;
+
+/* A column's figure: the mean of its rows' shares of their own maximum, times
+ * ten. A check out of 4 and a practice out of 2 can sit in one column that way
+ * without either being rescored, which is the whole reason the two figures are
+ * not added to each other. */
 export function totalsFor(data, labId) {
+  // Its own data and nothing from the page: the MCP tool imports this file in
+  // node, where `board` is empty, so every lookup here goes through `data`.
+  const question = id => data.questions.find(one => one.id === id);
   const scores = data.scores[labId];
   const byQuestion = {};
-  data.questions.forEach(question => {
-    byQuestion[question.id] = average(question.checks.map(check => scores[check.id]));
+  data.questions.forEach(one => {
+    byQuestion[one.id] = average(one.checks.map(check => scores[check.id]));
   });
-  const total = Object.values(byQuestion).reduce((sum, value) => sum + value, 0);
-  const supporting = [
-    ...data.supporting.map(practice => data.supporting_scores[labId][practice.id]),
-    ...disclosedOf(data).map(practice => data.internal_scores[labId][practice.id]),
-  ].reduce((sum, value) => sum + value, 0);
-  return { byQuestion, total, supporting };
+  const byColumn = {};
+  data.columns.forEach(column => {
+    const shares = [
+      ...column.questions.flatMap(id =>
+        question(id).checks.map(check => scores[check.id] / SCALE)),
+      ...column.practices.map(id => practiceScoreOf(data, labId, id) / PRACTICE),
+    ];
+    byColumn[column.id] = average(shares) * column.out_of;
+  });
+  return { byQuestion, byColumn };
 }
 
-/* By overall score, and a tie broken on the best practices. That is the research
- * note's own rule. On averages it breaks two ties: OpenAI and Anthropic, and
- * Meta and xAI. */
-const ahead = (a, b) => (level(a.total, b.total) ? a.supporting > b.supporting : a.total > b.total);
+/* The rank is the first column's figure and nothing else: the second sits
+ * beside it and never breaks a tie, so companies level on the first share a
+ * place. */
+const RANKED_BY = data => data.columns.find(column => column.ranks).id;
+const ahead = (a, b) => !level(a.ranking, b.ranking) && a.ranking > b.ranking;
 
-/* Labs level on both the overall score and the best practices share a place:
- * a rank is one more than the number of labs ahead. */
 export function ranked(data) {
+  const by = RANKED_BY(data);
   const labs = data.labs
-    .map(lab => ({ ...lab, ...totalsFor(data, lab.id) }))
-    .sort((a, b) => (level(a.total, b.total) ? b.supporting - a.supporting : b.total - a.total));
+    .map(lab => {
+      const totals = totalsFor(data, lab.id);
+      return { ...lab, ...totals, ranking: totals.byColumn[by] };
+    })
+    .sort((a, b) => b.ranking - a.ranking);
   return rankBy(labs, ahead);
 }
 
-const SCALE = 4;
-const OVERALL = 16;
-const PRACTICE = 2;
-/* A question or an overall score, to one decimal. A check stays a whole number. */
-const shown = value => value.toFixed(1);
-
-const board = { data: null, labs: [], nodes: {}, bestMax: 0 };
 /* The board this view draws on, built in initializeGovernance. */
 let view = null;
 
-const questionOf = id => board.data.questions.find(q => q.id === id);
-
-/* What opens in the table: each question into its checks, and the supporting
- * practices into theirs, the internal ones included. */
-const GROUPS = { supporting: "Best practices" };
-const groupName = id => GROUPS[id] || questionOf(id).name;
-const partsOf = id => (GROUPS[id] ? "practices" : "checks");
-/* "the practices" for a group with a name of its own, "its checks" for a
- * question, which is how the button to open one reads in a sentence. */
-const partsPhrase = id => `${GROUPS[id] ? "the" : "its"} ${partsOf(id)}`;
 const rowId = id => `gov-check-${id.replace(".", "-")}`;
 
 /* ---- What each popover is made of ------------------------------------------ */
@@ -99,11 +124,11 @@ const rowId = id => `gov-check-${id.replace(".", "-")}`;
  * its own description when it is even, on the two either side when it is odd. */
 function anchorsList(check, score) {
   const list = element("ol", "anchors");
-  [0, 2, 4].forEach(level => {
+  [0, 2, 4].forEach(mark => {
     const item = element("li");
-    if (score !== null && Math.abs(score - level) <= 1) item.classList.add("is-here");
-    item.append(element("span", "anchor-level", String(level)),
-      element("span", "", check.anchors[String(level)]));
+    if (score !== null && Math.abs(score - mark) <= 1) item.classList.add("is-here");
+    item.append(element("span", "anchor-level", String(mark)),
+      element("span", "", check.anchors[String(mark)]));
     list.append(item);
   });
   return list;
@@ -120,58 +145,64 @@ function checksOf(lab, question) {
   const list = element("ul", "check-list");
   question.checks.forEach(check => {
     const item = element("li");
-    item.append(view.chip(board.data.scores[lab.id][check.id], 4),
+    item.append(view.chip(board.data.scores[lab.id][check.id], SCALE),
       element("span", "check-id", check.id), element("span", "", check.label));
     list.append(item);
   });
   return list;
 }
 
-function practicesOf(lab) {
+/* The practices of a column, scored, with the sentence that says what the
+ * company publishes where one exists. */
+function practicesOf(lab, ids) {
   const list = element("ul", "check-list");
-  board.data.supporting.forEach(practice => {
+  ids.forEach(id => {
+    const practice = practiceOf(board.data, id);
     const item = element("li");
-    item.append(view.chip(board.data.supporting_scores[lab.id][practice.id], PRACTICE),
-      element("span", "check-id", practice.id), element("span", "", practice.label));
+    const said = onlyTheCompany(board.data, id)
+      ? board.data.internal_evidence[lab.id][id].sentence : practice.label;
+    item.append(view.chip(practiceScoreOf(board.data, lab.id, id), PRACTICE),
+      element("span", "check-id", id), element("span", "", said));
     list.append(item);
   });
   return list;
 }
 
-/* The four practices scored on what a company publishes, each with the sentence
- * that says what it publishes. */
-function disclosedList(lab) {
+/* The same practices with no company in front of them: their labels alone. */
+function practiceLabels(ids) {
   const list = element("ul", "check-list");
-  disclosedOf(board.data).forEach(practice => {
+  ids.forEach(id => {
+    const practice = practiceOf(board.data, id);
     const item = element("li");
-    item.append(view.chip(board.data.internal_scores[lab.id][practice.id], PRACTICE),
-      element("span", "check-id", practice.id),
-      element("span", "", board.data.internal_evidence[lab.id][practice.id].sentence));
+    item.append(element("span", "check-id", id), element("span", "", practice.label));
     list.append(item);
   });
   return list;
 }
 
-function internalList(marked) {
+/* The practice no total counts, said where it sits. */
+function unscoredList(column, marked) {
   const list = element("ul", "check-list");
-  auditOnlyOf(board.data).forEach(practice => {
+  (column.unscored || []).forEach(id => {
+    const practice = practiceOf(board.data, id);
     const item = element("li");
     if (marked) item.append(view.naChip());
-    item.append(element("span", "check-id", practice.id), element("span", "", practice.label));
+    item.append(element("span", "check-id", id), element("span", "", practice.label));
     list.append(item);
   });
   return list;
 }
 
-/* What 0, 1 and 2 mean for a supporting practice, with the score's place
- * marked. The research note never wrote these down, and the list says so. */
+/* What 0, 1 and 2 mean for a practice, with the score's place marked. The
+ * research note never wrote these down for the five anyone can check, and the
+ * list says so. */
 function scaleList(score, anchors = board.data.supporting_scale) {
   const list = element("ol", "anchors");
-  [0, 1, 2].forEach(level => {
+  [0, 1, 2].forEach(mark => {
     const item = element("li");
-    if (score === level) item.classList.add("is-here");
-    item.append(element("span", "anchor-level", String(level)),
-      element("span", "", anchors[String(level)]));
+    if (score === mark) item.classList.add("is-here");
+    item.append(element("span", "anchor-level", String(mark)),
+      element("span", "", anchors[String(mark)]));
     list.append(item);
   });
   const fragment = document.createDocumentFragment();
@@ -245,27 +276,35 @@ function profile(content, lab, open) {
     lab.open_weights ? "Its flagship model, or nearly, can be downloaded by anyone (open weights)." : "",
     lab.legal || "",
   ].filter(Boolean).join(" "));
-  content.append(view.figure(shown(lab.total), ` out of ${OVERALL}`));
-  board.data.questions.forEach(question => {
-    const fold = element("details");
-    fold.open = open === question.id;
-    const summary = element("summary");
-    summary.append(view.chip(lab.byQuestion[question.id], SCALE, shown(lab.byQuestion[question.id])),
-      element("span", "", `${question.name}, ${shown(lab.byQuestion[question.id])} out of ${SCALE}`));
-    fold.append(summary, checksOf(lab, question), paragraphs(text[question.id]));
-    content.append(fold);
+
+  board.data.columns.forEach(column => {
+    const figure = lab.byColumn[column.id];
+    content.append(view.h3(column.name),
+      view.figure(shown(figure), ` out of ${column.out_of}`
+        + `${column.ranks ? ", the figure it is ranked by" : ", beside the rank and not in it"}`));
+    column.questions.forEach(id => {
+      const question = questionOf(id);
+      const fold = element("details");
+      fold.open = open === id;
+      const summary = element("summary");
+      summary.append(view.chip(lab.byQuestion[id], SCALE, shown(lab.byQuestion[id])),
+        element("span", "", `${question.name}, ${shown(lab.byQuestion[id])} out of ${SCALE}`));
+      fold.append(summary, checksOf(lab, question), paragraphs(text[id]));
+      content.append(fold);
+    });
+    const anyone = column.practices.filter(id => !onlyTheCompany(board.data, id));
+    const company = column.practices.filter(id => onlyTheCompany(board.data, id));
+    if (anyone.length) content.append(paragraphs(text[column.prose]), practicesOf(lab, anyone));
+    if (company.length) {
+      content.append(view.h3("What only the company can show"), practicesOf(lab, company),
+        element("p", "subtitle", board.data.disclosure_note));
+    }
+    if (column.unscored) {
+      content.append(unscoredList(column, true), element("p", "subtitle", board.data.internal_note));
+    }
   });
-  const supporting = element("details");
-  supporting.open = open === "supporting";
-  const summary = element("summary");
-  summary.append(view.chip(lab.supporting, board.bestMax),
-    element("span", "", `Best practices, ${lab.supporting} out of ${board.bestMax}, not counted`));
-  supporting.append(summary, practicesOf(lab), paragraphs(text.supporting),
-    view.h3("What only the company can show"), disclosedList(lab),
-    element("p", "subtitle", `*${board.data.disclosure_note}`),
-    view.h3("Only an internal audit could score this"), internalList(true),
-    element("p", "", board.data.internal_note));
-  content.append(supporting);
+  content.append(element("p", "subtitle", board.data.not_added));
+
   if (text.aside) {
     const aside = element("div", "aside");
     const line = element("p");
@@ -273,6 +312,28 @@ function profile(content, lab, open) {
     aside.append(line);
     content.append(aside);
   }
+}
+
+function columnScore(content, lab, column) {
+  view.titled(content, `${lab.name}: ${column.name.toLowerCase()}`, column.plain);
+  content.append(view.figure(shown(lab.byColumn[column.id]), ` out of ${column.out_of}`),
+    element("p", "subtitle", `The mean of the rows below, each as a share of its own maximum. `
+      + `${column.ranks ? `${lab.name} is ranked ${lab.rank} of ${board.labs.length} on it.`
+        : "It does not enter the rank."}`));
+  const list = element("ul", "check-list");
+  column.questions.forEach(id => {
+    const item = element("li");
+    item.append(view.chip(lab.byQuestion[id], SCALE, shown(lab.byQuestion[id])),
+      element("span", "check-id", id), element("span", "", questionOf(id).name));
+    list.append(item);
+  });
+  column.practices.forEach(id => {
+    const item = element("li");
+    item.append(view.chip(practiceScoreOf(board.data, lab.id, id), PRACTICE),
+      element("span", "check-id", id), element("span", "", practiceOf(board.data, id).label));
+    list.append(item);
+  });
+  content.append(list, toProfile(lab, null));
 }
 
 function questionScore(content, lab, question) {
@@ -294,74 +355,78 @@ function checkScore(content, lab, question, check) {
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
 }
 
-function supportingScore(content, lab) {
-  view.titled(content, `${lab.name}: best practices`, "Shown beside the score and left out of it.");
-  content.append(view.figure(lab.supporting, ` out of ${board.bestMax}`), practicesOf(lab),
-    view.h3("What we found"), paragraphs(board.data.profiles[lab.id].supporting),
-    view.h3("What only the company can show"), disclosedList(lab),
-    element("p", "subtitle", `*${board.data.disclosure_note}`),
-    view.h3("Only an internal audit could score this"), internalList(true),
-    toProfile(lab, "supporting"));
-}
-
+/* One of the five anyone can check, for one company. */
 function practiceScore(content, lab, practice) {
   const value = board.data.supporting_scores[lab.id][practice.id];
+  const column = columnOf(board.data, practice.id);
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
   content.append(view.figure(value, ` out of ${PRACTICE}`),
     element("p", "", meansAt(board.data.supporting_scale, value)));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
+  if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
   content.append(view.h3("What each score means"), scaleList(value));
-  content.append(view.h3(`What we found on ${lab.name}'s best practices`),
-    paragraphs(board.data.profiles[lab.id].supporting), toProfile(lab, "supporting"));
+  content.append(view.h3(`What we found on ${lab.name}`),
+    paragraphs(board.data.profiles[lab.id][column.prose]), toProfile(lab, null));
 }
 
+/* One of the four the company alone can show, for one company: the sentence
+ * that says what it publishes, and the passages behind it. */
 function disclosedScore(content, lab, practice) {
   const value = board.data.internal_scores[lab.id][practice.id];
   const found = board.data.internal_evidence[lab.id][practice.id];
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
   content.append(view.figure(value, ` out of ${PRACTICE}`),
     element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
-  if (value === 0) content.append(element("p", "subtitle", `*${board.data.disclosure_note}`));
+  if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
   if (found.sources.length) {
     content.append(view.h3(`What ${lab.name} publishes`));
     found.sources.forEach(source => content.append(sourceQuote(source)));
   }
   content.append(view.h3("What each score means"),
-    scaleList(value, practice.anchors), toProfile(lab, "supporting"), paperFold(practice));
+    scaleList(value, practice.anchors), toProfile(lab, null), paperFold(practice));
 }
 
-function aboutDisclosedPractice(content, practice) {
-  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
-  content.append(
-    element("p", "subtitle", "One of the best practices only the company can show, scored on what it publishes."),
-    view.h3("What each score means"), scaleList(null, practice.anchors),
-    element("p", "subtitle", `*${board.data.disclosure_note}`), paperFold(practice));
-}
-
-function internalScore(content, lab, practice) {
+function unscoredScore(content, lab, practice) {
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, `${practice.id} ${practice.label}`);
   content.append(view.figure("NA", ", not assessed"),
     element("p", "", `Whether ${lab.name} does this cannot be confirmed from what it `
       + "publishes. It would take an internal audit."),
+    element("p", "", board.data.internal_note),
     view.h3("What an audit would look at"), element("p", "", practice.audit),
-    toProfile(lab, "supporting"));
+    toProfile(lab, null));
 }
 
-function aboutTotal(content) {
-  view.titled(content, `Overall, out of ${OVERALL}`, "The sum of the four questions.");
-  content.append(element("p", "", "Each question is scored from 0 to 4, as the average of "
-    + "its checks, and the overall score is the sum of the four. Every question weighs "
-    + "the same, whatever its number of checks."));
+/* ---- What each row is, with no company in front of it ---------------------- */
+
+function aboutColumn(content, column) {
+  view.titled(content, `${column.name}, out of ${column.out_of}`, column.plain);
+  content.append(element("p", "", column.about));
+  content.append(view.h3("The rows it is made of"));
   const list = element("ul", "check-list");
-  board.data.questions.forEach(question => {
+  column.questions.forEach(id => {
+    const question = questionOf(id);
     const item = element("li");
-    item.append(element("span", "check-id", question.id),
-      element("span", "", `${question.name}: ${question.plain}`));
+    item.append(element("span", "check-id", `${id} `),
+      element("span", "", `${question.name}, ${question.checks.length} checks out of 4 each. `
+        + `${question.plain} ${creditOf(board.data, question)}.`));
     list.append(item);
   });
-  content.append(list, element("p", "", "Companies are ranked by this score. A tie is "
-    + "broken on the best practices, and companies level on both share a place."));
+  column.practices.forEach(id => {
+    const practice = practiceOf(board.data, id);
+    const item = element("li");
+    item.append(element("span", "check-id", id),
+      element("span", "", `${practice.label} Out of ${PRACTICE}. `
+        + `${creditOf(board.data, practice)}.`));
+    list.append(item);
+  });
+  content.append(list);
+  if (column.unscored) {
+    content.append(view.h3("What this column does not count"),
+      unscoredList(column, false), element("p", "", board.data.internal_note));
+  }
+  content.append(view.h3("Why the two figures are not added"),
+    element("p", "", board.data.not_added));
 }
 
 function aboutQuestion(content, question) {
@@ -372,7 +437,8 @@ function aboutQuestion(content, question) {
   }
   content.append(view.h3("How it is scored"));
   content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4. `
-    + "The question's score is their average. Open a check to see what earns each score."));
+    + "The question's score is their average, and each of its checks counts on its own towards "
+    + "what is published. Open a check to see what earns each score."));
   question.checks.forEach(check => {
     const fold = element("details");
     const summary = element("summary");
@@ -380,7 +446,7 @@ function aboutQuestion(content, question) {
     fold.append(summary, anchorsList(check, null));
     content.append(fold);
   });
-  content.append(view.showInTable(question.id, partsPhrase(question.id)));
+  content.append(view.showInTable(question.id, "its checks"));
   // The paper's own wording, folded, under the sentences a reader came for.
   content.append(view.h3("What the working paper asks"),
     element("p", "", question.question), paperFold(question));
@@ -396,67 +462,44 @@ function aboutCheck(content, question, check) {
     paperFold(check));
 }
 
-function aboutSupporting(content) {
-  view.titled(content, `Best practices, out of ${board.bestMax}`, "Shown beside the score and left out of it.");
-  content.append(element("p", "", "Ten practices a company can be judged on beside the four "
-    + "questions. Five can be checked by anyone from public sources. Four more only the company "
-    + "can show, and are scored on what it publishes. One only an internal audit could show, and "
-    + "is not scored. Each scored practice is worth 0, 1 or 2, and they are kept out of the "
-    + "total."));
-  const list = element("ul", "check-list");
-  board.data.supporting.forEach(practice => {
-    const item = element("li");
-    item.append(element("span", "check-id", practice.id), element("span", "", practice.label));
-    list.append(item);
-  });
-  content.append(list, view.h3("What the scores mean"), scaleList(null),
-    view.h3("What only the company can show"),
-    element("p", "", board.data.disclosed_intro), disclosedAbout(),
-    view.h3("Only an internal audit could score this"),
-    element("p", "", board.data.internal_note), internalList(false),
-    view.showInTable("supporting", partsPhrase("supporting")));
+function aboutPractice(content, practice, column) {
+  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
+  content.append(element("p", "subtitle",
+    `A best practice, scored 0, 1 or 2, counted in ${column.name.toLowerCase()}.`),
+  view.h3("What each score means"), scaleList(null),
+  element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
 }
 
-function disclosedAbout() {
-  const list = element("ul", "check-list");
-  disclosedOf(board.data).forEach(practice => {
-    const item = element("li");
-    item.append(element("span", "check-id", practice.id), element("span", "", practice.label));
-    list.append(item);
-  });
-  return list;
+function aboutDisclosedPractice(content, practice) {
+  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
+  content.append(
+    element("p", "subtitle", "A best practice only the company can show, scored on what it publishes."),
+    view.h3("What each score means"), scaleList(null, practice.anchors),
+    element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
 }
 
 function aboutDisclosed(content) {
-  view.titled(content, "What only the company can show", "Four of the best practices, scored on what the company publishes.");
-  content.append(element("p", "", board.data.disclosed_intro), disclosedAbout(),
-    element("p", "subtitle", `*${board.data.disclosure_note}`));
+  view.titled(content, "What only the company can show",
+    "Four best practices, scored on what the company publishes.");
+  content.append(element("p", "", board.data.disclosed_intro),
+    practiceLabels(board.data.internal.filter(practice => practice.asked_to_publish)
+      .map(practice => practice.id)),
+    element("p", "subtitle", board.data.disclosure_note));
 }
 
-function aboutPractice(content, practice) {
-  view.titled(content, practice.short, `${practice.id} ${practice.label}`);
-  content.append(
-    element("p", "subtitle", "One of the best practices, scored 0, 1 or 2 and left out of the total."),
-    view.h3("What each score means"), scaleList(null), paperFold(practice));
-}
-
-function aboutInternal(content) {
-  view.titled(content, "Only an internal audit could score this", "One of the best practices, not scored.");
-  content.append(element("p", "", board.data.internal_note), internalList(false));
-}
-
-function aboutInternalPractice(content, practice) {
+function aboutUnscoredPractice(content, practice) {
   view.titled(content, practice.short, `${practice.id} ${practice.label}`);
   content.append(
     element("p", "subtitle", "Not assessed for any company, because no internal audit has been done."),
+    element("p", "", board.data.internal_note),
     view.h3("What an audit would look at"), element("p", "", practice.audit),
     paperFold(practice));
 }
 
 /* ---- The table --------------------------------------------------------------- */
 
-/* One cell of a lab's column: the board wants the lab's name for the accessible
- * label and its id for the address a walker selects on. */
+/* One cell of a company's column: the board wants the company's name for the
+ * accessible label and its id for the address a walker selects on. */
 const cellFor = (lab, rowLabel, row, rest) => view.scoreCell({
   name: lab.name, rowLabel, dataset: { lab: lab.id, row }, ...rest,
 });
@@ -493,125 +536,111 @@ function headRow() {
   return row;
 }
 
+/* A line across the table with a note in it and no figures: what marks the
+ * four practices scored on what a company publishes rather than on what anyone
+ * can read. */
+function noteRow(name, sub, note, build, label) {
+  const row = element("tr", "check-row practice-divider");
+  const head = element("th");
+  head.scope = "row";
+  head.append(view.rowName(name, sub, build, label));
+  const text = element("td", "divider-note", note);
+  text.colSpan = board.labs.length;
+  row.append(head, text);
+  return row;
+}
+
 function renderTable() {
   const body = document.createDocumentFragment();
 
-  const total = element("tr", "total-row");
-  total.append(view.rowHead(null, view.rowName("Overall", `out of ${OVERALL}`, aboutTotal,
-    `Overall, out of ${OVERALL}: how it is worked out`)));
-  board.labs.forEach(lab => total.append(cellFor(lab, "overall", "total", {
-    value: lab.total, max: OVERALL, text: shown(lab.total),
-    build: content => profile(content, lab, null),
-  })));
-  body.append(total);
-
-  board.data.questions.forEach(question => {
-    const row = element("tr", "question-row");
-    row.dataset.question = question.id;
-    row.append(view.rowHead(
-      view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
-        { parts: partsOf(question.id), name: groupName(question.id) }),
-      view.rowName(question.name, `out of ${SCALE}${question.minimum ? ", part of the minimum" : ""}`,
-        content => aboutQuestion(content, question), `${question.name}: what it asks`)));
-    board.labs.forEach(lab => row.append(cellFor(lab, question.name.toLowerCase(), question.id, {
-      value: lab.byQuestion[question.id], max: SCALE, text: shown(lab.byQuestion[question.id]),
-      build: content => questionScore(content, lab, question),
+  board.data.columns.forEach(column => {
+    // The head of a column: its own figure, in the size the board gives a
+    // headline, with a rule above it so the two read as two figures rather than
+    // one column of rows. Both wear the same two classes, which is why the
+    // second does not come out heavier than the first.
+    const head = element("tr", "total-row outside-row column-row");
+    head.dataset.column = column.id;
+    head.append(view.rowHead(null, view.rowName(column.name,
+      `out of ${column.out_of}${column.ranks ? ", ranks the companies" : ", not ranked"}`,
+      content => aboutColumn(content, column),
+      `${column.name}, out of ${column.out_of}: what it covers`)));
+    board.labs.forEach(lab => head.append(cellFor(lab, column.name.toLowerCase(), column.id, {
+      value: lab.byColumn[column.id], max: column.out_of, text: shown(lab.byColumn[column.id]),
+      build: content => columnScore(content, lab, column),
     })));
-    body.append(row);
+    body.append(head);
 
-    question.checks.forEach(check => {
-      const sub = view.subRow(rowId(check.id), question.id,
-        view.rowName(check.short, check.id,
-          content => aboutCheck(content, question, check),
-          `${check.id} ${check.short}: what its scores mean`));
-      board.labs.forEach(lab => sub.append(cellFor(lab, check.short.toLowerCase(), check.id, {
-        value: board.data.scores[lab.id][check.id], max: 4,
-        build: content => checkScore(content, lab, question, check),
+    column.questions.forEach(id => {
+      const question = questionOf(id);
+      const row = element("tr", "question-row");
+      row.dataset.question = question.id;
+      row.append(view.rowHead(
+        view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
+          { parts: "checks", name: question.name }),
+        view.rowName(question.name,
+          `out of ${SCALE}${question.minimum ? ", part of the minimum" : ""}, `
+          + `${creditOf(board.data, question)}`,
+          content => aboutQuestion(content, question), `${question.name}: what it asks`)));
+      board.labs.forEach(lab => row.append(cellFor(lab, question.name.toLowerCase(), question.id, {
+        value: lab.byQuestion[question.id], max: SCALE, text: shown(lab.byQuestion[question.id]),
+        build: content => questionScore(content, lab, question),
       })));
-      body.append(sub);
+      body.append(row);
+
+      question.checks.forEach(check => {
+        const sub = view.subRow(rowId(check.id), question.id,
+          view.rowName(check.short, check.id,
+            content => aboutCheck(content, question, check),
+            `${check.id} ${check.short}: what its scores mean`));
+        board.labs.forEach(lab => sub.append(cellFor(lab, check.short.toLowerCase(), check.id, {
+          value: board.data.scores[lab.id][check.id], max: SCALE,
+          build: content => checkScore(content, lab, question, check),
+        })));
+        body.append(sub);
+      });
     });
-  });
 
-  // A line across the table before the best practices, so nobody reads them as
-  // a fifth question: they come from another paper and add to nothing above.
-  const outside = element("tr", "outside-row");
-  const outsideHead = element("th", "", "Outside the total");
-  outsideHead.scope = "row";
-  const outsideNote = element("td", "divider-note",
-    "Best practices from a second working paper, by Kembery et al.");
-  outsideNote.colSpan = board.labs.length;
-  outside.append(outsideHead, outsideNote);
-  body.append(outside);
+    let marked = false;
+    column.practices.forEach(id => {
+      const practice = practiceOf(board.data, id);
+      const company = onlyTheCompany(board.data, id);
+      // Said once, where the first of them sits: these four are scored on what
+      // the company publishes, and a 0 means we looked and found nothing.
+      if (company && !marked) {
+        marked = true;
+        body.append(noteRow("What only the company can show", "scored on what it publishes",
+          board.data.disclosure_note, aboutDisclosed,
+          "Practices only the company can show: how they are scored"));
+      }
+      const row = element("tr", "practice-row");
+      row.dataset.practice = id;
+      row.append(view.rowHead(null, view.rowName(practice.short,
+        `out of ${PRACTICE}, ${creditOf(board.data, practice)}`,
+        company ? content => aboutDisclosedPractice(content, practice)
+          : content => aboutPractice(content, practice, column),
+        `${id} ${practice.short}: what its scores mean`)));
+      board.labs.forEach(lab => row.append(cellFor(lab, practice.short.toLowerCase(), id, {
+        value: practiceScoreOf(board.data, lab.id, id), max: PRACTICE,
+        build: company ? content => disclosedScore(content, lab, practice)
+          : content => practiceScore(content, lab, practice),
+      })));
+      body.append(row);
+    });
 
-  const supporting = element("tr", "supporting-row");
-  supporting.append(view.rowHead(
-    view.rowToggle("supporting",
-      [...board.data.supporting, { id: "disclosed" }, ...disclosedOf(board.data),
-        { id: "internal" }, ...auditOnlyOf(board.data)].map(part => rowId(part.id)),
-      { parts: partsOf("supporting"), name: groupName("supporting") }),
-    view.rowName("Best practices", `out of ${board.bestMax}`, aboutSupporting,
-      `Best practices, out of ${board.bestMax}, not counted: what they are`)));
-  board.labs.forEach(lab => supporting.append(cellFor(lab, "best practices", "supporting", {
-    value: lab.supporting, max: board.bestMax,
-    build: content => supportingScore(content, lab),
-  })));
-  body.append(supporting);
-  board.data.supporting.forEach(practice => {
-    const sub = view.subRow(rowId(practice.id), "supporting",
-      view.rowName(practice.short, practice.id,
-        content => aboutPractice(content, practice),
-        `${practice.id} ${practice.short}: what its scores mean`));
-    board.labs.forEach(lab => sub.append(cellFor(lab, practice.short.toLowerCase(), practice.id, {
-      value: board.data.supporting_scores[lab.id][practice.id], max: PRACTICE,
-      build: content => practiceScore(content, lab, practice),
-    })));
-    body.append(sub);
-  });
-
-  // The same group goes on, under a line of their own, with the practices only
-  // the company can show. The paper asks companies to publish them, so they are
-  // scored on what each publishes, and a 0 carries the note that says so.
-  const disclosedLine = view.subRow(rowId("disclosed"), "supporting",
-    view.rowName("What only the company can show*", "scored on what it publishes",
-      aboutDisclosed, "Practices only the company can show: how they are scored"));
-  disclosedLine.classList.add("practice-divider");
-  const scoredOn = element("td", "divider-note", `*${board.data.disclosure_note}`);
-  scoredOn.colSpan = board.labs.length;
-  disclosedLine.append(scoredOn);
-  body.append(disclosedLine);
-  disclosedOf(board.data).forEach(practice => {
-    const sub = view.subRow(rowId(practice.id), "supporting",
-      view.rowName(practice.short, practice.id,
-        content => aboutDisclosedPractice(content, practice),
-        `${practice.id} ${practice.short}: what its scores mean`));
-    board.labs.forEach(lab => sub.append(cellFor(lab, practice.short.toLowerCase(), practice.id, {
-      value: board.data.internal_scores[lab.id][practice.id], max: PRACTICE,
-      build: content => disclosedScore(content, lab, practice),
-    })));
-    body.append(sub);
-  });
-
-  // Last, what the paper does not ask anyone to publish. No audit has been
-  // done, so every cell is NA, and it counts towards nothing.
-  const divider = view.subRow(rowId("internal"), "supporting",
-    view.rowName("Only an internal audit could score this", "not scored",
-      aboutInternal, "Practices only an internal audit could score: what they are"));
-  divider.classList.add("practice-divider");
-  const why = element("td", "divider-note", "No internal audit has been done, so every company is NA.");
-  why.colSpan = board.labs.length;
-  divider.append(why);
-  body.append(divider);
-  auditOnlyOf(board.data).forEach(practice => {
-    const sub = view.subRow(rowId(practice.id), "supporting",
-      view.rowName(practice.short, practice.id,
-        content => aboutInternalPractice(content, practice),
-        `${practice.id} ${practice.short}: what it asks`));
-    board.labs.forEach(lab => sub.append(view.naCell({
-      name: lab.name, rowLabel: practice.short.toLowerCase(),
-      dataset: { lab: lab.id, row: practice.id },
-      build: content => internalScore(content, lab, practice),
-    })));
-    body.append(sub);
+    (column.unscored || []).forEach(id => {
+      const practice = practiceOf(board.data, id);
+      const row = element("tr", "practice-row");
+      row.dataset.practice = id;
+      row.append(view.rowHead(null, view.rowName(practice.short,
+        `not scored, in neither figure, ${creditOf(board.data, practice)}`,
+        content => aboutUnscoredPractice(content, practice), `${id} ${practice.short}: what it asks`)));
+      board.labs.forEach(lab => row.append(view.naCell({
+        name: lab.name, rowLabel: practice.short.toLowerCase(),
+        dataset: { lab: lab.id, row: id },
+        build: content => unscoredScore(content, lab, practice),
+      })));
+      body.append(row);
+    });
   });
 
   const table = view.nodes.table;
@@ -630,17 +659,31 @@ function renderLegend() {
   board.nodes.legend.replaceChildren(legend);
 }
 
-/* The ties the ranking has to break, or cannot, said under the table. */
+/* One sentence per column under the table, and the sentence that says why the
+ * two are never added. */
+function renderColumns() {
+  const lines = document.createDocumentFragment();
+  board.data.columns.forEach(column => {
+    const line = element("p", "gov-foot");
+    line.append(element("strong", "", `${column.name}, out of ${column.out_of}. `),
+      document.createTextNode(column.plain));
+    lines.append(line);
+  });
+  const why = element("p", "gov-foot");
+  why.append(element("strong", "", "The two are not added. "),
+    document.createTextNode(board.data.not_added));
+  lines.append(why);
+  board.nodes.columns.replaceChildren(lines);
+}
+
+/* The ties the ranking has to leave standing, said under the table. */
 function renderTies() {
   const lines = [];
   board.labs.forEach((lab, index) => {
     const next = board.labs[index + 1];
-    if (!next || !level(next.total, lab.total)) return;
-    lines.push(lab.supporting === next.supporting
-      ? `${lab.name} and ${next.name} tie on ${shown(lab.total)} and on the best practices, `
-        + `${lab.supporting} each, so they share ${ORDINALS[lab.rank - 1]} place.`
-      : `${lab.name} and ${next.name} tie on ${shown(lab.total)}, and ${lab.name} is `
-        + `placed ahead on the best practices, ${lab.supporting} against ${next.supporting}.`);
+    if (!next || !level(next.ranking, lab.ranking)) return;
+    lines.push(`${lab.name} and ${next.name} tie on ${shown(lab.ranking)}, and the second figure `
+      + `does not break a tie, so they share ${ORDINALS[lab.rank - 1]} place.`);
   });
   board.nodes.ties.textContent = lines.join(" ");
 }
@@ -683,7 +726,7 @@ function renderScoring() {
       name.scope = "row";
       name.append(element("span", "check-id", `${check.id} `), element("span", "", check.label));
       row.append(name);
-      ["0", "2", "4"].forEach(level => row.append(element("td", "", check.anchors[level])));
+      ["0", "2", "4"].forEach(mark => row.append(element("td", "", check.anchors[mark])));
       tbody.append(row);
     });
     table.append(thead, tbody);
@@ -692,17 +735,24 @@ function renderScoring() {
   });
   board.nodes.scoring.replaceChildren(blocks);
 
-  const practice = item => element("li", "",
-    `${item.id} ${item.label} Kembery et al., ${item.source.toLowerCase()}.`);
-  const practices = document.createDocumentFragment();
-  board.data.supporting.forEach(item => practices.append(practice(item)));
-  board.nodes.supporting.replaceChildren(practices);
-  const disclosed = document.createDocumentFragment();
-  disclosedOf(board.data).forEach(item => disclosed.append(practice(item)));
-  board.nodes.disclosed.replaceChildren(disclosed);
-  const internal = document.createDocumentFragment();
-  auditOnlyOf(board.data).forEach(item => internal.append(practice(item)));
-  board.nodes.internal.replaceChildren(internal);
+  // The practices, listed under the column each is counted in, with the section
+  // of the paper it comes from. The paper itself is named once, above.
+  const bullet = id => {
+    const practice = practiceOf(board.data, id);
+    return element("li", "", `${id} ${practice.label} ${practice.source}.`);
+  };
+  const fill = (node, ids) => {
+    const list = document.createDocumentFragment();
+    ids.forEach(id => list.append(bullet(id)));
+    node.replaceChildren(list);
+  };
+  const published = board.data.columns.find(column => column.id === "published");
+  const engages = board.data.columns.find(column => column.id === "engages");
+  fill(board.nodes.publishedPractices, published.practices);
+  fill(board.nodes.engagedPractices,
+    engages.practices.filter(id => !onlyTheCompany(board.data, id)));
+  fill(board.nodes.disclosed, engages.practices.filter(id => onlyTheCompany(board.data, id)));
+  fill(board.nodes.internal, engages.unscored || []);
 }
 
 async function loadGovernance() {
@@ -722,8 +772,9 @@ export async function initializeGovernance() {
   });
   board.nodes = {
     status: byId("gov-status"), legend: byId("gov-legend"), findings: byId("gov-findings"),
-    scoring: byId("gov-scoring"), supporting: byId("gov-supporting"),
-    disclosed: byId("gov-disclosed"), internal: byId("gov-internal"), ties: byId("gov-ties"),
+    scoring: byId("gov-scoring"), publishedPractices: byId("gov-published-practices"),
+    engagedPractices: byId("gov-engaged-practices"), disclosed: byId("gov-disclosed"),
+    internal: byId("gov-internal"), ties: byId("gov-ties"), columns: byId("gov-columns"),
     origin: byId("gov-origin"),
   };
   const data = await loadGovernance();
@@ -732,12 +783,12 @@ export async function initializeGovernance() {
     return;
   }
   board.data = data;
-  board.bestMax = PRACTICE * (data.supporting.length + disclosedOf(data).length);
   board.labs = ranked(data);
   // Where the questions and the practices come from, said once, above the board.
   board.nodes.origin.textContent = data.origin;
   renderTable();
   renderLegend();
+  renderColumns();
   renderTies();
   renderFindings();
   renderScoring();

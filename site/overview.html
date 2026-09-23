@@ -38,7 +38,7 @@
 
 <div class="shell">
   <!-- Two views of the index. The first reads what the documents say; the second
-       asks how they are governed. Tabs rather than a toggle, because each is a
+       asks how the companies govern them. Tabs rather than a toggle, because each is a
        whole view rather than a setting on one; overview.js owns the switching
        and the address, ?view=governance. -->
   <div class="views" role="tablist" aria-label="Views of the index">
@@ -47,7 +47,7 @@
       data-view="coverage">What the constitutions say</button>
     <button type="button" class="view-tab" role="tab" id="tab-governance"
       aria-controls="view-governance" aria-selected="false" tabindex="-1"
-      data-view="governance">How they are governed</button>
+      data-view="governance">How companies govern them</button>
   </div>
 
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
@@ -125,18 +125,26 @@
   <h1>How each company governs the rules its models follow</h1>
   <p class="lede gov-lede">
     Some AI companies publish a constitution, a document setting out how their
-    models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view asks four questions of
-    nine companies, as of September 2026, and scores the answers out of 4 each.
+    models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores nine companies,
+    as of September 2026, on two things side by side: the rules they publish, and
+    whether those rules are made to bind the models.
   </p>
-  <!-- The two parts of what the board holds, said before any figure. The class
-       is the one the first view's parts use, so both read the same. -->
+  <!-- The two figures, said before either of them appears. The class is the one
+       the first view's parts use, so both read the same. -->
   <div class="board-parts">
-    <p class="lede"><strong>The four questions, out of 16 together.</strong> Whether the company
-    publishes a constitution and says which models it governs, whether every change to the rules a
-    model follows can be seen, which filters it runs around its models, and whether the public gets
-    a say before one of the things its model must never do is weakened.</p>
-    <p class="lede"><strong>Best practices, outside the total.</strong> Ten further practices,
-    shown beside the score and never counted in it.</p>
+    <p class="lede"><strong>What is published, out of 10.</strong> Whether the company publishes a
+    constitution and says which models it governs, whether every change to the rules a model
+    follows can be seen, which filters it runs around its models, whether the public gets a say
+    before one of the things its model must never do is weakened, and whether the published text
+    may be reused. This is the figure the companies are ranked by.</p>
+    <p class="lede"><strong>What it engages, out of 10.</strong> Whether the document binds the
+    models: published tests of adherence, outside evaluators, a threshold before release, who may
+    approve a change, training, internal use and monitoring. It sits beside the rank and does not
+    enter it.</p>
+    <p class="lede"><strong>The two are never added.</strong> The checks are anchored line by
+    line and the practices are not, so a single total would read as more precise than the scores
+    behind it. One further practice is scored for nobody, because only an internal audit could show
+    it, and every company is marked NA on it.</p>
   </div>
   <p class="gov-foot" id="gov-origin"></p>
 
@@ -145,18 +153,22 @@
   <div class="gov-toolbar">
     <p class="gov-hint">
       Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
-      Open a row to see the checks it is made of.
+      Open a question to see the checks it is made of.
     </p>
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every row</button>
   </div>
   <div class="matrix-wrap">
     <table class="gov-heatmap board" id="gov-heatmap">
-      <caption class="visually-hidden">Each company's scores, overall and question by question, with each question's checks available to open</caption>
+      <caption class="visually-hidden">Each company's two figures, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
       <thead></thead>
       <tbody></tbody>
     </table>
   </div>
   <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
+  <!-- One sentence per figure, and the sentence saying why the two are not
+       added, written by governance.js from governance.json: the two columns are
+       named here and nowhere else in the markup. -->
+  <div id="gov-columns"></div>
   <p class="gov-foot">
     <strong>Open weights</strong> marks a company whose flagship model, or
     nearly, anyone can download and run. None of these questions can reach how
@@ -184,52 +196,122 @@
     <details id="gov-method">
       <summary>How the scoring works</summary>
       <div class="gov-more-body">
-        <h3>The four questions</h3>
+        <h3>Where the rows come from</h3>
         <p>
-          The four questions are the four asks of Polaris Collective's working
-          paper, in its draft of 10 September 2026. Each is split into checks
-          scored from 0 to 4: three for each of the first two questions and two
-          for the others. The first two are what the paper calls its minimum, the
-          asks it expects of every company before the other two: a published
-          constitution for every model in use, and one public change log. A
-          question's score is the average of its checks, and the overall score is
-          the sum of the four questions, out of 16, so every question weighs the
-          same.
+          The board has two sources and no others. The four questions are the four
+          asks of Polaris Collective's working paper "Model spec governance and
+          transparency", in its draft of 10 September 2026. The ten best practices
+          beside them come from "Emerging International Best Practices for AI Model
+          Specs", a working paper by Edward Kembery and colleagues that is under
+          review. Every row on the board says which of the two it comes from, under
+          its name, and the paper's own words sit in the popover the row's name
+          opens. Neither paper splits a question into checks, weighs one row
+          against another, or says what earns a score. We did all three, and every
+          score on the board is ours.
+        </p>
+        <h3>How a figure is worked out</h3>
+        <p>
+          A question is split into checks, each scored from 0 to 4: three for each
+          of the first two questions and two for the others. Every check carries a
+          written description of what earns 0, what earns 2 and what earns 4, in
+          the tables below. A question's own figure is the average of its checks.
+          A best practice is scored 0, 1 or 2 against one scale that covers all of
+          them.
         </p>
         <p>
-          The tables below say what earns 0, 2 and 4 on each check. A score of 1
-          or 3 falls between the descriptions either side of it.
+          Each row belongs to one figure and one only. A figure is the mean of its
+          rows, each taken as a share of its own maximum, times ten. What is
+          published has eleven rows, the ten checks and the licence practice, so
+          every check counts the same and a question with three checks weighs more
+          than one with two. What it engages has eight, all of them practices.
+        </p>
+        <p>
+          <strong>The two figures are never added.</strong> The checks are anchored
+          line by line; the practices share one generic scale with no line of their
+          own. A single total would give a precision the scores behind it do not
+          have. Adding them would mean putting the practices on the same anchored
+          scale and scoring the nine companies again, which is separate work and
+          has not been done.
+        </p>
+        <p>
+          Companies are ranked on what is published. The second figure never breaks
+          a tie, so companies level on the first share a place.
+        </p>
+        <p>
+          The first two questions are what our working paper calls its minimum, the
+          asks it expects of every company before the other two: a published
+          constitution for every model in use, and one public change log. The
+          tables below say what earns 0, 2 and 4 on each check. A score of 1 or 3
+          falls between the descriptions either side of it.
         </p>
         <div id="gov-scoring"></div>
-        <h3>Best practices, outside the total</h3>
+        <h3>The best practices, figure by figure</h3>
         <p>
-          Five further practices, from Kembery et al., Emerging International Best
-          Practices for AI Model Specs, keeping only those anyone can check from
-          public sources. Each is scored 0, 1 or 2, for a total out of 10. They are
-          shown beside the ranking and left out of its total, because they measure
-          related good practice. The paper gives no description of each score. In
-          our scoring, 2 is the practice in full, 1 part of it or a weaker form of
-          it, and 0 means we found nothing.
+          One practice is counted in what is published, because it is a fact about
+          the published text.
         </p>
-        <ul class="gov-bullets" id="gov-supporting"></ul>
-        <h3>Best practices only the company can show</h3>
+        <ul class="gov-bullets" id="gov-published-practices"></ul>
         <p>
-          Four more practices from the same paper. Nobody outside a company can see
-          whether it follows them, and the paper asks companies to say so publicly.
-          Each is scored 0, 1 or 2 on what the company publishes, and 0 when it
-          publishes nothing. A company may well follow a practice without saying
-          so: where we score 0, we found nothing published and no audit anyone can
-          verify. Tell us if we are wrong.
+          Four are counted in what it engages and can be checked by anyone from
+          public sources.
+        </p>
+        <ul class="gov-bullets" id="gov-engaged-practices"></ul>
+        <p>
+          Four more are counted in the same figure, and nobody outside a company
+          can see whether it follows them. The paper asks companies to say so
+          publicly, so each is scored 0, 1 or 2 on what the company publishes, and
+          0 when it publishes nothing.
         </p>
         <ul class="gov-bullets" id="gov-disclosed"></ul>
-        <h3>A best practice only an internal audit could score</h3>
         <p>
-          One more practice from the same paper, which it raises as an open problem
-          and does not ask companies to publish. Only an internal audit could show
-          it. No such audit has been done, every company is marked NA, not
-          assessed, and it counts towards nothing.
+          One is scored for nobody. The paper raises it as an open problem and does
+          not ask companies to publish it, only an internal audit could show it, no
+          such audit has been done, and every company is marked NA on it. It is
+          counted in neither figure.
         </p>
         <ul class="gov-bullets" id="gov-internal"></ul>
+        <p>
+          The paper gives no description of what 0, 1 and 2 mean on a practice. In
+          our scoring, 2 is the practice in full, 1 part of it or a weaker form of
+          it, and 0 means we found nothing published.
+        </p>
+        <h3>How we looked</h3>
+        <p>
+          Every score was given by hand, by reading documents. No model judged any
+          row, and no score was taken from another ranking. The reading was done
+          between 18 and 21 September 2026, and the sources it rests on are listed
+          company by company below.
+        </p>
+        <p>
+          For each company we searched its own pages first: the constitution or
+          policy document where one exists, the developer documentation, the model
+          cards and system cards, the terms of service and usage policy, the change
+          logs and release notes, and the safety or frontier framework. We then
+          searched for the company by name against the practices it had not
+          answered, and read the outside sources listed below, among them the EU
+          Code of Practice signatory list, the Stanford Foundation Model
+          Transparency Index, and the evaluations published by the UK AI Security
+          Institute and the US Center for AI Standards and Innovation. For the four
+          practices only a company can show, the search was run one practice at a
+          time across all nine companies, so that each practice was judged the same
+          way everywhere.
+        </p>
+        <p>
+          <strong>Where nothing is published, the board says nothing is
+          published.</strong> A 0 is not a judgement that a company does not do
+          something. It says we looked and found nothing public, and a company may
+          well follow a practice without saying so. Every score above 0 on the four
+          practices only a company can show rests on a passage the company
+          published, quoted with its address in the popover behind that score. Two
+          searches failed outright, and both are named under what could not be
+          established: the Chinese regulatory filings, and older copies of pages
+          that carry no date.
+        </p>
+        <p>
+          Tell us if we are wrong. The button at the bottom right of this page sends
+          us a note, and a correction that carries the address of the document is
+          the most useful thing anyone can send.
+        </p>
         <h3>How to read the scores</h3>
         <p>
           <strong>Publishing a constitution and covering models with it are scored
@@ -238,24 +320,31 @@
           company's products.
         </p>
         <p>
-          <strong>The checks say more than the overall score.</strong> OpenAI and
-          Anthropic have the same overall score and fall short in opposite ways.
-          OpenAI keeps a record of its versions and does not list the things its
-          models must never do, while Anthropic lists them and keeps no record of
-          its versions.
+          <strong>The rows say more than the figure.</strong> OpenAI and Anthropic
+          are the two highest on what is published and fall short in opposite
+          ways. OpenAI keeps a record of its versions and does not list
+          the things its models must never do, while Anthropic lists them and keeps
+          no record of its versions.
+        </p>
+        <p>
+          <strong>The two figures do not agree with each other.</strong> Meta
+          publishes almost nothing and is third on what it engages. Mistral AI is
+          fifth on what is published and scores 0 on what it engages, the only
+          company that does. That is why the two are shown side by side rather than
+          merged.
         </p>
         <p>
           <strong>Companies whose models anyone can download are marked.</strong>
-          Mistral AI, Moonshot AI and DeepSeek take three of the five lowest
-          places. These questions have no way to reach a model once it has been
-          downloaded, so the table marks these companies "Open weights".
+          Mistral AI, Moonshot AI and DeepSeek take three of the five lowest places
+          on what is published. These questions have no way to reach a model once
+          it has been downloaded, so the table marks these companies "Open
+          weights".
         </p>
         <p>
-          <strong>The bottom of the ranking comes down to the first
-          question.</strong> Six of the nine companies publish no constitution, so
-          most of the grid cannot apply to them and they sit at the bottom for that
-          reason. Among the companies that do publish, the change log is what
-          separates them.
+          <strong>Six of the nine companies publish no constitution.</strong> Most
+          of what the board asks about published rules cannot apply to them, which
+          is why they score so little on the first figure. Among the three that do
+          publish, the change log is what separates them.
         </p>
         <h3>Who the companies are</h3>
         <p>
@@ -268,7 +357,7 @@
         </p>
         <h3>What could not be established</h3>
         <p>
-          The four questions were written to argue for change, and scoring them
+          Both working papers were written to argue for change, and scoring them
           gives them more precision than they were designed for. The descriptions
           of each score are ours, and a different reading could move a company by
           a few points. The wider picture would stay: all nine fall short on the
@@ -277,8 +366,8 @@
           other special deployments.
         </p>
         <p>
-          Every score rests on a document found and dated, as of 18 September
-          2026. These points are open.
+          Every score rests on a document found and dated, in the reading of 18
+          to 21 September 2026. These points are open.
         </p>
         <ul class="gov-bullets">
           <li>
