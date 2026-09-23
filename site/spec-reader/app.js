@@ -3321,6 +3321,21 @@ function translationNote(translation, judged) {
        + (judged === false ? "" : " The index judged this translation.");
 }
 
+/* What a document is inside the company that published it, where its own text
+ * does not say it.
+ *
+ * A reader meets three labs' documents on the same shelf and has nothing to tell
+ * them apart on that point. A line here carries only what the document states in
+ * its own text, and it is keyed by the lab at the head of the document id,
+ * because what a document covers is a fact about its publisher rather than about
+ * one version of it. */
+const DOCUMENT_CONTEXT = {
+  alibaba: "The document names no models it governs. Its preface says the models in production "
+         + "do not yet meet what it asks, and are being moved towards it.",
+};
+
+const documentContext = id => DOCUMENT_CONTEXT[String(id).split("--")[0]] || "";
+
 /* A viewer may dismiss a translated document's notice. The choice is kept in this
  * browser for that document version only, so another translated document, or a
  * new version of this one, shows its notice. Where storage is refused, savedFlag
@@ -3595,6 +3610,10 @@ function renderDocument(doc, side = 0) {
     panel.querySelector(".document-translation .translation-text").textContent = note;
     panel.querySelector(".translation-flag").title = note;
   }
+  const context = documentContext(doc.id);
+  const contextBand = panel.querySelector(".document-context");
+  contextBand.textContent = context;
+  contextBand.hidden = !context;
   showTranslationNotice(panel);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
   attachLocators(panel, doc);

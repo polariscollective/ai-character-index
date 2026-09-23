@@ -570,7 +570,8 @@ function headRow() {
     button.dataset.lab = company.id;
     button.setAttribute("aria-haspopup", "dialog");
     button.setAttribute("aria-expanded", "false");
-    button.setAttribute("aria-label", `${company.name}, ranked ${company.rank}: its profile`);
+    button.setAttribute("aria-label", `${company.name}, ranked ${company.rank}`
+      + `${company.note ? `, ${lowerFirst(company.note)}` : ""}: its profile`);
     button.append(element("span", "rank", String(company.rank)));
     // Drawn, quiet and decorative: the name under it is what is read out, and a
     // company the set has no mark for keeps the space so every name starts on
@@ -580,6 +581,11 @@ function headRow() {
     button.append(company.document
       ? element("span", "company-flag mono", shownVersion(company.document.version))
       : element("span", "company-flag", "No published constitution"));
+    // A second line under the version, for a document that does not stand in its
+    // company where a reader of this board would assume it does. It is a few
+    // words, and the head it sits in opens the company's profile, which carries
+    // the same fact at its head in full.
+    if (company.note) button.append(element("span", "company-flag", company.note));
     button.addEventListener("click", () =>
       board.openPopover(button, content => profile(content, company)));
     cell.append(button);
