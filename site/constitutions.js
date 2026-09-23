@@ -503,14 +503,49 @@ function aboutBehaviour(content, behaviour) {
   renderMarkup(content, behaviour.is_not);
 }
 
-/* One cell, and the shortest popover on the board: what the constitution says on
- * this behaviour, how that stands beside the others, and why the figure is what
- * it is. Three sentences of the file's, spaced, and nothing else. */
+/* The headings a behaviour's cell carries, which are the page's words and not
+ * the file's: the file writes the four texts and the page says which question
+ * each of them answers. */
+const ASKS_HEADING = "What the constitution asks";
+const BESIDE_HEADING = "How it stands beside the other constitutions";
+const SAME_HEADING = "What they ask alike";
+const DIFFERS_HEADING = "Where they differ";
+
+/* One cell, in two halves a reader can tell apart. First what this constitution
+ * asks on this behaviour, under a heading of its own, and why the figure is what
+ * it is. Then, folded and shut under it, how that stands beside the other three,
+ * with what they ask alike and where they part under small headings of their
+ * own. The two questions ran together as one passage before, and a reader
+ * looking for one of them had to read both.
+ *
+ * The fold opens shut because the document in front of the reader is what the
+ * cell is about; the comparison is what they open next if they want it. */
 function behaviourCell(content, company, behaviour) {
   const entry = behaviourEntry(company, behaviour) || {};
   board.titled(content, `${company.name}: ${lowerFirst(behaviour.name)}`, documentLine(company));
   content.append(board.figure(shown(entry.score), ` out of ${depthMax()}`));
-  cellSentences(content, company, entry.says, entry.compared, entry.why);
+  /* A company that publishes no constitution carries a figure and no prose, and
+   * has nothing to compare: its cell keeps the company's own line and no fold. */
+  if (!(typeof entry.says === "string" && entry.says.trim())) {
+    cellSentences(content, company);
+    return;
+  }
+  content.append(board.h3(ASKS_HEADING));
+  sentences(content, entry.says, entry.why);
+  if (!(entry.same || entry.differs)) return;
+  const fold = element("details");
+  const summary = element("summary");
+  summary.append(element("span", "", BESIDE_HEADING));
+  fold.append(summary);
+  if (entry.same) {
+    fold.append(board.h3(SAME_HEADING));
+    sentences(fold, entry.same);
+  }
+  if (entry.differs) {
+    fold.append(board.h3(DIFFERS_HEADING));
+    sentences(fold, entry.differs);
+  }
+  content.append(fold);
 }
 
 /* ---- The table -------------------------------------------------------------- */

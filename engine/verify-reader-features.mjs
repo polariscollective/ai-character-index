@@ -2437,20 +2437,37 @@ console.log("== Overview: the constitutions board ==");
     "the board says what it is as of, and links to the coverage board nowhere",
     JSON.stringify([board.asOf, board.coverage]));
 
-  /* A cell's popover, held to the file word for word. Nothing is checked here
-   * against a sentence typed into this harness: the board must show what the
-   * file says and nothing besides, which is what an exact comparison of every
-   * block in the popover tests. */
-  const readPop = () => page.evaluate(() => ({
-    open: document.querySelector("#grid-pop").matches(":popover-open"),
+  /* A cell's popover, held to the file word for word. No sentence of a
+   * document is typed into this harness: the board must show what the file says
+   * and nothing besides, which is what an exact comparison of every block in
+   * the popover tests. The headings below are the page's own words rather than
+   * the file's, so they are named here and nowhere in the file. */
+  const asksHeading = "What the constitution asks";
+  const besideHeading = "How it stands beside the other constitutions";
+  const sameHeading = "What they ask alike";
+  const differsHeading = "Where they differ";
+  /* A fold is read apart from the blocks around it, so that what a reader has
+   * to open is never counted as something the popover shows straight away. */
+  const readPop = () => page.evaluate(() => {
+    const body = document.querySelector("#grid-pop .gov-pop-body");
     /* A bullet list of the file's prose is read back item by item, so a field
      * the file writes as a list is compared against the items it names rather
      * than against them run together. */
-    blocks: [...document.querySelector("#grid-pop .gov-pop-body").children]
+    const blocksOf = nodes => nodes
       .flatMap(node => (node.matches("ul.gov-bullets") ? [...node.children] : [node]))
-      .map(node => node.textContent.replace(/\s+/g, " ").trim()),
-    anchors: document.querySelectorAll("#grid-pop .anchors").length,
-  }));
+      .map(node => node.textContent.replace(/\s+/g, " ").trim());
+    const fold = body.querySelector(":scope > details");
+    return {
+      open: document.querySelector("#grid-pop").matches(":popover-open"),
+      blocks: blocksOf([...body.children].filter(node => !node.matches("details"))),
+      fold: fold && {
+        shut: !fold.open,
+        summary: fold.querySelector("summary").textContent.replace(/\s+/g, " ").trim(),
+        blocks: blocksOf([...fold.children].filter(node => !node.matches("summary"))),
+      },
+      anchors: document.querySelectorAll("#grid-pop .anchors").length,
+    };
+  });
   const pressCell = (name, id) => page.evaluate(([name, id]) => {
     const row = [...document.querySelectorAll("#board tbody tr")]
       .find(tr => tr.querySelector(".head-name")?.textContent === name);
@@ -2472,11 +2489,21 @@ console.log("== Overview: the constitutions board ==");
   check(popover.open && popover.blocks.join(" | ") === [
       flat(`${withDocument.name}: ${lowerFirst(behaviour.name)}`), flat(documentLine(withDocument)),
       flat(`${shown(entry.score)} out of ${depthTop}`),
-      ...written(entry.says, entry.compared, entry.why),
+      asksHeading, ...written(entry.says, entry.why),
     ].join(" | ") && popover.anchors === 0,
-    "a behaviour's cell says what the document says, how it stands beside the others and why "
-    + "the figure is what it is, in the file's words and no others, with the scale left under "
-    + "the table", JSON.stringify(popover.blocks.slice(0, 3)));
+    "a behaviour's cell opens on what the constitution asks, under a heading of its own, and "
+    + "why the figure is what it is, in the file's words and no others, with the scale left "
+    + "under the table", JSON.stringify(popover.blocks.slice(0, 4)));
+  /* The comparison is the second half, and it is shut: a reader who wants only
+   * what this document asks never has to read past it. */
+  check(popover.fold?.shut === true && popover.fold.summary === besideHeading
+      && popover.fold.blocks.join(" | ") === [
+        sameHeading, ...written(entry.same),
+        differsHeading, ...written(entry.differs),
+      ].join(" | "),
+    "the comparison with the other constitutions is folded shut under it, with what they ask "
+    + "alike and where they differ under headings of their own",
+    JSON.stringify(popover.fold));
   await closePop();
 
   const criterion = file.criteria[0];
@@ -2511,9 +2538,9 @@ console.log("== Overview: the constitutions board ==");
       flat(`${without.name}: ${lowerFirst(behaviour.name)}`), "No published constitution.",
       flat(`${shown(without.behaviours[behaviour.slug].score)} out of ${depthTop}`),
       ...written(without.profile),
-    ].join(" | "),
-    "a company that publishes no constitution scores nought and says so in the file's words",
-    JSON.stringify(popover.blocks));
+    ].join(" | ") && popover.fold === null,
+    "a company that publishes no constitution scores nought, says so in the file's words, and "
+    + "has nothing to compare", JSON.stringify(popover.blocks));
   await closePop();
 
   /* The earlier version of a document has no column, so its profile is reached
