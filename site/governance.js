@@ -241,7 +241,10 @@ function scaleList(score, anchors = board.data.supporting_scale) {
   return fragment;
 }
 
-/* One passage a company published, with a link to where it says it. */
+/* One passage a company published, with a link to where it says it. Where the
+ * row carries the day we read it, the line says that too: an address that
+ * answers today may not answer next year, and the date is what a reader needs
+ * to tell a page that changed from a page that was always this way. */
 function sourceQuote(source) {
   const block = element("blockquote", "paper-quote");
   block.append(element("p", "", source.quote));
@@ -252,8 +255,28 @@ function sourceQuote(source) {
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   where.append(link, document.createTextNode(`, ${source.date}`));
+  if (source.read) where.append(document.createTextNode(`. Read ${source.read}.`));
   block.append(where);
   return block;
+}
+
+/* The passages one check or one practice rests on, under the paragraph that
+ * says what we found. It is the block the four practices only a company can
+ * show have always had, given to the rest of the board: the document's own
+ * words, its address and its date. A row with nothing behind it says where we
+ * looked instead, because a score of 0 for want of anything published is still
+ * a claim somebody should be able to check. */
+function evidenceBlock(content, lab, rowId) {
+  const found = board.data.evidence?.[lab.id]?.[rowId];
+  if (!found) return;
+  const sources = found.sources || [];
+  if (sources.length) {
+    content.append(view.h3("What this rests on"));
+    sources.forEach(source => content.append(sourceQuote(source)));
+    if (found.looked) content.append(element("p", "subtitle", found.looked));
+  } else if (found.looked) {
+    content.append(view.h3("Where we looked"), element("p", "", found.looked));
+  }
 }
 
 /* What the working paper says about a question, a check or a practice: our
@@ -400,7 +423,9 @@ function checkScore(content, lab, question, check) {
     element("p", "", meansAt(check.anchors, value)));
   content.append(view.h3("What each score means"), anchorsList(check, value));
   content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
-    paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
+    paragraphs(board.data.profiles[lab.id][question.id]));
+  evidenceBlock(content, lab, check.id);
+  content.append(toProfile(lab, question.id));
 }
 
 /* One of the five anyone can check, for one company. */
@@ -416,7 +441,9 @@ function practiceScore(content, lab, practice) {
   if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
   content.append(view.h3("What each score means"), scaleList(value));
   content.append(view.h3(`What we found on ${lab.name}`),
-    paragraphs(board.data.profiles[lab.id][column.prose]), toProfile(lab, null));
+    paragraphs(board.data.profiles[lab.id][column.prose]));
+  evidenceBlock(content, lab, practice.id);
+  content.append(toProfile(lab, null));
 }
 
 /* One of the four the company alone can show, for one company: the sentence

@@ -30,8 +30,10 @@ PAGE = (ROOT / "site" / "overview.html").read_text(encoding="utf-8")
 
 # The board's order: companies are ranked on the final score, the sum of what is
 # published and what it engages. Until 24 September 2026 they were ranked on the
-# first figure alone, which was the research note's own order.
-ORDER = ["openai", "anthropic", "meta", "google", "alibaba", "xai", "moonshot",
+# first figure alone, which was the research note's own order. Six check scores
+# were corrected the same day, which swapped the first two places and moved Meta
+# and Mistral AI.
+ORDER = ["anthropic", "openai", "google", "meta", "alibaba", "xai", "moonshot",
          "mistral", "deepseek"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
@@ -262,16 +264,17 @@ class TheTwoFigures(unittest.TestCase):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["5.6", "5.5", "2.1", "2.0", "1.8", "1.5", "1.1", "0.7", "0.5"])
+                         ["5.6", "5.5", "2.0", "1.8", "1.8", "1.5", "1.1", "0.9", "0.5"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
-                         ["6.1", "5.9", "1.1", "2.0", "2.3", "1.1", "0.9", "1.4", "0.5"])
+                         ["6.1", "5.9", "2.0", "0.5", "2.3", "1.1", "0.9", "1.8", "0.5"])
         # Alibaba and Moonshot AI land on exactly 1.25, which the board prints
         # as 1.3: toFixed takes a half upwards, where Python's own round() would
         # take it to the even digit and print 1.2.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.0", "5.0", "3.1", "1.9", "1.3", "1.9", "1.3", "0.0", "0.6"])
+                         ["5.0", "5.0", "1.9", "3.1", "1.3", "1.9", "1.3", "0.0", "0.6"])
         # No two companies are level on the final score, so every place is
-        # taken once.
+        # taken once. Meta and Alibaba both print 1.8 and are a hundredth apart,
+        # which is why the rank is taken from the figure and not from the print.
         self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 7, 8, 9])
 
     def test_the_labs_marked_open_weights_are_the_notes(self):
@@ -318,6 +321,67 @@ class WhatOnlyTheCompanyCanShow(unittest.TestCase):
         for practice in ASKED:
             self.assertIn("Nothing published", practice["anchors"]["0"], practice["id"])
         self.assertIn("Where nothing is published, the board says nothing is published", FLAT)
+
+
+class EveryRowCarriesItsSource(unittest.TestCase):
+    """Until 24 September 2026 only the four practices a company alone can show
+    carried a quoted passage with its address. The ten checks and the five
+    practices anyone can check carried prose and nothing else, which is where
+    the errors were. Each of them now carries the same structure: the passages
+    the score rests on, or a sentence saying where we looked and found
+    nothing."""
+
+    ROWS = [check["id"] for check in CHECKS] + [practice["id"] for practice in DATA["supporting"]]
+
+    def test_every_company_carries_every_row(self):
+        self.assertEqual(len(self.ROWS), 15)
+        self.assertEqual(sorted(DATA["evidence"]), sorted(ORDER))
+        for lab in ORDER:
+            self.assertEqual(sorted(DATA["evidence"][lab]), sorted(self.ROWS), lab)
+
+    def test_a_row_carries_a_passage_or_says_where_we_looked(self):
+        # Every source is one a reader can open: an address, the title of the
+        # page, the page's own date and the day we read it. A row with no
+        # passage behind it says where we looked instead, because a 0 for want
+        # of anything published is still a claim somebody should be able to
+        # check.
+        for lab in ORDER:
+            for row in self.ROWS:
+                found = DATA["evidence"][lab][row]
+                where = f"{lab} {row}"
+                self.assertTrue(found.get("sources") or found.get("looked", "").strip(), where)
+                for source in found.get("sources", []):
+                    self.assertTrue(source["url"].startswith("https://"), source["url"])
+                    for field in ("quote", "title", "date", "read"):
+                        self.assertTrue(source.get(field, "").strip(), f"{where} {field}")
+
+    # The one row that scores above 0 and quotes nothing. xAI signed a testing
+    # agreement with the United States Center for AI Standards and Innovation in
+    # May 2026 and publishes no address for it, so the cell says where we looked.
+    UNQUOTED = {("xai", "S3")}
+
+    def test_a_score_above_0_rests_on_a_passage_or_names_the_gap(self):
+        unquoted = {(lab, row) for lab in ORDER for row in self.ROWS
+                    if not DATA["evidence"][lab][row].get("sources")
+                    and (DATA["scores"][lab].get(row)
+                         or DATA["supporting_scores"][lab].get(row))}
+        self.assertEqual(unquoted, self.UNQUOTED)
+        for lab, row in self.UNQUOTED:
+            self.assertIn("found no public", DATA["evidence"][lab][row]["looked"], f"{lab} {row}")
+
+    def test_the_page_promises_it_of_every_row(self):
+        # The promise used to stop at the four practices only a company can
+        # show, and nothing said so.
+        self.assertIn("Every row on the board rests on", FLAT)
+        self.assertNotIn("Every score above 0 on the four", FLAT)
+
+    def test_the_popover_shows_what_a_score_rests_on(self):
+        source = Path(ROOT / "site" / "governance.js").read_text(encoding="utf-8")
+        self.assertIn("What this rests on", source)
+        self.assertIn("Where we looked", source)
+        # Both the check popover and the practice popover call it.
+        self.assertIn("evidenceBlock(content, lab, check.id)", source)
+        self.assertIn("evidenceBlock(content, lab, practice.id)", source)
 
 
 class HowTheWorkWasDone(unittest.TestCase):
@@ -425,21 +489,22 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertIn(f"the best score on it is {shown(on_ten(best_log))} out of 10", first)
 
     def test_the_finding_on_meta_quotes_both_of_its_figures(self):
-        # "It scores 1.1 out of 10 on what is published ... and 3.1 out of 10 on
+        # "It scores 0.5 out of 10 on what is published ... and 3.1 out of 10 on
         # what it engages, behind only OpenAI and Anthropic."
         text = next(f["text"] for f in DATA["findings"] if "Muse Spark" in f["text"])
         _, columns = totals("meta")
         self.assertIn(f"{shown(columns['published'])} out of 10 on what is published", text)
         self.assertIn(f"{shown(columns['engages'])} out of 10 on what it engages", text)
-        # Meta is third on the figure it names, and level with xAI on the other.
+        # Meta is third on the figure it names, and level with DeepSeek at the
+        # bottom of the other, with nothing below the two of them.
         engages = sorted((totals(lab)[1]["engages"] for lab in ORDER), reverse=True)
         self.assertEqual(engages.index(columns["engages"]), 2)
-        self.assertEqual(columns["published"], totals("xai")[1]["published"])
+        self.assertEqual(columns["published"], totals("deepseek")[1]["published"])
         below = [lab for lab in ORDER if totals(lab)[1]["published"] < columns["published"]]
-        self.assertEqual(below, ["moonshot", "deepseek"])
-        # "which puts it third on the final score with 2.1 out of 10"
-        self.assertIn(f"third on the final score with {shown(ranking('meta'))} out of 10", text)
-        self.assertEqual(rank("meta"), 3)
+        self.assertEqual(below, [])
+        # "which puts it fourth on the final score with 1.8 out of 10"
+        self.assertIn(f"fourth on the final score with {shown(ranking('meta'))} out of 10", text)
+        self.assertEqual(rank("meta"), 4)
 
     def test_the_open_weights_finding_quotes_what_is_published(self):
         # "Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5", with Alibaba
@@ -458,10 +523,24 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(set(ORDER[-3:]), {"mistral", "moonshot", "deepseek"})
 
     def test_the_findings_on_whole_columns_hold(self):
-        # "On the check that asks for a comment period, every company scores 0 or 1"
-        # and, on special deployments, "every company scores 0 or 1 on it".
-        for check in ("4.2", "1.3"):
-            self.assertTrue(all(DATA["scores"][lab][check] in (0, 1) for lab in ORDER), check)
+        # "On the check that asks for a comment window, only OpenAI and Anthropic
+        # score anything at all, 2.5 out of 10 each."
+        window = {lab: DATA["scores"][lab]["4.2"] for lab in ORDER}
+        self.assertEqual({lab for lab, score in window.items() if score},
+                         {"openai", "anthropic"})
+        self.assertEqual(set(window.values()), {0, 1})
+        notice = next(f["text"] for f in DATA["findings"] if "comment window" in f["text"])
+        self.assertIn(f"{shown(on_ten(1))} out of 10 each", notice)
+        # On special deployments, "Anthropic scores 5.0 out of 10, OpenAI 2.5,
+        # and the other seven nothing at all."
+        special = {lab: DATA["scores"][lab]["1.3"] for lab in ORDER}
+        self.assertEqual(special["anthropic"], 2)
+        self.assertEqual(special["openai"], 1)
+        self.assertEqual({lab for lab, score in special.items() if score},
+                         {"openai", "anthropic"})
+        gap = next(f["text"] for f in DATA["findings"] if "armed forces" in f["title"])
+        self.assertIn(f"Anthropic scores {shown(on_ten(2))} out of 10, OpenAI "
+                      f"{shown(on_ten(1))}", gap)
 
     def test_there_are_eight_findings(self):
         self.assertEqual(len(DATA["findings"]), 8)
