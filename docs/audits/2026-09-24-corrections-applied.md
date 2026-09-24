@@ -136,3 +136,60 @@ popover opened, for a figure carrying three or more decimals. Two remain and bot
 are arXiv identifiers.
 
 **To undo.** Interpolate the score directly again.
+
+---
+
+## 5. The rubric's new level reaches the prompt, the page and the tests
+
+**Answers:** a fault entry 3 introduced, found by the second audit.
+
+**Before.** Entry 3 wrote the level 3 into
+`methodology/document-assessment-rubric.md` and nowhere else. That rubric says of
+itself that it is "the canonical source they restate: a change of substance here
+has to land in the prompt too", and the change did not.
+`engine/panel/prompts/assessment-criteria-v1.txt` went on asking judges for a
+ceiling the index had withdrawn, and `site/document-assessment.js` went on
+showing a reader three levels where the rubric described four.
+
+**After.** The prompt carries the level 3 in the rubric's own words. The site's
+anchor table carries it, so a reader opening the criterion sees the level a
+figure of 3 sits on. Two tests moved with the rule and one parser opened:
+`test_assessment_call.py` holds the prompt to "at most 2 on its own" and to the
+new line, `test_site_rubrics.py` reads any level the prompt describes rather than
+only the even ones, and its guard expects 0, 2, 3 and 4 on conflict rules.
+
+**What this does not change.** No figure. The readings on the board were taken
+under the old prompt, which is worth knowing: two of Anthropic's three readings
+gave 2 because of the ceiling, so its 2.3333 may understate the document under
+the rule as it now stands. Judging that cell again would cost money and is the
+owner's call.
+
+**To undo.** Restore the flat ceiling in all three places.
+
+---
+
+## 6. The fourteenth behaviour's figures are means again
+
+**Answers:** the second audit, all three of its document readers independently.
+
+**Before.** `preventing-secret-loyalties` joined the board on 24 September from
+publication `06d17d90` with OpenAI at 5.7 and Anthropic at 5.3, stored to one
+decimal, while Alibaba on the same row carried 2.3333333333. Those were the only
+two figures on the board that were not a panel's mean, which is the fault entry 2
+removed everywhere else.
+
+**After.** OpenAI 5.6666666667 and Anthropic 5.3333333333.
+
+**How the values were established.** Not read from the publication, which is not
+in this repository, but derived: a mean of three integers is a multiple of a
+third, and the only third that rounds to 5.7 at one decimal is 17/3, as the only
+third that rounds to 5.3 is 16/3. Alibaba's 7/3 on the same row confirms three
+seats. Both are worth checking against `06d17d90` when someone next has the
+database open.
+
+**What moves with it.** A takeaway that called no sycophancy level with
+preventing secret loyalties as Anthropic's lowest behaviour is false against the
+stored figures and true against these, which is the second audit's finding and is
+not yet applied.
+
+**To undo.** Write 5.7 and 5.3 back.
