@@ -1,0 +1,776 @@
+{
+ "generatedFrom": [
+  "tests/fixtures/reader/ten (synthetic)"
+ ],
+ "provenance": {
+  "method": "fixture",
+  "rubric": "v5",
+  "panel_config": "fixture",
+  "panel": [
+   "a",
+   "b",
+   "c"
+  ],
+  "judges_seen_in_data": [
+   "a",
+   "b",
+   "c"
+  ],
+  "runDate": "2026-01-01",
+  "scoring": "per passage: sum over judges of defining=3/core=2/related=1/neither=0"
+ },
+ "depthScale": 10,
+ "assessment": {
+  "acme--corpus@2026-01-01": {
+   "criteria": {
+    "conflict_rules": {
+     "mean": 3.0,
+     "judges": {
+      "a": {
+       "score": 4,
+       "rationale": "A strict order, a rule for equal ranks, and examples."
+      },
+      "b": {
+       "score": 3,
+       "rationale": "A strict order and examples; equal ranks are left to judgement.",
+       "model": "d"
+      },
+      "c": {
+       "score": 2,
+       "rationale": "An order to be weighed as a whole."
+      }
+     }
+    },
+    "rule_force": {
+     "mean": 3.3,
+     "judges": {
+      "a": {
+       "score": 3,
+       "rationale": "Most sections carry an authority label."
+      },
+      "b": {
+       "score": 3,
+       "rationale": "Most sections carry an authority label.",
+       "model": "d"
+      },
+      "c": {
+       "score": 4,
+       "rationale": "Every rule carries its force."
+      }
+     }
+    },
+    "reasons": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 2,
+       "rationale": "Only the strictest rules give a reason."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "Only the strictest rules give a reason.",
+       "model": "d"
+      },
+      "c": {
+       "score": 2,
+       "rationale": "Only the strictest rules give a reason."
+      }
+     }
+    },
+    "situations": {
+     "mean": 1.7,
+     "judges": {
+      "a": {
+       "score": 1,
+       "rationale": "Ordinary conversation and tools only."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "Three of the six have rules of their own.",
+       "model": "d"
+      },
+      "c": {
+       "score": 2,
+       "rationale": "Three of the six have rules of their own."
+      }
+     }
+    }
+   },
+   "contradictions": {
+    "claims": [
+     {
+      "passages": [
+       {
+        "locator": "corpus@2026-01-01 > #sentences > ¶1",
+        "quote": "A locator may name a span of sentences, so the splitter has to agree with a reader about where a sentence ends. This paragraph has three. The second one ends here. And the third mentions e.g. an abbreviation, i.e. a token that ends in a full stop without ending a sentence, such as etc. or vs. or approx. and the U.S. and the U.K.",
+        "exampleBlock": false
+       },
+       {
+        "locator": "corpus@2026-01-01 > #sentences > ¶2",
+        "quote": "Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is vol. 2, cf. the note above. The span arithmetic must count four sentences here and not eleven.",
+        "exampleBlock": false
+       }
+      ],
+      "situation": "When a reader counts the sentences of a paragraph.",
+      "why": "One passage says its paragraph has three sentences and the other that the count must be four.",
+      "readings": [
+       {
+        "seat": "a",
+        "found": true,
+        "holds": true,
+        "absolute": false,
+        "reason": "Neither count yields to the other."
+       },
+       {
+        "seat": "b",
+        "found": false,
+        "holds": false,
+        "absolute": false,
+        "reason": "Each count is about its own paragraph.",
+        "model": "d"
+       },
+       {
+        "seat": "c",
+        "found": false,
+        "holds": false,
+        "absolute": false,
+        "reason": "The two passages count different paragraphs."
+       }
+      ],
+      "confirmed": false,
+      "absolute": false,
+      "reviewed": null
+     },
+     {
+      "passages": [
+       {
+        "locator": "corpus@2026-01-01 > #sentences > ¶2",
+        "quote": "Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is vol. 2, cf. the note above. The span arithmetic must count four sentences here and not eleven.",
+        "exampleBlock": false
+       },
+       {
+        "locator": "corpus@2026-01-01 > #blocks > ¶2",
+        "quote": "This is a second block, and it runs across two source lines, which the parser joins into one block because the second line continues the first.",
+        "exampleBlock": false
+       }
+      ],
+      "situation": "When a paragraph runs across two source lines.",
+      "why": "One passage counts sentences across the break and the other joins the lines into one block first.",
+      "readings": [
+       {
+        "seat": "a",
+        "found": false,
+        "holds": true,
+        "absolute": false,
+        "reason": "Nothing in the document says which prevails."
+       },
+       {
+        "seat": "b",
+        "found": false,
+        "holds": false,
+        "absolute": false,
+        "reason": "The next section settles it.",
+        "model": "d"
+       },
+       {
+        "seat": "c",
+        "found": true,
+        "holds": true,
+        "absolute": false,
+        "reason": "The two cannot both be followed on one paragraph."
+       }
+      ],
+      "confirmed": true,
+      "absolute": false,
+      "reviewed": null
+     }
+    ],
+    "score": 2
+   },
+   "total": 12.0
+  },
+  "zenith--model-spec@2026-04-01": {
+   "criteria": {
+    "conflict_rules": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 1,
+       "rationale": "Nothing general; one section defers to the reader and no more."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "An instruction to settle conflicts by judgement."
+      },
+      "c": {
+       "score": 3,
+       "rationale": "An order of priority, with no rule for two rules of the same rank."
+      }
+     }
+    },
+    "rule_force": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 2,
+       "rationale": "The first heading is labelled and the rest of the text is not."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "One section carries an authority label and the others carry none."
+      },
+      "c": {
+       "score": 2,
+       "rationale": "A reader can tell the force of one rule in three."
+      }
+     }
+    },
+    "reasons": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 3,
+       "rationale": "Most rules give a reason, and the reasons are specific."
+      },
+      "b": {
+       "score": 2,
+       "rationale": "Some rules carry a reason, the strictest among them."
+      },
+      "c": {
+       "score": 1,
+       "rationale": "One rule in the document says why it exists."
+      }
+     }
+    },
+    "situations": {
+     "mean": 2.0,
+     "judges": {
+      "a": {
+       "score": 2,
+       "rationale": "Two of the six have rules of their own."
+      },
+      "b": {
+       "score": 3,
+       "rationale": "Four of the six have rules of their own."
+      },
+      "c": {
+       "score": 1,
+       "rationale": "Ordinary conversation, and the others named with no rules."
+      }
+     }
+    }
+   },
+   "contradictions": {
+    "claims": [],
+    "score": 4
+   },
+   "total": 12.0
+  }
+ },
+ "behaviours": [
+  {
+   "id": 1,
+   "slug": "defined-behaviour",
+   "name": "Defined behaviour",
+   "definition": "The document should say what it means.",
+   "category": "Behaviours under test",
+   "coverage": {
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 7.3,
+      "judges": {
+       "a": {
+        "depth": 8,
+        "rationale": "Prescribed, with worked examples that serve as an answer key."
+       },
+       "b": {
+        "depth": 7,
+        "rationale": "Prescribed, with one worked example, too few for an answer key."
+       },
+       "c": {
+        "depth": 7,
+        "rationale": "Prescribed, with an example that tests a neighbouring behaviour."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "corpus-labs-defined-behaviour-1",
+       "locator": "corpus@2026-01-01 > Parser corpus > Headings and anchors > A section reached by path > ¶1",
+       "quote": "This one has no anchor, so it is named by the path of its ancestors' titles. Both locator styles must resolve, because the index has one document of each kind.",
+       "role": "Model determined relevance (score 2/2):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2
+       },
+       "score": 2
+      },
+      {
+       "id": "corpus-labs-defined-behaviour-2",
+       "locator": "corpus@2026-01-01 > #sentences > ¶1",
+       "quote": "A locator may name a span of sentences, so the splitter has to agree with a reader about where a sentence ends. This paragraph has three. The second one ends here. And the third mentions e.g. an abbreviation, i.e. a token that ends in a full stop without ending a sentence, such as etc. or vs. or approx. and the U.S. and the U.K.",
+       "role": "Model determined relevance (score 1/2):\n✓ a — core",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 1
+       },
+       "score": 1
+      }
+     ]
+    },
+    "acme--second@2026-02-01": {
+     "depth": {
+      "mean": 4.0,
+      "judges": {
+       "a": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, in terms too general to grade against."
+       },
+       "b": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, and never made concrete."
+       },
+       "d": {
+        "depth": 4,
+        "rationale": "Discussed, with no rule a grader could quote."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "second-labs-defined-behaviour-1",
+       "locator": "second@2026-02-01 > #overview > ¶1",
+       "quote": "A second document, so the reader's compare view has two panes to put side by side. It is deliberately short: what it must do is exist, parse, and carry a handful of citable blocks.",
+       "role": "Model determined relevance (score 4/4):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2
+       },
+       "score": 4
+      }
+     ],
+     "substitutions": [
+      {
+       "seat": "c",
+       "substitute": "d",
+       "reason": "c returned no output for this document on every attempt."
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 8.0,
+      "judges": {
+       "a": {
+        "depth": 9,
+        "rationale": "Prescribed, with one worked example and no answer key."
+       },
+       "b": {
+        "depth": 8,
+        "rationale": "Prescribed, with a worked example that shows the sanctioned response."
+       },
+       "c": {
+        "depth": 7,
+        "rationale": "Prescribed, and the example tests a neighbouring behaviour."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-defined-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶1",
+       "quote": "The model says what it knows, and says so when it does not know.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "model-spec-labs-defined-behaviour-2",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶2",
+       "quote": "A list item, which is a block of its own and carries its own original.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": 2,
+   "slug": "undefined-behaviour",
+   "name": "Undefined behaviour",
+   "definition": "Tracked, and defined nowhere.",
+   "category": "Behaviours under test",
+   "coverage": {
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 10.0,
+      "judges": {
+       "a": {
+        "depth": 10,
+        "rationale": "Demonstrated, the edge shown, a conflict settled and a default given."
+       },
+       "b": {
+        "depth": 10,
+        "rationale": "Demonstrated, and all three conditions hold on every facet."
+       },
+       "c": {
+        "depth": 10,
+        "rationale": "Demonstrated, with the edge, the conflict and the undecidable case."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "corpus-labs-undefined-behaviour-1",
+       "locator": "corpus@2026-01-01 > #sentences > ¶2",
+       "quote": "Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is vol. 2, cf. the note above. The span arithmetic must count four sentences here and not eleven.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "corpus-labs-undefined-behaviour-2",
+       "locator": "corpus@2026-01-01 > #blocks > ¶2",
+       "quote": "This is a second block, and it runs across two source lines, which the parser joins into one block because the second line continues the first.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      },
+      {
+       "id": "corpus-labs-undefined-behaviour-3",
+       "locator": "corpus@2026-01-01 > #inline > ¶3",
+       "quote": "Whitespace collapses, including across lines, so a quote reads as one line however the source was wrapped.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    },
+    "acme--second@2026-02-01": {
+     "depth": null,
+     "passages": [
+      {
+       "id": "second-labs-undefined-behaviour-1",
+       "locator": "second@2026-02-01 > #section-a > ¶1",
+       "quote": "A paragraph long enough to be worth citing, with two sentences so a span can name part of it. This is the second sentence.",
+       "role": "Model determined relevance (score 3/4):\n✓ a — core",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 1
+       },
+       "score": 3
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 6.0,
+      "judges": {
+       "a": {
+        "depth": 6,
+        "rationale": "Concrete rules a grader could quote, and nothing beyond them."
+       },
+       "b": {
+        "depth": 6,
+        "rationale": "Concrete rules a grader could quote, and nothing beyond them."
+       },
+       "c": {
+        "depth": 6,
+        "rationale": "Rules stated plainly, with no example to read them against."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-undefined-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #overview > ¶1",
+       "quote": "A second publisher's document, read in translation and judged, so the reader has a translated document whose band may say that the index judged it.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": 3,
+   "slug": "folded-behaviour",
+   "name": "Folded behaviour",
+   "definition": "The document should say how this behaviour is weighed against the rest.",
+   "category": "A second group",
+   "coverage": {
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 5.0,
+      "judges": {
+       "a": {
+        "depth": 5,
+        "rationale": "Discussed, with a few rules precise enough to quote."
+       },
+       "b": {
+        "depth": 5,
+        "rationale": "Discussed, with rules too few to grade most responses."
+       },
+       "c": {
+        "depth": 5,
+        "rationale": "Discussed, and one rule a grader could quote."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "corpus-labs-folded-behaviour-1",
+       "locator": "corpus@2026-01-01 > Parser corpus > Headings and anchors > A section reached by path > ¶1",
+       "quote": "This one has no anchor, so it is named by the path of its ancestors' titles. Both locator styles must resolve, because the index has one document of each kind.",
+       "role": "Model determined relevance (score 2/2):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2
+       },
+       "score": 2
+      }
+     ]
+    },
+    "acme--second@2026-02-01": {
+     "depth": {
+      "mean": 6.0,
+      "judges": {
+       "a": {
+        "depth": 6,
+        "rationale": "Concrete rules a grader could quote as pass criteria."
+       },
+       "b": {
+        "depth": 6,
+        "rationale": "Prescribed: do and do not rules, with no worked example."
+       },
+       "c": {
+        "depth": 6,
+        "rationale": "Prescribed, and the document quotes its own sentences as rules."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "second-labs-folded-behaviour-1",
+       "locator": "second@2026-02-01 > #overview > ¶1",
+       "quote": "A second document, so the reader's compare view has two panes to put side by side. It is deliberately short: what it must do is exist, parse, and carry a handful of citable blocks.",
+       "role": "Model determined relevance (score 4/4):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2
+       },
+       "score": 4
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 4.0,
+      "judges": {
+       "a": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, in terms too general to grade against."
+       },
+       "b": {
+        "depth": 4,
+        "rationale": "Addressed in its own right, and never made concrete."
+       },
+       "c": {
+        "depth": 4,
+        "rationale": "Discussed, with no rule a grader could quote."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-folded-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶1",
+       "quote": "The model says what it knows, and says so when it does not know.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": 4,
+   "slug": "quiet-behaviour",
+   "name": "Quiet behaviour",
+   "definition": "The document should say what it asks for, and it says almost nothing.",
+   "category": "A second group",
+   "coverage": {
+    "acme--corpus@2026-01-01": {
+     "depth": {
+      "mean": 1.0,
+      "judges": {
+       "a": {
+        "depth": 1,
+        "rationale": "One passage bears on the behaviour indirectly, and never names it."
+       },
+       "b": {
+        "depth": 1,
+        "rationale": "Touched on inside a passage about something else."
+       },
+       "c": {
+        "depth": 1,
+        "rationale": "Bears on the behaviour only indirectly."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "corpus-labs-quiet-behaviour-1",
+       "locator": "corpus@2026-01-01 > #sentences > ¶2",
+       "quote": "Dr. Smith, Mr. Jones and Ms. Patel walk into a paragraph. No. 4 on the list is vol. 2, cf. the note above. The span arithmetic must count four sentences here and not eleven.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    },
+    "acme--second@2026-02-01": {
+     "depth": {
+      "mean": 2.0,
+      "judges": {
+       "a": {
+        "depth": 2,
+        "rationale": "Named in a list, and nothing further is said about it."
+       },
+       "b": {
+        "depth": 2,
+        "rationale": "Named in one clause, with nothing further."
+       },
+       "c": {
+        "depth": 2,
+        "rationale": "Named once, inside a passage about something else."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "second-labs-quiet-behaviour-1",
+       "locator": "second@2026-02-01 > #section-a > ¶1",
+       "quote": "A paragraph long enough to be worth citing, with two sentences so a span can name part of it. This is the second sentence.",
+       "role": "Model determined relevance (score 3/4):\n✓ a — core",
+       "adjacent": true,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 1
+       },
+       "score": 3
+      }
+     ]
+    },
+    "zenith--model-spec@2026-04-01": {
+     "depth": {
+      "mean": 5.0,
+      "judges": {
+       "a": {
+        "depth": 5,
+        "rationale": "Discussed, and part of one rule bears on it."
+       },
+       "b": {
+        "depth": 5,
+        "rationale": "Discussed, with one sentence that reads as a rule."
+       },
+       "c": {
+        "depth": 5,
+        "rationale": "Discussed, and a rule is begun rather than stated."
+       }
+      },
+      "scale": 10
+     },
+     "passages": [
+      {
+       "id": "model-spec-labs-quiet-behaviour-1",
+       "locator": "model-spec@2026-04-01 > #honesty > ¶2",
+       "quote": "A list item, which is a block of its own and carries its own original.",
+       "role": "Model determined relevance (score 6/6):\n✓ a — core",
+       "adjacent": false,
+       "exampleBlock": false,
+       "verdicts": {
+        "a": 2,
+        "b": 2,
+        "c": 2
+       },
+       "score": 6
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

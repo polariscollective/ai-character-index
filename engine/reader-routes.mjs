@@ -1,5 +1,5 @@
 /**
- * The reader's two routes, answered from committed files.
+ * The reader's three routes, answered from committed files.
  *
  * The browser walkers test the reader, not the database: what they must prove is
  * that the page resolves a publication, falls through a dead pin and renders
@@ -13,6 +13,7 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Buffer } from "node:buffer";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -27,13 +28,26 @@ export const CURRENT_PUBLICATION = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
  */
 export const DRAFT_PUBLICATION = "8d3f7a2e-5b1c-4e9a-b6d0-2c4f8e1a9b37";
 
+/**
+ * A publication on the depth scale of ten, answered only to a pin: the current
+ * publication's documents and links under a payload out of ten, which carries
+ * an assessment of one of its two documents. Only its payload differs, so it
+ * reads the other two files from the current publication's directory.
+ */
+export const TEN_PUBLICATION = "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14";
+
 /** Where each publication's files sit, relative to the reader's data directory. */
-const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "draft" };
+const PUBLICATION_DIRS = { [CURRENT_PUBLICATION]: ".", [DRAFT_PUBLICATION]: "draft",
+                           [TEN_PUBLICATION]: "ten" };
+
+/** The files a publication shares with the current one rather than carrying its own. */
+const SHARED_WITH_THE_CURRENT = { [TEN_PUBLICATION]: new Set(["documents.json", "links.json"]) };
 
 
 /**
- * Answers /api/reader/documents and /api/reader/payload, or returns false so
- * the caller falls through to its static handler.
+ * Answers /api/reader/documents, /api/reader/links, /api/reader/payload and the
+ * two boards, /api/reader/constitutions and /api/reader/governance,
+ * or returns false so the caller falls through to its static handler.
  *
  * `dataDir` is the reader's data directory in whatever tree is being served,
  * so a staged user-extended site answers from its own payloads.
@@ -65,8 +79,23 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
     }));
     return true;
   }
+  /* The two boards of the front page, as a publication freezes them: the site's
+   * own files, for the current publication. A pinned publication of the fixture
+   * carries none, which is the case a walker checks the page says so for. */
+  if (which === "constitutions" || which === "governance") {
+    if (pinned !== null) {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "no such publication" }));
+      return true;
+    }
+    const body = await readFile(new URL(`../site/${which}.json`, import.meta.url));
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(body);
+    return true;
+  }
   const name = payloadName;
   const file = which === "documents" ? "documents.json"
+    : which === "links" ? "links.json"
     : which === "payload" ? `${name}.json`
     : null;
   if (file === null) {
@@ -88,7 +117,8 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
   }
 
   try {
-    const dir = join(dataDir, PUBLICATION_DIRS[pin ?? CURRENT_PUBLICATION]);
+    const shared = SHARED_WITH_THE_CURRENT[pin]?.has(file);
+    const dir = join(dataDir, shared ? "." : PUBLICATION_DIRS[pin ?? CURRENT_PUBLICATION]);
     const body = await readFile(join(dir, file));
     response.writeHead(200, { "content-type": "application/json" });
     response.end(body);
@@ -135,4 +165,55 @@ export async function serveFeedbackRoute(request, response) {
 /** What the last POST /api/feedback sent, for a walker to assert against. */
 export function lastFeedbackReceived() {
   return lastFeedback;
+}
+
+/** The body of the most recent POST /api/page-feedback, or null before one
+ * arrives. Module-level for the same reason lastFeedback is: the walker reads
+ * it back well after the click that set it. */
+let lastPageFeedback = null;
+
+/**
+ * Answers POST /api/page-feedback the way app/api/page-feedback does when it
+ * accepts. A fixture for the browser walkers, not a rebuild of the route's own
+ * rules: those are tested under node against app/lib/page-feedback.mjs with no
+ * browser and no database. What this exists for is letting a walker prove what
+ * the bubble actually sent, picture included.
+ *
+ * The multipart body is parsed by handing it to Response, which is the same
+ * parser the route itself gets from the platform.
+ */
+export async function servePageFeedbackRoute(request, response) {
+  const url = new URL(request.url, "http://x");
+  if (url.pathname !== "/api/page-feedback" || request.method !== "POST") return false;
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  try {
+    const form = await new Response(Buffer.concat(chunks), {
+      headers: { "content-type": request.headers["content-type"] || "" },
+    }).formData();
+    const shot = form.get("screenshot");
+    lastPageFeedback = {
+      comment: form.get("comment"),
+      email: form.get("email"),
+      page_url: form.get("page_url"),
+      viewport: form.get("viewport"),
+      user_agent: form.get("user_agent"),
+      capture_method: form.get("capture_method"),
+      website: form.get("website"),
+      screenshot: shot && typeof shot === "object" && shot.size
+        ? { bytes: shot.size, type: shot.type,
+            png: Buffer.from(await shot.arrayBuffer()) }
+        : null,
+    };
+  } catch {
+    lastPageFeedback = null;
+  }
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(JSON.stringify({ done: "Thank you. We read every one." }));
+  return true;
+}
+
+/** What the last POST /api/page-feedback sent, for a walker to assert against. */
+export function lastPageFeedbackReceived() {
+  return lastPageFeedback;
 }

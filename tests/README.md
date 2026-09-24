@@ -1,8 +1,11 @@
 > **What these tests read.** The index lives in Supabase and CI knows no
 > secret, so everything here runs against fixtures: `parser-corpus.md`, a
 > document carrying every construction `cite.py` recognises; `index.py`, two
-> behaviours, one defined and one not; and `reader/`, the two payloads the
-> reader's routes serve. A fixture is a test input, never a second copy of
+> behaviours, one defined and one not; and `reader/`, the payload and the
+> documents, two of the three payloads the reader's routes serve, with
+> `reader/ten/`, a payload on the depth scale of ten that
+> `engine/reader-routes.mjs` answers to a pin, beside the current publication's
+> documents and links. A fixture is a test input, never a second copy of
 > the index. The published data is verified by `verify_supabase_provenance.py
 > --publication=<uuid>`, run when a publication is built.
 

@@ -1,0 +1,43 @@
+{
+  "_comment": "Panel-of-judges pipeline config. Credentials are ENV VAR NAMES, never values; keys live in the environment or a gitignored .env next to the harness.",
+  "providers": {
+    "openai":     {"base_url": null, "key_env": "OPENAI_API_KEY"},
+    "anthropic":  {"base_url": "https://api.anthropic.com/v1/", "key_env": "ANTHROPIC_API_KEY"},
+    "deepinfra":  {"base_url": "https://api.deepinfra.com/v1/openai", "key_env": "DEEPINFRA_API_KEY"},
+    "together":   {"base_url": "https://api.together.xyz/v1", "key_env": "TOGETHER_API_KEY"},
+    "gemini":     {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "key_env": "GEMINI_API_KEY"},
+    "openrouter": {"base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY"}
+  },
+  "routing_comment": "`provider`/`id` is the native route and stays the default. The optional `openrouter` block is a fallback harness.resolve() takes only when the native key is absent; tags and panel membership are unchanged either way, and metrics.jsonl records the id actually called. OpenRouter prices checked 2026-08-03; it has no Batch API, so a fallback-routed tag must run realtime.",
+  "models": {
+    "haiku":      {"provider": "anthropic", "id": "claude-haiku-4-5-20251001", "price_per_mtok": [1.00, 5.00],
+                   "openrouter": {"id": "anthropic/claude-haiku-4.5", "price_per_mtok": [1.00, 5.00]}},
+    "opus":       {"provider": "anthropic", "id": "claude-opus-4-8", "price_per_mtok": [5.00, 25.00],
+                   "openrouter": {"id": "anthropic/claude-opus-4.8", "price_per_mtok": [5.00, 25.00]}},
+    "fable":      {"provider": "anthropic", "id": "claude-fable-5", "price_per_mtok": [10.00, 50.00],
+                   "openrouter": {"id": "anthropic/claude-fable-5", "price_per_mtok": [10.00, 50.00]}},
+    "gpt-mini":   {"provider": "openai", "id": "gpt-5-mini", "price_per_mtok": [0.25, 2.00],
+                   "openrouter": {"id": "openai/gpt-5-mini", "price_per_mtok": [0.25, 2.00]}},
+    "gpt":        {"provider": "openai", "id": "gpt-5", "price_per_mtok": [1.25, 10.00],
+                   "openrouter": {"id": "openai/gpt-5", "price_per_mtok": [1.25, 10.00]}},
+    "sol":        {"provider": "openai", "id": "gpt-5.6-sol", "price_per_mtok": [5.00, 30.00],
+                   "openrouter": {"id": "openai/gpt-5.6-sol", "price_per_mtok": [5.00, 30.00]}},
+    "qwen-small": {"provider": "deepinfra", "id": "Qwen/Qwen3-32B", "price_per_mtok": [0.10, 0.30],
+                   "openrouter": {"id": "qwen/qwen3-32b", "price_per_mtok": [0.08, 0.28]}},
+    "qwen-big":   {"provider": "deepinfra", "id": "Qwen/Qwen3-235B-A22B-Instruct-2507", "price_per_mtok": [0.20, 0.60],
+                   "openrouter": {"id": "qwen/qwen3-235b-a22b-2507", "price_per_mtok": [0.15, 0.60]}},
+    "qwen-max":   {"provider": "openrouter", "id": "qwen/qwen3.7-max", "price_per_mtok": [1.48, 4.42]},
+    "deepseek":   {"provider": "deepinfra", "id": "deepseek-ai/DeepSeek-V3.2", "price_per_mtok": [0.28, 0.42],
+                   "openrouter": {"id": "deepseek/deepseek-v3.2", "price_per_mtok": [0.27, 0.40]}},
+    "kimi":       {"provider": "together", "id": "moonshotai/Kimi-K3", "price_per_mtok": [3.00, 15.00],
+                   "openrouter": {"id": "moonshotai/kimi-k3", "price_per_mtok": [3.00, 15.00]}}
+  },
+  "panels": {
+    "cheap":    ["gpt-mini", "haiku", "qwen-small"],
+    "frontier": ["sol", "fable", "qwen-max"]
+  },
+  "rubric": "v2",
+  "specs": ["constitution", "model-spec"],
+  "batch_size": 40,
+  "param_quirks_comment": "gpt-5*: max_completion_tokens + reasoning_effort (gpt-5.6: low, else minimal), no temperature. fable/mythos: no temperature. others: temperature=0."
+}

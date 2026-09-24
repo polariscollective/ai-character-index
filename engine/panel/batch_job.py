@@ -59,14 +59,24 @@ def now():
 
 
 def cost_of(tag, usage, config):
-    """What a call cost, from the panel's own prices. The mirror's price when the
-    mirror is what was called, since that is what OpenRouter bills."""
+    """What a call cost, from the panel's own prices, or None where that cannot
+    be known. The mirror's price when the mirror is what was called, since that
+    is what OpenRouter bills.
+
+    A provider that sends no usage block at all leaves `call_openrouter`
+    returning both meters null, which is a dict and therefore truthy. That is a
+    cost nobody can state, not a free call: null means unknown and zero means
+    free, as `assessment_store.summed` puts it, and they are not the same claim.
+    """
     model = config["models"].get(tag, {})
     prices = (model.get("openrouter") or model).get("price_per_mtok")
     if not prices or not usage:
         return None
-    return round((usage.get("prompt_tokens", 0) or 0) * prices[0] / 1e6
-                 + (usage.get("completion_tokens", 0) or 0) * prices[1] / 1e6, 6)
+    prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
+    if prompt is None and completion is None:
+        return None
+    return round((prompt or 0) * prices[0] / 1e6
+                 + (completion or 0) * prices[1] / 1e6, 6)
 
 
 def call_openrouter(provider, model_id, system, user, kwargs):
@@ -287,6 +297,26 @@ def one_call(store, call, run_row, registry, passages_for, versions,
         report["done"] += 1
 
 
+def retained_passages(cell, judgements, passages_for, version):
+    """The passages a reader shows by default for one cell, from its judges'
+    parsed votes: every banded passage, related included, because that is what
+    the reader opens on.
+
+    `cell` is every judge call of one behaviour on one document; `judgements`
+    is read once by the caller and passed in, since a caller giving several
+    cells their depths does not need to read the whole table again for each
+    one. Shared by `pending_depths`, which gives depths on the scale of four
+    as a run finishes, and `depth_pass.py`, which gives depths out of ten to
+    calls already done."""
+    model_of = {c["id"]: c["model"] for c in cell}
+    votes = {}
+    for row in judgements:
+        if row["call_id"] in model_of and row.get("parsed", True):
+            votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
+    shown = set(bands.shown_by_default(votes))
+    return [p for p in passages_for(version["spec_id"], version["version"]) if p[0] in shown]
+
+
 def pending_depths(store, run_id, passages_for, versions):
     """[(call, retained passages)] for every depth still to give.
 
@@ -308,15 +338,8 @@ def pending_depths(store, run_id, passages_for, versions):
             continue
         if judgements is None:
             judgements = store.select("aci_judgements")
-        model_of = {c["id"]: c["model"] for c in cell}
-        votes = {}
-        for row in judgements:
-            if row["call_id"] in model_of and row.get("parsed", True):
-                votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
-        shown = set(bands.shown_by_default(votes))
         version = versions[version_id]
-        retained = [p for p in passages_for(version["spec_id"], version["version"])
-                    if p[0] in shown]
+        retained = retained_passages(cell, judgements, passages_for, version)
         jobs.extend((call, retained) for call in todo)
     return jobs
 

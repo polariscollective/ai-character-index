@@ -22,7 +22,8 @@ const TTL_MS = 60_000;
  * freeze the answer an instance booted with, and would also let this server
  * answer from a different build than the reader on the same deployment. */
 const query = () =>
-  `select=id,published_at,is_public,payload,documents&${currentPublication()}`;
+  `select=id,published_at,is_public,payload,documents,constitutions,governance&`
+  + currentPublication();
 
 let memo = null;
 
@@ -54,6 +55,10 @@ export async function indexSnapshot(fetchImpl = fetch, now = () => Date.now()) {
     publication: { id: row.id, published_at: row.published_at, is_public: row.is_public === true },
     payload: row.payload,
     documents: row.documents,
+    // The two boards the publication froze, or null for one built before
+    // boards were: the board tools then say it is not compatible.
+    constitutions: row.constitutions ?? null,
+    governance: row.governance ?? null,
     notes: await behaviourNotes(fetchImpl, row.id),
   };
   // Memoised only once the whole snapshot is in hand: a half-read one would

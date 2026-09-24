@@ -9,7 +9,8 @@ import { test } from "node:test";
 import { publishJobParams } from "../publish.mjs";
 
 const BASE = { behaviours: ["helpfulness"], documents: ["openai--model-spec@2026-08-18"],
-               rubric: "v5", notes: "first cut" };
+               rubric: "v5", notes: "first cut",
+               linkRuns: ["11111111-1111-4111-8111-111111111111"] };
 
 test("a build with no credit is credited to Polaris Collective, not an e-mail", () => {
   const params = publishJobParams({ ...BASE, credit: "" });
@@ -35,6 +36,13 @@ test("the other fields travel unchanged", () => {
   const params = publishJobParams({ ...BASE, credit: "Ada Lovelace" });
   assert.deepEqual(params, {
     behaviours: ["helpfulness"], documents: ["openai--model-spec@2026-08-18"],
-    rubric: "v5", notes: "first cut", created_by: "Ada Lovelace",
+    rubric: "v5", notes: "first cut",
+    link_runs: ["11111111-1111-4111-8111-111111111111"],
+    created_by: "Ada Lovelace",
   });
+});
+
+test("the link runs a publication carries reach the job params", () => {
+  const params = publishJobParams({ ...BASE, credit: "" });
+  assert.deepEqual(params.link_runs, ["11111111-1111-4111-8111-111111111111"]);
 });

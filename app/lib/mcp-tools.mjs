@@ -304,6 +304,263 @@ export function retrievePassages({ publication, payload, documents }, args = {})
   };
 }
 
+/** The document a locator points into: `<lab>--<document>@<version>`. */
+function headOf(locator) {
+  return String(locator || "").split(" > ", 1)[0];
+}
+
+/**
+ * A relation named by the document it is about, never by a call's direction.
+ *
+ * `stricter_source` is a fact about the one call a judge answered. The same pair
+ * read from the other side comes back `stricter_target`, so two readings of one
+ * pair carry labels that look contradictory and are not. Named, a reading is the
+ * same claim from either end, which is what lets the two directions be merged at
+ * all.
+ */
+function namedRelation(relation, sourceLocator, targetLocator) {
+  if (relation === "stricter_source") {
+    return { relation: "stricter", stricter_document: headOf(sourceLocator) };
+  }
+  if (relation === "stricter_target") {
+    return { relation: "stricter", stricter_document: headOf(targetLocator) };
+  }
+  return { relation, stricter_document: null };
+}
+
+const NOT_COMPARED =
+  "No run has compared these two documents on this behaviour. That is not a "
+  + "finding about either document.";
+
+/* A pair is two passages, whichever direction found it. Sorting the two locators
+ * gives both directions the same key, which is what merges a judge's two
+ * readings of one pair rather than reporting them as two links. */
+const pairKey = (a, b) => [a, b].sort().join("\n");
+
+/**
+ * Everything one run found between two documents on one behaviour.
+ *
+ * Deliberately one answer rather than a walk. The unit a caller asked for is the
+ * comparison, and a comparison split across pages is one a client has to
+ * reassemble before it can say anything. `detail` is the lever instead: counts
+ * first if the size matters, then the whole thing.
+ *
+ * `evidence` is app/lib/links.mjs's, passed in rather than fetched, so this stays
+ * a function of its arguments and a fixture can exercise it with no network.
+ */
+export function compareDocuments({ publication, payload, documents, notes },
+                                 evidence, args = {}) {
+  const specifications = documents.documents || [];
+  const specById = new Map(specifications.map(document => [document.id, document]));
+  const behaviourBySlug = new Map(
+    (payload.behaviours || []).map(behaviour => [behaviour.slug, behaviour]));
+
+  const slug = args.behaviour;
+  if (!slug || !behaviourBySlug.has(slug)) {
+    throw new ToolError(
+      `behaviour must name one behaviour of this publication: `
+      + `${[...behaviourBySlug.keys()].join(", ")}`);
+  }
+  const wanted = [...new Set(args.model_spec_ids || [])];
+  if (wanted.length !== 2) {
+    throw new ToolError(
+      "model_spec_ids must name exactly two different specifications. A "
+      + "comparison is between two documents, and this publication carries: "
+      + `${[...specById.keys()].join(", ")}`);
+  }
+  const unknown = wanted.filter(id => !specById.has(id));
+  if (unknown.length) {
+    throw new ToolError(
+      `no such model spec: ${unknown.join(", ")}. This publication carries: `
+      + `${[...specById.keys()].join(", ")}`);
+  }
+  const detail = args.detail || "full";
+  if (!["counts", "full"].includes(detail)) {
+    throw new ToolError("detail must be counts or full");
+  }
+
+  const behaviour = behaviourBySlug.get(slug);
+  const note = notes?.[slug] || {};
+  const head = {
+    publication,
+    behaviour: {
+      slug,
+      name: behaviour.name,
+      group: note.group || behaviour.category || null,
+      definition: note.query || null,
+      boundary: note.boundary || null,
+      ...(note.query ? {} : { note: NO_BRIEF }),
+    },
+    model_specs_read: wanted.map(id => specSummary(specById.get(id))),
+  };
+
+  // The passages each document carries for this behaviour, and the quote of
+  // every locator the publication knows. A link may name a paragraph outside
+  // that set: the judges were shown the whole of the other document, which is
+  // what lets a counterpart filed under another behaviour be found at all.
+  const passages = {};
+  const quoteOf = new Map();
+  for (const id of wanted) {
+    passages[id] = passagesOf(behaviour, id).map(shapePassage);
+    for (const passage of behaviour.coverage?.[id]?.passages || []) {
+      quoteOf.set(passage.locator, passage.quote);
+    }
+  }
+
+  if (!evidence) {
+    return {
+      ...head,
+      depth: Object.fromEntries(wanted.map(id => [id, panelDepth(behaviour, id)])),
+      passages: detail === "full" ? passages : undefined,
+      comparison: null,
+      note: NOT_COMPARED,
+    };
+  }
+
+  for (const row of evidence.arbitrations || []) {
+    if (row.first_quote) quoteOf.set(row.first_locator, row.first_quote);
+    if (row.second_quote) quoteOf.set(row.second_locator, row.second_quote);
+  }
+  const settledBy = new Map(
+    (evidence.arbitrations || []).map(row => [
+      pairKey(row.first_locator, row.second_locator), row]));
+
+  // One entry per pair, carrying every judge's reading of it. A judge that read
+  // the pair in both directions appears twice, which is a fact about that judge
+  // rather than about the pair, so both are kept.
+  const pairs = new Map();
+  const silences = [];
+  for (const link of evidence.links || []) {
+    if (!link.target_locator) {
+      // A judge saying nothing in the other document bears on this passage.
+      // That is the comparison's strongest claim, so it travels as its own kind
+      // rather than as a pair with a hole in it.
+      silences.push({
+        locator: link.source_locator,
+        quote: quoteOf.get(link.source_locator) ?? null,
+        judge: link.judge,
+        rationale: link.rationale,
+      });
+      continue;
+    }
+    const key = pairKey(link.source_locator, link.target_locator);
+    if (!pairs.has(key)) {
+      const [first, second] = [link.source_locator, link.target_locator].sort();
+      pairs.set(key, {
+        passages: [
+          { locator: first, quote: quoteOf.get(first) ?? null },
+          { locator: second, quote: quoteOf.get(second) ?? null },
+        ],
+        judges: [],
+        arbitration: null,
+      });
+    }
+    pairs.get(key).judges.push({
+      judge: link.judge,
+      ...namedRelation(link.relation, link.source_locator, link.target_locator),
+      // Who may lift each rule, in one vocabulary rather than each document's
+      // own. Reported against the documents rather than against the direction.
+      force: {
+        [headOf(link.source_locator)]: link.source_force,
+        [headOf(link.target_locator)]: link.target_force,
+      },
+      rationale: link.rationale,
+    });
+  }
+
+  for (const [key, pair] of pairs) {
+    const settled = settledBy.get(key);
+    if (!settled) continue;
+    pair.arbitration = {
+      arbiter: settled.arbiter,
+      // A verdict from a model that gave one of the readings it was settling is
+      // still a verdict. It says which it is so a caller can weigh it.
+      arbiter_was_a_party: settled.arbiter_was_a_party,
+      why_disputed: settled.why_disputed,
+      // What was put to the arbiter is not repeated here: `judges` above is the
+      // same readings, and echoing them cost 27,651 of the first comparison's
+      // 344,001 characters to say twice what the answer already says once.
+      // aci_link_arbitrations keeps them, because an answer stored without its
+      // question is not evidence; an answer that carries the question twice is
+      // only long.
+      relation: settled.relation,
+      stricter_document: settled.stricter_document,
+      agrees: settled.agrees,
+      why: settled.why,
+    };
+  }
+
+  // What a reader is shown: the arbiter's verdict where there was one, and
+  // otherwise the judges' relation when they agree. Where they disagree and
+  // nobody settled it, this is null rather than a winner picked by counting.
+  for (const pair of pairs.values()) {
+    if (pair.arbitration) {
+      pair.settled = {
+        relation: pair.arbitration.relation,
+        stricter_document: pair.arbitration.stricter_document,
+        by: pair.arbitration.arbiter,
+        why: pair.arbitration.why,
+      };
+      continue;
+    }
+    const said = new Set(pair.judges.map(
+      judge => `${judge.relation}\n${judge.stricter_document || ""}`));
+    pair.settled = said.size === 1
+      ? { relation: pair.judges[0].relation,
+          stricter_document: pair.judges[0].stricter_document,
+          by: "the judges agreed", why: null }
+      : null;
+  }
+
+  const listed = [...pairs.values()];
+  const relations = {};
+  for (const pair of listed) {
+    const named = pair.settled?.relation ?? "unsettled";
+    relations[named] = (relations[named] || 0) + 1;
+  }
+
+  const comparison = {
+    run: evidence.run,
+    // Who was asked and who answered. A judge whose call failed is named here
+    // rather than dropped: an answer reporting two judges where three were asked
+    // would describe a panel that never sat.
+    judges: evidence.calls,
+    pairs: listed,
+    silences,
+    summary: evidence.summary
+      ? { written_by: evidence.summary.model,
+          prompt_sha256: evidence.summary.prompt_sha256,
+          text: evidence.summary.body }
+      : null,
+  };
+
+  const full = {
+    ...head,
+    depth: Object.fromEntries(wanted.map(id => [id, panelDepth(behaviour, id)])),
+    passages,
+    comparison,
+  };
+
+  if (detail === "full") return full;
+
+  // The same work, a smaller answer. What `counts` saves is what a caller has to
+  // read, not what this has to compute, and the character figure is the exact
+  // size of the full answer rather than a guess at it.
+  return {
+    ...head,
+    counts: {
+      passages: Object.fromEntries(
+        wanted.map(id => [id, passages[id].length])),
+      pairs: listed.length,
+      relations,
+      arbitrated: listed.filter(pair => pair.arbitration).length,
+      silences: silences.length,
+      summary_characters: comparison.summary?.text.length || 0,
+    },
+    full_answer_characters: JSON.stringify(full).length,
+  };
+}
+
 /**
  * What the server says about itself when a client connects, and the opening of
  * `about`.
@@ -316,11 +573,12 @@ export function retrievePassages({ publication, payload, documents }, args = {})
  * nothing here may name a document, a count or a panel. Everything of that kind
  * is `about`'s, derived from the publication in hand.
  */
-export const INSTRUCTIONS = `The AI Character Index reports where model specifications
-address a behaviour, and how strongly. It holds published specifications, a set
-of behaviours, and passages of those specifications that a panel of language
-model judges marked as bearing on each behaviour. It reports what those
-documents say, not how the models behave.
+export const INSTRUCTIONS = `The AI Constitutions Index reports where the constitutions AI
+companies publish address a behaviour, and how strongly. A constitution is the
+document in which a company sets out how its models are meant to behave. The
+index holds published constitutions, a set of behaviours, and passages of those
+constitutions that a panel of language model judges marked as bearing on each
+behaviour. It reports what those documents say, not how the models behave.
 
 A passage carries a strength: defining is the document's fullest statement of
 the behaviour, core establishes it there, related bears on it without
@@ -328,12 +586,13 @@ establishing it. Every passage is quoted verbatim at the version named in the
 answer.
 
 retrieve_passages answers with every band unless its strength argument narrows
-it, which is what the spec reader shows before any toggle is touched. Every
+it, which is what the doc reader shows before any toggle is touched. Every
 passage carries its strength, so a client can also filter what comes back.
 
-Where a behaviour and specification pair carries a depth, it is the mean the
-index's panel gave it, from 0 (absent) to 4 (rules with worked examples). A pair
-with no depth answers null.
+Where a behaviour and constitution pair carries a depth, it is the mean the
+index's panel gave it: 0 is absent and the top of the scale is rules with worked
+examples. A publication says which scale its depths are on, and
+constitutions_board names it. A pair with no depth answers null.
 
 Where one judge of the panel could not answer a pair at all, another model judged
 it in that seat, and the pair carries substitutions: the seat, the substitute and
@@ -342,6 +601,43 @@ the reason. A pair without that field was judged by the panel as configured.
 Every answer names the publication it was read from. A publication whose
 is_public is false is a build nobody has published, served by a development
 deployment, and what it answers is not the index's published data.
+
+compare_documents answers with everything one run found between two documents on
+one behaviour: every passage each of them carries, every pair of passages the
+judges linked with what each judge said and why, the verdict where two judges
+disagreed and an arbiter settled it, the passages one document has nothing
+facing, and a paragraph written from all of it. A relation there is named by the
+document it is about and never by a direction, so stricter comes with the
+document that demands more.
+
+That answer is very long: hundreds of thousands of characters where both
+documents cover the behaviour fully. The first pair measured came to 315,569
+characters, about 79,000 tokens. It is one answer rather than a walk, because a
+comparison split across pages is one a client has to reassemble before it can
+say anything. Pass detail counts first, which costs about 2,600 characters and
+reports the exact size of the full answer rather than an estimate of it, and
+decide from that whether to ask for the whole thing.
+
+Two tools answer with a whole scored board rather than with passages, and they
+answer different questions about the same companies.
+
+constitutions_board scores the documents. How far each published constitution
+goes: a final score out of 10 per company, the average of the document as a
+whole out of 10 over five criteria and how far it goes out of 10 on the
+behaviours the index carries. It is the board the publication froze, the one
+the front page shows.
+
+governance_board scores what the companies do around those documents. Whether a
+company publishes a constitution at all, whether it logs the changes it makes to
+it, what it says about the filters that sit outside the model, which rules it
+declares can never be lifted, and what it states about training, testing and
+monitoring against its own text. Nine companies, two figures out of 10 each,
+averaged into a final score out of 10. Those scores were given by hand from
+public documents, and a nought there means nothing public was found. The board
+is the one the publication froze, as the front page shows it.
+
+Both take an optional company, and both carry the wording each figure was given
+against, so a figure can be read without a second call.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
@@ -411,8 +707,8 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "nothing. Everything below is read from the publication being served rather "
     + "than written down, and it changes when a new publication is made public.",
     "",
-    "The documents. A specification is a document a laboratory publishes saying "
-    + "how its models should behave. Each version is a document of its own, named "
+    "The documents. A constitution is a document a company publishes saying how "
+    + "its models should behave. Each version is a document of its own, named "
     + "<lab>--<document>@<version>, which is also the head of every locator into "
     + "it, so two versions of one document are two documents and a citation says "
     + `which of them it read. This publication carries `
@@ -481,6 +777,17 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "behaviours you name and the documents you choose. Reach for it to answer a "
     + "question about what a document says. It needs at least one slug from "
     + "list_behaviours, which is what bounds the size of the answer.",
+    "  constitutions_board: every figure of the index's first board with the "
+    + "scale it is on and what it means, for every constitution or for one "
+    + "company. Reach for it to answer how far a constitution goes, or how two of "
+    + "them compare.",
+    "  governance_board: nine companies scored on four questions about how they "
+    + "govern the rules their models follow. Those figures were given by hand "
+    + "from public documents rather than judged by the panel. It belongs to no "
+    + "publication and carries its own as-of date.",
+    "  compare_documents: everything one run found between two documents on one "
+    + "behaviour, passage by passage. Its full answer runs to hundreds of "
+    + "thousands of characters, so pass detail counts first.",
     "",
     "Citing. These figures belong to one publication and change when a new one is "
     + `made public, so name the one you read: publication ${publication.id}`

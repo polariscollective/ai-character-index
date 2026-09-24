@@ -10,7 +10,7 @@
  */
 
 import { select } from "./supabase.mjs";
-import { currentPublication } from "./publications.mjs";
+import { currentPublication, pinnedPublication } from "./publications.mjs";
 
 const SELECT = "slug,name,numeric_id,group_name,definition,judging";
 
@@ -27,7 +27,7 @@ const SELECT = "slug,name,numeric_id,group_name,definition,judging";
  */
 async function publishedSlugs(publicationId, fetchImpl) {
   const query = publicationId
-    ? `select=id,build_params&id=eq.${publicationId}`
+    ? `select=id,build_params&${pinnedPublication(publicationId)}`
     : `select=id,build_params&${currentPublication()}`;
   const [publication] = await select("aci_publications", query, fetchImpl);
   if (!publication) return null;

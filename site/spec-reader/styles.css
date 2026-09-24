@@ -487,6 +487,31 @@ body.resizing-columns {
   line-height: 1.35;
 }
 .behaviour-group ul { list-style: none; margin: 0; padding: 0 10px 10px; }
+/* A category folds under its own name: the name is the button, with a chevron
+   before it that turns as it opens, and a folded category keeps only its head. */
+.group-fold {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.group-fold::before {
+  content: ""; flex: none; width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg); transition: transform .15s ease;
+}
+.group-fold[aria-expanded="false"]::before { transform: rotate(-45deg); }
+.group-fold:hover { color: var(--ink); }
+.behaviour-group.folded ul { display: none; }
+/* The way to propose a behaviour, quiet, under the list. */
+.behaviour-propose { margin: 4px 25px 14px; font-size: 13px; }
+.behaviour-propose a, .provider-propose {
+  color: var(--faint); text-decoration: underline 1px var(--energy); text-underline-offset: 3px;
+}
+.behaviour-propose a:hover, .provider-propose:hover { color: var(--ink); background: var(--energy); }
+/* After the publishers, set apart from them and smaller, since it is not one. */
+.provider-propose {
+  align-self: center; margin-left: 14px; font-size: 13px; white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) { .group-fold::before { transition: none; } }
 /* The row as it is drawn. The tick target and the depth figure sit in it side by
    side: the figure is a button, and a button inside a label would be ticked by
    the label on its way past, so the ground they share is this frame rather than
@@ -501,6 +526,17 @@ body.resizing-columns {
   gap: 9px;
   align-items: baseline;
   border-radius: 5px;
+}
+/* The figures and the comparison control, one above the other at the right of
+   the frame. A column rather than a wrapped full-width item: the behaviour name
+   beside them runs to several lines in a narrow sidebar, and a full-width item
+   would sit below all of them instead of below the figures. */
+.behaviour-stack {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 .behaviour-option {
   flex: 1;
@@ -659,18 +695,6 @@ body.resizing-columns {
   color: var(--ink);
 }
 
-/* The first line of a behaviour note: defined or not, judged or not. Those are
-   independent states and the note says both, because the menu shows every
-   behaviour alike and gives a reader no way to tell them apart. */
-.behaviour-note-state {
-  margin: 0 0 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-light);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 /* Each judge's depth, under the paragraph naming a document's mean: quieter than
    the paragraph, marked the way a spec passage's own lists are marked, so the
    note does not invent a second bullet system. */
@@ -698,10 +722,14 @@ body.resizing-columns {
    figure. Built like the key's notes -- fixed, in the top layer, cornered from
    the control that opened it -- and bounded the same way, so a judge who wrote
    three hundred words scrolls inside the box instead of stretching the page. */
+/* Wider than the 380px it opened at. It used to carry a figure and a list of
+   judges; it now carries the reading that explains the figure, those judges
+   folded away under it, and the comparison below them, and three things in a
+   column that narrow is a column of fragments. */
 .depth-note {
   position: fixed;
   inset: auto;
-  width: min(380px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
   max-height: min(70vh, 520px);
   overflow: auto;
   padding: 16px 18px 18px;
@@ -793,6 +821,52 @@ body.resizing-columns {
 }
 .depth-note-substitution { color: var(--muted); }
 
+/* The reading that explains the figure, directly under it and in the reading
+   colour: it is the answer to why the figure is what it is, and everything
+   below it is what that answer was drawn from. */
+.depth-note-written { color: var(--ink); }
+
+/* The judges, folded. Reachable in one press, out of the way in none: a record
+   that cannot be opened is a claim, and a record opened by default is three
+   paragraphs in front of the one that was asked for. */
+.depth-note-panel { margin: 0 0 10px; }
+.depth-note-panel summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.depth-note-panel summary:hover { color: var(--ink); }
+.depth-note-panel[open] summary { margin-bottom: 8px; }
+.depth-note-panel summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* The comparison, rendered by comparisonNodes, which answers in headings and
+   bullets. The modal has its own rules for these; here they are sized to the
+   note they sit at the foot of. */
+.depth-note-body h4 {
+  margin: 14px 0 4px;
+  color: var(--accent);
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+}
+/* What a whole passage is, above the headings inside it. Told apart from those
+   by tone rather than by size: quieter and ruled off, so it reads as the label
+   of a section and they read as the headings within it. A document's name is an
+   h3 with the chartreuse rule, and neither of these is a document. */
+.depth-note-section {
+  margin: 18px 0 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-light);
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+}
+.depth-note-body ul { margin: 0 0 10px; padding-left: 18px; }
+.depth-note-body li { margin: 0 0 4px; }
+.depth-note-body strong { font-weight: 600; }
+
 /* One judge: who, what it gave, and why. The name is a model identifier and the
    score is a figure, so both are mono; the rationale is prose and is not. */
 .depth-note-judges li { grid-template-columns: 1fr auto; }
@@ -881,10 +955,15 @@ body.resizing-columns {
 /* The note. `position: fixed` with the corner set from the button it belongs to:
    a popover lands in the top layer, where the browser's own centring would put
    it in the middle of the window rather than beside what was clicked. */
+/* 640px, up from 360. The note holds a brief and a boundary, both prose, and at
+   360 they came out as ribbons: the width that reads well is the one the
+   comparing variant below already had. It stays under that variant rather than
+   meeting it, because comparing the note is about two documents and this one is
+   about one, and a difference the code encodes should stay visible. */
 .key-note {
   position: fixed;
   inset: auto;
-  width: min(360px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
   max-height: min(70vh, 520px);
   overflow: auto;
   padding: 16px 18px 18px;
@@ -893,6 +972,10 @@ body.resizing-columns {
   background: var(--paper);
   color: var(--ink);
 }
+
+/* Comparing, the behaviour note is about two documents at once. Set by
+ * openBehaviourNote at the moment it opens, and only there. */
+.key-note.key-note-wide { width: min(720px, calc(100vw - 32px)); }
 
 .key-note::backdrop { background: transparent; }
 
@@ -1077,6 +1160,112 @@ body.sidebar-collapsed .sidebar-resizer {
 /* Hidden until app.js has drawn the panels and put it in a publisher row. The
    display above would otherwise beat the [hidden] attribute. */
 .compare-toggle[hidden] { display: none; }
+
+/* The loupe, in the document's own header at the end of the meta row. The same
+   object as the note icon beside it, to the pixel: they are two small things
+   offered about one document, and one of them dressed differently would read as
+   a different kind of thing. */
+.find-toggle {
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.find-toggle:hover { background: var(--energy); color: var(--ink); }
+.find-toggle:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.find-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+/* Drawn rather than fetched, like .split-icon above: a glyph font for two
+   shapes is a network request for two shapes. */
+.lens-icon { position: relative; display: block; width: 14px; height: 14px; margin: 0 auto; }
+.lens-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0 4px 4px 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.lens-icon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 5px;
+  height: 1.5px;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: right center;
+}
+
+/* One per panel, between the header's rule and the text it searches, so the
+   count and the matches visibly belong to the same document. Comparing, there
+   are two, each counting its own. */
+.find-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 24px;
+  border-bottom: 1px solid var(--line-light);
+  background: var(--chrome-deep);
+}
+.find-bar[hidden] { display: none; }
+.find-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 12px;
+}
+.find-input:focus-visible { outline: 2px solid var(--energy); outline-offset: 1px; }
+/* Tabular so that stepping through matches does not shuffle the arrows sideways
+   as the number grows a digit. */
+.find-count {
+  flex: none;
+  min-width: 7ch;
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.find-step {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 13px;
+  cursor: pointer;
+}
+.find-step:hover:not(:disabled) { background: var(--energy); color: var(--ink); }
+.find-step:disabled { opacity: .4; cursor: default; }
+.find-close { font-size: 16px; }
+
+/* Every match, and the one being read. Painted through the highlight registry
+   rather than by wrapping the text in elements: the reader's own highlights,
+   copy gutters and note anchors all live in this DOM, and a search that
+   rewrote it to show itself would be editing the thing it is searching. */
+/* A literal rather than a token: a custom property inside ::highlight resolves
+   against whichever element the range happens to start in, so the same search
+   would be painted differently paragraph by paragraph. */
+::highlight(reader-find) { background: rgb(183 201 75 / .35); }
+::highlight(reader-find-current) { background: var(--energy); color: var(--ink); }
 /* The walk through a document's passages, in that document's own header. It
    used to be one pair of arrows above both panels, stepping a single list that
    ran from one specification into the other. */
@@ -2033,6 +2222,19 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 /* The display above would otherwise beat the hidden attribute. */
 .document-translation[hidden] { display: none; }
+/* The band beside it, in the same chrome and without the rust rule. The notice
+   above warns about the text a reader is looking at; this states two facts about
+   the document, so it is drawn quietly. */
+.document-context {
+  margin: 0;
+  padding: 6px 12px 6px 22px;
+  border-bottom: 1px solid var(--line-light);
+  background: var(--chrome-deep);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+}
 .translation-text { flex: 1; min-width: 0; }
 /* The notice's close control: a plain ×, in the band's own ink, centred at its
    right end. The negative margins keep the band no taller for it. */
@@ -2270,6 +2472,62 @@ body.no-behaviours .sidebar-export { display: none; }
   font-family: var(--ui);
 }
 .feedback-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+
+/* The comparison window. Wider than the note dialog because what it holds is
+   prose rather than a form: twenty thousand characters at a form's width is a
+   column too narrow to read and too long to scroll. */
+.comparison-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(86vh, 860px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+.comparison-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+.comparison-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 0;
+}
+.comparison-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.comparison-body {
+  padding: 4px 20px 20px;
+  overflow-y: auto;
+  max-height: calc(min(86vh, 860px) - 64px);
+}
+
+/* The control that opens it, on its own line under the two figures. A quiet
+   link rather than a button: it sits in a menu of behaviours and must not
+   compete with the tick target beside it. */
+.behaviour-diff {
+  /* Placed by the column it sits in rather than by an offset written here, so
+     nothing has to be kept in step by hand when the row changes shape. */
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.behaviour-diff:hover,
+.behaviour-diff:focus-visible { background: var(--energy); }
+.behaviour-diff[hidden] { display: none; }
 .feedback-form { display: block; padding: 18px 20px 20px; overflow-y: auto; max-height: inherit; }
 
 .feedback-head {
@@ -2468,4 +2726,80 @@ body.no-behaviours .sidebar-export { display: none; }
   font-family: var(--ui);
   font-size: 13px;
   color: var(--ink);
+}
+
+/* Links to the other document. A judged paragraph carries one bubble per
+   counterpart: what the other specification does about what this paragraph
+   says. Clicking one scrolls the compared panel to that paragraph.
+
+   Colour carries the relation, and only the relation: rust where no response
+   could respect both documents, gold where they differ without colliding, olive
+   where they agree. The judge's own sentence is the bubble's title, because a
+   relation is an opinion and the sentence is what makes it weighable. */
+.link-bubbles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+/* The colour is the behaviour, set once on the row. It used to be the relation,
+   which is now carried by the pill's own word: two meanings on one channel left
+   a reader unable to use either. The fallback triplet is --faint, for a row with
+   no behaviour to colour it. */
+.link-goto {
+  padding: 1px 9px;
+  border: 1px solid rgb(var(--bh, 103 108 88));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+/* The reading of all the counterparts rather than one of them, so it is filled
+   where the others are outlined: it is the one to press first, and it is the
+   only pill that goes nowhere. */
+.link-goto[data-relation="summary"] {
+  border-color: rgb(var(--bh, 51 61 34));
+  background: rgb(var(--bh, 51 61 34));
+  color: var(--on-accent);
+}
+.link-goto:hover,
+.link-goto:focus-visible,
+.link-goto[aria-expanded="true"] { background: var(--energy); border-color: var(--energy);
+                                  color: var(--ink); }
+
+/* Which subject drew a bubble, beside it and in that behaviour's own colour,
+   and only when several behaviours are ticked. It borrows the gutter's
+   vocabulary rather than inventing one: same name, same hue, one step further
+   in, so a reader meeting it already knows what it means. */
+/* The reason for one link, under the row rather than inside it: the pills keep
+   their places when it opens, and only one is ever open. */
+.link-note {
+  display: block;
+  margin: 5px 0 7px;
+  padding: 6px 9px;
+  border-left: 2px solid var(--faint);
+  border-radius: 0 3px 3px 0;
+  background: rgb(0 0 0 / .03);
+  font-family: var(--ui);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.link-note[hidden] { display: none; }
+
+/* The bubble that brought the reader here, on a paragraph that carries several.
+   A ring rather than a fill: it says "this one" without claiming to be pressed,
+   and it survives the flash fading under it. */
+.link-goto.link-back {
+  box-shadow: 0 0 0 2px var(--energy);
+  border-color: var(--energy);
+}
+
+.link-target { animation: link-target-flash 1.6s ease-out; }
+@keyframes link-target-flash {
+  from { background: var(--energy); }
+  to { background: transparent; }
 }

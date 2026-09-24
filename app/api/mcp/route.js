@@ -1,7 +1,7 @@
 /**
  * The public MCP server.
  *
- * Four read-only tools over the published index, unauthenticated, on the same
+ * Read-only tools over the published index, unauthenticated, on the same
  * application that serves the reader. Nothing here is disclosed that the
  * reader's own routes do not already serve to anyone who loads the page: this
  * is a second shape over the same rows, not a second door into the database.
@@ -14,8 +14,11 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { indexSnapshot } from "../../lib/index-snapshot.mjs";
-import { about, listModelSpecs, listBehaviours, retrievePassages, INSTRUCTIONS, ToolError }
+import { linkEvidence } from "../../lib/links.mjs";
+import { about, listModelSpecs, listBehaviours, retrievePassages,
+         compareDocuments, INSTRUCTIONS, ToolError }
   from "../../lib/mcp-tools.mjs";
+import { constitutionsBoard, governanceBoard } from "../../lib/board-tools.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,6 +132,130 @@ const handler = createMcpHandler(
           "The next_cursor of the previous page, to continue a walk."),
       }),
     }, args => answer(snapshot => retrievePassages(snapshot, args)));
+
+    server.registerTool("constitutions_board", {
+      title: "The board of constitutions",
+      description:
+        "How far each AI company's published constitution goes. A constitution "
+        + "is the document in which a company sets out how its models are meant "
+        + "to behave, such as Claude's Constitution, the OpenAI Model Spec or "
+        + "the Alibaba Model Spec. This tool reads those documents; "
+        + "governance_board scores what the companies do around them instead. A "
+        + "company that publishes no constitution is on the board at nought and "
+        + "says so.\n\n"
+        + "Each company answers with a final score out of 10, the average of two "
+        + "halves, each counting for half, and is ranked by it.\n\n"
+        + "The document as a whole, out of 10, is the average of five criteria, each "
+        + "given from 0 to 4 and shown out of 10: clarity when two rules are "
+        + "contradictory, how firm each rule is and who may lift it, whether the "
+        + "rules say why they exist, which of the situations a model is used in "
+        + "have rules of their own, and unsettled contradictions between rules.\n\n"
+        + "The behaviours, out of 10, are the average of how far the constitution "
+        + "goes on each behaviour the index carries, grouped under honesty and "
+        + "epistemics, harm and safety, autonomy, oversight and authority, and "
+        + "helpfulness and judgement. The "
+        + "scale is 0 absent, 2 named, 4 discussed, 6 prescribed, 8 demonstrated "
+        + "with worked examples, and 10 bounded, which asks that the edge be "
+        + "shown, that a clash with another of the document's own rules be "
+        + "settled, and that a default be given for the case the model cannot "
+        + "tell apart. An odd figure means the level below is fully met and the "
+        + "one above only in part.\n\n"
+        + "Every figure comes back with the level it reads as, what the document "
+        + "says on that row and why the figure is what it is, so a figure can be "
+        + "read without a second call. The answer is the board the publication "
+        + "froze, the same one the front page shows, with its takeaways.\n\n"
+        + "Pass company to narrow to one, such as OpenAI. This is the board on "
+        + "the index's front page. The whole board runs to a few tens of "
+        + "thousands of characters.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as OpenAI. Every constitution "
+          + "by default."),
+      }),
+    }, args => answer(snapshot => constitutionsBoard(snapshot, args)));
+
+    server.registerTool("governance_board", {
+      title: "The board of governance",
+      description:
+        "How openly each of nine AI companies governs the rules it gives its "
+        + "models. A constitution here is the document in which a company sets "
+        + "out how its models are meant to behave, such as Claude's Constitution "
+        + "or the OpenAI Model Spec. This tool does not read those documents, it "
+        + "scores what the company does around them; constitutions_board reads "
+        + "the documents themselves. The nine are OpenAI, Anthropic, Alibaba, "
+        + "Google DeepMind, Mistral AI, Meta, xAI, Moonshot AI and DeepSeek.\n\n"
+        + "Each company answers with a final score out of 10, which ranks the "
+        + "companies, and the two figures out of 10 it averages, each counting "
+        + "for half.\n\n"
+        + "What is published, out of 10, scores what anyone can go and read "
+        + "today. It is eleven "
+        + "rows: ten checks grouped under four questions, each check scored 0 to "
+        + "4, plus one on the licence the text carries. The four questions ask "
+        + "whether the company publishes a constitution at all and for which "
+        + "models, whether it keeps a dated log of the changes it makes to it, "
+        + "what it says about the filters and classifiers that sit outside the "
+        + "model, and which of its rules it declares can never be lifted.\n\n"
+        + "What it engages, out of 10, scores what a company states about its "
+        + "own practice, over eight rows scored 0, 1 or 2: training the models "
+        + "it deploys on the constitution, holding its internal models to it, "
+        + "publishing the text it actually uses, checking and reporting "
+        + "violations in production, publishing a current test of adherence, "
+        + "giving outside evaluators access to test adherence, announcing an "
+        + "adherence threshold before a release, and naming who approves a "
+        + "change to the text.\n\n"
+        + "Every row comes back with its figure, the wording that figure was "
+        + "given against, and the passage or address it rests on. The answer "
+        + "also carries a written paragraph on each company and the reason the "
+        + "two figures are not added.\n\n"
+        + "These were scored by hand by Polaris Collective from public "
+        + "documents, on a date the answer names. The board belongs to no "
+        + "publication of the index. A nought means nothing public was found, "
+        + "not that the company does not do the thing.\n\n"
+        + "Pass company to narrow to one. All nine come to about 90,000 "
+        + "characters; one company to about 30,000.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as Anthropic. All nine by "
+          + "default."),
+      }),
+    }, args => answer(snapshot => governanceBoard(snapshot, args)));
+
+    server.registerTool("compare_documents", {
+      title: "Compare two documents on one behaviour",
+      description:
+        "Everything one run found between two model specifications on one "
+        + "behaviour: each document's passages quoted with the band the panel "
+        + "put them in, every pair of passages the judges linked with the "
+        + "relation each judge gave, who may lift each rule and the judge's own "
+        + "reasoning, the arbiter's verdict wherever two judges disagreed, the "
+        + "passages one document has nothing facing, and the paragraph written "
+        + "from all of it. A relation is named by the document it is about and "
+        + "never by a direction: stricter arrives with stricter_document. "
+        + "THIS ANSWER IS VERY LONG: hundreds of thousands of characters where "
+        + "both documents cover the behaviour fully, and it comes whole rather "
+        + "than in pages. The first pair measured came to 315,569 characters, "
+        + "about 79,000 tokens. Pass detail counts first: it costs about 2,600 "
+        + "characters, reports the exact size of the full answer rather than an "
+        + "estimate of it, and lets you decide whether to ask for the whole "
+        + "thing.",
+      inputSchema: z.object({
+        behaviour: z.string().describe(
+          "One behaviour slug, from list_behaviours. A comparison is about one "
+          + "behaviour."),
+        model_spec_ids: z.array(z.string()).length(2).describe(
+          "Exactly two specification ids, from list_model_specs. A comparison "
+          + "is between two documents."),
+        detail: z.enum(["counts", "full"]).optional().describe(
+          "full by default, which is everything. counts answers instead with "
+          + "how many passages each document carries, how many pairs were "
+          + "linked, the tally of relations, how many were arbitrated, how many "
+          + "silences there are, and full_answer_characters: the exact size of "
+          + "the full answer, not an estimate of it."),
+      }),
+    }, args => answer(async snapshot => compareDocuments(
+      snapshot,
+      await linkEvidence(args.behaviour, args.model_spec_ids),
+      args)));
   },
   {
     serverInfo: { name: "ai-character-index", version: "1.0.0" },

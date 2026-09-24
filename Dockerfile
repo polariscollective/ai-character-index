@@ -6,8 +6,8 @@
 # what to do, and writes what it did back onto the same row.
 #
 # Three modes, one image: compose prices a run and writes its calls, judge
-# executes them, publish builds the two payloads the reader serves. A mode is a
-# string rather than a deployment.
+# executes them, publish builds the three payloads the reader serves. A mode is
+# a string rather than a deployment.
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -18,7 +18,22 @@ WORKDIR /app
 # of the engine is standard library by design.
 RUN pip install --no-cache-dir "openai>=1.0"
 
+# Node, for the one builder that is not Python. engine/build-links-data.mjs imports
+# app/lib/links.mjs, the assembly the reader route already used: a Python port would
+# be a second copy of it, and this repository has published wrong figures off exactly
+# that kind of drift before. So the image carries a Node runtime and the two files
+# that builder's import graph actually reaches: links.mjs and the supabase.mjs it
+# imports in turn. Not the site, beyond the two board files a publication
+# freezes, not the reader, not Next, and not the rest of app/lib
+# either -- no Slack client, no submissions, no feedback, no admin data.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY engine/ ./engine/
+COPY app/lib/links.mjs app/lib/supabase.mjs ./app/lib/
+# The two boards a publication freezes (engine/publish.py BOARD_FILES).
+COPY site/constitutions.json site/governance.json ./site/
 ENV PYTHONPATH=/app/engine
 
 # Only the OpenRouter key reaches this container, and that is a requirement

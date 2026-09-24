@@ -58,6 +58,11 @@
         ]
       }
     },
+    "opus-5": {
+      "provider": "anthropic",
+      "id": "claude-opus-5",
+      "_note": "Not a hosted seat, and no request for it is ever sent to a provider. It names the model judging from inside a Claude Code session, driven by engine/panel/link_self.py, and exists here only so harness.resolve is satisfied and link_job's pipeline can run unchanged with the reply read from a file. It carries no price_per_mtok deliberately: batch_job.cost_of then records null, which this project reads as unknown rather than as free, and a session's tokens are not billed through this ledger. A run judged by this seat is not the panel and must not be published as one."
+    },
     "fable": {
       "provider": "anthropic",
       "id": "claude-fable-5",
@@ -180,7 +185,7 @@
         3.0,
         15.0
       ],
-      "max_output": 65536,
+      "max_output": 131072,
       "openrouter": {
         "id": "moonshotai/kimi-k3",
         "price_per_mtok": [
@@ -203,7 +208,8 @@
       "price_per_mtok": [
         0.46,
         1.45
-      ]
+      ],
+      "max_output": 131072
     },
     "qwen38-max": {
       "provider": "openrouter",
@@ -254,6 +260,10 @@
     ],
     "_frontier_fast_note": "calibration-loop panel (2026-08-17): deepseek replaces kimi as third seat -- K3 spends 8-18 min and 25-57k reasoning tokens per whole-doc call; V3.2 is frontier-class, open-weights, and fast. Seat confirmed by a 4-way audition on the v5 rubric (runlog-v5.jsonl, 5 cells each): V3.2 4/4 named-core hits at 28-86s/call with the sparsest positives; glm (GLM-5.2) 3/4 at 43-153s = designated substitute; deepseek-v4 (V4-Pro-0813) 4/4 but 93-1132s/call and 2-4x looser; qwen38-max 2 length-overflow parse failures. The shipped payload was regenerated from this panel's v5 full bench (engine/panel/runlog-v5.jsonl) on 2026-08-24: frontier_fast x v5 is the production display configuration; frontier/frontier_primary remain the K3-seated panels for v3-family runs.",
     "_comment": "frontier = every tag whose rows the site builder may admit (primaries AND substitutes). frontier_primary = the judges the run driver executes; substitutes (opus, kimi-k2) are run manually per Skill 4 when a primary fails.",
+    "opus_5_self": [
+      "opus-5"
+    ],
+    "_opus_5_self_note": "One seat, and it is the model running the Claude Code session rather than a hosted judge. Composed and driven by engine/panel/link_self.py: the engine's own pipeline runs unchanged, with each reply coming from a file a subagent wrote instead of from a socket. Two things follow from having one seat and must be said rather than discovered. A single judge cannot assert a silence, which needs all three, so an absent row from this panel is one model's opinion and not the index's finding. And it cannot disagree with itself across seats, so the second pass over such a run compares its two directions against each other rather than its judges. Never a published panel: this seat is an Anthropic model reading Anthropic's own constitution against another laboratory's specification, which is precisely the conflict the index exists to avoid.",
     "itest": [
       "qwen-big"
     ],
@@ -263,11 +273,32 @@
     "frontier_fast": {
       "fable": [
         "opus",
+        "kimi",
+        "glm"
+      ],
+      "deepseek": [
+        "glm",
         "kimi"
+      ],
+      "opus": [
+        "glm"
       ]
     }
   },
-  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. Which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
+  "_substitutes_note": "Declared, ordered stand-ins per panel per seat. publish.py refuses a recorded substitution (aci_seat_substitutions) that is not on this list for its seat. frontier_fast's fable seat: opus first, the upstream precedent recorded in _opus_note below. kimi next, for when every Anthropic model is refused on input, as happened 2026-09-15 judging the Alibaba Model Spec (fable through Anthropic's own API, and fable, opus and sonnet through OpenRouter); kimi was fable's panel-mate in frontier_primary. glm last: kimi holds a contradictions seat of its own in the assessment, so on a document where every Anthropic model is refused, as the Alibaba Model Spec was, nobody else could take fable's contradictions seat. frontier_fast's deepseek seat: glm first, named deepseek's substitute by the audition of 2026-08-17 recorded in _frontier_fast_note, about a tenth of kimi's price per token, and seated nowhere else, so it is free where kimi already sits in fable's place. kimi next. (Owner, 22 September 2026.) frontier_fast's opus seat, which opus holds only on the assessment's contradictions: glm alone, since on the Alibaba Model Spec every Anthropic model is refused and kimi already holds a contradictions seat of its own (owner, 22 September 2026). A substitute is used only when the seat's own model cannot answer a cell at all, and each use is recorded with a reason. The depth ladder and the assessment try this list in order; for passage judging, which is tried first is policy for whoever records a substitution, not a rule this list's order enforces.",
+  "assessment": {
+    "criteria": [
+      "sol",
+      "fable",
+      "deepseek"
+    ],
+    "contradictions": [
+      "sol",
+      "opus",
+      "kimi"
+    ]
+  },
+  "_assessment_note": "The seats of the assessment of a document as a whole (engine/assess.py), per question. The criteria are scored by frontier_fast's seats. The contradictions are found, and every claim is then read by every one of their seats, by sol, opus and kimi. kimi sits in deepseek's place for those questions (owner, 21 September 2026), and opus in fable's since 22 September 2026: fable's content filter refused the finding of contradictions on all four documents of the first full run, and billed about 1.20 dollars each time on three of them (owner, 22 September 2026). A seat that cannot answer is taken by its declared substitutes from frontier_fast's substitutes block, skipping any substitute already seated for the same question.",
   "rubric": "v5",
   "specs": [
     "anthropic--constitution",

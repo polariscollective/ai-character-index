@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-title: AI Character Index
+title: AI Constitutions Index
 message: >-
   This file cites the software in this repository. The index's data is not
   in this repository: it is served by the site, and each publication has an
   identifier and a date. To cite the data, use the citation the site gives
   for the publication you read, at
-  https://ai-character-index.vercel.app/how-it-works. The specifications the
+  https://ai-character-index.vercel.app/about. The specifications the
   index reads are third-party works and should be cited to their own
   publishers, not to this project.
 type: software

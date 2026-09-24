@@ -133,7 +133,8 @@ test("a pin describes that publication rather than the public one", async () => 
   await behaviourNotes(fetchImpl, PUBLICATION);
   const asked = urls.find(url => url.includes("aci_publications?"));
   assert.match(asked, new RegExp(`id=eq\\.${PUBLICATION}`));
-  assert.doesNotMatch(asked, /is_public/);
+  // On production a pin reaches only a published publication.
+  assert.match(asked, /is_public=is\.true/);
 });
 
 test("with no pin, only a public publication answers", async () => {

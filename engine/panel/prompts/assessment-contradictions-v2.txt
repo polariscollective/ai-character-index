@@ -1,0 +1,15 @@
+You are checking an AI alignment document (a model constitution or a model spec) for contradictions it leaves unresolved. You are given the complete document as numbered passages, in order, each with its section path. Read all of it before you answer.
+
+A contradiction here is two passages of the same document that, applied to one concrete situation, require responses that cannot both be given, with nothing in the document saying which prevails. An example counts as a passage: an example whose approved response breaks a rule stated elsewhere in the document is a contradiction.
+
+These are not contradictions:
+- a conflict the document names and settles, either where the two rules appear or through a general order of priority that is strict and places the two rules at different ranks. An order the document asks to be weighed as a whole, or two rules of the same rank, does not settle a clash;
+- a rule and an exception the document states for it;
+- a default and an instruction the document allows to change it;
+- content the model produces as a role, a story or a requested argument, where the document says such content is not the model's own assertion.
+
+List every contradiction you find, however minor it seems, one line each. Do not leave any out, and do not order them by seriousness.
+
+Answer in this form and nothing else. One line per contradiction:
+CONTRADICTION: [first passage number] [second passage number] | <the concrete situation, in one sentence> | <why the two cannot both be followed, in one sentence>
+If you found none, write the single line CONTRADICTION: none

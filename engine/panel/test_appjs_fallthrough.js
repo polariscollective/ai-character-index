@@ -2,9 +2,14 @@
 /* Automated guard for the payload resolution that site/spec-reader/app.js
  * implements:  ?publication=<uuid> pin -> the current publication.  app.js runs
  * DOM code at module scope, so it cannot be imported directly; instead the
- * resolution functions (payloadName, payloadUrl, loadBehaviours) are extracted
- * verbatim from the real file and loadBehaviours is driven against a stubbed
- * loadJSON, exactly as the browser's fetch would resolve it.
+ * resolution functions (payloadName, sliceParams, urlSlugs, loadBehaviours) are
+ * extracted verbatim from the real file and loadBehaviours is driven against a
+ * stubbed loadJSON, exactly as the browser's fetch would resolve it.
+ *
+ * payloadUrl was one of them until the reader learned to ask for only what its
+ * URL names: the address is built from sliceParams and urlSlugs now. Naming a
+ * function the file no longer has does not fail a check, it kills the suite on
+ * load, so this list is worth keeping true.
  *
  * The chain used to have three tiers and now has two. The manifest was a ledger
  * of local runs and the shipped fallback existed for a fresh clone; a payload
@@ -56,23 +61,44 @@ eval(consts + "\n" +
   "let asked = [];\n" +
   "const state = {};\n" +
   "let location;\n" +   // browser global, injected per-scenario below
+  /* initialParams is a module-level const in app.js, read once from
+     location.search. Here location is replaced per scenario, so the runner
+     re-derives it below; left as a single binding, every scenario after the
+     first would resolve against the first one's URL. */
+  "let initialParams;\n" +
   "async function loadJSON(url) {\n" +
   "  asked.push(url);\n" +
   "  if (url in fetchMap) return fetchMap[url];\n" +
   "  throw new Error(\"HTTP 404 for \" + url);\n" +
   "}\n" +
   extractFn("function payloadName(id)") + "\n" +
-  extractFn("function payloadUrl(id)") + "\n" +
+  /* payloadUrl no longer exists: loadBehaviours builds its address from
+     sliceParams and urlSlugs, so those are what the fall-through must run
+     against. Extracting a function the file has lost makes this suite die on
+     load, which is how it fell silent rather than failing by name. */
+  extractFn("function sliceParams(pinned, { behaviours, specs } = {})") + "\n" +
+  extractFn("function urlSlugs()") + "\n" +
+  /* loadDocuments asks for the documents named by ?spec= and ?compare-with=
+     now, via urlSpecs(), so the sandbox needs it extracted the same way
+     urlSlugs() already is for loadBehaviours(). */
+  extractFn("function urlSpecs()") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
-  extractOrThrowing("async function loadDocuments()") + "\n" +
-  "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; state.payloadSource = undefined; return loadBehaviours(); };\n" +
+  /* loadDocuments defaults its pin to servedPin(), so initialize can ask for
+     the documents beside the payload rather than after it. */
+  extractFn("function servedPin()") + "\n" +
+  extractOrThrowing("async function loadDocuments(pinned = servedPin())") + "\n" +
+  "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; initialParams = new URLSearchParams(search); state.payloadSource = undefined; return loadBehaviours(); };\n" +
   "documentsRunner = async (search, map) => { await runner(search, map); return loadDocuments(); };\n" +
   "readAsked = () => asked;\n" +
   "readSource = () => state.payloadSource;");
 
 const PINNED_ID = "7c2e0f11-4b6a-4d2e-9a5f-1e8c3b0d7a42";
-const CURRENT_URL = "/api/reader/payload";
-const PINNED_URL = `${CURRENT_URL}?publication=${PINNED_ID}`;
+const SPEC_A = "anthropic--constitution@2026-01-20";
+/* An address naming no behaviour asks for none, so the reader writes the empty
+ * parameter that says so. It used to write nothing at all, which the routes
+ * read as a request for the whole publication. */
+const CURRENT_URL = "/api/reader/payload?behavior=";
+const PINNED_URL = `/api/reader/payload?publication=${PINNED_ID}&behavior=`;
 const PIN = { behaviours: ["PIN"] };
 const CURRENT = { behaviours: ["CURRENT"] };
 
@@ -128,8 +154,8 @@ function check(ok, label, detail) {
    * publication's documents matches nothing. The loader follows the payload's
    * outcome rather than the URL: a pin that fell back reads the current documents
    * even where a pinned documents request would have answered. */
-  const DOCS_CURRENT_URL = "/api/reader/documents";
-  const DOCS_PINNED_URL = `${DOCS_CURRENT_URL}?publication=${PINNED_ID}`;
+  const DOCS_CURRENT_URL = "/api/reader/documents?spec=";
+  const DOCS_PINNED_URL = `/api/reader/documents?publication=${PINNED_ID}&spec=`;
   const DOCS_PIN = { documents: ["PIN"] };
   const DOCS_CURRENT = { documents: ["CURRENT"] };
   const readDocuments = async (search, map) => {
@@ -162,6 +188,14 @@ function check(ok, label, detail) {
     check(docs.documents[0] === "CURRENT"
           && readAsked().every(url => !url.includes("behaviours-v5-reader")),
           "a malformed pin reads the current documents and never asks for its own",
+          docs.error || JSON.stringify(readAsked()));
+  }
+  {
+    const DOCS_SPEC_URL = `/api/reader/documents?spec=${encodeURIComponent(SPEC_A)}`;
+    const docs = await readDocuments(`?spec=${SPEC_A}`, {
+      [CURRENT_URL]: CURRENT, [DOCS_SPEC_URL]: DOCS_CURRENT });
+    check(docs.documents[0] === "CURRENT",
+          "the documents request names the document the address asks for",
           docs.error || JSON.stringify(readAsked()));
   }
 

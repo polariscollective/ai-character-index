@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About, AI Constitutions Index</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Polaris design framework v1.1. Shares the reader's two surfaces:
+     daylight (default) and umber, which is the framework's olive-deep ground. */
+  :root {
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+    --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body[data-palette="daylight"] {
+    --bg:#F1EFE3; --lift:#E9E6D7;
+    --hair:#C6C4B0; --hair2:#5C6B3C;
+    --ink:#23281B; --ink2:#5C6B3C; --ink3:#676C58;
+    --spec:#333D22; --energy:#B7C94B; --weak:#C9A227; --gap:#A0522D;
+    --on-accent:#F1EFE3;
+  }
+  body[data-palette="umber"] {
+    --bg:#333D22; --lift:#2A331C;
+    --hair:#4A552F; --hair2:#C4CBA8;
+    --ink:#F1EFE3; --ink2:#C4CBA8; --ink3:#A2AA88;
+    --spec:#C7D69A; --energy:#B7C94B; --weak:#D9B93F; --gap:#C97A4D;
+    --on-accent:#23281B;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--ui);
+         font-size: 17px; line-height: 1.6; min-height: 100vh; }
+
+  /* ---------- header (as on the reader) ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between;
+           padding: 16px 40px; border-bottom: 1px solid var(--hair); }
+  /* The mark and the name take one pair of tones and move together, as they do
+     in the bar of evals-playground: olive at rest, olive-deep under the
+     pointer, ink while pressed. On the umber surface there is nothing darker
+     than the ground to move to, so the pair brightens to paper instead. */
+  .site-brand { display: flex; align-items: baseline; gap: 10px;
+                --brand-rest: var(--ink2); --brand-lit: var(--spec); --brand-pressed: var(--ink); }
+  body[data-palette="umber"] .site-brand { --brand-lit: var(--ink); --brand-pressed: var(--ink); }
+  /* The broken orbit, carrying the accent while the wordmark keeps the ink. */
+  /* Olive rather than the framework's olive-deep: at 20px the deep tone reads
+     as a smudge beside its name, and the darkening is spent on hover instead. */
+  .polaris-mark { width: 20px; height: 20px; flex: none; color: var(--brand-rest);
+                  transition: color .15s ease; }
+  /* The mark leaves for polariscollective.org, the same place its name leaves
+     for. Second link to one destination, so it stays out of the reading order
+     and out of the tab order. */
+  .mark-link { display: flex; flex: none; align-self: center; }
+  .collective { color: var(--brand-rest); text-decoration: none; transition: color .15s ease;
+                font-family: var(--display); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  /* Mark and name are one target and answer as one: whichever half the pointer
+     is over, both darken. The chartreuse highlight this page gives a link in
+     prose is turned off for the pair: it would fill a block behind the name
+     that the mark beside it cannot take, and the bar would move under the
+     pointer instead of the name darkening in it. */
+  .mark-link:hover,
+  .collective:hover { background: none; }
+  .mark-link:hover .polaris-mark,
+  .site-brand:has(.collective:hover) .polaris-mark,
+  .mark-link:hover + .collective,
+  .collective:hover { color: var(--brand-lit); }
+  .mark-link:active .polaris-mark,
+  .site-brand:has(.collective:active) .polaris-mark,
+  .mark-link:active + .collective,
+  .collective:active { color: var(--brand-pressed); }
+  .brand-divider { align-self: center; width: 1px; height: 15px; flex: none; background: var(--hair); }
+  .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .wordmark a { color: inherit; text-decoration: none; }
+  nav { display: flex; align-items: center; gap: 24px; }
+  nav a { font-size: 14px; color: var(--ink2); text-decoration: none; }
+  nav a[href]:hover { background: var(--energy); color: var(--ink); }
+  nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .mode { background: none; border: none; padding: 4px 6px;
+          font: inherit; font-size: 16px; line-height: 1; color: var(--ink2); cursor: pointer;
+          transition: background-color .15s ease, color .15s ease; }
+  .mode:hover { background: var(--energy); color: var(--ink); }
+
+  /* ---------- the column ----------
+     One column, sections told apart by a rule and by whitespace. The bordered
+     sheet this replaced was a card, and the framework draws structure with
+     neither cards nor shadows. */
+  .sheet { max-width: 720px; margin: 0 auto; padding: 0 40px; }
+  .m-head { padding: 56px 0 32px; }
+  .m-title { font-family: var(--display); font-size: 40px; font-weight: 600; line-height: 1.16; }
+  .m-sub { font-size: 17px; line-height: 1.6; color: var(--ink2); max-width: 66ch; margin-top: 16px; }
+
+  /* Primary button: olive-deep ground, paper text, pill, chartreuse on hover. */
+  .repo-btn { display: inline-block; margin-top: 24px; padding: 10px 22px;
+              border: 1px solid transparent; border-radius: 999px;
+              background: var(--spec); color: var(--on-accent);
+              font-size: 15px; font-weight: 600; text-decoration: none;
+              transition: background-color .15s ease, color .15s ease; }
+  .repo-btn:hover { background: var(--energy); color: var(--ink); }
+
+  section.m { padding: 32px 0; border-top: 1px solid var(--hair); }
+  /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
+  h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
+       margin-bottom: 16px; padding-top: 19px;
+       background: linear-gradient(var(--energy), var(--energy)) 0 0 / 56px 3px no-repeat; }
+  section.m p { font-size: 16px; line-height: 1.55; color: var(--ink); max-width: 66ch; margin-bottom: 14px; }
+  /* The sentence that says what this section is for. */
+  section.m p.lead { font-size: 17px; line-height: 1.6; }
+  /* The opening summary keeps the olive the page's standfirst used to carry, so
+     the first thing read looks like a standfirst rather than another paragraph. */
+  #tldr p.lead { color: var(--ink2); }
+  section.m p:last-child { margin-bottom: 0; }
+  /* The change log: a dated heading per publication and what changed, in plain
+     words. */
+  .changelog h3 { margin: 22px 0 6px; font-family: var(--display); font-size: 17px; font-weight: 600; }
+  .changelog h3:first-child { margin-top: 6px; }
+  .changelog h3 code, .changelog p code { font-family: var(--mono); font-size: .9em; }
+  .changelog h3 a { color: var(--ink); text-decoration: underline 2px var(--energy);
+                    text-underline-offset: 4px; box-shadow: none; }
+  .changelog h3 a:hover, .changelog h3 a:focus-visible { background: var(--energy); }
+  .changelog-toggle { margin: 14px 0 0; padding: 4px 12px; border: 1px solid var(--olive, #5C6B3C);
+    border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+  .changelog-toggle:hover, .changelog-toggle:focus-visible { background: var(--energy); }
+
+  /* The two steps, numbered because they come in that order. */
+  section.m ol.steps { max-width: 66ch; margin: 8px 0 0; padding-left: 1.4em; }
+  section.m ol.steps li { font-size: 16px; line-height: 1.55; margin-bottom: 10px; padding-left: 4px; }
+  /* The asterisk after "should": small and raised, and a way to the note that
+     says what the word means here. */
+  section.m a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; box-shadow: none; }
+  section.m a.asterisk:hover, section.m a.asterisk:focus-visible { background: var(--energy); }
+  /* The words the index uses: each term on its own line in the heading face, its
+     meaning under it, a rule between one term and the next. */
+  .glossary { max-width: 66ch; margin: 4px 0 0; border-top: 1px solid var(--line); }
+  .glossary dt { padding-top: 14px; font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--ink); }
+  .glossary dd { margin: 6px 0 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .glossary dd p { margin-bottom: 10px; }
+  .glossary dd p:last-child { margin-bottom: 0; }
+  /* The count that opens the list: written like a link, because it reads as part
+     of the sentence, and a button, because it opens rather than goes. */
+  .glossary-open { padding: 0; border: 0; background: none; color: var(--ink); font: inherit;
+                   text-decoration: underline 2px var(--energy); text-underline-offset: 3px;
+                   cursor: pointer; }
+  .glossary-open:hover, .glossary-open:focus-visible { background: var(--energy); }
+  .glossary-open:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .behaviours-dialog .dialog-body h3 { margin: 22px 0 6px; font-size: 13px; font-weight: 600;
+                                       color: var(--ink2); }
+  .behaviours-dialog .dialog-body h3:first-child { margin-top: 0; }
+  .behaviour-item { padding: 12px 0; border-top: 1px solid var(--hair); }
+  .behaviour-item h4 { margin: 0 0 4px; font-family: var(--display); font-size: 16px;
+                       font-weight: 600; }
+  .behaviour-item p { margin: 0 0 6px; max-width: 62ch; font-size: 15px; line-height: 1.55; }
+  .behaviour-item a, .behaviours-missing a { color: var(--ink); font-size: 14px;
+    text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+  .behaviour-item a:hover, .behaviours-missing a:hover { background: var(--energy); }
+  .behaviours-missing { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair);
+                        font-size: 15px; }
+  section.m ul { list-style: none; max-width: 66ch; margin: 8px 0 16px; }
+  section.m li { line-height: 1.6; color: var(--ink); padding: 6px 0 6px 24px; position: relative; }
+  /* Bullets are 6px chartreuse circles. */
+  section.m li::before { content: ""; position: absolute; top: .78em; left: 4px;
+                         width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+  section.m li b { font-weight: 600; }
+  /* Steps to follow in order are numbered: the bullet's indent, with the number
+     where the chartreuse circle would be. */
+  section.m ol { max-width: 66ch; margin: 8px 0 16px; padding-left: 24px; }
+  section.m ol > li { padding-left: 4px; }
+  section.m ol > li::before { content: none; }
+  section.m ol > li::marker { color: var(--ink2); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 13px; color: var(--ink2);
+         background: var(--lift); border: 1px solid var(--hair); padding: 0 4px; border-radius: 4px; }
+  pre { max-width: 66ch; margin: 16px 0; padding: 16px; overflow-x: auto;
+        background: var(--lift); border: 1px solid var(--hair); border-radius: 4px; }
+  pre code { display: block; border: none; background: none; padding: 0;
+             font-size: 13px; line-height: 1.7; color: var(--ink); }
+  /* The framework's link: ink text over a 2px chartreuse underline; hover fills
+     the highlight behind it. */
+  a { color: var(--ink); text-decoration: none; box-shadow: inset 0 -2px 0 var(--energy);
+      transition: background-color .15s ease; }
+  a:hover { background: var(--energy); }
+  header a, footer a, .repo-btn { box-shadow: none; }
+
+  footer { max-width: 720px; margin: 0 auto; padding: 32px 40px 64px;
+           border-top: 1px solid var(--hair);
+           display: flex; flex-direction: column; gap: 8px;
+           font-size: 14px; color: var(--ink3); }
+  .f-row { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+  .proto-flag { margin-left: auto; }
+  footer a { color: var(--ink2); }
+  footer a:hover { background: var(--energy); color: var(--ink); }
+
+  :focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    header { padding: 14px 22px; flex-wrap: wrap; gap: 6px 18px; }
+    /* Two names and a menu do not fit. The mark carries the collective alone,
+       and its name is still a link in the footer. */
+    .collective, .brand-divider { display: none; }
+    .sheet, footer { padding-left: 22px; padding-right: 22px; }
+    .m-title { font-size: 32px; }
+  }
+
+  /* ---------- the proposal forms ---------- */
+  .choice { display: flex; gap: 0; margin: 8px 0 32px; border: 1px solid var(--hair); width: fit-content; }
+  .choice a { padding: 9px 20px; font-size: 15px; color: var(--ink2); text-decoration: none;
+              box-shadow: none; }
+  .choice a:hover { background: var(--energy); color: var(--ink); }
+  .choice a[aria-current="page"] { background: var(--spec); color: var(--on-accent); }
+  form.propose { margin: 0 0 24px; }
+  form.propose label { display: block; margin-bottom: 20px; }
+  form.propose label > span { display: block; font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
+  form.propose .hint { display: block; margin-top: 6px; font-size: 14px; color: var(--ink3); }
+  form.propose input[type="text"],
+  form.propose input[type="email"],
+  form.propose input[type="url"],
+  form.propose textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--hair); border-radius: 4px;
+    background: var(--bg); color: var(--ink); font-family: var(--ui); font-size: 16px;
+    line-height: 1.5;
+  }
+  form.propose textarea { min-height: 110px; resize: vertical; }
+  form.propose input:focus-visible, form.propose textarea:focus-visible,
+  form.propose input[type="file"]:focus-visible {
+    outline: 2px solid var(--energy); outline-offset: 1px; border-color: var(--hair2);
+  }
+  form.propose input[type="file"] { font-family: var(--ui); font-size: 15px; color: var(--ink2); }
+  form.propose button { margin-top: 4px; padding: 11px 26px; border: 1px solid var(--spec);
+    border-radius: 999px; background: var(--spec); color: var(--on-accent);
+    font-family: var(--ui); font-size: 16px; font-weight: 500; cursor: pointer; }
+  form.propose button:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  /* Hidden from people, visible to the machinery that fills in every field it
+     finds. Not display:none, which some of it knows to skip. */
+  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .said { margin: 0 0 28px; padding: 14px 18px; border-left: 3px solid var(--energy);
+          background: var(--lift); font-size: 16px; }
+  .said.bad { border-left-color: var(--gap); }
+  .said p { margin: 0 0 6px; }
+  .said p:last-child { margin: 0; }
+
+  /* ---------- the header, identical to the reader's ---------- */
+  /* Same height, same rule, same background. Two surfaces differing by a few
+     pixels read as two sites when you move between them, and moving between them
+     is what a nav is for. Held at the top while the page scrolls under it, which
+     is how the reader already behaves: its window is fixed and its content
+     scrolls. */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: 54px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--hair);
+    background: var(--lift);
+  }
+  .site-header .site-brand { display: flex; align-items: baseline; gap: 10px; }
+  .site-header nav { display: flex; align-items: center; gap: 24px; }
+  .site-header nav a { color: var(--ink2); text-decoration: none; font-size: 14px;
+                       box-shadow: none; }
+  .site-header nav a:hover { background: var(--energy); color: var(--ink); }
+  .site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+  .site-header .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600;
+                           color: var(--ink); text-decoration: none; box-shadow: none; }
+  .site-header .wordmark:hover { background: none; color: var(--ink); }
+  .site-header .mode { align-self: center; }
+  @media (max-width: 700px) {
+    /* Here the brand and the nav can take two rows. The header grows to hold
+       them, because it stays over the page and a row spilling out of it would
+       sit on the text scrolling underneath. */
+    .site-header { height: auto; min-height: 54px; padding: 8px 16px; gap: 6px 12px; }
+    .site-header .collective, .site-header .brand-divider { display: none; }
+    .site-header nav { gap: 14px; }
+  }
+
+  /* ---------- the contents rail ---------- */
+  /* One hairline down the side of the page's own headings, with a chartreuse
+     segment marking where you are. No label above it: a column of this page's
+     headings, beside this page, does not need to announce what it is. */
+  .with-rail { display: flex; align-items: flex-start; gap: 56px;
+               max-width: 1052px; margin: 0 auto; padding: 0 40px; }
+  .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
+  /* Both offsets clear the header, which stays over the page: the rail sits
+     under it, and a heading jumped to lands below it rather than behind it. On a
+     phone the header wraps and grows, so the script writes its real height into
+     --header-height; 54px is its height until then. */
+  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 220px; padding-top: 92px; }
+  .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
+  .rail li { margin: 0; }
+  .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
+            border-left: 2px solid transparent; color: var(--ink3);
+            font-size: 13px; line-height: 1.35; text-decoration: none; box-shadow: none;
+            transition: color .15s ease, border-color .15s ease; }
+  .rail a:hover { background: none; color: var(--ink); }
+  .rail a[aria-current="true"] { color: var(--ink); border-left-color: var(--energy); }
+  .sheet [id] { scroll-margin-top: calc(var(--header-height, 54px) + 24px); }
+  @media (max-width: 940px) {
+    .with-rail { display: block; padding: 0 22px; }
+    .with-rail .sheet { max-width: 66ch; margin: 0 auto; }
+    .rail { display: none; }
+  }
+
+  /* ---------- the proposal dialog ---------- */
+  /* The forms are long, and before this they sat open on the page whether or not
+     anyone wanted them, pushing everything after them out of reach. They open on
+     request now. Rendered with `open` in the markup so that without JavaScript
+     they are still on the page rather than unreachable; the script closes the
+     dialog on load and reopens it modally. */
+  .open-propose { padding: 11px 24px; border: 1px solid var(--spec); border-radius: 999px;
+                  background: var(--spec); color: var(--on-accent); font-family: var(--ui);
+                  font-size: 16px; font-weight: 500; cursor: pointer; }
+  .open-propose:hover { background: var(--energy); color: var(--ink); border-color: var(--energy); }
+  .open-propose:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+  .propose-dialog {
+    margin: auto;                 /* the page's reset zeroes what centres a modal */
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 64px);
+    padding: 0;
+    border: 1px solid var(--hair2);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .propose-dialog::backdrop { background: rgba(35, 40, 27, .55); }
+  .dialog-head { display: flex; align-items: baseline; justify-content: space-between;
+                 gap: 16px; padding: 20px 28px 16px; border-bottom: 1px solid var(--hair);
+                 background: var(--lift); }
+  /* The page draws its section rule as a gradient on every h2. The dialog's
+     title is not a section of the page, so it carries none. */
+  .dialog-head h2 { font-family: var(--display); font-size: 20px; font-weight: 600;
+                    margin: 0; padding-top: 0; background: none; }
+  .dialog-close { border: 0; background: none; padding: 4px 2px; color: var(--ink2);
+                  font-family: var(--ui); font-size: 14px; cursor: pointer; }
+  .dialog-close:hover { background: var(--energy); color: var(--ink); }
+  .dialog-close:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .dialog-body { padding: 20px 28px 28px; overflow-y: auto; max-height: calc(100vh - 150px); }
+  .dialog-body .choice { margin-top: 0; }
+  .dialog-body .form-panel p { font-size: 16px; line-height: 1.55; max-width: 62ch;
+                               margin-bottom: 14px; }
+  /* The switch is buttons now, not links: changing which form you are filling in
+     should not reload the page under you. */
+  .choice button { padding: 9px 20px; border: 0; background: none; color: var(--ink2);
+                   font-family: var(--ui); font-size: 15px; cursor: pointer; }
+  .choice button:hover { background: var(--energy); color: var(--ink); }
+  .choice button[aria-current="true"] { background: var(--spec); color: var(--on-accent); }
+  .choice button:focus-visible { outline: 2px solid var(--energy); outline-offset: -2px; }
+  /* Without JavaScript the dialog is an ordinary block on the page. */
+  .propose-dialog[open] { display: block; }
+  /* On a phone the dialog takes the screen. A form of seven fields has no room
+     to spare for a margin, and the eight pixels left on each side are there to
+     say that what is behind the dialog is still a page.
+
+     Measured in dvh as well as vh, and the dvh line second so that whatever
+     does not know it keeps the vh one: a phone browser counts its own toolbars
+     inside vh, so a dialog cut to 64px short of 100vh still ran under the
+     address bar.
+
+     The body is given the room the head leaves rather than a figure of its own.
+     Its ceiling elsewhere is the window less 150px, which assumed a title on
+     one line; here the title takes two and the difference was cut off the
+     bottom of the form. A column that hands the head its height and the body
+     the rest cannot be wrong about it. */
+  @media (max-width: 640px) {
+    .propose-dialog {
+      width: calc(100vw - 16px);
+      /* A modal dialog is capped by the browser's own max-width, which is the
+         window less six pixels and two of its own ems. Left alone, that is what
+         decides the width here and the line above decides nothing. */
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 16px);
+      max-height: calc(100dvh - 16px);
+    }
+    .propose-dialog[open] { display: flex; flex-direction: column; }
+    .dialog-head { flex: none; padding: 16px 18px 14px; }
+    .dialog-body { flex: 1 1 auto; min-height: 0; max-height: none;
+                   padding: 16px 18px 22px; }
+    /* Both switches and the close are text where a pointer would do, and a
+       thumb needs the height the platforms ask for. */
+    .dialog-close { min-height: 44px; padding: 10px 12px; }
+    .choice button { min-height: 44px; }
+    .open-propose { min-height: 44px; }
+  }
+
+  /* ---------- the citation block ---------- */
+  .cite-block { position: relative; margin: 0 0 16px; max-width: 66ch; }
+  /* The figure holds the 66ch measure. The page's own pre cap is 66ch too, but
+     counted in the pre's 13px mono, which left the box narrower than its figure
+     and the button floating outside it. */
+  .cite-block pre { max-width: none;
+                    margin: 0; padding: 14px 96px 14px 16px; border: 1px solid var(--hair);
+                    border-radius: 4px; background: var(--lift); font-family: var(--mono);
+                    font-size: 13px; line-height: 1.6; white-space: pre-wrap;
+                    word-break: break-word; }
+  .cite-block button { position: absolute; top: 10px; right: 10px; padding: 5px 12px;
+                       border: 1px solid var(--hair2); border-radius: 999px;
+                       background: var(--bg); color: var(--ink2); font-family: var(--ui);
+                       font-size: 13px; cursor: pointer; }
+  .cite-block button:hover { background: var(--energy); color: var(--ink);
+                             border-color: var(--energy); }
+  .cite-block button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+  .cite-block button[data-said] { background: var(--spec); color: var(--on-accent);
+                                  border-color: var(--spec); }
+</style>
+</head>
+<body data-palette="daylight">
+
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a href="/">Overview</a>
+    <a href="/spec-reader/">Doc reader</a>
+    <a class="active" href="/about" aria-current="page">About</a>
+    <a href="/mcp">MCP</a>
+    <!-- Hidden, not removed. The umber surface is not offered anywhere in the
+         index, and the same button is hidden the same way on the reader. -->
+    <button class="mode" id="mode" type="button" hidden
+      aria-label="Switch to the umber night surface">☾</button>
+  </nav>
+</header>
+
+<div class="with-rail">
+
+  <nav class="rail" aria-label="On this page">
+    <ol></ol>
+  </nav>
+
+  <div class="sheet">
+
+  <div class="m-head">
+    <div class="m-title">About the index</div>
+  </div>
+
+  <div id="said-page" hidden></div>
+
+  <!-- The page opens on what the index is, for someone who has not seen the site
+       and is not technical. Every section below is written to the user's rules for
+       English prose: plain declarative sentences, one antithesis for the whole page
+       (the opening section's third sentence, because that contrast is the whole
+       caveat), no triads where two items would do, no closing punchlines. -->
+  <section class="m" id="tldr">
+    <h2>What this is</h2>
+    <p class="lead">AI companies publish constitutions: long documents saying how their models
+    should<a class="asterisk" href="#why" aria-label="What should means here">*</a> behave. This
+    index reads them one behaviour at a time and shows every passage that bears on each behaviour,
+    quoted, with its exact place in the document. As of September 2026 it reports what those
+    documents say, not how the models behave.</p>
+    <!-- The document is named in the link as well as in the sentence. Without a
+         ?spec= the reader opens on its preferred lab, which is Anthropic, so this
+         example promised the OpenAI Model Spec and landed on the constitution.
+         Naming it in both places is what keeps the two from drifting apart again;
+         openingDocument falls back to the newest Anthropic document if this
+         version ages out, so the sentence stays true either way. -->
+    <p>Say you want everything Claude&rsquo;s Constitution says about avoiding a concentration of power.
+    The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power&amp;spec=anthropic--constitution@2026-01-20">doc
+    reader</a> shows those passages together and can set them beside what another company&rsquo;s
+    document says.</p>
+    <p>The <a href="/">overview</a> is meant to hold four views of these documents, and two of
+    them are online. The first, <a href="/">what the constitutions say</a>, scores each
+    constitution as a document and behaviour by behaviour. The second,
+    <a href="/?view=governance">how constitutions are governed</a>, scores nine companies on how
+    open they are about their constitution and how far it is made to bind their models. The two
+    still in preparation are <a href="#ambition">described below</a>.</p>
+  </section>
+  <!-- Why the index exists, for a reader who has not seen how these models are
+       made. The asterisk beside the first "should" on the site points here. -->
+  <section class="m" id="why">
+    <h2>Why it matters</h2>
+    <p class="lead">When a company says how its models should behave, the word
+    &ldquo;should&rdquo; carries a lot, because nobody can program a model to behave that
+    way.</p>
+    <p>A large language model is a neural network: billions of numbers, called weights, that no
+    person can read. Nobody writes its values into it as code. It is trained on examples, each an
+    input and the output wanted for it, and it adjusts its weights by itself until its answers
+    match the examples as closely as it can. In a situation that no example covered, what it does
+    depends on what it drew from the examples it saw.</p>
+    <p>Getting a model to behave well therefore takes two steps.</p>
+    <ol class="steps">
+      <li><b>Agree on precise rules.</b> Before a model can be trained to behave well, someone
+      has to write down what it must do and what it must never do. That is what a
+      constitution is for, and it is what this index reads.</li>
+      <li><b>Check that the model follows them.</b> A constitution matters only if the model
+      was trained on it and behaves as it says. This index does not measure that yet, and it is
+      part of <a href="#ambition">our ambition</a>.</li>
+    </ol>
+  </section>
+  <!-- The words the index uses, defined near the top so the rest of the page can
+       lean on them. The thirteen behaviours open in a dialog read from the
+       publication, so the list is the one the doc reader shows. -->
+  <section class="m" id="words">
+    <h2>The words we use</h2>
+    <dl class="glossary">
+      <dt>AI Constitutions Index</dt>
+      <dd>
+        <p>AI companies publish documents setting down the values their models should hold and the
+        rules they have to follow. We call these documents constitutions, and the index is named
+        after them.</p>
+      </dd>
+      <dt>Behaviour</dt>
+      <dd>
+        <p>For us, a behaviour is one precise thing a constitution can ask of a model, such as
+        deferring to users&rsquo; decisions about their own lives, or not asserting what the model
+        believes to be false. Each is written in two parts, what it requires and where it stops,
+        so that a careful reader could mark every passage of a constitution that bears on it.
+        The index reads a constitution against that description, one behaviour at a time.</p>
+        <p>So far the index asks about
+        <button type="button" class="glossary-open" id="glossary-open" aria-haspopup="dialog"
+        >thirteen behaviours</button>.</p>
+      </dd>
+      <dt>Passage</dt>
+      <dd>
+        <p>A paragraph or a run of sentences in a constitution, cited by a locator that names
+        the document, its version, its section and the sentences. For each behaviour, every
+        passage the index marks falls in one of three bands. A defining passage is the
+        document&rsquo;s fullest statement of the behaviour, a core passage establishes it, and a
+        related passage bears on it without establishing it.</p>
+      </dd>
+      <dt>Depth</dt>
+      <dd>
+        <p>How far a constitution goes on one behaviour. The newest publications score it from 0,
+        saying nothing about the behaviour, to 10, setting rules, showing them applied and settling
+        the hard cases. Earlier publications score it from 0 to 4.</p>
+      </dd>
+    </dl>
+  </section>
+  <!-- Why the site uses one word for documents their publishers name differently.
+       The last paragraph is there because the question is always asked of a site
+       that says constitution while one of the companies it covers has given its
+       own document that title. -->
+  <section class="m" id="the-word">
+    <h2>Why we say constitution</h2>
+    <p class="lead">These documents go by different names. OpenAI calls its one the Model Spec,
+    Anthropic calls its one Claude&rsquo;s Constitution, Alibaba calls its one the AI Model Spec.
+    The index needs one word for the class of document, and that word is constitution.</p>
+    <p>A constitution is the document that says where authority sits and what may never be done,
+    whoever asks. That is what these documents do. They rank whose instructions win when a
+    company, a developer and a user want different things, and they name what the model must
+    refuse however it is asked. &ldquo;Specification&rdquo; suggests an engineering document a
+    machine can be held to line by line, and none of these is that.
+    &ldquo;Policy&rdquo; suggests a rule the company applies to the people using its
+    products rather than to its own model.</p>
+    <p>The choice has nothing to do with Anthropic calling its own document Claude&rsquo;s
+    Constitution. The index would use the word if Anthropic had never used it, and using it puts
+    no company&rsquo;s document above another. Where a company&rsquo;s own name for its document
+    appears on this site, it appears as that company writes it.</p>
+  </section>
+  <!-- What the index means to become. An ambition, so no line carries a date. -->
+  <section class="m" id="ambition">
+    <h2>Our ambition</h2>
+    <p class="lead">The index is to have four views of these documents, one tab each on the
+    overview.</p>
+    <ul>
+      <li><b>What the constitutions say.</b> Each constitution scored as a document and behaviour
+      by behaviour. Online.</li>
+      <li><b>How constitutions are governed.</b> How open each company is about its constitution,
+      and how far the constitution is made to bind its models. Online.</li>
+      <li><b>How constitutions are regulated.</b> How far regulation refers to these documents,
+      jurisdiction by jurisdiction. As of September 2026 the EU is the only jurisdiction that
+      requires them to be described, and only to its AI Office, which does not publish them.
+      In preparation.</li>
+      <li><b>Adherence of models to constitutions.</b> How closely each company&rsquo;s models
+      follow the constitution it published, measured with evaluations. It is the link between
+      the quality of a document, the way it is governed, and how the models behave. In
+      preparation.</li>
+    </ul>
+    <p>Beyond those views, we mean the index to do five things.</p>
+    <ul>
+      <li><b>Stay current.</b> Read every constitution, and every new version of
+      one, as soon as it is published.</li>
+      <li><b>Test adherence.</b> Measure how closely each company&rsquo;s models follow the
+      constitution that company published.</li>
+      <li><b>Hold each constitution to the best.</b> Set it against what the best of the other
+      companies do and against standards endorsed by public institutions or independent experts,
+      and show where it falls short.</li>
+      <li><b>Find the contradictions.</b> Show where a constitution&rsquo;s own rules pull
+      against each other, and where two companies&rsquo; documents disagree.</li>
+      <li><b>Open up how they are written.</b> Challenge the way these documents are made and
+      changed, and argue for democratic processes around them, such as public consultation before
+      a rule is weakened.</li>
+    </ul>
+  </section>
+  <!-- The setup lives on the MCP page. What belongs here is why a reader might
+       want it at all. -->
+  <section class="m" id="your-assistant">
+    <h2>Use the index from your AI assistant</h2>
+    <p class="lead">You can connect the index to an assistant such as Claude or ChatGPT, so that
+    its answers about these documents come from the index.</p>
+    <p>The connection uses MCP, the Model Context Protocol, a standard way for an assistant to
+    look something up in another service while it answers. Once connected, your assistant quotes
+    the passages a document gives on a behaviour and says where each one sits, so you can check
+    the answer. The index only reads, and needs no account or key.</p>
+    <p>It is useful to people who write about how AI companies govern their models, and to people
+    who build evaluations. The <a href="/mcp">MCP page</a> explains the setup and what the index
+    can be asked.</p>
+  </section>
+  <section class="m">
+    <h2>What the index reads</h2>
+    <p>As of September 2026 the index reads four constitutions: Claude&rsquo;s Constitution
+    (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18) and the
+    Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it says
+    about any one subject is spread across it.</p>
+    <p>Each version is read as a document of its own, named
+    <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, so the two OpenAI versions are
+    read and cited separately. Alibaba publishes its constitution in Chinese. The index works from
+    an English translation, and the doc reader shows the original beside every passage.</p>
+    <p>As of September 2026 the index groups the behaviours it asks about in four categories: autonomy,
+    oversight and authority; harm and safety; helpfulness and judgement; honesty and
+    epistemics.</p>
+    <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that bears
+    on it is highlighted in the document you are reading, or in two documents side by side. All
+    three bands are shown by default, with related passages drawn softer, and each band can be
+    switched off. Clicking a passage shows why it was cited and how strongly. The <b>i</b> beside
+    each behaviour shows the description the index read it against. The export saves the passages
+    you ticked as a file.</p>
+  </section>
+  <!-- Two sections, so each kind of proposal has its own place in the rail and its
+       own button into the form it needs. The wrapper keeps #propose, which links
+       already shared point at. -->
+  <div id="propose">
+  <section class="m">
+    <h2>Propose a new constitution</h2>
+    <p class="lead">If there is a constitution the index should be reading,
+    send it here.</p>
+    <p><b>Send the text itself, along with its address.</b> The index quotes documents word for
+    word and ties every citation to the exact version it read, so it keeps its own copy. Markdown
+    or plain text, up to 2 MB.</p>
+    <p>The form also asks who published it, what it is called, which version it is and where it
+    is published. The version is whatever the publisher calls this release, such as a date or a
+    number, because a citation has to say which release it read. Keep the headings in the text,
+    since citations use them to name the place they point to.</p>
+    <p><button type="button" class="open-propose" id="open-propose-specification"
+    data-kind="specification">Propose a new constitution</button></p>
+  </section>
+  <section class="m">
+    <h2>Propose a new behaviour</h2>
+    <p class="lead">If the index should be asking about a behaviour it does not yet cover, send it
+    here.</p>
+    <p><b>A proposal is a description in two sentences.</b> The first says in plain terms what the
+    behaviour requires. The second says where it stops, usually by naming a neighbouring behaviour
+    it could be confused with.</p>
+    <p>The second sentence is often left out, and it decides how useful the result is.
+    &ldquo;Honesty&rdquo; with no boundary collects every passage about trust, tone, transparency
+    and correcting errors. &ldquo;Honesty, meaning the model does not assert what it believes to be
+    false, not whether it volunteers everything it knows&rdquo; collects the passages you
+    meant.</p>
+    <p>Sending a proposal only records it. We read every proposal and decide whether it belongs in
+    the index. If it does, we add it to the index, we write to tell you, and it appears in the doc
+    reader once a publication that includes it is made public. We cannot
+    promise to run everything, and if we decide against a proposal we will tell you.</p>
+    <p><button type="button" class="open-propose" id="open-propose-behaviour"
+    data-kind="behaviour">Propose a new behaviour</button></p>
+  </section>
+  </div>
+  <section class="m">
+    <h2>What it does not tell you</h2>
+    <p>The index reports what a document says. A constitution that covers a behaviour thoroughly
+    is no evidence that the model follows it, and measuring that is separate work the citations
+    here can feed.</p>
+    <p>When two companies&rsquo; documents treat a behaviour differently, it is usually because
+    they made different choices. A figure measures how much a document gives an evaluation to work
+    with.</p>
+    <p>For the Alibaba constitution the index reports what the English translation says, and the doc
+    reader shows the original for comparison.</p>
+  </section>
+  <section class="m">
+    <h2>Citing what you find</h2>
+    <p>Every passage carries a locator, such as these two.</p>
+    <pre><code>anthropic--constitution@2026-01-20 &gt; Being broadly ethical &gt; Being honest &gt; &para;18 s1-4
+openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
+    <p>A locator names the company, the document and its version, the section and the sentences.
+    Because the version is part of the document&rsquo;s name, a locator keeps pointing at the same
+    words after the company reissues the document, since a reissue is a new document, as with the
+    two OpenAI versions. Anyone can resolve a locator back to its text.</p>
+    <p>The reader&rsquo;s export writes each quote with its locator.</p>
+    <h3>Citing the index itself</h3>
+    <p>The index changes over time, so a citation of it has to name the build it read. This
+    citation names the publication currently on the site and the date it was published.</p>
+    <figure class="cite-block">
+      <pre id="cite-text">Loading the current publication...</pre>
+      <button type="button" id="cite-copy" data-copy="cite-text">Copy</button>
+    </figure>
+    <p>Adapt the style to your venue, and keep the authors, the publication identifier and the
+    date, which let someone else retrieve the same figures.</p>
+    <p><b>The credit is read from the publication.</b> The dataset is credited to whoever produced
+    it, which as of September 2026 is Polaris Collective. The method has its own line: the scale,
+    the bands and the citation grammar are the work of Andr&eacute;s Cotton and Matt Stults, as are
+    most of the behaviour descriptions.</p>
+    <p><b>Cite each constitution to its publisher.</b> Anthropic and OpenAI release theirs under
+    CC0. A quote from the Alibaba Model Spec comes from the index&rsquo;s English translation, so
+    say so when you use one. Cite the index for the coverage, meaning which passages address which
+    behaviour and how closely.</p>
+    <p>The repository&rsquo;s
+    <a href="https://github.com/polariscollective/ai-character-index/blob/main/CITATION.cff"
+    target="_blank" rel="noopener">CITATION.cff</a> gives GitHub a &ldquo;Cite this
+    repository&rdquo; button with BibTeX and APA formats. Use it to cite the project as a
+    whole.</p>
+  </section>
+  <!-- Every publication the public has been shown, newest first. Written here by
+       hand for now: a publication does not yet carry a change-log field of its
+       own, and when it does this list should be read from it. -->
+  <!-- Written from /api/reader/publications by the script at the foot of the
+       page: on production the publications made public, on a development
+       deployment every one, drafts marked. Each opens the site as it was. The
+       two paragraphs written by hand for the first publications are kept, by id,
+       in the script. -->
+  <section class="m" id="changelog">
+    <h2>Change log</h2>
+    <p id="changelog-lead">Each publication of the index is fixed once it is made. These are the
+    publications that have been made public, newest first, and each opens the site as it was.</p>
+    <div class="changelog" id="changelog-list"><p>Loading.</p></div>
+  </section>
+  <!-- The one technical section on the page, and the last. Everything above it is
+       written for a reader who will never clone anything. -->
+  <section class="m" id="run-it-yourself">
+    <h2>The repository, and running it yourself</h2>
+    <p><b>This index began as the AI Character Index, created by
+    <a href="https://github.com/AndresCotton" target="_blank" rel="noopener">Andr&eacute;s
+    Cotton</a> with the help of <a href="https://github.com/MattStults" target="_blank"
+    rel="noopener">Matt Stults</a>, and most of what is described here is their work.</b> It was
+    supported by Generator Residency (Kairos &amp; Constellation) and BlueDot Impact, and it is
+    published at <a href="https://ai-character-index.pages.dev" target="_blank"
+    rel="noopener">ai-character-index.pages.dev</a>.</p>
+    <p>Both repositories are public, and either one reads a document on your own machine, with
+    your own documents and behaviours, without an account or a database. The original is built
+    around git: the behaviours, the documents and the results are files, so a change to the index
+    is a commit and a contribution is a pull request. It needs Python, a browser and an API
+    key.</p>
+    <pre><code>git clone https://github.com/AndresCotton/ai-character-index.git
+cd ai-character-index
+python3 -m http.server 8080 --directory site</code></pre>
+    <p>Ours, <a href="https://github.com/polariscollective/ai-character-index" target="_blank"
+    rel="noopener">polariscollective/ai-character-index</a>, serves this site. It adds a hosted
+    database and an operator&rsquo;s portal, which makes it the heavier of the two to clone. It
+    also runs on one machine with one API key:</p>
+    <pre><code>python3 engine/local_run.py \
+    --document=my-constitution@2026-09-12:path/to/document.md \
+    --behaviour=path/to/behaviour.json</code></pre>
+    <p>A document is any markdown file, and a behaviour is a small JSON file with its name, what it
+    requires and where it stops. Neither needs registering, and both are read the same way this
+    site reads them. Nothing is sent to us, and the document goes only to the provider whose key
+    you use. The results are written to <code>artefacts/</code>, and the README describes each
+    file.</p>
+  </section>
+  </div>
+
+</div>
+
+  <!-- Every behaviour the index asks about, opened from the count in the glossary:
+       each with the description the index read it against and a way into the doc reader on it.
+       Filled from the publication the page is serving. -->
+  <dialog class="propose-dialog behaviours-dialog" id="behaviours-dialog"
+          aria-labelledby="behaviours-dialog-title">
+    <div class="dialog-head">
+      <h2 id="behaviours-dialog-title">The behaviours the index asks about</h2>
+      <button type="button" class="dialog-close" id="behaviours-close"
+              aria-label="Close">Close</button>
+    </div>
+    <div class="dialog-body" id="behaviours-body">
+      <p class="behaviours-empty">The list could not be loaded. The doc reader shows every
+      behaviour in its menu.</p>
+    </div>
+  </dialog>
+  <dialog class="propose-dialog" id="propose-dialog" open
+          aria-labelledby="propose-dialog-title">
+    <div class="dialog-head">
+      <h2 id="propose-dialog-title">Propose a constitution or a behaviour</h2>
+      <button type="button" class="dialog-close" id="propose-close"
+              aria-label="Close">Close</button>
+    </div>
+
+    <div class="dialog-body">
+      <div id="said" hidden></div>
+
+      <nav class="choice" aria-label="What you are sending">
+        <button type="button" id="pick-specification" data-kind="specification">A constitution</button>
+        <button type="button" id="pick-behaviour" data-kind="behaviour">A behaviour</button>
+      </nav>
+
+      <div class="form-panel" id="form-behaviour">
+    
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="behaviour">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>What would you call it</span>
+        <input type="text" name="name" required placeholder="Bribery resistance">
+        <span class="hint">A short name, the way it would read in a menu.</span>
+      </label>
+      <label>
+        <span>What does the behaviour require</span>
+        <textarea name="query" required placeholder="The model should not change its behaviour in response to offers of payment, reward or favours, and should not solicit them."></textarea>
+        <span class="hint">One or two sentences on what the behaviour is. Write it as you would
+        brief a careful colleague who must apply it to a page of text without asking you
+        anything.</span>
+      </label>
+      <label>
+        <span>Where does it stop</span>
+        <textarea name="boundary" required placeholder="This is about resistance to inducements aimed at the model. It is not about whether the model will discuss bribery as a subject, and not about honesty in general."></textarea>
+        <span class="hint">Name the neighbouring behaviour yours could be confused with, so that
+        passages about it are not counted. Without this the result is broader than you
+        meant.</span>
+      </label>
+      <label>
+        <span>Why does it matter</span>
+        <textarea name="why" placeholder="What it would tell you to learn that a constitution covers this thoroughly, or not at all."></textarea>
+        <span class="hint">Optional, and it is what we read first when deciding.</span>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">We use it only to tell you what we decided, and to write again when
+        it is published.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+      </div>
+
+      <div class="form-panel" id="form-specification">
+    
+    <p>Send the text of the constitution as well as its address. The index quotes documents word
+    for word and ties every citation to the exact version it read, so it keeps its own copy.</p>
+    <form class="propose" method="post" action="/api/submit" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="specification">
+      <label class="trap" aria-hidden="true">
+        <span>Leave this empty</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+      <label>
+        <span>Who published it</span>
+        <input type="text" name="organisation" required placeholder="OpenAI">
+      </label>
+      <label>
+        <span>What is it called</span>
+        <input type="text" name="name" required placeholder="Model Spec">
+        <span class="hint">Do not use @ or &gt; in the name, because citations into the document
+        are built from it.</span>
+      </label>
+      <label>
+        <span>Which version</span>
+        <input type="text" name="version" required placeholder="2026-01-20">
+        <span class="hint">Whatever the publisher calls this release, such as a date or a
+        number. A citation has to say which release it read.</span>
+      </label>
+      <label>
+        <span>Where is it published</span>
+        <input type="url" name="source_url" required placeholder="https://example.com/constitution">
+      </label>
+      <label>
+        <span>The document itself</span>
+        <input type="file" name="document" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
+        <span class="hint">Markdown or plain text, up to 2 MB. Keep the headings, since citations
+        use them to name places in the document.</span>
+      </label>
+      <label>
+        <span>Why does it belong here</span>
+        <textarea name="why" placeholder="Optional, and it is what we read first when deciding."></textarea>
+      </label>
+      <label>
+        <span>Your email</span>
+        <input type="email" name="email" required placeholder="you@example.com">
+        <span class="hint">We use it only to tell you what we decided, and to write again when
+        it is published.</span>
+      </label>
+      <button type="submit">Send it</button>
+    </form>
+      </div>
+    </div>
+  </dialog>
+
+<footer>
+  <div class="f-row">
+    <span>Run by <a href="https://polariscollective.org">Polaris Collective</a>, started by
+      <a href="https://github.com/AndresCotton">Andres Cotton</a></span>
+  </div>
+  <div class="f-row">
+    <span>The standalone original is
+      <a href="https://ai-character-index.pages.dev" target="_blank"
+      rel="noopener">ai-character-index.pages.dev</a>, from
+      <a href="https://github.com/AndresCotton/ai-character-index" target="_blank"
+      rel="noopener">github.com/AndresCotton/ai-character-index</a></span>
+    <span><a href="/admin">Admin</a></span>
+    <span class="proto-flag">Apache 2.0 code, CC BY 4.0 writing and data</span>
+  </div>
+</footer>
+
+<script>
+/* surface toggle, shared state with the reader */
+const SURFACES = ["daylight", "umber"];
+const modeBtn = document.getElementById("mode");
+function setPalette(p) {
+  if (!SURFACES.includes(p)) p = "daylight";
+  document.body.dataset.palette = p;
+  try { localStorage.setItem("aci-palette", p); } catch (e) {}
+  const night = p === "umber";
+  modeBtn.textContent = night ? "☼" : "☾";
+  modeBtn.title = night ? "Back to daylight" : "Switch to umber";
+  modeBtn.setAttribute("aria-label", night ? "Switch to the daylight surface" : "Switch to the umber night surface");
+}
+modeBtn.addEventListener("click", () =>
+  setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber"));
+/* The stored preference is no longer read. The switch above is hidden on every
+   page of the index, and the three pages share one localStorage key, so a reader
+   who had chosen umber before would have come back to a surface with nothing on
+   the page to leave it by. ?palette=umber still reaches it, which is how the
+   surface stays inspectable rather than lost. */
+const qp = new URLSearchParams(location.search).get("palette");
+setPalette(qp || "daylight");
+
+/* The proposal forms, behind a button.
+ *
+ * They are long, and on the page they pushed everything after them out of reach.
+ * The dialog is written `open`, so with no JavaScript the forms are still there;
+ * the first thing this does is close it. */
+const dialog = document.getElementById("propose-dialog");
+const panels = {
+  behaviour: document.getElementById("form-behaviour"),
+  specification: document.getElementById("form-specification"),
+};
+const picks = {
+  behaviour: document.getElementById("pick-behaviour"),
+  specification: document.getElementById("pick-specification"),
+};
+const params = new URLSearchParams(location.search);
+
+/* Which form is showing. Read from the URL at first, then from whatever was last
+ * chosen: reopening the dialog should return you to the form you were filling
+ * in, not to the one the page was loaded with. */
+let current = params.get("kind") === "specification" ? "specification" : "behaviour";
+
+/* The title follows the form, so the dialog carries the name of the button that
+   opened it, and changes with the switch. */
+const dialogTitles = {
+  behaviour: "Propose a new behaviour",
+  specification: "Propose a new constitution",
+};
+const dialogTitle = document.getElementById("propose-dialog-title");
+
+function show(kind) {
+  current = kind;
+  dialogTitle.textContent = dialogTitles[kind];
+  for (const [name, panel] of Object.entries(panels)) {
+    panel.hidden = name !== kind;
+    if (name === kind) picks[name].setAttribute("aria-current", "true");
+    else picks[name].removeAttribute("aria-current");
+  }
+}
+
+function open(kind) {
+  show(kind);
+  if (!dialog.open) dialog.showModal();
+  // The URL says which form is open, so the state can be linked to and the back
+  // button closes the dialog rather than leaving the page.
+  const url = new URL(location.href);
+  url.searchParams.set("kind", kind);
+  history.replaceState(null, "", url);
+}
+
+if (dialog) {
+  dialog.close();                       // it was open for the no-script case
+  show(current);
+
+  /* Arriving to propose something: a link carrying ?propose, such as the overview's
+     "Propose one", opens the form at once rather than leaving the reader to find
+     the button. Closing it takes the flag out of the address, so a reload or a
+     link copied afterwards does not open it again. */
+  if (params.has("propose")) open(current);
+  dialog.addEventListener("close", () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("propose")) return;
+    url.searchParams.delete("propose");
+    history.replaceState(null, "", url);
+  });
+
+  // Each section has its own button, and it opens the form that section explains.
+  for (const button of document.querySelectorAll(".open-propose")) {
+    button.addEventListener("click", () => open(button.dataset.kind));
+  }
+  document.getElementById("propose-close").addEventListener("click", () => dialog.close());
+  for (const [kind, button] of Object.entries(picks)) {
+    button.addEventListener("click", () => open(kind));
+  }
+  // A click on the backdrop lands on the dialog itself, never on its contents.
+  dialog.addEventListener("click", event => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  /* What came back from the route. A refusal belongs beside the form that was
+     refused, with the dialog open so it can be fixed; an acceptance belongs on
+     the page, because there is nothing left to fill in. */
+  const done = params.get("done");
+  const problem = params.get("problem");
+  const write = (into, text, bad) => {
+    into.hidden = false;
+    into.className = "said" + (bad ? " bad" : "");
+    into.replaceChildren();
+    for (const line of text.split("\n")) {
+      const p = document.createElement("p");
+      p.textContent = line;            /* never innerHTML: this came through a URL */
+      into.append(p);
+    }
+    into.setAttribute("role", bad ? "alert" : "status");
+  };
+  if (problem) {
+    write(document.getElementById("said"), problem, true);
+    open(current);
+  } else if (done) {
+    write(document.getElementById("said-page"), done, false);
+    document.getElementById("said-page").scrollIntoView({ block: "center" });
+  }
+}
+
+
+/* The change log, from the publications this deployment may show. */
+const HANDWRITTEN = {
+  "1919ee6b-8a81-4ab5-902a-e949857db028": "It keeps the passages of the publication before it, "
+    + "and every depth figure is worked out again. The depth figures had rested on fewer passages "
+    + "than the doc reader shows, and they now rest on every passage a reader sees, related "
+    + "passages included. One figure, the depth for avoiding both over- and under-caution in the "
+    + "Alibaba constitution, was arrived at differently from every other figure, and the "
+    + "publication says so.",
+  "07958c5e-eb91-4e31-81f2-32f79c01b84c": "The first publication to cover thirteen behaviours "
+    + "over four documents on one method throughout, with a depth from 0 to 4. It was withdrawn "
+    + "on 16 September 2026 because its depth figures rested on fewer passages than the doc "
+    + "reader shows.",
+};
+const changelogList = document.getElementById("changelog-list");
+if (changelogList) {
+  const WHEN = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+    timeZone: "UTC", timeZoneName: "short",
+  });
+  fetch("/api/reader/publications")
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(({ development, publications }) => {
+      if (development) {
+        document.getElementById("changelog-lead").textContent = "Each publication of the index "
+          + "is fixed once it is made. This deployment is for development, so it lists every "
+          + "publication, newest first, including those never made public, and each opens the "
+          + "site as it was.";
+      }
+      const firstPublic = publications.find(row => row.is_public);
+      /* On development every publication is listed, and most drafts are noise:
+         the newest is always shown, as it is the one this deployment serves, and
+         so is every published one; the other drafts wait behind a button. */
+      const entries = publications.map((row, index) => {
+        const head = document.createElement("h3");
+        const link = document.createElement("a");
+        link.href = `/?publication=${row.id}`;
+        const code = document.createElement("code");
+        code.textContent = row.id.slice(0, 8);
+        link.append(`${WHEN.format(new Date(row.published_at)).replace(",", " at")}, publication `,
+          code);
+        const standing = [];
+        if (development ? index === 0 : row === firstPublic) standing.push("current");
+        if (!row.is_public) standing.push("unpublished");
+        head.append(link, standing.length ? `, ${standing.join(", ")}` : "");
+        const text = document.createElement("p");
+        text.textContent = HANDWRITTEN[row.id] || row.notes || "";
+        const entry = document.createElement("div");
+        entry.className = "changelog-entry";
+        entry.append(...(text.textContent ? [head, text] : [head]));
+        entry.hidden = development && index > 0 && !row.is_public;
+        return entry;
+      });
+      const hidden = entries.filter(entry => entry.hidden);
+      const shown = [...entries];
+      if (hidden.length) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "changelog-toggle";
+        const label = open => `${open ? "Hide" : "Show"} unpublished (${hidden.length})`;
+        toggle.textContent = label(false);
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") !== "true";
+          hidden.forEach(entry => { entry.hidden = !open; });
+          toggle.setAttribute("aria-expanded", String(open));
+          toggle.textContent = label(open);
+        });
+        shown.push(toggle);
+      }
+      changelogList.replaceChildren(...shown);
+    })
+    .catch(() => {
+      changelogList.replaceChildren(Object.assign(document.createElement("p"), {
+        textContent: "The list of publications could not be loaded.",
+      }));
+    });
+}
+
+/* The citation for the build being read.
+ *
+ * The index is a dataset that changes, so a citation of it has to name the
+ * publication and its date. The page asks the route that knows, rather than
+ * carrying a date that would go stale the next time anyone publishes. */
+const citeText = document.getElementById("cite-text");
+if (citeText) {
+  const pinned = new URLSearchParams(location.search).get("publication");
+  fetch("/api/reader/publication" + (pinned ? `?publication=${encodeURIComponent(pinned)}` : ""))
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(publication => {
+      const published = publication.published_at.slice(0, 10);
+      const credit = publication.credit || {};
+      /* The authors are the people whose runs produced these verdicts, read off
+         the build itself. A build carrying somebody's work names them without
+         anyone having remembered to add them to a list. */
+      const authors = (credit.judged_by || []).join("; ") || "AI Constitutions Index";
+      const method = (credit.method?.authors || []).join(", ");
+      /* A build nobody has published is not the index's data, and a citation of
+         it would say it was. This page can be served a draft two ways: a
+         ?publication= pin, which is how a draft is previewed, and a development
+         deployment, which serves the newest build whether or not it is public.
+         Either way the line says what it is rather than dressing it as the
+         published record. */
+      const draft = publication.is_public === false;
+      citeText.textContent = draft
+        ? `Draft publication ${publication.id}, built ${published}. Not published, `
+          + "and not citable as the AI Constitutions Index: it is a build nobody has "
+          + `released.\n${location.origin}/spec-reader/?publication=${publication.id}`
+        : `${authors} (${published.slice(0, 4)}). AI Constitutions Index [Data set]. `
+          + `Publication ${publication.id}, published ${published}. `
+          + `${location.origin}/spec-reader/?publication=${publication.id}`
+          + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
+    })
+    .catch(() => {
+      /* Say what is missing rather than leave a loading line that never resolves.
+         Same credit as the live line: the data set to whoever judged it, the
+         method on its own line. The publication id is the part that could not
+         be read, so it is left out rather than guessed. */
+      citeText.textContent =
+        "Polaris Collective (2026). AI Constitutions Index [Data set]. "
+        + location.origin + "/spec-reader/"
+        + "\nMethod: Andrés Cotton, Matt Stults, https://github.com/AndresCotton/ai-character-index";
+    });
+}
+
+/* The behaviours the glossary counts, in a dialog opened from the count: each
+   one's name, the description the index read it against, and a way into the doc reader on
+   it, grouped as the reader's menu groups them. Read from the publication the
+   page is serving, so the count and the list are the reader's own. If the read
+   fails, the count keeps the number it was written with and the dialog says
+   where the list is instead. */
+const behavioursDialog = document.getElementById("behaviours-dialog");
+const behavioursOpen = document.getElementById("glossary-open");
+if (behavioursDialog && behavioursOpen) {
+  const body = document.getElementById("behaviours-body");
+  behavioursOpen.addEventListener("click", () => behavioursDialog.showModal());
+  document.getElementById("behaviours-close")
+    .addEventListener("click", () => behavioursDialog.close());
+  behavioursDialog.addEventListener("click", event => {
+    if (event.target === behavioursDialog) behavioursDialog.close();
+  });
+  const pinned = new URLSearchParams(location.search).get("publication");
+  fetch("/api/reader/behaviours" + (pinned ? `?publication=${encodeURIComponent(pinned)}` : ""))
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(registry => {
+      const groups = new Map();
+      Object.entries(registry || {}).forEach(([slug, entry]) => {
+        const group = entry.group || "Behaviours";
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group).push({ slug, name: entry.name || slug, query: entry.query || "" });
+      });
+      if (!groups.size) return;
+      const count = [...groups.values()].reduce((sum, list) => sum + list.length, 0);
+      const words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight",
+        "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+        "seventeen", "eighteen", "nineteen", "twenty"];
+      behavioursOpen.textContent = `${words[count] || count} ${count === 1 ? "behaviour" : "behaviours"}`;
+      const blocks = document.createDocumentFragment();
+      groups.forEach((members, group) => {
+        const heading = document.createElement("h3");
+        heading.textContent = group;
+        blocks.append(heading);
+        members.forEach(({ slug, name, query }) => {
+          const item = document.createElement("div");
+          item.className = "behaviour-item";
+          const title = document.createElement("h4");
+          title.textContent = name;
+          const text = document.createElement("p");
+          text.textContent = query;
+          const open = document.createElement("a");
+          open.href = `/spec-reader/?behavior=${encodeURIComponent(slug)}`;
+          open.textContent = "Open it in the doc reader";
+          item.append(title, text, open);
+          blocks.append(item);
+        });
+      });
+      const missing = document.createElement("p");
+      missing.className = "behaviours-missing";
+      const propose = document.createElement("a");
+      propose.href = "#propose";
+      propose.textContent = "propose it";
+      // Straight into the form, not to the section above it.
+      propose.addEventListener("click", event => {
+        event.preventDefault();
+        behavioursDialog.close();
+        document.getElementById("open-propose-behaviour")?.click();
+      });
+      missing.append(document.createTextNode("Is one missing? "), propose,
+        document.createTextNode("."));
+      blocks.append(missing);
+      body.replaceChildren(blocks);
+    })
+    .catch(() => {});
+}
+
+/* Copy, for every button that names what it copies. */
+for (const button of document.querySelectorAll("[data-copy]")) {
+  button.addEventListener("click", async () => {
+    const source = document.getElementById(button.dataset.copy);
+    try {
+      await navigator.clipboard.writeText(source.textContent.trim());
+      button.dataset.said = "yes";
+      button.textContent = "Copied";
+    } catch {
+      /* A refused clipboard is not a dead end: select the text so the usual
+         keyboard copy works. */
+      const range = document.createRange();
+      range.selectNodeContents(source);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      button.textContent = "Press copy";
+    }
+    setTimeout(() => { delete button.dataset.said; button.textContent = "Copy"; }, 2000);
+  });
+}
+
+/* The header stays over the page and wraps onto more rows on a phone, so what
+   has to clear it (the rail, a heading jumped to) reads its real height from
+   here rather than from a constant. */
+const siteHeader = document.querySelector(".site-header");
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--header-height", `${siteHeader.offsetHeight}px`);
+}).observe(siteHeader);
+
+/* The rail is built from the page's own headings, so it cannot fall out of step
+   with them. Each h2 gets an id from its text where it has none. */
+const rail = document.querySelector(".rail ol");
+if (rail) {
+  const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sections = [...document.querySelectorAll(".sheet section.m")]
+    .map(section => ({ section, heading: section.querySelector("h2") }))
+    .filter(entry => entry.heading);
+  const links = new Map();
+  for (const { section, heading } of sections) {
+    if (!section.id) section.id = slug(heading.textContent);
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = `#${section.id}`;
+    link.textContent = heading.textContent;
+    item.append(link);
+    rail.append(item);
+    links.set(section.id, link);
+  }
+
+  /* Which section you are in.
+   *
+   * The sections are observed, not the headings, and that is the fix for a bug
+   * this had: headings are points, so a band narrow enough to mean "at the top
+   * of the screen" contains none of them most of the time, and the rail fell
+   * back to the first item on every scroll between headings. Sections tile the
+   * page, so one of them always covers the band. `current` is never reset to a
+   * default either -- when nothing intersects, which happens at the very bottom,
+   * the last answer stands. */
+  let current = sections[0].section.id;
+  const visible = new Set();
+  const mark = () => {
+    for (const { section } of sections) {
+      if (visible.has(section.id)) { current = section.id; break; }
+    }
+    for (const [id, link] of links) {
+      if (id === current) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  };
+  const watch = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target.id);
+      else visible.delete(entry.target.id);
+    }
+    mark();
+  }, { rootMargin: "-12% 0px -76% 0px" });
+  sections.forEach(({ section }) => watch.observe(section));
+  mark();
+
+  /* A click marks its target at once rather than waiting for the scroll to
+     settle, which is what made the rail feel unresponsive. */
+  rail.addEventListener("click", event => {
+    const link = event.target.closest("a");
+    if (link) { current = link.hash.slice(1); visible.clear(); mark(); }
+  });
+}
+</script>
+
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for four pages:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
+<!-- The wordmark's note: which publication is on screen, the change log and
+     the words the index uses. One file for four pages, like dev-tag.js. -->
+<script type="module" src="/brand.js"></script>
+<!-- The bubble at the bottom right: a screenshot of this page, annotated, with
+     a sentence. One file for four pages, like dev-tag.js and brand.js. -->
+<script type="module" src="/page-feedback.js"></script>
+</body>
+</html>

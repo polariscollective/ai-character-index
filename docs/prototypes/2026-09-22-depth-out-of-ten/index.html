@@ -1,0 +1,1856 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Depth out of 10 (prototype), AI Constitutions Index</title>
+<!-- A design prototype of the overview on the 0 to 10 depth scale, with the
+     whole-document assessment and a final score, drawn as the governance board
+     draws itself (site/governance.js and site/overview.html on develop). It
+     reads data.json beside it and nothing else, so it can be moved or deleted
+     without touching the site. The design is
+     docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* The overview's tokens, copied from site/overview.html, plus the two status
+   colours the contradictions need. */
+:root {
+  --paper: #F1EFE3;
+  --chrome: #E9E6D7;
+  --header-height: 54px;
+  --ink: #23281B;
+  --muted: #5C6B3C;
+  --faint: #676C58;
+  --line: #C6C4B0;
+  --line-light: #DCD9C7;
+  --accent: #333D22;
+  --energy: #B7C94B;
+  --on-accent: #F1EFE3;
+  --fail: #A0522D;
+  --neutral: #8A8F7A;
+  --measure: 84vw;
+  --gutter: 24px;
+  --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.mono { font-family: var(--mono); }
+:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* The prototype's own line, above everything, so nobody reads a figure here
+   as the index's. */
+.prototype-line {
+  margin: 0;
+  padding: 6px var(--gutter);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* The reader's header, as the overview carries it. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--header-height);
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.site-brand { display: flex; align-items: baseline; gap: 10px; }
+.polaris-mark { width: 20px; height: 20px; flex: none; color: var(--muted); transition: color .15s ease; }
+.mark-link { display: flex; flex: none; align-self: center; }
+.collective {
+  color: var(--muted);
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+.mark-link:hover .polaris-mark, .site-brand:has(.collective:hover) .polaris-mark,
+.mark-link:hover + .collective, .collective:hover { color: var(--accent); }
+.brand-divider { width: 1px; height: 15px; flex: none; align-self: center; background: var(--line); }
+.wordmark { font-family: var(--display); color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600; white-space: nowrap; }
+.site-header nav { display: flex; align-items: center; gap: 24px; }
+.site-header nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: background-color .15s ease, color .15s ease; }
+.site-header nav a:hover { background: var(--energy); color: var(--ink); }
+.site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
+
+.shell { width: var(--measure); margin: 0 auto; padding: 8px 16px 48px; }
+h1 {
+  margin: 34px 0 6px;
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+h1::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 14px;
+  background: var(--energy);
+}
+.lede { margin: 0 0 26px; max-width: 108ch; color: var(--muted); }
+.lede a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+  transition: background-color .15s ease;
+}
+.lede a:hover { background: var(--energy); }
+.lede a.asterisk { margin-left: 1px; font-size: .75em; vertical-align: super; line-height: 0; text-decoration: none; }
+.grid-note { margin: 4px 0 0; max-width: 78ch; color: var(--faint); font-size: 13px; line-height: 1.5; }
+.grid-note:empty { display: none; }
+
+/* ---- The board, as the governance view draws it ----------------------------
+   Rules copied from the governance part of site/overview.html on develop, with
+   its class names kept where the thing is the same thing. */
+.gov-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.gov-hint { margin: 0; max-width: 90ch; color: var(--muted); font-size: 14px; }
+/* The framework's secondary button, and its primary once pressed. */
+.gov-button {
+  flex: none;
+  padding: 5px 14px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.gov-button:hover { background: var(--energy); border-color: var(--energy); color: var(--ink); }
+.gov-button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+th, td { text-align: left; padding: 0; }
+.board thead th {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 1;
+  padding: 8px 6px 8px 0;
+  border-bottom: 1px solid var(--muted);
+  background: var(--paper);
+  color: var(--muted);
+  font-weight: 600;
+  vertical-align: top;
+}
+.board thead th.row-col { width: 22%; }
+.board tbody th { padding: 0 10px 0 0; font-weight: 400; vertical-align: middle; }
+.board .cell { padding: 3px 6px 3px 0; }
+.board tbody tr { border-bottom: 1px solid var(--line-light); }
+.cell-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--paper);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.cell-figure { font-family: var(--mono); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* What the score is out of, small and light grey in the cell's lower right
+   corner, straight on the cell's own colour. */
+.cell-max {
+  position: absolute;
+  right: 6px;
+  bottom: 3px;
+  color: rgb(241 239 227 / .7);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.cell-button:hover { border-color: var(--accent); outline: 2px solid var(--ink); outline-offset: 1px; }
+.cell-button.is-open { outline: 3px solid var(--ink); outline-offset: 2px; }
+.cell-button:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* The total leads, and reads as the sum it is: taller, heavier, a rule under it. */
+.board .total-row { border-bottom: 1px solid var(--muted); }
+.board .total-row .cell-button { min-height: 54px; }
+.board .total-row .cell-figure { font-size: 20px; }
+/* Not assessed: no score, so no colour, and a dashed edge so the cell still
+   reads as one. */
+.cell-button.cell-na {
+  border: 1px dashed var(--muted);
+  background: transparent;
+  color: var(--muted);
+}
+.cell-na .cell-figure { font-weight: 400; }
+/* A group's rows, indented under it and a size smaller. */
+.board .check-row th { padding-left: 34px; }
+/* A row's cell starts a fifth of the way into its own column, like the second
+   line of a bullet: an open group reads as the parts its figure is made of,
+   column by column. */
+.board .check-row .cell-button { width: 80%; margin-left: 20%; min-height: 36px; padding: 6px 8px; }
+/* A little more room on the right than the governance view gives, which only
+   ever marks "/4": "/10" is wider, and touched the figure. */
+.board .check-row .cell-button { padding-right: 20px; }
+.board .check-row .cell-figure { font-size: 14px; }
+.board .check-row { background: rgb(92 107 60 / .05); }
+tr[hidden] { display: none; }
+/* An invented figure: a dotted ring inside the cell, in the figure's colour. */
+.cell-button.is-invented::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px dotted currentColor;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.row-head { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.row-name, .company-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-name .head-name { font-weight: 600; text-decoration: underline 2px var(--energy); text-underline-offset: 3px; transition: background-color .15s ease; }
+.check-row .row-name .head-name { font-weight: 400; text-decoration-thickness: 1px; }
+.row-name:hover .head-name, .row-name:focus-visible .head-name,
+.company-button:hover .company-name, .company-button:focus-visible .company-name { background: var(--energy); }
+.head-name { display: block; }
+.head-sub { display: block; font-size: 12px; font-weight: 400; color: var(--faint); }
+.company-button { display: block; width: 100%; font-weight: 600; }
+.company-button .rank { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--faint); }
+.company-name { color: var(--muted); transition: background-color .15s ease; }
+.company-flag { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--faint); }
+.company-flag.mono { font-family: var(--mono); }
+/* Open and shut, drawn rather than typed: two borders of a small square, turned
+   to point right when shut and down when open. */
+.row-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.row-toggle:hover { background: var(--energy); border-color: var(--energy); }
+.row-toggle::before, .gov-pop summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+}
+.row-toggle[aria-expanded="true"]::before, .gov-pop details[open] > summary::before { transform: rotate(45deg); }
+.row-spacer { flex: none; width: 26px; }
+
+.gov-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.gov-legend .swatches { display: flex; gap: 2px; }
+.gov-legend .swatch { width: 26px; height: 12px; border-radius: 2px; }
+.legend-na { display: inline-flex; align-items: center; gap: 6px; }
+.gov-foot { margin: 10px 0 0; max-width: 90ch; color: var(--muted); font-size: 13px; }
+.gov-foot:empty { display: none; }
+.gov-date { margin: 6px 0 0; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+/* The depth of a behaviour, written out under the table in the tone of the
+   board's other notes there: small, muted, the level and its word carrying the
+   weight. Three columns wide, one on a phone. */
+.depth-key { margin: 16px 0 0; max-width: 1100px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.depth-key h2 { margin: 0 0 8px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink); }
+.depth-key-list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 28px; }
+.depth-key-list > li { display: flex; gap: 8px; align-items: baseline; }
+.depth-key .anchor-level { flex: none; width: 1.4em; font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.depth-key .anchor-name { font-weight: 600; color: var(--ink); }
+.depth-key-conditions { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; }
+.depth-key-conditions li { position: relative; padding-left: 13px; }
+.depth-key-conditions li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); }
+.depth-key .gov-foot { margin-top: 8px; }
+/* How the scores are made, folded, as the governance view folds how it scored. */
+.gov-more { margin-top: 40px; border-top: 1px solid var(--muted); }
+.gov-more > details { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-more summary {
+  padding: 14px 0;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gov-more summary:hover { color: var(--muted); }
+.gov-more-body { padding: 0 0 24px; }
+.gov-more-body p { max-width: 72ch; margin: 0 0 12px; font-size: 15px; line-height: 1.6; }
+.gov-more-body .mono { font-size: 14px; }
+
+/* The popover. Placed beside what opened it; the browser keeps it above
+   everything and closes it on Escape or a press elsewhere. */
+.gov-pop {
+  inset: auto;
+  margin: 0;
+  width: min(460px, calc(100vw - 16px));
+  max-height: min(72vh, 600px);
+  overflow-y: auto;
+  padding: 16px 20px 18px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.gov-pop:focus { outline: none; }
+.gov-pop:focus-visible { outline: 2px solid var(--energy); }
+.gov-pop-close {
+  float: right;
+  margin: -6px -8px 0 12px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.gov-pop-close:hover { background: var(--energy); color: var(--ink); }
+.gov-pop h2 { margin: 0 0 2px; font-family: var(--display); font-size: 18px; font-weight: 600; line-height: 1.3; }
+.gov-pop h3 { margin: 14px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.gov-pop p { margin: 0 0 10px; }
+.gov-pop .subtitle { color: var(--muted); }
+.gov-pop .figure strong { font-size: 26px; font-weight: 600; }
+.gov-pop details { border-top: 1px solid rgb(92 107 60 / .2); }
+.gov-pop details:last-of-type { border-bottom: 1px solid rgb(92 107 60 / .2); }
+.gov-pop details > :not(summary) { margin-left: 21px; }
+.gov-pop summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 0;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.gov-pop summary::-webkit-details-marker { display: none; }
+.gov-pop summary::before { flex: none; margin: 0 4px 0 2px; }
+.gov-pop summary:hover { color: var(--muted); }
+.gov-pop a { color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+.gov-pop a:hover { background: var(--energy); }
+.gov-pop .gov-button { margin: 6px 8px 0 0; }
+.chip {
+  flex: none;
+  display: inline-block;
+  min-width: 30px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.chip-na { border: 1px dashed var(--muted); color: var(--muted); font-weight: 400; }
+.check-list { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.check-list li { display: flex; gap: 10px; align-items: baseline; line-height: 1.45; }
+.anchors { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.anchors li { display: flex; gap: 12px; padding: 4px 8px; border-radius: 3px; line-height: 1.45; }
+.anchors li.is-here { background: rgb(183 201 75 / .25); }
+.anchor-level { flex: none; width: 1.4em; font-family: var(--mono); font-weight: 600; }
+.anchor-name { font-weight: 600; }
+/* What a judge said: the rule the popover's quotes carry, in the line tone. */
+.judges { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.judges li { padding: 2px 0 2px 12px; border-left: 3px solid var(--line); }
+.judges .who { display: block; font-size: 12px; color: var(--faint); }
+.judges .who .mono { font-size: 12px; }
+.judges p { margin: 0; }
+/* A behaviour named in a category's popover opens its own popover in place. */
+.inline-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline 1px var(--energy);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.inline-button:hover { background: var(--energy); }
+
+/* ---- The sheet, kept for the one text too long for a popover: the list of
+   contradictions, each with its two passages quoted. */
+dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+}
+dialog::backdrop { background: rgb(35 40 27 / .55); }
+dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.sheet-head { flex: none; padding: 12px 20px 0; }
+.sheet-topline { display: flex; align-items: baseline; justify-content: flex-end; gap: 16px; }
+.sheet-head h2 { margin: 4px 0 0; font-family: var(--display); font-size: 19px; font-weight: 600; line-height: 1.3; }
+.sheet-link {
+  margin-right: auto;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.sheet-link:hover { background: var(--energy); }
+.sheet-link[hidden] { display: none; }
+.sheet-close {
+  flex: none;
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  color: var(--faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sheet-close:hover { background: var(--energy); color: var(--ink); }
+.sheet-body { position: relative; flex: 1; min-height: 0; padding: 6px 20px 22px; overflow-y: auto; }
+.sheet-body h3 { margin: 22px 0 6px; font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
+.sheet-body h4 { margin: 14px 0 4px; font-size: 12px; font-weight: 600; color: var(--faint); }
+.sheet-body p { margin: 0 0 10px; max-width: 66ch; }
+.sheet-body a {
+  color: var(--ink);
+  text-decoration: underline 2px var(--energy);
+  text-underline-offset: 3px;
+}
+.sheet-body a:hover { background: var(--energy); }
+.sheet-sub { color: var(--faint); font-size: 13px; }
+.sheet-figure { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.missing { color: var(--faint); }
+.claims-count { color: var(--muted); font-size: 13px; }
+.claim { padding: 14px 0 6px; border-top: 1px solid var(--muted); }
+.claim-status { display: flex; align-items: center; gap: 8px; margin-bottom: 4px !important; font-weight: 600; }
+.status-glyph { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--neutral); }
+.status-glyph.is-confirmed { background: var(--fail); }
+.claim-absolute { font-size: 13px; color: var(--ink); }
+.passage { margin: 0 0 4px; padding-left: 14px; border-left: 2px solid var(--line); }
+.passage p { margin: 0; white-space: pre-line; font-size: 14px; line-height: 1.55; }
+.passage-cite { margin: 0 0 12px 16px !important; font-size: 12px; color: var(--faint); }
+.passage-cite a { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.readings { width: 100%; margin: 2px 0 10px; font-size: 13px; line-height: 1.45; table-layout: auto; }
+.readings th {
+  padding: 4px 10px 4px 0;
+  border-bottom: 1px solid var(--muted);
+  color: var(--muted);
+  font-weight: 600;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+.readings td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgb(92 107 60 / .2); vertical-align: top; }
+.readings td.yes-no { white-space: nowrap; }
+.readings .judge-model { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; }
+.readings.figures th:not(:nth-child(-n+2)), .readings td.numeric { text-align: right; }
+.readings td.numeric .mono, .readings td.rank-cell .mono { font-size: 13px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Nine labs need about a thousand pixels. Narrower than that the table scrolls
+   sideways in its own frame, with the names of the rows held at its left edge
+   so a figure never loses its row. The head no longer holds at the top there:
+   a frame that can scroll is what a sticky head would stick to. */
+@media (max-width: 1180px) {
+  .matrix-wrap { position: relative; overflow-x: auto; }
+  .board { min-width: 1000px; }
+  .board thead th { position: static; }
+  .board tbody th, .board thead th.row-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper);
+  }
+  .board .check-row th { background: #EAE8DB; }
+  /* Held at the left only. The top the wide layout gives the head, to clear the
+     site header, would push this one cell down inside the frame. */
+  .board thead th.row-col { top: auto; }
+  /* A collapsed border is painted under a pinned cell, whose ground then hides
+     it, so the rule under the corner is drawn on the corner itself. */
+  .board thead th.row-col::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: var(--muted);
+  }
+}
+/* A phone: the page takes the whole width with the framework's 16px gutter,
+   the header drops the collective's name and lets the menu wrap, and the row
+   names take a narrower column so more than one lab shows beside them. */
+@media (max-width: 880px) {
+  .depth-key-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .depth-key-list { grid-template-columns: 1fr; }
+  :root { --measure: 100%; --gutter: 16px; }
+  .site-header { position: static; height: auto; flex-wrap: wrap; gap: 4px 16px; padding: 10px var(--gutter); }
+  .collective, .brand-divider { display: none; }
+  .site-header nav { gap: 18px; flex-wrap: wrap; }
+  h1 { margin-top: 22px; font-size: 25px; }
+  .board { min-width: 920px; }
+  .board thead th.row-col { width: 176px; }
+}
+@media (max-width: 560px) {
+  .readings thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .readings, .readings tbody, .readings tr, .readings td { display: block; width: 100%; }
+  .readings tr { padding: 8px 0; border-bottom: 1px solid rgb(92 107 60 / .2); }
+  .readings td { padding: 1px 0; border: 0; text-align: left !important; }
+  .readings td[data-label]:not(.judge)::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 600; }
+  .readings td.judge { font-weight: 600; }
+  .readings td.reason { margin-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<p class="prototype-line">Prototype. Every figure is real, as of 22 September 2026: the depths out of ten, and each document as a whole with its contradictions found and read by the second method.</p>
+
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a class="active" href="/" aria-current="page">Overview</a>
+    <a href="/spec-reader/">Doc reader</a>
+    <a href="/about">About</a>
+    <a href="/mcp">MCP</a>
+  </nav>
+</header>
+
+<main class="shell">
+  <h1>How deeply each specification covers each behaviour</h1>
+  <p class="lede">
+    AI companies publish documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
+    behave. This grid shows, behaviour by behaviour, how far each one actually goes.
+    <br>
+    Missing a specification, or a behaviour the index should be asking about?
+    <a href="/about?propose#propose" target="_blank" rel="noopener noreferrer">Propose one</a>.
+  </p>
+
+  <p class="grid-note" id="status" aria-live="polite">Loading.</p>
+
+  <div class="gov-toolbar">
+    <p class="gov-hint">
+      Press a figure to see the evidence behind it, or a lab or a row&rsquo;s name to read
+      about it. Open a group to see its rows.
+    </p>
+    <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
+  </div>
+  <div class="matrix-wrap">
+    <table class="board" id="board">
+      <caption class="visually-hidden">Each lab's final score, its document as a whole and its behaviours by category, with each group's rows available to open</caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="gov-legend" id="legend" aria-hidden="true"></div>
+  <section class="depth-key" aria-labelledby="depth-key-title">
+    <h2 id="depth-key-title">Depth of a behaviour, out of 10</h2>
+    <ol class="depth-key-list" id="depth-key"></ol>
+    <p class="gov-foot" id="depth-key-odd"></p>
+  </section>
+  <p class="gov-foot" id="ties"></p>
+  <p class="gov-date">As of September 2026</p>
+
+  <!-- The method, folded: a reader who wants it opens it, and a reader who
+       does not is not made to scroll past it. Written by renderMethod from the
+       data, so its counts cannot disagree with the board. -->
+  <div class="gov-more">
+    <details id="method">
+      <summary>How the scores are made</summary>
+      <div class="gov-more-body" id="method-body"></div>
+    </details>
+  </div>
+</main>
+
+<!-- One popover for the whole board, filled with whatever was pressed and
+     placed beside it. The browser closes it on Escape or a press elsewhere. -->
+<div class="gov-pop" id="pop" popover role="dialog" aria-labelledby="pop-title" tabindex="-1"></div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-head">
+    <div class="sheet-topline">
+      <a class="sheet-link" id="sheet-link" target="_blank" rel="noopener noreferrer" hidden></a>
+      <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+    </div>
+    <h2 id="sheet-title"></h2>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</dialog>
+
+<script type="module">
+/* Everything the model wrote lands as a text node: nothing here is built with
+ * innerHTML. The board, the popover and the folding are the governance view's
+ * (site/governance.js on develop); the colour logic and the columns are the
+ * overview's (site/overview.js), run over a scale read per row. */
+
+const WITHOUT_A_SPECIFICATION = ["Google DeepMind", "xAI", "Meta", "Mistral AI", "Moonshot AI",
+  "DeepSeek"];
+
+/* ---- Colour ---------------------------------------------------------------- */
+
+/* The overview's ramp, with its stops at 0, half and the top of whichever
+ * scale is painted, so the deepest green is only reached at the top. */
+const RAMP = [
+  { at: 0, rgb: [180, 71, 47] },
+  { at: 0.5, rgb: [217, 162, 39] },
+  { at: 1, rgb: [76, 140, 63] },
+];
+
+function rampAt(value, max) {
+  const held = Math.max(0, Math.min(1, value / max));
+  const upper = RAMP.find(stop => stop.at >= held) || RAMP[RAMP.length - 1];
+  const lower = [...RAMP].reverse().find(stop => stop.at <= held) || RAMP[0];
+  if (upper === lower) return upper.rgb;
+  const across = (held - lower.at) / (upper.at - lower.at);
+  return lower.rgb.map((channel, i) => Math.round(channel + across * (upper.rgb[i] - channel)));
+}
+
+/* The governance board's rule: a figure is always light, where the overview
+ * picks dark or light by the colour underneath, because across one table of
+ * scores figures that change colour from cell to cell read as a second code. */
+const FIGURE = "#F1EFE3";
+function paint(node, value, max) {
+  node.style.background = `rgb(${rampAt(value, max).join(" ")})`;
+  node.style.color = FIGURE;
+}
+
+function chip(value, max, text = value.toFixed(1)) {
+  const node = element("span", "chip", text);
+  paint(node, value, max);
+  return node;
+}
+const naChip = () => element("span", "chip chip-na", "NA");
+
+/* ---- The scales ------------------------------------------------------------ */
+
+/* The six anchors of engine/panel/prompts/depth-v2.txt, each bar cut to one
+ * line in plain words, and the three conditions its level 10 asks for. */
+const ANCHORS = [
+  { level: 0, anchor: "absent", bar: "No passage bears on the behaviour." },
+  { level: 2, anchor: "named",
+    bar: "The behaviour appears in passing, a word or a clause, and nothing more is said." },
+  { level: 4, anchor: "discussed",
+    bar: "Addressed in its own right, but too generally to grade a response against." },
+  { level: 6, anchor: "prescribed",
+    bar: "Concrete do and don't rules that a grader could quote as pass criteria." },
+  { level: 8, anchor: "demonstrated",
+    bar: "Rules plus worked examples that show the sanctioned response." },
+  { level: 10, anchor: "bounded",
+    bar: "Demonstrated, and the three conditions below hold for every part of the behaviour." },
+];
+const CONDITIONS = [
+  "The edge is shown: two cases that differ in one feature get opposite answers.",
+  "A conflict is settled: the document names a rule of its own that pulls against this one, "
+    + "says which prevails and shows it on a case.",
+  "A default for the undecidable case: it says what to do when the model cannot tell which "
+    + "side of the edge it is on.",
+];
+const ODD_LINE = "An odd figure means the level below is fully met and part of the next.";
+
+/* "prescribed" for an even figure, "prescribed and partly demonstrated" for an
+ * odd one, after rounding the mean to a whole number. */
+function depthWords(mean) {
+  const whole = Math.max(0, Math.min(10, Math.round(mean)));
+  const below = ANCHORS[Math.floor(whole / 2)];
+  return whole % 2 === 0 ? below.anchor : `${below.anchor} and partly ${ANCHORS[(whole + 1) / 2].anchor}`;
+}
+
+/* The five criteria, with what each asks and the judges' anchors at 0, 2 and
+ * 4, from engine/panel/prompts/assessment-criteria-v1.txt and, for the
+ * contradictions, from the design. */
+const CRITERIA = [
+  { key: "conflict_rules", name: "Conflict rules",
+    asks: "What the document says, in general, when two of its own rules conflict.",
+    anchors: {
+      0: "Nothing.",
+      2: "An order of priority to be weighed as a whole, or an instruction to settle conflicts by "
+        + "judgement or by the document's spirit. Either is at most 2, however detailed.",
+      4: "A strict order that decides who wins whenever two ranks conflict, a rule for two rules "
+        + "of the same rank, and examples of the order applied." } },
+  { key: "rule_force", name: "Force of each rule",
+    asks: "Whether a reader can tell, for each rule, if it is absolute or a default, and who may change it.",
+    anchors: {
+      0: "The document does not separate absolute rules from defaults.",
+      2: "It lists its absolute rules, or labels some sections, but for much of the text a reader "
+        + "cannot tell a rule from a hope or an explanation.",
+      4: "Every rule carries its force, including who may change it, and commentary is marked "
+        + "apart from instruction." } },
+  { key: "reasons", name: "Reasons given",
+    asks: "Whether the rules say why they exist.",
+    anchors: {
+      0: "Rules are stated without reasons.",
+      2: "Some rules carry a reason, typically the most restrictive ones.",
+      4: "Nearly every rule that constrains the model says why, in terms specific enough to decide "
+        + "a case the document does not show." } },
+  { key: "situations", name: "Situations covered",
+    asks: "Whether the document has rules for the situations in which the model is used: ordinary "
+      + "conversation, actions it takes on its own with tools, images, audio and video, users who "
+      + "may be minors, other AI agents, and deployments a business has customised.",
+    anchors: {
+      0: "Ordinary conversation only.",
+      2: "Some of the six have rules of their own, or all six are named and most have none.",
+      4: "All six have rules of their own." } },
+  { key: "contradictions", name: "Unresolved contradictions",
+    asks: "Whether the document contradicts itself somewhere without saying which rule prevails.",
+    anchors: {
+      0: "Three or more, or any that involves a rule the document calls absolute.",
+      2: "One or two, neither involving an absolute rule.",
+      4: "None found." } },
+];
+
+const CRITERION_MAX = 4;
+const SHOWN_MAX = 2;
+const WHOLE_MAX = 10;
+const FINAL_MAX = 20;
+const HALVING = "The judges score from 0 to 4; the index halves it so the five criteria add up to 10.";
+const CONTRADICTIONS_RULE = "Scored from the confirmed contradictions, from 0 to 4, and halved like "
+  + "the other criteria: 2 when none is confirmed, 1 for one or two with no absolute rule, 0 for "
+  + "three or more or any absolute one.";
+
+/* ---- The figures ----------------------------------------------------------- */
+
+const state = { scale: 10, behaviours: [], categories: [], columns: [], assessment: {} };
+
+/* One decimal with halves rounded up, clear of the float noise that makes
+ * toFixed round 6.75 down. */
+const round1 = value => Math.round(value * 10 + 1e-9) / 10;
+const sum = values => values.reduce((total, value) => total + value, 0);
+
+/* A criterion's mean from its judges' own scores, on their scale of 0 to 4, so
+ * halving it is not a second rounding of a figure already rounded. */
+function criterionMean(assessment, key) {
+  if (key === "contradictions") return assessment.contradictions.score;
+  const criterion = assessment.criteria[key];
+  const scores = Object.values(criterion.judges || {}).map(given => given.score)
+    .filter(Number.isFinite);
+  return scores.length ? sum(scores) / scores.length : criterion.mean;
+}
+
+/* The five figures out of 2 as the board shows them, and their total, which
+ * is their sum as shown so the figures on screen add up exactly. */
+function wholeFigures(assessment) {
+  const parts = CRITERIA.map(criterion =>
+    round1(criterionMean(assessment, criterion.key) / CRITERION_MAX * SHOWN_MAX));
+  return { parts, total: round1(sum(parts)) };
+}
+
+/* The plain mean of a document's behaviour cells, out of 10. */
+function behavioursFigure(column) {
+  const cells = state.behaviours.map(behaviour => behaviour.coverage?.[column.id]?.depth)
+    .filter(depth => Number.isFinite(depth?.mean));
+  if (!cells.length) return null;
+  return {
+    value: round1(sum(cells.map(depth => depth.mean)) / cells.length),
+    count: cells.length,
+    invented: cells.filter(depth => depth.fake).length,
+  };
+}
+
+/* The behaviours' figure plus the document as a whole, each out of 10. */
+function finalFigure(column) {
+  const assessment = column.absent ? null : state.assessment[column.id];
+  const behaviours = column.absent ? null : behavioursFigure(column);
+  if (!assessment || !behaviours) return null;
+  const whole = wholeFigures(assessment).total;
+  return { behaviours, whole, value: round1(behaviours.value + whole) };
+}
+
+/* The plain mean of one category's behaviour cells for one column, out of 10.
+ * A lab with no specification stands at nought across, as its behaviours do. */
+function categoryFigure(members, column) {
+  if (column.absent) return 0;
+  const means = members.map(behaviour => behaviour.coverage?.[column.id]?.depth?.mean)
+    .filter(Number.isFinite);
+  return means.length ? round1(sum(means) / means.length) : null;
+}
+
+/* ---- Order and rank -------------------------------------------------------- */
+
+/* Columns by final score, best first, as the governance view orders its labs:
+ * a rank is one more than the number of labs ahead, so labs level on the score
+ * as shown share a place and the next rank skips. The governance view breaks a
+ * tie on its best practices; there is no second figure here, so a tie stands.
+ * The sort is stable, so level labs keep the alphabetical order they came in,
+ * and the labs with no final score follow, unranked, in that order too. */
+const level = (a, b) => Math.abs(a - b) < 1e-9;
+const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth"];
+
+function newestPerSpecification(documents) {
+  const newest = new Map();
+  documents.forEach(document_ => {
+    const spec = String(document_.id).split("@", 1)[0];
+    const held = newest.get(spec);
+    if (!held || String(document_.version) > String(held.version)) newest.set(spec, document_);
+  });
+  return [...newest.values()]
+    .concat(WITHOUT_A_SPECIFICATION.map(lab => ({ lab, absent: true })))
+    .sort((a, b) => a.lab.localeCompare(b.lab, "en", { sensitivity: "base" }));
+}
+
+function ranked(columns) {
+  const scored = columns.map(column => ({ column, final: finalFigure(column) }))
+    .filter(entry => entry.final)
+    .sort((a, b) => b.final.value - a.final.value);
+  scored.forEach(entry => {
+    entry.column.rank = 1 + scored.filter(other =>
+      !level(other.final.value, entry.final.value) && other.final.value > entry.final.value).length;
+  });
+  const ranks = new Set(scored.map(entry => entry.column));
+  return [...scored.map(entry => entry.column), ...columns.filter(column => !ranks.has(column))];
+}
+
+const rankedColumns = () => state.columns.filter(column => column.rank);
+
+function rankLine(column) {
+  const all = rankedColumns();
+  const alongside = all.filter(other => other !== column && other.rank === column.rank);
+  return `Ranked ${column.rank} of ${all.length}`
+    + `${alongside.length ? `, level with ${alongside.map(other => other.lab).join(" and ")}` : ""}.`;
+}
+
+function tiesText() {
+  const all = rankedColumns();
+  return all.flatMap((column, i) => {
+    const next = all[i + 1];
+    if (!next || next.rank !== column.rank) return [];
+    return [`${column.lab} and ${next.lab} tie on ${finalFigure(column).value.toFixed(1)}, `
+      + `so they share ${ORDINALS[column.rank - 1]} place.`];
+  }).join(" ");
+}
+
+/* ---- Small builders -------------------------------------------------------- */
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+const paragraph = (text, className) => element("p", className, text);
+const mono = text => element("span", "mono", text);
+const shownVersion = version => String(version || "").replace(/-00$/, "");
+const readerLink = params => `/spec-reader/?${new URLSearchParams(params)}`;
+/* "OpenAI: harm and safety", keeping a leading acronym as it is. */
+const lowerFirst = text => (/^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
+const documentLine = column => `${column.title}, ${shownVersion(column.version)}.`;
+
+function link(href, text) {
+  const node = element("a", null, text);
+  node.href = href;
+  node.target = "_blank";
+  node.rel = "noopener noreferrer";
+  return node;
+}
+
+/* ---- The popover ----------------------------------------------------------- */
+
+const nodes = {
+  status: document.querySelector("#status"),
+  table: document.querySelector("#board"),
+  legend: document.querySelector("#legend"),
+  depthKey: document.querySelector("#depth-key"),
+  method: document.querySelector("#method-body"),
+  depthKeyOdd: document.querySelector("#depth-key-odd"),
+  ties: document.querySelector("#ties"),
+  expandAll: document.querySelector("#expand-all"),
+  pop: document.querySelector("#pop"),
+  sheet: document.querySelector("#sheet"),
+  sheetTitle: document.querySelector("#sheet-title"),
+  sheetLink: document.querySelector("#sheet-link"),
+  sheetBody: document.querySelector("#sheet-body"),
+  sheetClose: document.querySelector("#sheet-close"),
+};
+
+const pop = { trigger: null, closedTrigger: null, closedAt: 0 };
+
+/* Beside what opened it, never over it: below if it fits, else above, else to
+ * the right or the left, and held inside the window whichever it is. */
+function placePopover() {
+  const node = nodes.pop;
+  if (!pop.trigger || !node.matches(":popover-open")) return;
+  const box = pop.trigger.getBoundingClientRect();
+  const width = node.offsetWidth;
+  const height = node.offsetHeight;
+  const gap = 8;
+  const room = { width: window.innerWidth, height: window.innerHeight };
+  const clampTop = top => Math.max(gap, Math.min(top, room.height - height - gap));
+  const clampLeft = left => Math.max(gap, Math.min(left, room.width - width - gap));
+  let top;
+  let left;
+  if (box.bottom + gap + height <= room.height - gap) {
+    [top, left] = [box.bottom + gap, clampLeft(box.left)];
+  } else if (box.top - gap - height >= gap) {
+    [top, left] = [box.top - gap - height, clampLeft(box.left)];
+  } else if (box.right + gap + width <= room.width - gap) {
+    [top, left] = [clampTop(box.top + box.height / 2 - height / 2), box.right + gap];
+  } else if (box.left - gap - width >= gap) {
+    [top, left] = [clampTop(box.top + box.height / 2 - height / 2), box.left - gap - width];
+  } else {
+    // A phone: no side has room, so it takes the window and scrolls inside.
+    [top, left] = [clampTop(box.bottom + gap), clampLeft(box.left)];
+  }
+  node.style.top = `${top}px`;
+  node.style.left = `${left}px`;
+}
+
+/* Fill the popover and show it beside `trigger`. A press on the trigger of an
+ * open popover is meant to close it, which the browser's light dismiss does on
+ * the way down; the click that follows must not open it again. */
+function openPopover(trigger, build) {
+  const node = nodes.pop;
+  if (trigger === pop.closedTrigger && performance.now() - pop.closedAt < 300) return;
+  if (node.matches(":popover-open")) node.hidePopover();
+  const content = document.createDocumentFragment();
+  const close = element("button", "gov-pop-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Close");
+  close.addEventListener("click", () => node.hidePopover());
+  content.append(close);
+  build(content);
+  node.replaceChildren(content);
+  pop.trigger = trigger;
+  trigger.setAttribute("aria-expanded", "true");
+  trigger.classList.add("is-open");
+  node.showPopover();
+  node.scrollTop = 0;
+  placePopover();
+  node.focus({ preventScroll: true });
+}
+
+/* The same popover, same place, new contents. */
+function refill(build) {
+  const trigger = pop.trigger;
+  if (!trigger) return;
+  nodes.pop.hidePopover();
+  pop.closedTrigger = null;
+  openPopover(trigger, build);
+}
+
+function wirePopover() {
+  const node = nodes.pop;
+  node.addEventListener("beforetoggle", event => {
+    if (event.newState !== "closed") return;
+    const trigger = pop.trigger;
+    pop.trigger = null;
+    if (!trigger) return;
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.classList.remove("is-open");
+    pop.closedTrigger = trigger;
+    pop.closedAt = performance.now();
+    if (node.contains(document.activeElement)) trigger.focus({ preventScroll: true });
+  });
+  window.addEventListener("scroll", placePopover, { passive: true });
+  window.addEventListener("resize", placePopover, { passive: true });
+  document.querySelector(".matrix-wrap").addEventListener("scroll", placePopover, { passive: true });
+}
+
+function titled(content, title, subtitle) {
+  const heading = element("h2", "", title);
+  heading.id = "pop-title";
+  content.append(heading);
+  if (subtitle) content.append(element("p", "subtitle", subtitle));
+}
+
+function figure(value, rest) {
+  const line = element("p", "figure");
+  line.append(element("strong", "", String(value)), document.createTextNode(rest));
+  return line;
+}
+const h3 = text => element("h3", "", text);
+
+function popButton(text, onPress) {
+  const button = element("button", "gov-button", text);
+  button.type = "button";
+  button.addEventListener("click", onPress);
+  return button;
+}
+
+/* The depth scale, with the figure's place marked: its own anchor when it
+ * rounds to an even number, the two either side when it rounds to an odd one. */
+function depthScale(mean) {
+  const fragment = document.createDocumentFragment();
+  const list = element("ol", "anchors");
+  const whole = mean === null ? null : Math.max(0, Math.min(10, Math.round(mean)));
+  ANCHORS.forEach(({ level: at, anchor, bar }) => {
+    const item = element("li");
+    if (whole !== null && Math.abs(whole - at) <= 1) item.classList.add("is-here");
+    const text = element("span");
+    text.append(element("span", "anchor-name", anchor), document.createTextNode(`: ${bar}`));
+    item.append(element("span", "anchor-level", String(at)), text);
+    list.append(item);
+  });
+  const conditions = element("ul", "check-list");
+  CONDITIONS.forEach(condition => conditions.append(element("li", "", condition)));
+  fragment.append(list, element("p", "subtitle", "The three conditions for 10:"), conditions,
+    element("p", "subtitle", ODD_LINE));
+  return fragment;
+}
+
+/* A criterion's anchors on the judges' scale, with the mean's place marked as
+ * the governance view marks a check's: every description within 1 of it. */
+function criterionScale(criterion, mean04) {
+  const list = element("ol", "anchors");
+  [0, 2, 4].forEach(at => {
+    const item = element("li");
+    if (mean04 !== null && Math.abs(mean04 - at) <= 1 + 1e-9) item.classList.add("is-here");
+    item.append(element("span", "anchor-level", String(at)), element("span", "", criterion.anchors[at]));
+    list.append(item);
+  });
+  const fragment = document.createDocumentFragment();
+  fragment.append(list, element("p", "subtitle",
+    "A score of 1 or 3 falls between the descriptions either side of it."));
+  return fragment;
+}
+
+/* "sol", or "glm in the deepseek seat" when a substitute answered. */
+function judgeName(seat, model) {
+  const name = element("span");
+  if (model) name.append(mono(model), document.createTextNode(" in the "), mono(seat),
+    document.createTextNode(" seat"));
+  else name.append(mono(seat));
+  return name;
+}
+
+/* The panel's three seats. A reading filed under another name is a substitute
+ * the data does not place: it answered in the one seat the reading's panel
+ * leaves empty, and is shown in it, as a reading that names its seat is. */
+const PANEL_SEATS = ["deepseek", "fable", "sol"];
+
+function placedJudges(judges) {
+  const entries = Object.entries(judges || {});
+  const empty = PANEL_SEATS.filter(seat => !entries.some(([key]) => key === seat));
+  return entries.map(([key, given]) => (PANEL_SEATS.includes(key) || empty.length !== 1
+    ? { seat: key, model: given.model, given }
+    : { seat: empty[0], model: key, given }))
+    .sort((a, b) => a.seat.localeCompare(b.seat));
+}
+
+function readingsList(judges, valueKey, outOf) {
+  const list = element("ul", "judges");
+  placedJudges(judges).forEach(({ seat, model, given }) => {
+    const item = element("li");
+    const who = element("span", "who");
+    who.append(judgeName(seat, model), document.createTextNode(" gave "),
+      mono(String(given[valueKey])), document.createTextNode(` out of ${outOf}`));
+    item.append(who);
+    if (given.rationale) item.append(element("p", "", given.rationale));
+    list.append(item);
+  });
+  return list;
+}
+
+/* ---- What each popover says ------------------------------------------------ */
+
+function aboutFinal(content) {
+  titled(content, `Final score, out of ${FINAL_MAX}`, "The sum of two figures, each out of 10, so the two count equally.");
+  const parts = element("ul", "check-list");
+  parts.append(element("li", "", "Behaviours: the plain mean of a document's behaviour cells, out of 10."),
+    element("li", "", "The document as a whole: the total of its five criteria, out of 10."));
+  content.append(parts);
+  const table = element("table", "readings figures");
+  const headRow = element("tr");
+  ["Rank", "Lab", "Behaviours", "Whole document", "Final score"].forEach(name => {
+    const cell = element("th", null, name);
+    cell.scope = "col";
+    headRow.append(cell);
+  });
+  const head = element("thead");
+  head.append(headRow);
+  const rows = element("tbody");
+  rankedColumns().forEach(column => {
+    const final = finalFigure(column);
+    const row = element("tr");
+    const rank = element("td", "rank-cell");
+    rank.dataset.label = "Rank";
+    rank.append(mono(String(column.rank)));
+    const name = element("td", "judge", column.lab);
+    name.dataset.label = "Lab";
+    row.append(rank, name);
+    [["Behaviours", final.behaviours.value], ["Whole document", final.whole], ["Final score", final.value]]
+      .forEach(([label, value]) => {
+        const cell = element("td", "numeric");
+        cell.dataset.label = label;
+        cell.append(mono(value.toFixed(1)));
+        row.append(cell);
+      });
+    rows.append(row);
+  });
+  table.append(head, rows);
+  content.append(table, element("p", "", "Labs are ranked by this score. Labs level on it share a place "
+    + "and the next rank skips. A lab with no specification has no whole-document total to add, so it "
+    + "has no final score and comes after, unranked."));
+}
+
+function finalScore(content, column, final) {
+  titled(content, `${column.lab}: final score`, `${documentLine(column)} ${rankLine(column)}`);
+  content.append(figure(final.value.toFixed(1), ` out of ${FINAL_MAX}`));
+  const parts = element("ul", "check-list");
+  const part = (value, text) => {
+    const item = element("li");
+    item.append(chip(value, WHOLE_MAX), element("span", "", text));
+    return item;
+  };
+  parts.append(part(final.behaviours.value, `Behaviours, the plain mean of its ${final.behaviours.count} behaviour cells`),
+    part(final.whole, "The document as a whole, the total of its five criteria"));
+  content.append(parts);
+  const arithmetic = element("p");
+  arithmetic.append(mono(`${final.behaviours.value.toFixed(1)} + ${final.whole.toFixed(1)} = ${final.value.toFixed(1)}`),
+    document.createTextNode(` out of ${FINAL_MAX}.`));
+  content.append(arithmetic);
+  if (final.behaviours.invented) {
+    content.append(element("p", "subtitle", `${final.behaviours.invented} of the ${final.behaviours.count} `
+      + "behaviour cells are invented for the prototype, so this figure is partly invented too."));
+  }
+  content.append(popButton(`The whole profile of ${column.lab}`, () => refill(c => profile(c, column))));
+}
+
+/* A lab's whole profile, from its column's head, as the governance view gives
+ * a company's: every group folded, with the rows it is made of. */
+function profile(content, column) {
+  if (column.absent) {
+    titled(content, column.lab, "No published specification.");
+    content.append(element("p", "", `We know of no model behaviour specification from ${column.lab}, and none `
+      + "appears to have been published, so there is no public document to set beside the others. Its "
+      + "behaviours stand at nought for that absence, and the rows that assess a document are NA."));
+    return;
+  }
+  const final = finalFigure(column);
+  titled(content, column.lab, `${documentLine(column)} ${rankLine(column)}`);
+  content.append(figure(final.value.toFixed(1), ` out of ${FINAL_MAX}`));
+  const assessment = state.assessment[column.id];
+  const { parts, total } = wholeFigures(assessment);
+  const whole = element("details");
+  const wholeSummary = element("summary");
+  wholeSummary.append(chip(total, WHOLE_MAX), element("span", "", `The document as a whole, ${total.toFixed(1)} out of 10`));
+  const criteria = element("ul", "check-list");
+  CRITERIA.forEach((criterion, i) => {
+    const item = element("li");
+    item.append(chip(parts[i], SHOWN_MAX), element("span", "", `${criterion.name}, out of 2`));
+    criteria.append(item);
+  });
+  whole.append(wholeSummary, criteria);
+  content.append(whole);
+  state.categories.forEach(({ name, members }) => {
+    const value = categoryFigure(members, column);
+    const fold = element("details");
+    const summary = element("summary");
+    summary.append(chip(value, WHOLE_MAX), element("span", "", `${name}, ${value.toFixed(1)} out of 10`));
+    const list = element("ul", "check-list");
+    members.forEach(behaviour => {
+      const depth = behaviour.coverage?.[column.id]?.depth;
+      if (!Number.isFinite(depth?.mean)) return;
+      const item = element("li");
+      item.append(chip(depth.mean, state.scale), element("span", "", behaviour.name));
+      list.append(item);
+    });
+    fold.append(summary, list);
+    content.append(fold);
+  });
+  const read = element("p");
+  read.style.marginTop = "12px";
+  read.append(link(readerLink({ spec: column.id }), "Read the document in the doc reader"));
+  content.append(read);
+}
+
+/* A row that assesses a document, for a lab that has none. */
+function notAssessed(content, column, row, more) {
+  titled(content, `${column.lab}: ${lowerFirst(row)}`, "Not assessed.");
+  content.append(figure("NA", ", not assessed"),
+    element("p", "", `There is no published specification from ${column.lab} to assess.${more ? ` ${more}` : ""}`));
+}
+
+/* A nought that means the index holds no document, rather than a document that
+ * was read and found to say nothing. */
+function absentScore(content, column, subject, these) {
+  titled(content, `${column.lab}: ${lowerFirst(subject)}`, "No published specification.");
+  content.append(figure("0.0", " out of 10"),
+    element("p", "", `We know of no model behaviour specification from ${column.lab}, and none appears `
+      + "to have been published, so there is no public document to set beside the others."),
+    element("p", "subtitle", "The nought therefore stands for that absence. Nobody has examined a "
+      + `${column.lab} specification and found it silent on ${these}.`));
+}
+
+function aboutWhole(content) {
+  titled(content, "The document as a whole", "Five criteria, each out of 2, adding up to a total out of 10.");
+  content.append(element("p", "", "Beside the depth of each behaviour, each document is assessed whole, "
+    + `by the same three judges, on five criteria. ${HALVING}`));
+  content.append(h3("How it is scored"));
+  CRITERIA.forEach(criterion => {
+    const fold = element("details");
+    const summary = element("summary");
+    summary.append(element("span", "", criterion.name));
+    fold.append(summary, element("p", "", criterion.asks), criterionScale(criterion, null));
+    if (criterion.key === "contradictions") fold.append(element("p", "subtitle", CONTRADICTIONS_RULE));
+    content.append(fold);
+  });
+  content.append(showInTable("whole"));
+}
+
+/* The total of one document: its five criteria folded, each with its judges.
+ * The contradictions are too long for a popover and open in the sheet. */
+function wholeScore(content, column, assessment) {
+  const { parts, total } = wholeFigures(assessment);
+  titled(content, `${column.lab}: the document as a whole`, documentLine(column));
+  content.append(figure(total.toFixed(1), " out of 10"),
+    element("p", "subtitle", `The sum of its five criteria, each out of 2. ${HALVING}`));
+  CRITERIA.forEach((criterion, i) => {
+    const fold = element("details");
+    const summary = element("summary");
+    summary.append(chip(parts[i], SHOWN_MAX), element("span", "", `${criterion.name}, ${parts[i].toFixed(1)} out of 2`));
+    fold.append(summary);
+    if (criterion.key === "contradictions") {
+      fold.append(element("p", "", CONTRADICTIONS_RULE), contradictionsLine(assessment),
+        popButton("Read the contradictions", () => openContradictions(column, assessment, parts[i])));
+    } else {
+      fold.append(readingsList(assessment.criteria[criterion.key].judges, "score", CRITERION_MAX));
+    }
+    content.append(fold);
+  });
+  content.append(popButton(`The whole profile of ${column.lab}`, () => refill(c => profile(c, column))));
+}
+
+function aboutCriterion(content, criterion) {
+  titled(content, criterion.name, criterion.asks);
+  content.append(element("p", "subtitle", "One of the five criteria on the document as a whole. "
+    + `${criterion.key === "contradictions" ? CONTRADICTIONS_RULE : HALVING}`));
+  content.append(h3("What the judges' scores mean, 0 to 4"), criterionScale(criterion, null));
+}
+
+function criterionScore(content, column, criterion, assessment, part) {
+  titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`, criterion.asks);
+  content.append(figure(part.toFixed(1), " out of 2"), element("p", "subtitle", HALVING));
+  const judges = assessment.criteria[criterion.key].judges || {};
+  content.append(h3(`The ${Object.keys(judges).length} readings, each out of 4`),
+    readingsList(judges, "score", CRITERION_MAX));
+  content.append(h3("What the judges' scores mean, 0 to 4"),
+    criterionScale(criterion, criterionMean(assessment, criterion.key)));
+}
+
+function contradictionsLine(assessment) {
+  const claims = assessment.contradictions.claims || [];
+  const confirmed = claims.filter(claim => claim.confirmed).length;
+  return element("p", "", claims.length
+    ? `Found and checked by three judges, not reviewed by a person: ${confirmed} confirmed of ${claims.length} listed.`
+    : "The judges listed none.");
+}
+
+function contradictionsScore(content, column, assessment, part) {
+  const criterion = CRITERIA.find(item => item.key === "contradictions");
+  titled(content, `${column.lab}: unresolved contradictions`, criterion.asks);
+  content.append(figure(part.toFixed(1), " out of 2"), element("p", "subtitle", CONTRADICTIONS_RULE),
+    contradictionsLine(assessment));
+  const confirmed = (assessment.contradictions.claims || []).filter(claim => claim.confirmed);
+  if (confirmed.length) {
+    content.append(h3("Confirmed"));
+    const list = element("ul", "check-list");
+    confirmed.forEach(claim => {
+      const item = element("li", "", claim.situation + (claim.absolute ? " Absolute." : ""));
+      list.append(item);
+    });
+    content.append(list);
+  }
+  content.append(popButton("Read the contradictions", () => openContradictions(column, assessment, part)));
+  content.append(h3("What the judges' scores mean, 0 to 4"),
+    criterionScale(criterion, assessment.contradictions.score));
+}
+
+function aboutCategory(content, category, members) {
+  titled(content, category, `${members.length} behaviours, each a depth out of 10. The group's figure is their plain mean.`);
+  const list = element("ul", "check-list");
+  members.forEach(behaviour => list.append(element("li", "", behaviour.name)));
+  content.append(list, h3("What a depth means"), depthScale(null), showInTable(category));
+}
+
+function categoryScore(content, column, category, members, value) {
+  titled(content, `${column.lab}: ${lowerFirst(category)}`, documentLine(column));
+  content.append(figure(value.toFixed(1), " out of 10"),
+    element("p", "subtitle", `The plain mean of its ${members.length} behaviours.`));
+  const list = element("ul", "check-list");
+  members.forEach(behaviour => {
+    const depth = behaviour.coverage?.[column.id]?.depth;
+    if (!Number.isFinite(depth?.mean)) return;
+    const item = element("li");
+    const open = element("button", "inline-button", behaviour.name);
+    open.type = "button";
+    open.addEventListener("click", () => refill(c => behaviourScore(c, column, behaviour, depth)));
+    item.append(chip(depth.mean, state.scale), open);
+    list.append(item);
+  });
+  content.append(list);
+}
+
+function aboutBehaviour(content, behaviour) {
+  titled(content, behaviour.name, "A depth out of 10: how far a document goes on this behaviour.");
+  content.append(h3("What the judges are asked"), element("p", "", behaviour.definition
+    || "No brief is recorded for this behaviour."));
+  content.append(h3("What a depth means"), depthScale(null));
+}
+
+function behaviourScore(content, column, behaviour, depth) {
+  titled(content, `${column.lab}: ${lowerFirst(behaviour.name)}`, behaviour.definition);
+  content.append(figure(depth.mean.toFixed(1), ` out of 10, ${depthWords(depth.mean)}`));
+  if (depth.fake) {
+    content.append(element("p", "subtitle", "Invented for the prototype. No judge gave this figure."));
+  }
+  const count = Object.keys(depth.judges || {}).length;
+  if (count) content.append(h3(`The ${count} readings`), readingsList(depth.judges, "depth", 10));
+  content.append(h3("Where this figure sits"), depthScale(depth.mean));
+  const read = element("p");
+  read.append(link(readerLink({ behavior: behaviour.slug, spec: column.id }), "Read the passages in the doc reader"));
+  content.append(read);
+}
+
+/* ---- The sheet, for the contradictions ------------------------------------- */
+
+function sheet(title, build, sheetLink) {
+  nodes.sheetTitle.textContent = title;
+  if (sheetLink) {
+    nodes.sheetLink.href = sheetLink.href;
+    nodes.sheetLink.textContent = sheetLink.text;
+    nodes.sheetLink.hidden = false;
+  } else {
+    nodes.sheetLink.removeAttribute("href");
+    nodes.sheetLink.hidden = true;
+  }
+  const body = document.createDocumentFragment();
+  build(body);
+  nodes.sheetBody.replaceChildren(body);
+  nodes.sheetBody.scrollTop = 0;
+  if (!nodes.sheet.open) nodes.sheet.showModal();
+}
+
+function yesNo(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "Not given";
+}
+
+function readingsTable(readings) {
+  const table = element("table", "readings");
+  const headRow = element("tr");
+  ["Judge", "Found it", "Holds", "Absolute", "Reason"].forEach(name => {
+    const cell = element("th", null, name);
+    cell.scope = "col";
+    headRow.append(cell);
+  });
+  const head = element("thead");
+  head.append(headRow);
+  const body = element("tbody");
+  readings.forEach(reading => {
+    const row = element("tr");
+    const judge = element("td", "judge");
+    judge.dataset.label = "Judge";
+    judge.append(mono(reading.seat));
+    if (reading.model) {
+      const model = element("span", "judge-model", "answered by ");
+      model.append(mono(reading.model));
+      judge.append(model);
+    }
+    row.append(judge);
+    [["Found it", reading.found], ["Holds", reading.holds], ["Absolute", reading.absolute]]
+      .forEach(([name, value]) => {
+        const cell = element("td", "yes-no", yesNo(value));
+        cell.dataset.label = name;
+        row.append(cell);
+      });
+    const reason = String(reading.reason || "");
+    const why = element("td", "reason", reason.charAt(0).toUpperCase() + reason.slice(1));
+    why.dataset.label = "Reason";
+    row.append(why);
+    body.append(row);
+  });
+  table.append(head, body);
+  return table;
+}
+
+function claimNode(claim, documentId) {
+  const item = element("section", "claim");
+  const status = element("p", "claim-status");
+  status.append(element("span", `status-glyph${claim.confirmed ? " is-confirmed" : ""}`),
+    document.createTextNode(claim.confirmed ? "Confirmed" : "Not confirmed"));
+  item.append(status);
+  if (claim.absolute) {
+    item.append(paragraph("Absolute: the clash involves a rule the document says can never be overridden",
+      "claim-absolute"));
+  }
+  item.append(element("h4", null, "Situation"), paragraph(claim.situation));
+  item.append(element("h4", null, "The two passages"));
+  claim.passages.forEach(passage => {
+    const quote = element("blockquote", "passage");
+    quote.append(paragraph(passage.quote));
+    const cite = paragraph("", "passage-cite");
+    cite.append(link(readerLink({ spec: documentId, passage: passage.locator }), passage.locator));
+    if (passage.exampleBlock) cite.append(document.createTextNode(", an example in the document"));
+    item.append(quote, cite);
+  });
+  item.append(element("h4", null, "Why both cannot be followed"), paragraph(claim.why));
+  item.append(element("h4", null, "How each judge read it"), readingsTable(claim.readings || []));
+  return item;
+}
+
+function openContradictions(column, assessment, part) {
+  if (nodes.pop.matches(":popover-open")) nodes.pop.hidePopover();
+  sheet(`${column.lab}: Unresolved contradictions`, body => {
+    body.append(paragraph(documentLine(column), "sheet-sub"));
+    const figureLine = paragraph("");
+    figureLine.append(element("span", "sheet-figure", part.toFixed(1)), document.createTextNode(" out of 2."));
+    body.append(figureLine, paragraph(CONTRADICTIONS_RULE));
+    const claims = assessment.contradictions.claims || [];
+    const confirmed = claims.filter(claim => claim.confirmed);
+    body.append(element("h3", null, "Contradictions"),
+      paragraph("Found and checked by three judges. Not reviewed by a person."));
+    if (!claims.length) {
+      body.append(paragraph("The judges listed none.", "missing"));
+      return;
+    }
+    body.append(paragraph(`${confirmed.length} confirmed of ${claims.length} listed.`, "claims-count"));
+    [...confirmed, ...claims.filter(claim => !claim.confirmed)]
+      .forEach(claim => body.append(claimNode(claim, column.id)));
+  }, { href: readerLink({ spec: column.id }), text: "Read the document in the doc reader" });
+}
+
+/* ---- The table ------------------------------------------------------------- */
+
+/* What opens in the table: the document as a whole into its criteria, and each
+ * category into its behaviours. */
+const groups = new Map();
+const expanded = new Set();
+
+function rowName(name, sub, build, label) {
+  const button = element("button", "row-name");
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", label);
+  button.append(element("span", "head-name", name));
+  if (sub) button.append(element("span", "head-sub", sub));
+  button.addEventListener("click", () => openPopover(button, build));
+  return button;
+}
+
+function cellButton(label, build, className) {
+  const cell = element("td", "cell");
+  const button = element("button", className);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", label);
+  button.addEventListener("click", () => openPopover(button, build));
+  cell.append(button);
+  return { cell, button };
+}
+
+function scoreCell(column, rowLabel, value, max, build, invented = false) {
+  const text = value.toFixed(1);
+  const { cell, button } = cellButton(`${column.lab}, ${rowLabel}: ${text} out of ${max}`
+    + (invented ? ", partly invented for the prototype" : ""), build, "cell-button");
+  paint(button, value, max);
+  if (invented) button.classList.add("is-invented");
+  const out = element("span", "cell-max", `/${max}`);
+  out.setAttribute("aria-hidden", "true");
+  button.append(element("span", "cell-figure", text), out);
+  return cell;
+}
+
+/* A row that assesses a document, for a lab with none: NA, and no colour. */
+function naCell(column, rowLabel, build) {
+  const { cell, button } = cellButton(`${column.lab}, ${rowLabel}: not assessed`, build, "cell-button cell-na");
+  button.append(element("span", "cell-figure", "NA"));
+  return cell;
+}
+
+const rowId = (groupId, i) => `row-${[...groups.keys()].indexOf(groupId)}-${i}`;
+
+/* The round button that opens a row into the rows under it. */
+function rowToggle(groupId, childCount, parts) {
+  const toggle = element("button", "row-toggle");
+  toggle.type = "button";
+  toggle.dataset.group = groupId;
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", Array.from({ length: childCount }, (_, i) => rowId(groupId, i)).join(" "));
+  toggle.setAttribute("aria-label", `Show the ${parts} of ${groups.get(groupId).name}`);
+  toggle.addEventListener("click", () => setExpanded(groupId, !expanded.has(groupId)));
+  return toggle;
+}
+
+/* A row's head: a fold for a group, an empty space the same width for the rows
+ * that have nothing to fold, so every name starts on one line. */
+function rowHead(first, name) {
+  const head = element("th");
+  head.scope = "row";
+  const line = element("div", "row-head");
+  line.append(first || element("span", "row-spacer"), name);
+  head.append(line);
+  return head;
+}
+
+/* A row folded under its group until that opens. */
+function subRow(groupId, i, name) {
+  const row = element("tr", "check-row");
+  row.id = rowId(groupId, i);
+  row.dataset.parent = groupId;
+  row.hidden = true;
+  const head = element("th");
+  head.scope = "row";
+  head.append(name);
+  row.append(head);
+  return row;
+}
+
+function headRow() {
+  const row = element("tr");
+  const corner = element("th", "row-col");
+  corner.scope = "col";
+  corner.append(element("span", "head-name", "Score"), element("span", "head-sub", "labs by rank"));
+  row.append(corner);
+  state.columns.forEach(column => {
+    const cell = element("th");
+    cell.scope = "col";
+    const button = element("button", "company-button");
+    button.type = "button";
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", column.rank
+      ? `${column.lab}, ranked ${column.rank}: its profile`
+      : `${column.lab}, no published specification`);
+    if (column.rank) button.append(element("span", "rank", String(column.rank)));
+    else button.append(element("span", "rank", " "));
+    button.append(element("span", "company-name", column.lab));
+    button.append(column.absent
+      ? element("span", "company-flag", "No specification")
+      : element("span", "company-flag mono", shownVersion(column.version)));
+    button.addEventListener("click", () => openPopover(button, content => profile(content, column)));
+    cell.append(button);
+    row.append(cell);
+  });
+  return row;
+}
+
+function renderTable() {
+  const body = document.createDocumentFragment();
+  const columns = state.columns;
+
+  /* The final score, a single row above every group, as the governance view's
+   * total. A lab with no specification has no whole-document total to add. */
+  const total = element("tr", "total-row");
+  total.append(rowHead(null, rowName("Final score", `out of ${FINAL_MAX}`, aboutFinal,
+    `Final score, out of ${FINAL_MAX}: how it is worked out`)));
+  columns.forEach(column => {
+    const final = finalFigure(column);
+    total.append(final
+      ? scoreCell(column, "final score", final.value, FINAL_MAX, c => finalScore(c, column, final),
+        final.behaviours.invented > 0)
+      : naCell(column, "final score", c => notAssessed(c, column, "Final score",
+        "It has no whole-document total to add, so it has no final score.")));
+  });
+  body.append(total);
+
+  /* The document as a whole, a group of its own: its total on the group row,
+   * the five criteria out of 2 folded under it. */
+  const wholeRow = element("tr", "question-row");
+  wholeRow.append(rowHead(rowToggle("whole", CRITERIA.length, "criteria"),
+    rowName("The document as a whole", "out of 10, five criteria", aboutWhole,
+      "The document as a whole: what it measures")));
+  columns.forEach(column => {
+    const assessment = column.absent ? null : state.assessment[column.id];
+    wholeRow.append(assessment
+      ? scoreCell(column, "the document as a whole", wholeFigures(assessment).total, WHOLE_MAX,
+        c => wholeScore(c, column, assessment))
+      : naCell(column, "the document as a whole", c => notAssessed(c, column, "The document as a whole")));
+  });
+  body.append(wholeRow);
+  CRITERIA.forEach((criterion, i) => {
+    const sub = subRow("whole", i, rowName(criterion.name, "out of 2",
+      c => aboutCriterion(c, criterion), `${criterion.name}: what it asks`));
+    columns.forEach(column => {
+      const assessment = column.absent ? null : state.assessment[column.id];
+      if (!assessment) {
+        sub.append(naCell(column, lowerFirst(criterion.name), c => notAssessed(c, column, criterion.name)));
+        return;
+      }
+      const part = wholeFigures(assessment).parts[i];
+      sub.append(scoreCell(column, lowerFirst(criterion.name), part, SHOWN_MAX,
+        criterion.key === "contradictions"
+          ? c => contradictionsScore(c, column, assessment, part)
+          : c => criterionScore(c, column, criterion, assessment, part)));
+    });
+    body.append(sub);
+  });
+
+  /* Each category: the mean of its behaviours on the group row, the behaviours
+   * folded under it, each out of 10. */
+  state.categories.forEach(({ name, members }) => {
+    const row = element("tr", "question-row");
+    row.append(rowHead(rowToggle(name, members.length, "behaviours"),
+      rowName(name, `out of 10, ${members.length} behaviours`, c => aboutCategory(c, name, members),
+        `${name}: what it measures`)));
+    columns.forEach(column => {
+      const value = categoryFigure(members, column);
+      if (value === null) { row.append(element("td", "cell")); return; }
+      const invented = !column.absent && members.some(b => b.coverage?.[column.id]?.depth?.fake);
+      row.append(scoreCell(column, lowerFirst(name), value, WHOLE_MAX, column.absent
+        ? c => absentScore(c, column, name, "these behaviours")
+        : c => categoryScore(c, column, name, members, value), invented));
+    });
+    body.append(row);
+    members.forEach((behaviour, i) => {
+      const sub = subRow(name, i, rowName(behaviour.name, "out of 10",
+        c => aboutBehaviour(c, behaviour), `${behaviour.name}: what the judges are asked`));
+      columns.forEach(column => {
+        const depth = column.absent ? null : behaviour.coverage?.[column.id]?.depth;
+        if (!column.absent && !Number.isFinite(depth?.mean)) { sub.append(element("td", "cell")); return; }
+        sub.append(scoreCell(column, behaviour.name, depth ? depth.mean : 0, state.scale, column.absent
+          ? c => absentScore(c, column, behaviour.name, "this behaviour")
+          : c => behaviourScore(c, column, behaviour, depth), Boolean(depth?.fake)));
+      });
+      body.append(sub);
+    });
+  });
+
+  nodes.table.tHead.replaceChildren(headRow());
+  nodes.table.tBodies[0].replaceChildren(body);
+}
+
+/* A group opens into its rows, and the button above the table opens or shuts
+ * them all at once. */
+function setExpanded(groupId, open) {
+  if (open) expanded.add(groupId);
+  else expanded.delete(groupId);
+  nodes.table.querySelectorAll("tr.check-row").forEach(row => {
+    if (row.dataset.parent === groupId) row.hidden = !open;
+  });
+  const toggle = [...nodes.table.querySelectorAll(".row-toggle")].find(node => node.dataset.group === groupId);
+  const { name, parts } = groups.get(groupId);
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.setAttribute("aria-label", `${open ? "Hide" : "Show"} the ${parts} of ${name}`);
+  const all = expanded.size === groups.size;
+  nodes.expandAll.setAttribute("aria-pressed", String(all));
+  nodes.expandAll.textContent = all ? "Hide every row" : "Show every row";
+}
+
+/* From a popover about a group, open its rows in the table. */
+function showInTable(groupId) {
+  const shown = expanded.has(groupId);
+  const { parts } = groups.get(groupId);
+  return popButton(`${shown ? "Hide" : "Show"} its ${parts} in the table`, () => {
+    nodes.pop.hidePopover();
+    setExpanded(groupId, !shown);
+  });
+}
+
+/* How the colour reads, and nothing else: each row is painted over its own
+ * maximum, so the figure and the corner mark say which scale it is on. */
+function renderLegend() {
+  const legend = document.createDocumentFragment();
+  legend.append(element("span", "", "Colour is the share of the row's maximum:"), element("span", "", "none"));
+  const swatches = element("span", "swatches");
+  [0, 0.25, 0.5, 0.75, 1].forEach(share => {
+    const swatch = element("span", "swatch");
+    swatch.style.background = `rgb(${rampAt(share, 1).join(" ")})`;
+    swatches.append(swatch);
+  });
+  legend.append(swatches, element("span", "", "all"));
+  const na = element("span", "legend-na");
+  na.append(naChip(), document.createTextNode(" no published specification to assess"));
+  legend.append(na);
+  if (state.behaviours.some(b => Object.values(b.coverage || {}).some(c => c.depth?.fake))) {
+    legend.append(element("span", "", "A dotted ring marks a figure invented for the prototype."));
+  }
+  nodes.legend.replaceChildren(legend);
+}
+
+/* The depth scale under the table, from the same anchors and conditions the
+ * behaviour popovers mark, so the two cannot drift apart. */
+function renderDepthKey() {
+  const list = document.createDocumentFragment();
+  ANCHORS.forEach(({ level: at, anchor, bar }) => {
+    const item = element("li");
+    const text = element("span");
+    text.append(element("span", "anchor-name", anchor), document.createTextNode(`: ${bar}`));
+    if (at === 10) {
+      const conditions = element("ul", "depth-key-conditions");
+      CONDITIONS.forEach(condition => conditions.append(element("li", "", condition)));
+      text.append(conditions);
+    }
+    item.append(element("span", "anchor-level", String(at)), text);
+    list.append(item);
+  });
+  nodes.depthKey.replaceChildren(list);
+  nodes.depthKeyOdd.textContent = ODD_LINE;
+}
+
+/* A paragraph from parts: plain strings, {mono} for figures and model names,
+ * {lead} for the bold opening the governance view gives each paragraph. */
+function rich(...parts) {
+  const node = element("p");
+  parts.forEach(part => {
+    if (typeof part === "string") node.append(document.createTextNode(part));
+    else if (part.mono !== undefined) node.append(mono(String(part.mono)));
+    else if (part.lead) node.append(element("strong", "", part.lead), document.createTextNode(" "));
+  });
+  return node;
+}
+
+/* Who answered in a seat not their own, over the documents on the board. */
+function substitutions() {
+  const shown = state.columns.filter(column => !column.absent);
+  const depths = new Map();
+  shown.forEach(column => state.behaviours.forEach(behaviour => {
+    placedJudges(behaviour.coverage?.[column.id]?.depth?.judges).forEach(({ seat, model }) => {
+      if (!model) return;
+      const key = `${model} ${seat}`;
+      depths.set(key, { model, seat, count: (depths.get(key)?.count || 0) + 1 });
+    });
+  }));
+  const readings = { total: 0, bySubstitute: new Map() };
+  shown.forEach(column => (state.assessment[column.id]?.contradictions.claims || []).forEach(claim =>
+    claim.readings.filter(reading => reading.seat === "fable").forEach(reading => {
+      readings.total += 1;
+      if (reading.model) readings.bySubstitute.set(reading.model, (readings.bySubstitute.get(reading.model) || 0) + 1);
+    })));
+  return { depths: [...depths.values()].sort((a, b) => b.count - a.count), readings };
+}
+
+function renderMethod() {
+  const { depths, readings } = substitutions();
+  const list = items => items.flatMap((item, i) => [
+    ...(i === 0 ? [] : [i === items.length - 1 ? " and " : ", "]), ...item]);
+  // "kimi answered in fable's seat for 13 depths, glm in deepseek's seat for 6 and ..."
+  const seatParts = depths.map(({ model, seat, count }, i) => [{ mono: model },
+    `${i === 0 ? " answered" : ""} in ${seat}'s seat for `, { mono: count },
+    i === 0 ? ` ${count === 1 ? "depth" : "depths"}` : ""]);
+  const readingParts = [...readings.bySubstitute].map(([model, count]) =>
+    [{ mono: model }, " for ", { mono: count }]);
+  const substituted = sum([...readings.bySubstitute.values()]);
+  nodes.method.replaceChildren(
+    rich({ lead: "Final score, out of 20." }, "The behaviours' figure, out of ", { mono: 10 },
+      ", plus the document as a whole, out of ", { mono: 10 },
+      ". Labs are ranked by it; equal scores share a rank and the next rank is skipped."),
+    rich({ lead: "The behaviours' figure." }, "The plain mean of the document's behaviour depths. "
+      + "A category's figure is the plain mean of its behaviours."),
+    rich({ lead: "A behaviour's depth, out of 10." }, "Three judges (", { mono: "sol" }, ", ",
+      { mono: "fable" }, " and ", { mono: "deepseek" }, ") each read the passages the panel cited for that "
+      + "behaviour in that document and give a depth from ", { mono: 0 }, " to ", { mono: 10 },
+      " on the scale above; the figure is their mean. When a judge's model cannot answer, a declared "
+      + "substitute answers in its seat and the cell says so",
+      ...(seatParts.length ? [": on this board ", ...list(seatParts), "."] : ".")),
+    rich({ lead: "The document as a whole, out of 10." }, "Five criteria. Four are each read by three judges (",
+      { mono: "sol" }, ", ", { mono: "fable" }, " and ", { mono: "deepseek" }, ") on the whole document and "
+      + "scored ", { mono: 0 }, " to ", { mono: 4 }, "; the fifth, unresolved contradictions, is scored "
+      + "from the list the next paragraph describes. The index halves each so the five add up to ",
+      { mono: 10 }, ". The total is the sum of the five figures as shown."),
+    rich({ lead: "Unresolved contradictions." }, "Three judges (", { mono: "sol" }, ", ", { mono: "fable" },
+      " and ", { mono: "kimi" }, ") each list every contradiction they find; then each of the three reads "
+      + "every claim, its own included, and says whether it holds and whether it involves a rule the "
+      + "document calls absolute",
+      ...(readingParts.length ? ["; on this board a substitute answered in fable's seat for ",
+        { mono: substituted }, " of its ", { mono: readings.total }, " readings: ", ...list(readingParts)] : []),
+      ". A claim is confirmed when two of the three say it holds, and absolute when two say it holds and "
+      + "is absolute. Score: ", { mono: 4 }, " when none is confirmed, ", { mono: 2 }, " when one or two are "
+      + "and none is absolute, ", { mono: 0 }, " when three or more are or any is absolute; halved like "
+      + "the others. No person has reviewed the list."),
+    rich("The contradictions in this prototype come from a first run settled by an earlier rule, so the "
+      + "figures in that row will change."));
+}
+
+async function initialize() {
+  let data;
+  try {
+    const response = await fetch("./data.json");
+    if (!response.ok) throw new Error(String(response.status));
+    data = await response.json();
+  } catch {
+    nodes.status.textContent = "The board could not be loaded: data.json is missing beside this page.";
+    return;
+  }
+  state.scale = data.depthScale || 10;
+  state.behaviours = data.behaviours || [];
+  state.assessment = data.assessment || {};
+  const byCategory = new Map();
+  state.behaviours.forEach(behaviour => {
+    const name = behaviour.category || "Behaviours under test";
+    if (!byCategory.has(name)) byCategory.set(name, []);
+    byCategory.get(name).push(behaviour);
+  });
+  state.categories = [...byCategory].map(([name, members]) => ({ name, members }));
+  groups.set("whole", { name: "The document as a whole", parts: "criteria" });
+  state.categories.forEach(({ name }) => groups.set(name, { name, parts: "behaviours" }));
+  state.columns = ranked(newestPerSpecification(data.documents || []));
+  renderTable();
+  renderLegend();
+  renderDepthKey();
+  renderMethod();
+  nodes.ties.textContent = tiesText();
+  wirePopover();
+  nodes.expandAll.addEventListener("click", () => {
+    const open = expanded.size !== groups.size;
+    [...groups.keys()].forEach(id => setExpanded(id, open));
+  });
+  nodes.status.textContent = "";
+}
+
+nodes.sheetClose.addEventListener("click", () => nodes.sheet.close());
+nodes.sheet.addEventListener("click", event => {
+  if (event.target === nodes.sheet) nodes.sheet.close();
+});
+
+initialize();
+</script>
+</body>
+</html>

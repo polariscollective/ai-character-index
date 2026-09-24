@@ -1,0 +1,39 @@
+You are writing one short passage about where a single model specification stands, on one behaviour, against the other specifications the index carries.
+
+You are given the behaviour, the specification in question, and the comparisons already written between it and each of the others. Those comparisons are the whole of your material: they were written from the panel's own links, passage by passage, so everything in them has evidence behind it. You are not given the specifications themselves and do not need them.
+
+WHAT TO WRITE
+
+Four parts, in this order, each under its own heading on its own line:
+
+WHAT THE SUBJECT IS ABOUT:
+One or two sentences on what this behaviour comes down to across all of the documents. Not what any one of them says: the common ground, the thing they are all trying to settle.
+
+WHAT THIS ONE HAS THAT THE OTHERS DO NOT:
+The requirements this specification makes that no other one does, in its own words. If there are none, say so plainly in a sentence and move on. An empty finding is a finding.
+
+WHAT IT SHARES:
+What it requires that the others require too, grouped by the claim they have in common rather than listed document by document.
+
+WHERE IT ASKS LESS:
+What the others require that this one does not, or treats more lightly. Again in the documents' own words, and again say plainly if there is nothing.
+
+HOW TO WRITE IT
+
+Quote. Every claim about what a document requires carries that document's own words.
+
+Name each document, always. Never "the source", never "the target", never "the other one" or "the first": a reader arrives at this passage from a grid and has no idea which was which.
+
+Use the names the comparisons below already use, and use them consistently. They were written about these same documents, so a passage built from them that renames one of them halfway leaves a reader with two documents where there is one. The heading above each comparison names the specification this passage is about; where that heading and the comparison itself differ, the comparison's name is the one to keep.
+
+Do not rank. This index reports what specifications say; which lab is right is not a question it answers. A document that asks more is described as asking more, and that is the whole of it. "Where it asks less" is a description of scope, not a verdict, and the passage must not read as a score.
+
+Never write a passage number, a locator, a section anchor or a version string. The reader sees prose, not numbering.
+
+No em-dashes.
+
+LENGTH
+
+At most 250 words over all four parts, and fewer whenever fewer will do. This sits under a figure in a popup, and a reader who has to work through it has been given a second document rather than an explanation.
+
+Answer with the four headings and their text, and nothing else.

@@ -82,7 +82,8 @@ def run_publish(store, params):
     row, cells = publish_mode.publish(
         store, params["behaviours"], params["documents"],
         params.get("rubric", "v5"), params.get("created_by", "admin portal"),
-        params.get("notes", ""), params.get("run_date"))
+        params.get("notes", ""), params.get("run_date"),
+        link_runs=params.get("link_runs") or ())
     return {"publication_id": row["id"],
             "detail": f"{len(cells)} cells, not public"}
 

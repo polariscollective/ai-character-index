@@ -2,12 +2,17 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
+import hashlib
+
 import cite
 import index_store
+
+TEN = index_store.depth_call.prompt_sha256(10)
 
 
 class FakeStore:
@@ -331,6 +336,548 @@ class CellDepthTest(unittest.TestCase):
             [self.depth("sol", 3), self.depth("fable", 3),
              self.depth("deepseek", None, status="error")]), [self.CELL])
         self.assertEqual(got, {})
+
+
+class CellDepthOutOfTenTest(unittest.TestCase):
+    """Depths out of ten live in their own table, keyed by call, prompt and
+    assessment run. `aci_depths` never carries them, so a store holding both
+    still reads the scale of four exactly as it always has when no assessment
+    run is named."""
+    CELL = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+    RUN = "assessment-1"
+
+    def store(self, out_of_ten=()):
+        calls = [{"id": f"call-{m}", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": m, "status": "done"}
+                 for m in ("sol", "fable", "deepseek")]
+        depths = [{"call_id": f"call-{m}", "status": "done", "depth": v,
+                   "rationale": f"{m} says {v}."}
+                  for m, v in (("sol", 3), ("fable", 3), ("deepseek", 2))]
+        return FakeStore({"aci_judge_calls": calls, "aci_depths": depths,
+                          "aci_depths_out_of_ten": list(out_of_ten)})
+
+    def ten(self, model, value, assessment_run_id=None, prompt_sha256=None,
+           substitute=None, substitution_reason=None, rationale=None):
+        row = {"call_id": f"call-{model}", "status": "done", "depth": value,
+              "rationale": rationale or f"{model} says {value} out of ten.",
+              "assessment_run_id": assessment_run_id or self.RUN,
+              "prompt_sha256": prompt_sha256 or TEN}
+        if substitute is not None:
+            row["model"] = substitute
+            row["substitution_reason"] = substitution_reason
+        return row
+
+    def full_ten(self):
+        return [self.ten("sol", 6), self.ten("fable", 6), self.ten("deepseek", 4)]
+
+    def test_with_no_assessment_run_the_scale_of_four_reads_as_today(self):
+        got = index_store.cell_depths(self.store(out_of_ten=self.full_ten()), [self.CELL])
+        self.assertEqual(got[("helpfulness", "row-1")], {
+            "mean": 2.7,
+            "judges": {
+                "deepseek": {"depth": 2, "rationale": "deepseek says 2."},
+                "fable": {"depth": 3, "rationale": "fable says 3."},
+                "sol": {"depth": 3, "rationale": "sol says 3."},
+            }})
+
+    def test_an_assessment_run_reads_its_own_rows_of_ten(self):
+        got = index_store.cell_depths(self.store(out_of_ten=self.full_ten()),
+                                      [self.CELL], self.RUN, depth_prompt=TEN)
+        self.assertEqual(got[("helpfulness", "row-1")], {
+            "mean": 5.3,
+            "scale": 10,
+            "judges": {
+                "deepseek": {"depth": 4, "rationale": "deepseek says 4 out of ten."},
+                "fable": {"depth": 6, "rationale": "fable says 6 out of ten."},
+                "sol": {"depth": 6, "rationale": "sol says 6 out of ten."},
+            }})
+
+    def test_a_row_of_another_assessment_run_is_ignored(self):
+        rows = [self.ten("sol", 6, assessment_run_id="other-run"),
+               self.ten("fable", 6), self.ten("deepseek", 4)]
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
+        self.assertEqual(got, {})
+
+    def test_a_row_of_another_prompt_digest_is_ignored(self):
+        rows = [self.ten("sol", 6, prompt_sha256="stale-digest"),
+               self.ten("fable", 6), self.ten("deepseek", 4)]
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
+        self.assertEqual(got, {})
+
+    def test_rows_are_read_by_the_digest_given_not_by_the_prompt_on_disk(self):
+        """A publication records the digest its depths were given under. When
+        the prompt of ten is later edited, the file's digest moves and the
+        publication must still read its own rows."""
+        original = index_store.depth_call.prompt_sha256
+        edited = "e" * 64
+        with mock.patch.object(index_store.depth_call, "prompt_sha256",
+                               lambda scale=4: edited if scale == 10 else original(scale)):
+            got = index_store.cell_depths(self.store(out_of_ten=self.full_ten()),
+                                          [self.CELL], self.RUN, depth_prompt=TEN)
+            self.assertEqual(got[("helpfulness", "row-1")]["mean"], 5.3)
+            under_the_edit = [self.ten(m, 1, prompt_sha256=edited)
+                              for m in ("sol", "fable", "deepseek")]
+            got = index_store.cell_depths(self.store(out_of_ten=under_the_edit),
+                                          [self.CELL], self.RUN, depth_prompt=TEN)
+            self.assertEqual(got, {}, "rows under the file's new digest are not the ones given")
+
+    def test_reading_out_of_ten_needs_the_digest_it_was_given_under(self):
+        with self.assertRaises(ValueError):
+            index_store.cell_depths(self.store(out_of_ten=self.full_ten()), [self.CELL],
+                                    self.RUN)
+
+    def test_a_row_naming_its_substitute_carries_it(self):
+        rows = [self.ten("sol", 6, substitute="kimi",
+                         rationale="kimi says 6 out of ten.",
+                         substitution_reason="sol was refused on input."),
+               self.ten("fable", 6), self.ten("deepseek", 4)]
+        got = index_store.cell_depths(self.store(out_of_ten=rows), [self.CELL], self.RUN,
+                                      depth_prompt=TEN)
+        entry = got[("helpfulness", "row-1")]["judges"]["sol"]
+        self.assertEqual(entry, {"depth": 6, "rationale": "kimi says 6 out of ten.",
+                                 "model": "kimi",
+                                 "substitution_reason": "sol was refused on input."})
+
+
+FOUR = index_store.depth_call.prompt_sha256(4)
+
+
+class DepthScaleTest(unittest.TestCase):
+    """The scale a build reads its depths on follows from the depth prompt and
+    the assessment run it names, and a pair that does not go together is
+    refused naming what was named and what was expected."""
+
+    def refusal(self, *args):
+        with self.assertRaises(SystemExit) as refused:
+            index_store.depth_scale(*args)
+        return str(refused.exception)
+
+    def test_naming_nothing_or_the_prompt_of_four_reads_the_scale_of_four(self):
+        self.assertEqual(index_store.depth_scale(), 4)
+        self.assertEqual(index_store.depth_scale(FOUR, None), 4)
+
+    def test_the_prompt_of_ten_with_an_assessment_run_reads_the_scale_of_ten(self):
+        self.assertEqual(index_store.depth_scale(TEN, "assessment-1"), 10)
+
+    def test_an_earlier_prompt_of_ten_still_reads_the_scale_of_ten(self):
+        """What a publication recorded is what it is rebuilt with: whether a
+        new publication uses the current prompt is publish.py's question."""
+        self.assertEqual(index_store.depth_scale("e" * 64, "assessment-1"), 10)
+
+    def test_a_depth_prompt_that_is_not_a_digest_is_refused_with_an_assessment_run(self):
+        message = self.refusal("abc123", "assessment-1")
+        self.assertIn("abc123", message)
+        self.assertIn("sha256", message)
+
+    def test_an_assessment_run_under_any_other_prompt_is_refused_naming_both(self):
+        for named in (None, FOUR):
+            message = self.refusal(named, "assessment-1")
+            self.assertIn(FOUR, message)
+            self.assertIn(TEN, message)
+
+    def test_the_prompt_of_ten_without_an_assessment_run_is_refused(self):
+        self.assertIn("--assessment-run", self.refusal(TEN, None))
+
+    def test_a_digest_that_is_neither_is_refused_and_named(self):
+        message = self.refusal("abc123", None)
+        self.assertIn("abc123", message)
+        self.assertIn(FOUR, message)
+
+
+class AssessmentRunIdTest(unittest.TestCase):
+    """An assessment run id is a uuid as the database writes it, and anything
+    else given for one is refused by name before a store is read."""
+    ID = "8a4e2c6f-1b3d-4f5a-9c7e-0d2b4f6a8c1e"
+
+    def test_a_uuid_is_taken_as_the_database_writes_it(self):
+        self.assertEqual(index_store.assessment_run_id(self.ID), self.ID)
+        self.assertEqual(index_store.assessment_run_id(self.ID.upper()), self.ID)
+
+    def test_anything_else_is_refused_naming_it(self):
+        for given in ("assessment-1", self.ID[:-1], self.ID + "0", self.ID.replace("-", ""),
+                      "{" + self.ID + "}", f" {self.ID}", ""):
+            with self.assertRaises(SystemExit) as refused:
+                index_store.assessment_run_id(given)
+            self.assertIn(f"--assessment-run={given} is not an assessment run id",
+                          str(refused.exception))
+
+
+V1 = {"id": "row-1", "spec_id": "acme", "version": "2026-01-01"}
+V2 = {"id": "row-2", "spec_id": "acme", "version": "2026-06-01"}
+ASSESSMENT_RUN = {"id": "assessment-1", "status": "done",
+                  "panels": {"criteria": ["sol", "fable"], "contradictions": ["sol", "kimi"]}}
+
+
+def assessed(version_id, criteria_status="done", scored=("conflict_rules", "rule_force",
+                                                         "reasons", "situations"),
+             confirm_status="done", kimi_read=None, claims_written=True):
+    """The rows of one fully assessed document, with one thing to vary at a time.
+
+    `confirm_status` None means the confirmation was never asked. `kimi_read`
+    says whether kimi's reading of the claim sol found was written, which by
+    default it was exactly when kimi's confirmation finished. With
+    `claims_written` false, no claim was written, so nothing was confirmed."""
+    if kimi_read is None:
+        kimi_read = confirm_status == "done"
+    calls = [{"id": f"{version_id}-c-{seat}", "run_id": "assessment-1",
+              "spec_version_id": version_id, "question": "criteria", "seat": seat,
+              "model": seat, "status": criteria_status if seat == "fable" else "done"}
+             for seat in ("sol", "fable")]
+    calls += [{"id": f"{version_id}-x-{seat}", "run_id": "assessment-1",
+               "spec_version_id": version_id, "question": "contradictions", "seat": seat,
+               "model": seat, "status": "done"} for seat in ("sol", "kimi")]
+    if claims_written and confirm_status is not None:
+        calls += [{"id": f"{version_id}-k-kimi", "run_id": "assessment-1",
+                   "spec_version_id": version_id, "question": "confirm", "seat": "kimi",
+                   "model": "kimi", "status": confirm_status}]
+    scores = [{"call_id": f"{version_id}-c-sol", "criterion": criterion, "score": 3,
+               "rationale": "r", "locators": []}
+              for criterion in ("conflict_rules", "rule_force", "reasons", "situations")]
+    scores += [{"call_id": f"{version_id}-c-fable", "criterion": criterion, "score": 2,
+                "rationale": "r", "locators": []} for criterion in scored]
+    claims = [{"id": f"{version_id}-claim", "run_id": "assessment-1",
+               "spec_version_id": version_id, "first_locator": "a", "second_locator": "b",
+               "situation": "s", "why": "w", "found_by": ["sol"]}]
+    verdicts = [{"claim_id": f"{version_id}-claim", "call_id": f"{version_id}-x-sol",
+                 "seat": "sol", "holds": True, "absolute": None, "reason": "found it"}]
+    if kimi_read:
+        verdicts.append({"claim_id": f"{version_id}-claim", "call_id": f"{version_id}-k-kimi",
+                         "seat": "kimi", "holds": False, "absolute": False,
+                         "reason": "They apply to different users."})
+    if not claims_written:
+        claims, verdicts = [], []
+    return calls, scores, claims, verdicts
+
+
+def assessment_store(*documents, runs=(ASSESSMENT_RUN,), versions=None):
+    tables = {"aci_assessment_runs": list(runs), "aci_assessment_calls": [],
+              "aci_assessment_scores": [], "aci_assessment_claims": [],
+              "aci_assessment_verdicts": []}
+    if versions is not None:
+        tables["aci_spec_versions"] = list(versions)
+    for calls, scores, claims, verdicts in documents:
+        tables["aci_assessment_calls"] += calls
+        tables["aci_assessment_scores"] += scores
+        tables["aci_assessment_claims"] += claims
+        tables["aci_assessment_verdicts"] += verdicts
+    return FakeStore(tables)
+
+
+class AssessmentTest(unittest.TestCase):
+    """A publication out of ten carries the assessment of every document it
+    carries, each answered by every seat of the run, or it is refused naming
+    every document that is not."""
+
+    def refusal(self, store, versions=(V1, V2)):
+        with self.assertRaises(SystemExit) as refused:
+            index_store.assessment(store, "assessment-1", list(versions))
+        return str(refused.exception)
+
+    def test_a_run_that_assessed_every_document_gives_each_its_rows(self):
+        run, rows = index_store.assessment(
+            assessment_store(assessed("row-1"), assessed("row-2")), "assessment-1", [V1, V2])
+        self.assertEqual(run["id"], "assessment-1")
+        self.assertEqual(sorted(rows), ["row-1", "row-2"])
+        self.assertEqual(len(rows["row-1"]["calls"]), 5)
+        self.assertEqual(len(rows["row-1"]["scores"]), 8)
+        self.assertEqual([claim["id"] for claim in rows["row-2"]["claims"]], ["row-2-claim"])
+        self.assertEqual(len(rows["row-2"]["verdicts"]), 2)
+
+    def test_rows_of_another_run_or_another_document_are_not_read(self):
+        stray = assessed("row-1")
+        for table in stray:
+            for row in table:
+                if "run_id" in row:
+                    row["run_id"] = "another-run"
+        run, rows = index_store.assessment(
+            assessment_store(assessed("row-2"), stray), "assessment-1", [V2])
+        self.assertEqual(sorted(rows), ["row-2"])
+        self.assertTrue(all(call["spec_version_id"] == "row-2" for call in rows["row-2"]["calls"]))
+
+    def test_a_document_the_run_did_not_assess_is_named(self):
+        message = self.refusal(assessment_store(assessed("row-2")))
+        self.assertIn("acme@2026-01-01", message)
+        self.assertNotIn("acme@2026-06-01", message)
+
+    def test_a_seat_that_did_not_answer_is_named(self):
+        message = self.refusal(assessment_store(assessed("row-1", criteria_status="error"),
+                                                assessed("row-2")))
+        self.assertIn("acme@2026-01-01", message)
+        self.assertIn("fable", message)
+
+    def test_a_criterion_a_seat_left_unscored_is_named(self):
+        message = self.refusal(assessment_store(
+            assessed("row-1", scored=("conflict_rules", "rule_force", "reasons")),
+            assessed("row-2")))
+        self.assertIn("situations", message)
+
+    def test_a_confirmation_that_did_not_finish_is_named(self):
+        message = self.refusal(assessment_store(assessed("row-1", confirm_status="error"),
+                                                assessed("row-2")))
+        self.assertIn("kimi", message)
+        self.assertIn("acme@2026-01-01", message)
+
+    def test_a_run_that_does_not_exist_is_named(self):
+        message = self.refusal(assessment_store(assessed("row-1"), runs=()))
+        self.assertIn("assessment-1", message)
+        self.assertNotIn("--resume=", message, "there is no run to take up")
+        self.assertIn("new assessment run", message)
+
+    def assert_remedy(self, message):
+        """The remedy is to take the run up where it stopped, or a new run
+        where only a new run will do, with depths out of ten given against the
+        run that stands, since they belong to the run they were given with."""
+        self.assertIn("--resume=assessment-1", message)
+        self.assertIn("new assessment run", message)
+        self.assertIn("depths out of ten", message)
+        self.assertIn("--assessment-run=", message)
+        self.assertNotIn("not taken up again", message)
+
+    def test_a_run_left_error_with_its_confirmations_missing_is_refused(self):
+        # It stopped after the claims were written and before kimi confirmed
+        # the one it did not find: every call it made is done.
+        stopped = dict(ASSESSMENT_RUN, status="error", error="interrupted")
+        message = self.refusal(assessment_store(assessed("row-1", confirm_status=None),
+                                                assessed("row-2", confirm_status=None),
+                                                runs=(stopped,)))
+        self.assertIn("error", message)
+        for name in ("acme@2026-01-01", "acme@2026-06-01"):
+            self.assertIn(f"{name}: kimi gave no reading of 1 of its 1 claimed "
+                          "contradictions", message)
+        self.assert_remedy(message)
+
+    def test_a_run_left_running_with_no_claims_written_is_refused(self):
+        # Every seat answered, and the run stopped before the claims were pooled.
+        running = dict(ASSESSMENT_RUN, status="running")
+        message = self.refusal(assessment_store(assessed("row-1", claims_written=False),
+                                                assessed("row-2", claims_written=False),
+                                                runs=(running,)))
+        self.assertIn("running", message)
+        self.assertIn("acme@2026-01-01", message)
+        self.assertIn("acme@2026-06-01", message)
+        self.assert_remedy(message)
+
+    def test_a_claim_a_seat_left_unread_in_a_finished_run_is_named(self):
+        # kimi's confirmation finished, and its reply did not read the claim.
+        message = self.refusal(assessment_store(assessed("row-1", kimi_read=False),
+                                                assessed("row-2")))
+        self.assertIn("acme@2026-01-01: kimi gave no reading of 1 of its 1 claimed "
+                      "contradictions", message)
+        self.assertNotIn("acme@2026-06-01", message)
+        self.assert_remedy(message)
+
+
+
+# A run of the second method that takes its criteria from assessment-1.
+TAKING = {"id": "assessment-2", "status": "done",
+          "panels": {"criteria": ["sol", "fable"], "contradictions": ["sol", "kimi"]},
+          "config": {"substitutes": {}, "criteria_from": "assessment-1"}}
+
+
+def contradictions_of(version_id, read_by=("sol", "kimi"), confirm_status="done",
+                      found=("sol", "kimi")):
+    """The contradictions half of one document in assessment-2: each seat found
+    and read, and the one claim pooled was read by the seats of `read_by`."""
+    calls = [{"id": f"{version_id}-2-{question}-{seat}", "run_id": "assessment-2",
+              "spec_version_id": version_id, "question": question, "seat": seat,
+              "model": seat, "status": status}
+             for question, status, seats in (("contradictions", "done", found),
+                                             ("confirm", confirm_status, ("sol", "kimi")))
+             for seat in seats]
+    claims = [{"id": f"{version_id}-2-claim", "run_id": "assessment-2",
+               "spec_version_id": version_id, "first_locator": "c", "second_locator": "d",
+               "situation": "s2", "why": "w2", "found_by": ["kimi"]}]
+    verdicts = [{"claim_id": f"{version_id}-2-claim", "call_id": f"{version_id}-2-confirm-{seat}",
+                 "seat": seat, "holds": True, "absolute": False, "reason": f"{seat} reads it."}
+                for seat in read_by]
+    return calls, [], claims, verdicts
+
+
+class CriteriaFromTest(unittest.TestCase):
+    """A run that takes its criteria from an earlier run stands on that run's
+    criteria, conflict rules and depths, and on its own contradictions. The
+    gaps check applies each half to its own run and says which run a gap is
+    in."""
+
+    def store(self, *documents, runs=(ASSESSMENT_RUN, TAKING)):
+        return assessment_store(*documents, runs=runs)
+
+    def refusal(self, store, versions=(V1, V2)):
+        with self.assertRaises(SystemExit) as refused:
+            index_store.assessment(store, "assessment-2", list(versions))
+        return str(refused.exception)
+
+    def test_criteria_come_from_the_run_named_and_contradictions_from_the_run_itself(self):
+        run, rows = index_store.assessment(
+            self.store(assessed("row-1"), assessed("row-2"), contradictions_of("row-1"),
+                       contradictions_of("row-2")), "assessment-2", [V1, V2])
+        self.assertEqual(run["id"], "assessment-2")
+        self.assertEqual(run["criteria_run"]["id"], "assessment-1")
+        for version_id in ("row-1", "row-2"):
+            calls = rows[version_id]["calls"]
+            self.assertEqual(sorted(c["id"] for c in calls if c["question"] == "criteria"),
+                             [f"{version_id}-c-fable", f"{version_id}-c-sol"])
+            self.assertTrue(all(c["run_id"] == "assessment-2" for c in calls
+                                if c["question"] != "criteria"))
+            self.assertEqual(len([c for c in calls if c["question"] != "criteria"]), 4)
+            self.assertEqual(len(rows[version_id]["scores"]), 8)
+            self.assertEqual([c["id"] for c in rows[version_id]["claims"]],
+                             [f"{version_id}-2-claim"])
+            self.assertEqual({v["call_id"] for v in rows[version_id]["verdicts"]},
+                             {f"{version_id}-2-confirm-sol", f"{version_id}-2-confirm-kimi"})
+
+    def test_a_run_s_own_rows_are_what_it_wrote(self):
+        run, rows = index_store.assessment_run_rows(
+            self.store(assessed("row-1"), contradictions_of("row-1")), "assessment-2", ["row-1"])
+        self.assertNotIn("criteria_run", run)
+        self.assertEqual({c["run_id"] for c in rows["row-1"]["calls"]}, {"assessment-2"})
+        self.assertEqual(rows["row-1"]["scores"], [])
+
+    def test_a_run_that_takes_nothing_is_read_as_it_always_was(self):
+        store = self.store(assessed("row-1"), assessed("row-2"))
+        run, rows = index_store.assessment(store, "assessment-1", [V1, V2])
+        self.assertEqual(run, ASSESSMENT_RUN)
+        self.assertEqual(index_store.assessment_run_rows(store, "assessment-1", ["row-1", "row-2"]),
+                         (run, rows))
+
+    def test_a_criteria_gap_is_named_in_the_run_it_is_in(self):
+        message = self.refusal(self.store(
+            assessed("row-1", criteria_status="error"), assessed("row-2"),
+            contradictions_of("row-1"), contradictions_of("row-2")))
+        self.assertIn("acme@2026-01-01: fable gave no criteria answer in assessment run "
+                      "assessment-1", message)
+        self.assertNotIn("acme@2026-06-01", message)
+
+    def test_a_contradictions_gap_is_named_in_the_run_it_is_in(self):
+        message = self.refusal(self.store(
+            assessed("row-1"), assessed("row-2"),
+            contradictions_of("row-1", read_by=("sol",)), contradictions_of("row-2")))
+        self.assertIn("acme@2026-01-01: kimi gave no reading of 1 of its 1 claimed "
+                      "contradictions in assessment run assessment-2", message)
+        # The earlier run's own contradictions are not this run's business:
+        # assessed() wrote one claim sol found and kimi read, never read here.
+        self.assertNotIn("row-1-claim", message)
+        self.assertIn("--resume=assessment-2", message)
+        self.assertIn("depths out of ten are read from assessment run assessment-1", message)
+
+    def test_a_document_either_run_did_not_assess_is_named_with_that_run(self):
+        message = self.refusal(self.store(assessed("row-1"), contradictions_of("row-1"),
+                                          contradictions_of("row-2")))
+        self.assertIn("acme@2026-06-01: assessment run assessment-1, whose criteria "
+                      "assessment run assessment-2 takes, did not assess it", message)
+        message = self.refusal(self.store(assessed("row-1"), assessed("row-2"),
+                                          contradictions_of("row-1")))
+        self.assertIn("acme@2026-06-01: the assessment run did not assess it (assessment "
+                      "run assessment-2)", message)
+
+    def test_the_run_named_must_have_finished_and_exist(self):
+        stopped = dict(ASSESSMENT_RUN, status="error")
+        documents = (assessed("row-1"), assessed("row-2"), contradictions_of("row-1"),
+                     contradictions_of("row-2"))
+        message = self.refusal(self.store(*documents, runs=(stopped, TAKING)))
+        self.assertIn("assessment run assessment-1, whose criteria assessment run "
+                      "assessment-2 takes, has status error, not done", message)
+        message = self.refusal(self.store(*documents, runs=(TAKING,)))
+        self.assertIn("there is no assessment run assessment-1, whose criteria assessment "
+                      "run assessment-2 takes", message)
+
+    def test_the_depths_out_of_ten_are_read_from_the_run_named(self):
+        cell = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+        calls = [{"id": f"call-{m}", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": m, "status": "done"}
+                 for m in ("sol", "fable", "deepseek")]
+        depths = [{"call_id": f"call-{m}", "status": "done", "depth": value,
+                   "rationale": f"{m} on {run_id}.", "assessment_run_id": run_id,
+                   "prompt_sha256": TEN}
+                  for run_id, value in (("assessment-1", 6), ("assessment-2", 1))
+                  for m in ("sol", "fable", "deepseek")]
+        store = FakeStore({"aci_judge_calls": calls, "aci_depths_out_of_ten": depths,
+                           "aci_assessment_runs": [ASSESSMENT_RUN, TAKING]})
+        given = index_store.cell_depths(store, [cell], "assessment-2", depth_prompt=TEN)
+        self.assertEqual(given, index_store.cell_depths(store, [cell], "assessment-1",
+                                                        depth_prompt=TEN))
+        self.assertEqual(given[("helpfulness", "row-1")]["mean"], 6)
+        self.assertEqual(index_store.criteria_run_id(store, "assessment-2"), "assessment-1")
+        self.assertEqual(index_store.criteria_run_id(store, "assessment-1"), "assessment-1")
+
+
+def with_finder(documents, version_id, seat, status):
+    """`documents`, with `seat`'s finding on `version_id` in `status`."""
+    for calls, _scores, _claims, _verdicts in documents:
+        for call in calls:
+            if (call["spec_version_id"], call["question"], call["seat"]) == (
+                    version_id, "contradictions", seat):
+                call["status"] = status
+    return documents
+
+
+class PooledVersionsTest(unittest.TestCase):
+    """The versions of one document an assessment run assessed are pooled, so a
+    version stands only once every contradictions seat answered on every
+    version of its document the run holds, named or not: a version whose
+    claims were never written reads exactly like one with none."""
+
+    def gaps(self, store, versions, run_id="assessment-1"):
+        run, rows = index_store.assessment_rows(store, run_id, [v["id"] for v in versions])
+        return index_store.assessment_gaps(run_id, run, rows, versions)
+
+    def test_a_version_named_alone_is_held_to_the_finders_of_the_versions_pooled_with_it(self):
+        store = assessment_store(*with_finder([assessed("row-1"), assessed("row-2")],
+                                              "row-2", "kimi", "error"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [
+            "acme@2026-01-01: kimi gave no contradictions answer on acme@2026-06-01, whose "
+            "contradictions are pooled with this version's"])
+        with self.assertRaises(SystemExit) as refused:
+            index_store.assessment(store, "assessment-1", [V1])
+        self.assertIn("pooled with this version's", str(refused.exception))
+
+    def test_both_named_the_failure_is_named_once_where_it_is(self):
+        store = assessment_store(*with_finder([assessed("row-1"), assessed("row-2")],
+                                              "row-2", "kimi", "error"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1, V2]),
+                         ["acme@2026-06-01: kimi gave no contradictions answer"])
+
+    def test_a_version_whose_pooled_versions_all_answered_stands_alone(self):
+        store = assessment_store(assessed("row-1"), assessed("row-2"), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [])
+        # Another document's versions are not pooled with it.
+        other = dict(V2, id="row-3", spec_id="other")
+        stray = with_finder([assessed("row-3")], "row-3", "kimi", "error")
+        store = assessment_store(assessed("row-1"), *stray, versions=[V1, other])
+        self.assertEqual(self.gaps(store, [V1]), [])
+
+    def test_a_run_whose_every_version_is_named_is_read_as_it_always_was(self):
+        store = assessment_store(assessed("row-1"), assessed("row-2"), versions=[V1, V2])
+        _run, rows = index_store.assessment_rows(store, "assessment-1", ["row-1", "row-2"])
+        self.assertNotIn("aci_spec_versions", [table for table, _params in store.selects])
+        self.assertEqual({key for each in rows.values() for key in each},
+                         {"calls", "scores", "claims", "verdicts"})
+
+    def test_a_run_of_the_first_method_pooled_each_version_on_its_own(self):
+        prompts = HERE / "panel" / "prompts"
+        first = dict(ASSESSMENT_RUN, prompts={"contradictions": hashlib.sha256(
+            (prompts / "assessment-contradictions-v1.txt").read_bytes()).hexdigest()})
+        documents = with_finder([assessed("row-1"), assessed("row-2")], "row-2", "kimi", "error")
+        store = assessment_store(*documents, runs=(first,), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1]), [])
+        self.assertNotIn("aci_spec_versions", [table for table, _params in store.selects])
+        # The same rows under the second method's prompt are pooled.
+        second = dict(ASSESSMENT_RUN, prompts={"contradictions": hashlib.sha256(
+            (prompts / "assessment-contradictions-v2.txt").read_bytes()).hexdigest()})
+        store = assessment_store(*documents, runs=(second,), versions=[V1, V2])
+        self.assertEqual(len(self.gaps(store, [V1])), 1)
+
+    def test_a_run_that_takes_its_criteria_names_the_run_its_pool_is_in(self):
+        store = assessment_store(
+            assessed("row-1"), assessed("row-2"),
+            *with_finder([contradictions_of("row-1"), contradictions_of("row-2")],
+                         "row-2", "kimi", "error"),
+            runs=(ASSESSMENT_RUN, TAKING), versions=[V1, V2])
+        self.assertEqual(self.gaps(store, [V1], run_id="assessment-2"), [
+            "acme@2026-01-01: kimi gave no contradictions answer on acme@2026-06-01, whose "
+            "contradictions are pooled with this version's, in assessment run assessment-2"])
 
 
 if __name__ == "__main__":

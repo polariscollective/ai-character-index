@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MCP, AI Character Index</title>
+<title>MCP, AI Constitutions Index</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,7 +186,7 @@
                        box-shadow: none; }
   .site-header nav a:hover { background: var(--energy); color: var(--ink); }
   .site-header nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--energy); }
-  .site-header .wordmark { font-family: var(--display); font-size: 16px; font-weight: 600;
+  .site-header .wordmark { font-family: var(--display); font-size: 17px; font-weight: 600;
                            color: var(--ink); text-decoration: none; box-shadow: none; }
   .site-header .wordmark:hover { background: none; color: var(--ink); }
   .site-header .mode { align-self: center; }
@@ -214,13 +214,17 @@
      the page's own headings, with a chartreuse segment marking where you are.
      This page has sections enough to need it now. */
   .with-rail { display: flex; align-items: flex-start; gap: 56px;
-               max-width: 1000px; margin: 0 auto; padding: 0 40px; }
+               /* The same measure as how-it-works.html, so the two pages put their
+                  rail and their text in the same places. They were 1000 and 1052,
+                  each summed by hand around a rail of its own width, and centring
+                  two different sums moved every line 26px between the pages. */
+               max-width: 1052px; margin: 0 auto; padding: 0 40px; }
   .with-rail .sheet { max-width: 660px; margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
   /* Both offsets clear the header, which stays over the page: the rail sits
      under it, and a heading jumped to lands below it rather than behind it. On a
      phone the header wraps and grows, so the script writes its real height into
      --header-height; 54px is its height until then. */
-  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 168px; padding-top: 92px; }
+  .rail { position: sticky; top: calc(var(--header-height, 54px) + 22px); flex: 0 0 220px; padding-top: 92px; }
   .rail ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--hair); }
   .rail li { margin: 0; }
   .rail a { display: block; margin-left: -1px; padding: 5px 0 5px 14px;
@@ -242,16 +246,20 @@
 
 <header class="site-header">
   <span class="site-brand">
-    <a class="mark-link" href="https://polariscollective.org" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
-    <a class="collective" href="https://polariscollective.org">Polaris Collective</a>
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <a class="wordmark" href="/spec-reader/">AI Character Index</a>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
   </span>
   <nav aria-label="Primary navigation">
-    <a href="/spec-reader/">Spec reader</a>
-    <a href="/how-it-works">How it works and contribute</a>
+    <a href="/">Overview</a>
+    <a href="/spec-reader/">Doc reader</a>
+    <a href="/about">About</a>
     <a class="active" href="/mcp" aria-current="page">MCP</a>
-    <button class="mode" id="mode" type="button" aria-label="Switch to the umber night surface">☾</button>
+    <!-- Hidden, not removed. The umber surface is not offered anywhere in the
+         index, and the same button is hidden the same way on the reader. -->
+    <button class="mode" id="mode" type="button" hidden
+      aria-label="Switch to the umber night surface">☾</button>
   </nav>
 </header>
 
@@ -267,7 +275,7 @@
     <div class="m-title">MCP</div>
     <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
     these documents by quoting them, rather than from memory. This page has the whole setup, from
-    a settings menu or from a command line. Four tools, read only, no account and no key.</p>
+    a settings menu or from a command line. Seven tools, read only, no account and no key.</p>
   </div>
 
   <section class="m" id="what-this-does">
@@ -281,7 +289,7 @@
     <pre><code data-origin>/api/mcp</code></pre>
     <p>There is nothing to sign in to and no key to obtain. The index only reads: it can be asked
     what the documents say, and it cannot be asked to change anything. Everything it serves is the
-    published index, the same data the spec reader is built from, so a call reads what the site
+    published index, the same data the doc reader is built from, so a call reads what the site
     shows and nothing else.</p>
   </section>
 
@@ -363,52 +371,55 @@
 
   <section class="m" id="tools">
     <h2>Tools</h2>
-    <p>Four, and all of them read. Four words recur below. A <b>behaviour</b> is one thing a
-    document might commit a model to, such as deferring to a user&rsquo;s own decisions. A
+    <p>Seven, and all of them read. Five words recur below. A <b>constitution</b> is a document an
+    AI company publishes saying how its models should behave. A <b>behaviour</b> is one thing a
+    constitution might commit a model to, such as deferring to a user&rsquo;s own decisions. A
     <b>locator</b> is the address of a quote inside a document, naming the document, its version,
     the section and the sentences, as in
     <code>openai--model-spec@2026-08-18 &gt; #scope_of_autonomy &gt; &para;14</code>. The
     <b>panel</b> is the three frontier models that read every document for every behaviour and
-    marked the passages. A <b>depth</b> is the score those judges give a document for a behaviour,
-    from 0, absent, to 4, rules with worked examples: it says how much the document gives an
-    evaluation to work with, not how much the lab cares.</p>
-    <p><b>about.</b> What the index is, what it does not report, and what the other three tools
+    marked the passages. A <b>depth</b> is the score those judges give a constitution for a
+    behaviour, from 0, where it says nothing about it, to the top of the scale, where it sets
+    rules and shows them applied. It says how much the document gives an evaluation to work with,
+    and nothing about how much the company behind it cares. Every depth comes back with the scale
+    it was given on.</p>
+    <p><b>about.</b> What the index is, what it does not report, and what the other six tools
     return, in one answer meant to be read before anything else is asked. No arguments. It names
     the documents, the behaviours and the sections they sit in, the panel that judged and the
     publication being served, each read from that publication when you ask rather than written
     into this page, so it is current whenever it is called. Most assistants never show a
     server&rsquo;s own instructions to the model, so this is the same text where the model will
     see it.</p>
-    <p><b>list_model_specs.</b> Every specification the current publication carries: id,
+    <p><b>list_model_specs.</b> Every constitution the current publication carries: id,
     laboratory, title, version, source URL, how many behaviours were judged against it and how
-    many passages it holds. No arguments. It does not return the specification text, which runs to
-    hundreds of kilobytes; the source URL is in the answer. Each specification is one version, and
-    its id reads <code>&lt;lab&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
+    many passages it holds. No arguments. It does not return the constitution text, which runs to
+    hundreds of kilobytes; the source URL is in the answer. Each constitution is one version, and
+    its id reads <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, such as
     <code>openai--model-spec@2026-08-18</code>, which is also the head of every locator into
-    it.</p>
+    it. The tool keeps its old name so that clients already connected go on working.</p>
     <p><b>list_behaviours.</b> Every behaviour the publication shows, with the section it is
     grouped in, the brief the judge panel was given, the boundary of the construct and where the
-    definition came from. Each one also carries, per specification, how many passages it has, the
+    definition came from. Each one also carries, per constitution, how many passages it has, the
     strongest band any of them reaches and the panel&rsquo;s mean depth. No arguments. The slugs it returns are what the next tool takes.</p>
-    <p><b>retrieve_passages.</b> The passages of a specification that bear on a behaviour, quoted
+    <p><b>retrieve_passages.</b> The passages of a constitution that bear on a behaviour, quoted
     verbatim and located. Each one comes back with its locator, its quote, the band it sits in and
     the verdict every judge gave it.</p>
     <ul>
       <li><b>behaviours.</b> Required, at least one slug. It is what bounds the size of the
           answer.</li>
-      <li><b>model_spec_ids.</b> Optional, every specification by default. Where a behaviour and
-          specification pair carries a depth, it comes back as the mean the index&rsquo;s panel
-          gave it, on a scale from 0, absent, to 4, rules with worked examples. A pair with no
-          depth comes back with <code>null</code>.</li>
+      <li><b>model_spec_ids.</b> Optional, every constitution by default. Where a behaviour and
+          constitution pair carries a depth, it comes back as the mean the index&rsquo;s panel
+          gave it, with the scale that mean is on. A pair with no depth comes back with
+          <code>null</code>.</li>
       <li><b>strength.</b> Optional. <code>defining</code> is the document&rsquo;s fullest
           statement of the behaviour, <code>core</code> establishes it there, <code>related</code>
           bears on it without establishing it. Each means that band and stronger.
-          <code>related</code> by default, so every band comes back, which is what the spec
+          <code>related</code> by default, so every band comes back, which is what the doc
           reader shows before you touch a toggle. Every passage carries its strength, so pass
           <code>core</code> or <code>defining</code> to narrow the answer. A judge&rsquo;s own
           verdict of <code>adjacent</code> is the band named <code>related</code> here.</li>
       <li><b>limit.</b> Optional, 40 by default, 200 at most. It is a page budget in passages: an
-          answer holds whole behaviour and specification pairs, never split, strongest passage
+          answer holds whole behaviour and constitution pairs, never split, strongest passage
           first.</li>
       <li><b>cursor.</b> Optional, the <code>next_cursor</code> of the previous page. It names the
           publication it was issued against, so a walk that spans a new publication stops rather
@@ -420,6 +431,26 @@
     seat&rsquo;s verdicts and depth are then the substitute&rsquo;s.</p>
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
+    <p><b>constitutions_board.</b> Every figure on the overview&rsquo;s first board, each with the
+    scale it is on: the score out of 20, the document as a whole out of 10 with its five criteria,
+    and how far each constitution goes on every behaviour. It carries what each criterion asked
+    and what each level of the depth scale asks for, so a figure can be read without a second
+    call. One argument, <b>company</b>, optional, which narrows it to one company.</p>
+    <p><b>governance_board.</b> The overview&rsquo;s second board: nine companies scored out of 16
+    on four questions about how they govern the rules their models follow, each question split
+    into checks scored 0 to 4, with the descriptions the scores were given against and the
+    paragraph we wrote on what we found. The best practices are there too, shown beside the score
+    and never counted in it. One argument, <b>company</b>, optional. These figures were given by
+    hand from public documents rather than judged by the panel, and this board belongs to no
+    publication and carries its own as-of date.</p>
+    <p><b>compare_documents.</b> Everything one run found between two constitutions on one
+    behaviour: the passages each of them carries, every pair of passages the judges linked with
+    what each judge said, the verdict where two judges disagreed and a third settled it, the
+    passages one document has nothing facing, and a paragraph written from all of it. It takes one
+    <b>behaviour</b> and exactly two <b>model_spec_ids</b>. The answer is long, hundreds of
+    thousands of characters where both documents cover the behaviour fully, so pass <b>detail</b>
+    as <code>counts</code> first: that answers with the size of the full answer and the tally of
+    what is in it.</p>
   </section>
 
   </div>
@@ -457,9 +488,13 @@ function setPalette(p) {
 }
 modeBtn.addEventListener("click", () =>
   setPalette(document.body.dataset.palette === "umber" ? "daylight" : "umber"));
+/* The stored preference is no longer read. The switch above is hidden on every
+   page of the index, and the three pages share one localStorage key, so a reader
+   who had chosen umber before would have come back to a surface with nothing on
+   the page to leave it by. ?palette=umber still reaches it, which is how the
+   surface stays inspectable rather than lost. */
 const qp = new URLSearchParams(location.search).get("palette");
-let saved = null; try { saved = localStorage.getItem("aci-palette"); } catch (e) {}
-setPalette(qp || saved || "daylight");
+setPalette(qp || "daylight");
 
 /* The endpoint is written relative in the markup, so a reader without
    JavaScript still sees something true, and absolute here so the blocks above
@@ -577,5 +612,15 @@ if (rail) {
 }
 </script>
 
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for four pages:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
+<!-- The wordmark's note: which publication is on screen, the change log and
+     the words the index uses. One file for four pages, like dev-tag.js. -->
+<script type="module" src="/brand.js"></script>
+<!-- The bubble at the bottom right: a screenshot of this page, annotated, with
+     a sentence. One file for four pages, like dev-tag.js and brand.js. -->
+<script type="module" src="/page-feedback.js"></script>
 </body>
 </html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Reachable by its address and linked from nowhere: what it shows is
+       working material rather than what the index publishes. -->
+  <meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coverage board, AI Constitutions Index</title>
+<!-- The site's own mark, the same declaration the other pages carry: the broken
+     orbit knocked out in paper from an olive-deep rounded square. Inline rather
+     than a file, as everywhere else here, so the page stays movable. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/board.css">
+</head>
+<body>
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a href="/">Overview</a>
+    <a href="/spec-reader/">Doc reader</a>
+    <a href="/about">About</a>
+    <a href="/mcp">MCP</a>
+  </nav>
+</header>
+
+<div class="shell">
+  <!-- The board the overview led with until 23 September 2026, on a page of its
+       own. It is still built from the publication the site is serving, so the
+       figures it carries and the passages under them stay reachable; the front
+       page reads a written file instead. -->
+  <section id="coverage-board">
+  <h1>Each constitution scored, with the passages behind every figure</h1>
+  <p class="lede">
+    AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
+    behave. This board scores each one twice, out of 10 each, and leads with the two added
+    together. Every figure opens on what is behind it, and on the passages in the document
+    itself.
+  </p>
+  <div class="board-parts">
+    <p><strong>The document as a whole.</strong> Whether the constitution settles a clash between
+    two of its own rules, whether a reader can tell which rules are absolute and which can be
+    lifted and by whom, whether the rules come with reasons, whether they reach the situations
+    the models are used in, and whether the document contradicts itself somewhere without saying
+    which rule wins.</p>
+    <p><strong>The behaviours.</strong> How far the constitution goes on each behaviour the index
+    asks about, from saying nothing about it to setting rules and showing them applied to worked
+    examples.</p>
+  </div>
+  <p class="lede">
+    Missing a constitution, or a behaviour the index should be asking about?
+    <a href="/about?propose#propose" target="_blank"
+      rel="noopener noreferrer">Propose one</a>.
+  </p>
+
+  <p class="grid-note" id="status" aria-live="polite">Loading.</p>
+
+  <div class="gov-toolbar">
+    <p class="gov-hint">
+      Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
+      Open a row to see the parts it is made of.
+    </p>
+    <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
+  </div>
+  <div class="matrix-wrap">
+    <table class="board" id="board">
+      <!-- Written by renderTable from the publication on screen: a publication
+           with no assessment has neither a final score nor a document as a
+           whole, and a caption that named them would promise a screen reader
+           rows it will never reach. -->
+      <caption class="visually-hidden"></caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="legend" aria-hidden="true"></div>
+  <!-- The scale under the table rather than beside it: the board is read across
+       first, and a rail down the side took a fifth of the width from it. -->
+  <section class="depth-key" aria-labelledby="depth-key-title">
+    <h2 id="depth-key-title"></h2>
+    <ol class="depth-key-list" id="depth-key"></ol>
+    <p class="gov-foot" id="depth-key-odd"></p>
+  </section>
+  <p class="gov-foot" id="ties"></p>
+
+  <!-- One popover for the whole board, filled with whatever was pressed and
+       placed beside it. The browser closes it on Escape or a press elsewhere. -->
+  <div class="gov-pop" id="grid-pop" popover role="dialog" aria-labelledby="grid-pop-title" tabindex="-1"></div>
+
+  <!-- How the scores are made, folded: a reader who wants it opens it, and a
+       reader who does not is not made to scroll past it to reach the board.
+       Written by renderMethod from the payload, so its counts and its seats
+       cannot disagree with the board above. -->
+  <div class="gov-more">
+    <details id="method">
+      <summary>How the scores are made</summary>
+      <div class="gov-more-body" id="method-body"></div>
+    </details>
+  </div>
+  </section>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-head">
+    <!-- Above the title rather than beside it: a long behaviour name and a link
+         sharing one line left the name truncated, and the name is the thing the
+         reader opened the note to read. Its own tab, so the grid stays where it
+         was left; noopener because a page opened this way keeps a handle on the
+         one that opened it. Hidden for a column with no document. -->
+    <div class="sheet-topline">
+      <a class="sheet-link" id="sheet-link" target="_blank" rel="noopener noreferrer"
+        hidden>Read the passages in the doc reader</a>
+      <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+    </div>
+    <h2 id="sheet-title"></h2>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</dialog>
+
+<script type="module" src="/coverage.js"></script>
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for every page:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
+<!-- The wordmark's note: which publication is on screen, the change log and
+     the words the index uses. One file for every page, like dev-tag.js. -->
+<script type="module" src="/brand.js"></script>
+<!-- The bubble at the bottom right: a screenshot of this page, annotated, with
+     a sentence. One file for every page, like dev-tag.js and brand.js. -->
+<script type="module" src="/page-feedback.js"></script>
+</body>
+</html>

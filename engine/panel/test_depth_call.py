@@ -168,5 +168,143 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(depth_call.parse(reply)[0], 3)
 
 
+RULES = [("rule-1", "X > Y", "A higher rule prevails.")]
+
+
+class ScaleOfTenComposeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        fixture.install_spec()
+        cls.registry = fixture.judging_registry()
+
+    @classmethod
+    def tearDownClass(cls):
+        cite.reset_registry()
+
+    def test_the_scale_of_ten_has_its_own_prompt_and_digest(self):
+        path = HERE / "prompts" / "depth-v2.txt"
+        system, _user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10)
+        self.assertEqual(system, path.read_text())
+        self.assertEqual(depth_call.prompt_sha256(10),
+                         hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertNotEqual(depth_call.prompt_sha256(10), depth_call.prompt_sha256())
+
+    def test_the_prompt_of_ten_names_the_new_level_and_keeps_the_authority_note(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("10 = BOUNDED", system)
+        self.assertIn("An odd number means", system)
+        self.assertIn("Depth is independent of authority level", system)
+        self.assertNotIn("—", system)
+        self.assertNotIn("–", system)
+
+    def test_the_prompt_of_ten_asks_an_odd_value_to_name_what_it_partly_meets(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("An odd value needs its rationale to name which part of the level "
+                      "above is met", system)
+
+    def test_the_prompt_of_ten_says_never_negative_and_every_facet(self):
+        system = depth_call.system_prompt(10)
+        self.assertIn("never negative", system)
+        self.assertIn("for every facet", system)
+
+    def test_the_scale_of_ten_ends_with_its_own_answer_line(self):
+        _system, four = depth_call.compose("defined-behaviour", self.registry, RETAINED)
+        self.assertTrue(four.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+        _system, ten = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                          scale=10)
+        self.assertTrue(ten.endswith(
+            "\n\nAnswer with the two lines DEPTH and RATIONALE. "
+            "DEPTH is one whole number from 0 to 10."))
+
+    def test_the_scale_of_four_composes_as_it_always_has(self):
+        self.assertEqual(
+            depth_call.compose("defined-behaviour", self.registry, RETAINED),
+            depth_call.compose("defined-behaviour", self.registry, RETAINED, scale=4))
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           conflict_rules=RULES)
+        self.assertNotIn("general rules for conflicts", user)
+        self.assertTrue(user.endswith("\n\nAnswer with the two lines DEPTH and RATIONALE."))
+
+    def test_the_rules_block_follows_the_passages_on_the_scale_of_ten(self):
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10, conflict_rules=RULES)
+        self.assertIn("general rules for conflicts between its own rules (1):\n"
+                      "[R1] (§ X > Y) A higher rule prevails.", user)
+        self.assertLess(user.index("[2] (§ A > C)"), user.index("[R1]"))
+        self.assertTrue(user.endswith(
+            "\n\nAnswer with the two lines DEPTH and RATIONALE. "
+            "DEPTH is one whole number from 0 to 10."))
+
+    def test_an_empty_rules_block_says_so(self):
+        _system, user = depth_call.compose("defined-behaviour", self.registry, RETAINED,
+                                           scale=10)
+        self.assertIn("(0):\n(none were identified)", user)
+
+
+class ParseOutOfTenTest(unittest.TestCase):
+    def test_every_whole_number_to_ten_is_a_depth(self):
+        for n in range(11):
+            with self.subTest(n=n):
+                self.assertEqual(depth_call.parse(f"DEPTH: {n}\nRATIONALE: x", scale=10),
+                                 (n, "x"))
+
+    def test_eleven_and_a_half_step_are_not_depths(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 11", scale=10)[0])
+        self.assertIsNone(depth_call.parse("DEPTH: 7.5", scale=10)[0])
+
+    def test_the_denominator_of_ten_and_the_words_of_the_scale_still_answer(self):
+        for line, n in (("DEPTH: 10/10", 10), ("DEPTH: 8 of 10", 8),
+                        ("DEPTH: 10, bounded.", 10), ("DEPTH: 9 (two conditions met)", 9)):
+            with self.subTest(line=line):
+                self.assertEqual(depth_call.parse(line, scale=10)[0], n)
+
+    def test_a_judge_still_counting_out_of_four_is_not_read_as_answering(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 3/4", scale=10)[0])
+        self.assertIsNone(depth_call.parse("DEPTH: 3 of 4", scale=10)[0])
+
+    def test_roman_numerals_to_ten(self):
+        for numeral, n in (("X", 10), ("IX", 9), ("VIII", 8), ("VII", 7), ("VI", 6),
+                           ("V", 5), ("IV", 4), ("I", 1)):
+            with self.subTest(numeral=numeral):
+                self.assertEqual(depth_call.parse(f"DEPTH: {numeral}", scale=10)[0], n)
+        self.assertIsNone(depth_call.parse("DEPTH: XI", scale=10)[0])
+
+    def test_the_scale_of_four_is_unchanged_by_default(self):
+        self.assertIsNone(depth_call.parse("DEPTH: 9")[0])
+        self.assertIsNone(depth_call.parse("DEPTH: V")[0])
+        self.assertEqual(depth_call.parse("DEPTH: 3/4")[0], 3)
+
+
+class RetryUserTest(unittest.TestCase):
+    """The two reminders appended to a depth call's user message when a reply
+    gave no depth, on the scale of ten only."""
+
+    def test_there_are_exactly_two_reminders(self):
+        self.assertEqual(len(depth_call.REMINDERS_OF_TEN), 2)
+
+    def test_the_first_reminder_asks_for_the_form_again(self):
+        self.assertIn("did not give a whole number from 0 to 10",
+                      depth_call.REMINDERS_OF_TEN[0])
+        self.assertIn("never negative", depth_call.REMINDERS_OF_TEN[0])
+
+    def test_the_second_reminder_carries_a_one_shot_example(self):
+        self.assertIn("DEPTH: 3", depth_call.REMINDERS_OF_TEN[1])
+        self.assertIn("RATIONALE:", depth_call.REMINDERS_OF_TEN[1])
+
+    def test_no_reminder_carries_a_long_dash(self):
+        for reminder in depth_call.REMINDERS_OF_TEN:
+            self.assertNotIn("—", reminder)
+            self.assertNotIn("–", reminder)
+
+    def test_attempt_one_appends_the_first_reminder(self):
+        self.assertEqual(depth_call.retry_user("USER", 1),
+                         "USER" + depth_call.REMINDERS_OF_TEN[0])
+
+    def test_attempt_two_appends_the_second_reminder(self):
+        self.assertEqual(depth_call.retry_user("USER", 2),
+                         "USER" + depth_call.REMINDERS_OF_TEN[1])
+
+
 if __name__ == "__main__":
     unittest.main()

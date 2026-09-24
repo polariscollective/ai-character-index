@@ -5,10 +5,12 @@ The public site's source: plain HTML and vanilla JS, with no build step of its o
 **Pages:**
 
 - `index.html`: a minimal redirect to `spec-reader/` (the reader is the landing surface). The core-page prototype it carried is retired; its design history lives in [`design/`](../design/).
-- `how-it-works.html`: what the index is, how to cite it, how to run it yourself, and the two
-  proposal forms, in a dialog, posting to `/api/submit`. Served at `/how-it-works` by a rewrite
+- `about.html`: what the index is, how to cite it, how to run it yourself, and the two
+  proposal forms, in a dialog, posting to `/api/submit`. Served at `/about` by a rewrite
   in `next.config.mjs`; `methodology.html` and `propose.html` are redirects to it, kept because
   links to both are already shared.
+- `overview.html`: the front page at `/`, two views behind tabs. The first is the constitutions board, drawn by `constitutions.js` from the written file `constitutions.json`; the second is the governance board, from `governance.json`. Both are `board.js`, and both carry each company's mark from `company-marks.js`.
+- `coverage.html`: the board built from the publication, at `/coverage`. It led the front page until 23 September 2026 and keeps the figures whose passages a reader can open.
 - `mcp.html`: how to connect to the public MCP endpoint at `/api/mcp`. Served at `/mcp`.
 - `spec-reader/`: the spec reader, over the documents of the current publication. It takes the documents, the behaviour payload and the behaviour notes from `/api/reader/documents`, `/api/reader/payload` and `/api/reader/behaviours`; a `?publication=` pin reaches any publication. See its own README.
 

@@ -79,7 +79,7 @@ export async function publications(fetchImpl = fetch) {
     // Never the payload columns. They are megabytes, and no page shows them.
     select("aci_publications",
            "select=id,published_at,published_by,notes,panel,rubric,"
-           + "is_public,payload_sha256,documents_sha256,build_params"
+           + "is_public,payload_sha256,documents_sha256,links_sha256,build_params"
            + "&order=published_at.desc", fetchImpl),
     select("aci_publication_cells", "select=publication_id", fetchImpl),
   ]);
@@ -87,6 +87,16 @@ export async function publications(fetchImpl = fetch) {
     ...row,
     cells: cells.filter(cell => cell.publication_id === row.id).length,
   }));
+}
+
+/** The link runs a publication can carry, newest first.
+ *
+ * Which runs the public sees is a decision a publication records. It used to be
+ * decided by testing the prefix of the script name that created a run, which
+ * worked and was nobody's decision. */
+export async function linkRuns(fetchImpl = fetch) {
+  return select("aci_link_runs",
+                "select=id,created_at,created_by,status&order=created_at.desc", fetchImpl);
 }
 
 /** Proposals from outside, newest first, each with a link to its document.
@@ -100,6 +110,24 @@ export async function submissions(limit = 50, fetchImpl = fetch) {
     ...row,
     link: row.document ? await signedLink("aci-submissions", row.document, 3600, fetchImpl)
                        : null,
+  })));
+}
+
+/** What readers said about whole pages, newest first, each with its capture.
+ *
+ * The link is minted here and expires, because the bucket is private and a
+ * permanent link to a private object is a public object with extra steps. The
+ * Slack message mints one too, for seven days; this is the surface an operator
+ * can come back to, and a private bucket with nothing that reads it is a
+ * bucket nobody can open. */
+export async function pageFeedback(limit = 50, fetchImpl = fetch) {
+  const rows = await select("aci_page_feedback",
+                            `select=*&order=created_at.desc&limit=${limit}`, fetchImpl);
+  return Promise.all(rows.map(async row => ({
+    ...row,
+    link: row.screenshot
+      ? await signedLink("aci-page-feedback", row.screenshot, 3600, fetchImpl)
+      : null,
   })));
 }
 

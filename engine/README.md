@@ -25,7 +25,25 @@ The user manifest (`specs/user/specs.json`, `SPEC_CITE_USER_SPECS`) went with th
 
 ## panel/
 
-The judging pipeline: prompt composition and verdict parsing (`harness.py`, `judge_call.py`, `depth_call.py`), composing a run (`compose_run.py`), executing it (`batch_job.py`), the reader's tier bands (`bands.py`) and the behaviour payload builder (`build_site_data.py`). The index judges with one panel, `frontier_fast`, under rubric v5 (`panel/prompts/v5.txt`), and each judge gives every cell a 0 to 4 depth (`panel/prompts/depth-v1.txt`). See [`panel/README.md`](panel/README.md); `python3 engine/panel/test_panel.py` runs its offline tests (no network, no keys).
+The judging pipeline: prompt composition and verdict parsing (`harness.py`, `judge_call.py`, `depth_call.py`), composing a run (`compose_run.py`), executing it (`batch_job.py`), the reader's tier bands (`bands.py`) and the behaviour payload builder (`build_site_data.py`). The index judges with one panel, `frontier_fast`, under rubric v5 (`panel/prompts/v5.txt`), and each judge gives every cell a 0 to 4 depth (`panel/prompts/depth-v1.txt`). A depth out of ten is given afterwards, by `panel/depth_pass.py` (below), and never in this job. See [`panel/README.md`](panel/README.md); `python3 engine/panel/test_panel.py` runs its offline tests (no network, no keys).
+
+`pilot_scale_ten.py` is the pilot of depth out of ten and of the assessment of a whole document (`panel/assessment_call.py`), from `docs/superpowers/plans/2026-09-21-depth-out-of-ten-pilot.md`. It reads the public publication, writes nothing to the database, and prices itself unless given `--go`.
+
+## assess.py and panel/depth_pass.py
+
+The scale of ten and the assessment of a document as a whole, from `docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md`. Both need credentials, both spend real money, and both print a price and write nothing until they are given `--go`.
+
+```sh
+python3 engine/assess.py --documents=ID,ID                                   # priced, nothing written
+python3 engine/assess.py --documents=ID,ID --go                              # spends, and writes
+python3 engine/assess.py --resume=RUN --documents=ID,ID --go                 # takes a stopped run up
+python3 engine/assess.py --resume=RUN --replay --documents=ID,ID --go        # asks a failed finding again
+python3 engine/assess.py --criteria-from=RUN --documents=ID,ID --go          # only the contradictions
+python3 engine/panel/depth_pass.py --runs=RUN,RUN --assessment-run=RUN       # priced, nothing written
+python3 engine/panel/depth_pass.py --runs=RUN,RUN --assessment-run=RUN --go  # spends, and writes
+```
+
+`assess.py` has every seat read each document whole and score the five criteria of [`methodology/document-assessment-rubric.md`](../methodology/document-assessment-rubric.md), writing the run, its calls, their scores, the contradictions claimed and every reading of them to the `aci_assessment_` tables. `depth_pass.py` then gives a depth out of ten to the done calls of runs already judged, on the scale of [`methodology/spec-coverage-depth-rubric.md`](../methodology/spec-coverage-depth-rubric.md), reading the conflict rules the assessment cited and writing `aci_depths_out_of_ten`. The order is fixed: a depth out of ten is shown those rules, so its document must be assessed first.
 
 ## job.py, publish.py and local_run.py
 
@@ -35,11 +53,12 @@ The judging pipeline: prompt composition and verdict parsing (`harness.py`, `jud
 
 ## site builders and checks
 
-A publication's two payloads are built by `publish.py` for the cells it selects and stored on its `aci_publications` row; `/api/reader/payload` and `/api/reader/documents` serve them from there. Both builders read the database:
+A publication's three payloads are built by `publish.py` for the cells it selects and stored on its `aci_publications` row; `/api/reader/payload`, `/api/reader/documents` and `/api/reader/links` serve them from there. All three builders read the database. The third is JavaScript because the assembly it needs already lives in `app/lib/links.mjs`, and `publish.py` picks each builder's interpreter from its file extension:
 
 ```sh
 python3 engine/panel/build_site_data.py --out=PATH [--cells=PATH]    # the behaviour payload
 python3 engine/build-spec-reader-data.py [--out=PATH] [--cells=PATH]  # the documents payload
+node engine/build-links-data.mjs --link-runs=ID,ID [--note-prompts=SHA,SHA] --out=PATH  # the links payload
 node engine/verify-reader-test.mjs          # every behaviour x document view of the reader (needs Chrome)
 node engine/verify-reader-features.mjs      # the reader's URL and DOM features, a draft pin included (needs Chrome)
 node engine/verify-portal.mjs [url]         # the admin portal, read-only, against a running server with credentials

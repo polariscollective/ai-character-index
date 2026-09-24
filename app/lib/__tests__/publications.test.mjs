@@ -3,14 +3,21 @@
  * Run: node --test app/lib/__tests__/
  */
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { beforeEach, test } from "node:test";
 import { currentPublication, isPublicationId, publicationColumn, publicationRow,
-         readerResponse, SERVES_DEVELOPMENT } from "../publications.mjs";
+         readerResponse, resetHeldColumns, resolvePublicationId,
+         SERVES_DEVELOPMENT, pinnedPublication } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "KEY";
+
+// Every test in this file shares the module's HELD map (it is process state,
+// not per-test state), so a value one test caches can otherwise leak into the
+// next. Starting each test with nothing held is what makes each test's own
+// stub the only thing that can answer it.
+beforeEach(() => resetHeldColumns());
 
 function stub(rows, status = 200) {
   const calls = [];
@@ -23,6 +30,58 @@ function stub(rows, status = 200) {
 }
 
 const params = (query) => new URLSearchParams(query);
+
+test("an unpinned read resolves which publication it is serving, then reads it by id", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID }]);
+  const got = await resolvePublicationId(null, fetchImpl);
+  assert.equal(got, ID);
+  assert.match(calls[0].url, /select=id/);
+  assert.match(calls[0].url, /order=published_at\.desc/);
+});
+
+test("a pin is checked against the table before it is trusted", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID }]);
+  assert.equal(await resolvePublicationId(ID, fetchImpl), ID);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, new RegExp(`id=eq\\.${ID}`));
+});
+
+test("a pin naming a publication the table no longer has resolves to null", async () => {
+  const { fetchImpl } = stub([]);
+  assert.equal(await resolvePublicationId(ID, fetchImpl), null);
+});
+
+test("nothing published yet resolves to null", async () => {
+  const { fetchImpl } = stub([]);
+  assert.equal(await resolvePublicationId(null, fetchImpl), null);
+});
+
+test("a column is fetched once per publication and held, though existence is asked again", async () => {
+  const { calls, fetchImpl } = stub([{ id: ID, payload: { ok: 1 } }]);
+  const first = await publicationColumn("payload", ID, fetchImpl);
+  const second = await publicationColumn("payload", ID, fetchImpl);
+  assert.deepEqual(first, { ok: 1 });
+  assert.deepEqual(second, { ok: 1 });
+  // Two existence checks (one per call) plus one column read: the second
+  // call's column comes from memory, but existence is never taken on faith.
+  assert.equal(calls.length, 3, "the second column read came from memory");
+});
+
+/* This is the regression the Critical review found: before the fix, a pin
+ * was trusted once and its column held forever, so a publication withdrawn
+ * after being read once would go on being served from memory. Reverting only
+ * publications.mjs to its parent commit and running this test alone must
+ * fail with `second` equal to the held bytes rather than null. */
+test("a pinned publication the database no longer has answers null, not the bytes once held", async () => {
+  const existed = stub([{ id: ID, payload: { ok: 1 } }]);
+  const first = await publicationColumn("payload", ID, existed.fetchImpl);
+  assert.deepEqual(first, { ok: 1 }, "the publication existed on the first read");
+
+  const withdrawn = stub([]);
+  const second = await publicationColumn("payload", ID, withdrawn.fetchImpl);
+  assert.equal(second, null,
+              "the same id must not keep answering from a column held before the row was gone");
+});
 
 test("a uuid is a publication id and a payload name is not", () => {
   assert.equal(isPublicationId(ID), true);
@@ -84,14 +143,23 @@ test("production ignores the variable however it is set", () => {
   );
 });
 
-test("a pin asks for that publication", async () => {
+test("a pin asks for that publication, and on production only a published one", async () => {
   const { calls, fetchImpl } = stub([{ documents: { ok: 1 } }]);
   await publicationColumn("documents", ID, fetchImpl);
   assert.match(calls[0].url, new RegExp(`id=eq\\.${ID}`));
   assert.doesNotMatch(calls[0].url, /order=/);
-  // A pin reaches a draft: previewing what is about to be published is the
-  // whole point of having a draft at all.
-  assert.doesNotMatch(calls[0].url, /is_public/);
+  // A copied address is not a way in to a draft on production: the pin asks
+  // for a published row, and a draft answers as if it did not exist.
+  assert.match(calls[0].url, /is_public=is\.true/);
+});
+
+test("on a development deployment a pin reaches a draft", () => {
+  // Previewing what is about to be published is what a development deployment
+  // is for, so there a pin names any publication.
+  const env = { [SERVES_DEVELOPMENT]: "true" };
+  assert.equal(pinnedPublication(ID, env), `id=eq.${ID}`);
+  assert.match(pinnedPublication(ID, {}), /is_public=is\.true/);
+  assert.match(pinnedPublication(ID, { ...env, VERCEL_ENV: "production" }), /is_public=is\.true/);
 });
 
 /* A surface that cites a build has to know whether anyone published it: served
@@ -145,4 +213,66 @@ test("a refused query is loud rather than empty", async () => {
   const { fetchImpl } = stub([], 403);
   await assert.rejects(() => publicationColumn("payload", null, fetchImpl),
                        /GET aci_publications\?.* -> 403: permission denied/);
+});
+
+test("readerResponse serves the links column, and a pin is immutable for a year", async () => {
+  // The real shape, because a links column never ships without its notes, and a
+  // route test is worth more against the shape the route will actually meet.
+  // The fixture carries a locator and a comparison rather than empty objects:
+  // with nothing to lose, the assertion could not tell a column served whole
+  // from a column emptied on the way out.
+  const links = {
+    byLocator: { "a--doc@2026-01-01 > s > ¶1": [{ behaviours: ["helpfulness"] }] },
+    comparisons: { "helpfulness\na--doc@2026-01-01\nb--doc@2026-01-01": { text: "yes" } },
+    notes: { passage: {}, depth: {}, standing: {} },
+  };
+  const { fetchImpl } = stub([{ links }]);
+  const out = await readerResponse("links", new URLSearchParams(`publication=${ID}`), fetchImpl);
+  assert.equal(out.status, 200);
+  assert.deepEqual(out.body, links, "no parameter names anything, so the column is served whole");
+  assert.match(out.cacheControl, /immutable/);
+});
+
+test("readerResponse answers 404 for a publication carrying no links", async () => {
+  const { fetchImpl } = stub([{ links: null }]);
+  const out = await readerResponse("links", new URLSearchParams(), fetchImpl);
+  assert.equal(out.status, 404);
+});
+
+test("readerResponse returns all behaviours, withheld ones lose their passages", async () => {
+  const doc = "anthropic--constitution@2026-01-20";
+  const { fetchImpl } = stub([{ id: ID, payload: {
+    behaviours: [
+      { id: 1, slug: "helpfulness", coverage: { [doc]: { depth: { mean: 2.7 }, passages: [{ locator: `${doc} > s > ¶1` }] } } },
+      { id: 2, slug: "no-sycophancy", coverage: { [doc]: { depth: { mean: 1.0 }, passages: [{ locator: `${doc} > s > ¶2` }] } } }
+    ] } }]);
+  const out = await readerResponse("payload",
+    new URLSearchParams(`publication=${ID}&behavior=helpfulness`), fetchImpl);
+  assert.equal(out.status, 200);
+  assert.equal(out.body.behaviours.length, 2, "both behaviours are listed");
+  assert.equal(out.body.behaviours[0].slug, "helpfulness");
+  assert.equal(out.body.behaviours[0].coverage[doc].passages.length, 1, "asked behaviour keeps passages");
+  assert.equal(out.body.behaviours[1].slug, "no-sycophancy");
+  assert.equal(out.body.behaviours[1].coverage[doc].passagesWithheld, true, "unwanted behaviour marked withheld");
+  assert.equal("passages" in out.body.behaviours[1].coverage[doc], false, "and carries no passages key");
+  assert.deepEqual(out.body.behaviours[1].coverage[doc].depth, { mean: 1.0 }, "but keeps its depth");
+});
+
+test("with no behavior parameter the whole column is served, as before", async () => {
+  const whole = { behaviours: [{ slug: "helpfulness" }, { slug: "no-sycophancy" }] };
+  const { fetchImpl } = stub([{ payload: whole }]);
+  const out = await readerResponse("payload", new URLSearchParams(`publication=${ID}`), fetchImpl);
+  assert.deepEqual(out.body, whole);
+});
+
+test("an empty behavior parameter withholds all paragraphs, which is not the same as none given", async () => {
+  const doc = "anthropic--constitution@2026-01-20";
+  const { fetchImpl } = stub([{ payload: {
+    behaviours: [{ id: 1, slug: "helpfulness", coverage: { [doc]: { depth: { mean: 2.7 }, passages: [{ locator: `${doc} > s > ¶1` }] } } }] } }]);
+  const out = await readerResponse("payload",
+    new URLSearchParams(`publication=${ID}&behavior=`), fetchImpl);
+  assert.equal(out.body.behaviours.length, 1, "behaviour is still listed");
+  assert.equal(out.body.behaviours[0].slug, "helpfulness");
+  assert.equal(out.body.behaviours[0].coverage[doc].passagesWithheld, true, "with paragraphs withheld");
+  assert.equal("passages" in out.body.behaviours[0].coverage[doc], false, "and no passages key");
 });

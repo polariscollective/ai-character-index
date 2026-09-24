@@ -1,0 +1,5 @@
+# secrets + python cruft (keep runlog.jsonl / reasons.jsonl / scores-*.json -- that's the data)
+.env
+__pycache__/
+*.pyc
+demo*.html

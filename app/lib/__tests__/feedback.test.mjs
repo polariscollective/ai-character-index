@@ -153,11 +153,16 @@ test("no pin means the current publication, resolved as the reader resolves it",
 });
 
 test("a pin that is not a publication falls through rather than being stored", async () => {
-  const { seen, fetchImpl } = spy(url => (url.includes("id=eq.") ? [] : [{ id: "current" }]));
-  assert.equal(await resolvePublication("00000000-0000-0000-0000-000000000000", fetchImpl),
-               "current");
-  assert.equal(seen.length, 2, "it asked for the pin, then for the current one");
-  assert.equal(await resolvePublication("not-a-uuid", fetchImpl), "current");
+  const missing = "00000000-0000-0000-0000-000000000000";
+  const current = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+  // A miss on the pin and a hit on the current publication both end up asked by
+  // id=eq., now that a column is read by a resolved id rather than by a pin
+  // straight through: only the value being looked up tells them apart.
+  const { seen, fetchImpl } = spy(url => (url.includes(`id=eq.${missing}`) ? [] : [{ id: current }]));
+  assert.equal(await resolvePublication(missing, fetchImpl), current);
+  assert.equal(seen.length, 3,
+              "it asked for the pin, then resolved the current one, then read its id");
+  assert.equal(await resolvePublication("not-a-uuid", fetchImpl), current);
 });
 
 test("nothing published yet is a null, not a refusal", async () => {

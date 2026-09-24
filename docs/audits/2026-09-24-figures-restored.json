@@ -1,0 +1,302 @@
+[
+ {
+  "company": "openai",
+  "field": "criterion rule_force",
+  "before": 3.7,
+  "after": 3.6666666667
+ },
+ {
+  "company": "openai",
+  "field": "criterion reasons",
+  "before": 3.3,
+  "after": 3.3333333333
+ },
+ {
+  "company": "openai",
+  "field": "behaviour not-undermining-human-oversight",
+  "before": 6.7,
+  "after": 6.6666666667
+ },
+ {
+  "company": "openai",
+  "field": "behaviour harm-avoidance-to-third-parties",
+  "before": 8.3,
+  "after": 8.3333333333
+ },
+ {
+  "company": "openai",
+  "field": "behaviour helpfulness",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "openai",
+  "field": "behaviour how-to-approach-tradeoffs",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "openai",
+  "field": "behaviour no-sycophancy",
+  "before": 6.3,
+  "after": 6.3333333333
+ },
+ {
+  "company": "openai",
+  "field": "behaviour objectivity-on-contested-questions",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "criterion rule_force",
+  "before": 3.7,
+  "after": 3.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "criterion reasons",
+  "before": 2.3,
+  "after": 2.3333333333
+ },
+ {
+  "company": "alibaba",
+  "field": "criterion situations",
+  "before": 3.7,
+  "after": 3.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "whole.total",
+  "before": 8.8,
+  "after": 8.8333333333
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour avoiding-illegitimate-concentration-of-power",
+  "before": 5.3,
+  "after": 5.3333333333
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour instruction-hierarchy-conformance",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour not-undermining-human-oversight",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour user-autonomy",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour avoiding-over-and-under-caution",
+  "before": 7.3,
+  "after": 7.3333333333
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour harm-avoidance-to-third-parties",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour how-to-approach-tradeoffs",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour honesty-and-non-deception",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour no-sycophancy",
+  "before": 7.3,
+  "after": 7.3333333333
+ },
+ {
+  "company": "alibaba",
+  "field": "behaviour objectivity-on-contested-questions",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "criterion rule_force",
+  "before": 3.3,
+  "after": 3.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "criterion reasons",
+  "before": 3.3,
+  "after": 3.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "whole.total",
+  "before": 8.4,
+  "after": 8.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour not-undermining-human-oversight",
+  "before": 7.3,
+  "after": 7.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour user-autonomy",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour avoiding-over-and-under-caution",
+  "before": 6.3,
+  "after": 6.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour harm-avoidance-to-third-parties",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour harmlessness-to-the-user",
+  "before": 7.7,
+  "after": 7.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour proportionate-risk-mitigation",
+  "before": 7.3,
+  "after": 7.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour how-to-approach-tradeoffs",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour honesty-and-non-deception",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour no-sycophancy",
+  "before": 6.3,
+  "after": 6.3333333333
+ },
+ {
+  "company": "openai-2025-12",
+  "field": "behaviour objectivity-on-contested-questions",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "criterion conflict_rules",
+  "before": 2.3,
+  "after": 2.3333333333
+ },
+ {
+  "company": "anthropic",
+  "field": "criterion rule_force",
+  "before": 2.7,
+  "after": 2.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "criterion reasons",
+  "before": 3.7,
+  "after": 3.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "criterion situations",
+  "before": 2.7,
+  "after": 2.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "whole.total",
+  "before": 6.6,
+  "after": 6.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour instruction-hierarchy-conformance",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour not-undermining-human-oversight",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour avoiding-over-and-under-caution",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour harmlessness-to-the-user",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour helpfulness",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour how-to-approach-tradeoffs",
+  "before": 8.7,
+  "after": 8.6666666667
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour honesty-and-non-deception",
+  "before": 9.3,
+  "after": 9.3333333333
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour no-sycophancy",
+  "before": 5.3,
+  "after": 5.3333333333
+ },
+ {
+  "company": "anthropic",
+  "field": "behaviour objectivity-on-contested-questions",
+  "before": 6.3,
+  "after": 6.3333333333
+ },
+ {
+  "company": "board",
+  "field": "companies",
+  "before": "openai alibaba openai-2025-12 anthropic deepseek google meta mistral moonshot xai",
+  "after": "openai alibaba anthropic deepseek google meta mistral moonshot xai"
+ }
+]

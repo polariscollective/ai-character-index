@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Tier-1 feature harness for the site's spec reader (site/spec-reader/),
+// Tier-1 feature harness for the site's doc reader (site/spec-reader/),
 // driven against TWO data states: the bundled payloads that ship in the repo,
-// against the fixture index served through the reader's two routes (the
-// two payloads it serves). Covers the reader's URL/DOM-state
+// against the fixture index served through two of the reader's routes (the
+// payload and the documents; the links route is not staged, so the reader
+// renders without bubbles). Covers the reader's URL/DOM-state
 // features and the user-data path; interactive-only features (resizer drags,
 // focus toggles, scroll behaviour) stay manual (Tier 2). The reader's passage
 // anchoring against the shipped payload is covered by verify-reader-test.mjs
@@ -19,8 +20,14 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serveReaderRoute, serveFeedbackRoute, lastFeedbackReceived,
-         CURRENT_PUBLICATION, DRAFT_PUBLICATION } from "./reader-routes.mjs";
+         servePageFeedbackRoute, lastPageFeedbackReceived,
+         CURRENT_PUBLICATION, DRAFT_PUBLICATION, TEN_PUBLICATION } from "./reader-routes.mjs";
 import { resolverSource, proveDocument } from "./reader-locator-proof.mjs";
+/* The board of constitutions reads a light markup out of its own file. The
+ * expected words below are read through that same parser rather than through a
+ * copy of it here: this repository has published wrong figures off exactly that
+ * kind of duplication before. */
+import { markupPlain } from "../site/constitutions.js";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
                ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
@@ -49,6 +56,26 @@ const DOC_TRANSLATED = fixtureDocs.find(doc => doc.translation)?.id;
 const DEFINED = "defined-behaviour";
 const UNDEFINED = "undefined-behaviour";
 
+/* Nothing is declared missing any more, and the reason is worth keeping.
+ *
+ * The reader used to ask for three gitignored files -- a run's links and the two
+ * kinds of paragraph beside them -- which no checkout carried, so their absence
+ * had to be declared here or every machine but the one that generated them
+ * failed. They are rows in the database now, asked for at /api/reader/links, and
+ * reader-routes.mjs answers that address itself with a 404 for a route it does
+ * not stage. It never reaches the file branch below, so the audit never sees it
+ * and has nothing to forgive. The reader renders without bubbles, exactly as it
+ * did when the files were missing; what the bubbles contain is held to the
+ * Python in app/lib/__tests__/links.test.mjs.
+ *
+ * If that ever changes -- if the fixture router stops answering it -- the audit
+ * should fail, which is why there is no allowance left here to hide it. */
+/* Every 404 this server emitted, audited at the end. Chrome logs each one into
+ * the console, and the collector below cannot tell which file it was: the
+ * message carries no URL. So the console line is dropped there and the real
+ * check lives here, where the path is known. */
+const missingPaths = [];
+
 // --- Serve the staged site ----------------------------------------------------
 const server = createServer(async (req, res) => {
   // Answered from the staged tree's own payloads, so the fixture index is
@@ -56,7 +83,18 @@ const server = createServer(async (req, res) => {
   // The dialog's own send: a fixture that always accepts, recording what it
   // was sent for the feedback dialog section below to read back.
   if (await serveFeedbackRoute(req, res)) return;
+  // The bubble's own send: a fixture that always accepts, recording what it was
+  // sent, picture included, for the page-feedback section below to read back.
+  if (await servePageFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
+  /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is
+   * also why site/index.html no longer exists: an array returned from rewrites()
+   * is applied after the filesystem, so a real file at / always won and the old
+   * redirect into the reader went on being served whatever the config said.
+   *
+   * Without this line the walker answers 404 for the one address every menu
+   * points at, which would be a check on the walker rather than on the page. */
+  if (path === "/") path = "/overview.html";
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
   // not the file it happens to be stored in.
@@ -65,7 +103,7 @@ const server = createServer(async (req, res) => {
     const body = await readFileAsync(join(SITE, path));
     res.writeHead(200, { "content-type": MIME[extname(path)] || "application/octet-stream" });
     res.end(body);
-  } catch { res.writeHead(404).end("not found"); }
+  } catch { missingPaths.push(path); res.writeHead(404).end("not found"); }
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/spec-reader/`;
@@ -73,7 +111,15 @@ const base = `http://127.0.0.1:${server.address().port}/spec-reader/`;
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage();
 let pageErrors = [];
-page.on("console", m => { if (m.type() === "error") pageErrors.push(m.text()); });
+page.on("console", m => {
+  // Chrome echoes every 404 here as one fixed sentence carrying no URL, so a
+  // file that is meant to be missing and one that has been lost read alike.
+  // The audit at the foot tells them apart; this would only report both.
+  if (m.type() === "error"
+      && m.text() !== "Failed to load resource: the server responded with a status of 404 (Not Found)") {
+    pageErrors.push(m.text());
+  }
+});
 page.on("pageerror", e => pageErrors.push(String(e)));
 
 let failures = 0;
@@ -912,12 +958,38 @@ await page.waitForTimeout(250);
 check((await cards()) > 0, "select-all-behaviours restores the view");
 await at("?behavior=${DEFINED}");
 {
+  /* The umber surface is no longer offered. Its switch, its palette and
+   * setPalette all remain -- the button carries `hidden` and ?palette=umber
+   * still reaches the surface -- but nothing on the page presses it, because the
+   * Overview page has no second palette and a control the menus disagreed about
+   * was worse than none.
+   *
+   * So this no longer clicks it: a click on a hidden control never resolves, and
+   * this walker hung on it for fifty-eight retries rather than failing. What is
+   * checked instead is that the switch is there and not offered, and that the
+   * surface it used to reach still works when asked for directly, which is how
+   * every other palette check in this file already drives it. */
+  const offered = await page.evaluate(() => {
+    const button = document.querySelector("#mode");
+    return { present: Boolean(button), hidden: button?.hidden ?? null };
+  });
+  check(offered.present && offered.hidden === true,
+    "the palette switch is kept and not offered", JSON.stringify(offered));
+
   const before = await page.evaluate(() => document.body.dataset.palette);
-  await page.click("#mode");
+  await page.evaluate(() => { document.body.dataset.palette = "umber"; });
   await page.waitForTimeout(150);
-  const after = await page.evaluate(() => document.body.dataset.palette);
-  check(before !== after && ["daylight", "umber"].includes(after),
-    "mode button toggles the palette", `${before} -> ${after}`);
+  const ground = await page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor);
+  await page.evaluate(name => { document.body.dataset.palette = name; }, before);
+  const daylight = await page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor);
+  // That the ground changes, not what it changes to: the body takes --chrome
+  // rather than --paper, and a colour written in here is a fourth place the
+  // palette would have to be kept true.
+  check(before === "daylight" && ground !== daylight,
+    "the umber surface still answers when it is asked for",
+    `${daylight} -> ${ground}`);
 }
 
 // =============================================================================
@@ -1909,6 +1981,1816 @@ console.log("== Reader: the note dialog ==");
 }
 
 // =============================================================================
+/* Every figure a board has painted, with the ratio between the ink it was given
+ * and the colour under it, measured in the page rather than computed from the
+ * data: what a reader has to read is what the browser resolved.
+ *
+ * The table's cells only. A chip wears the same paint, by the same line of
+ * board.js, and lives inside a popover that is shut while this runs.
+ *
+ * `share` is the figure over its own maximum, read off the cell's own two spans,
+ * which is what fixes a colour on the ramp: the ramp is the same three stops
+ * over every maximum the two boards use. */
+const inkOn = selector => page.evaluate(selector => {
+  const channel = value => {
+    const part = value / 255;
+    return part <= 0.04045 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = colour => {
+    const [r, g, b] = colour.match(/[\d.]+/g).slice(0, 3).map(Number);
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  };
+  const ratio = (a, b) => {
+    const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+  const DARK = "rgb(35, 40, 27)";
+  const LIGHT = "rgb(241, 239, 227)";
+  return [...document.querySelectorAll(`${selector} .cell-button`)]
+    .filter(node => !node.classList.contains("cell-na"))
+    .map(node => {
+      const style = getComputedStyle(node);
+      const ground = style.backgroundColor;
+      const figure = node.querySelector(".cell-figure")?.textContent ?? "";
+      // The corner mark where a board shows one, else the maximum the cell
+      // carries: the two boards on the front page show no corner mark.
+      const max = node.querySelector(".cell-max")?.textContent ?? `/${node.dataset.max ?? ""}`;
+      return {
+        what: `${node.dataset.lab ?? ""} ${node.dataset.row ?? ""}`.trim(),
+        figure,
+        max,
+        share: Number(figure) / Number(max.replace("/", "")),
+        ground,
+        ink: style.color,
+        better: ratio(DARK, ground) >= ratio(LIGHT, ground) ? DARK : LIGHT,
+        ratio: Math.round(ratio(style.color, ground) * 100) / 100,
+      };
+    });
+}, selector);
+
+/* The worst cell of a board and the ones that do not reach 4.5:1, which are the
+ * low-scoring end of the ramp and are named rather than counted. */
+const inkReport = cells => {
+  const worst = cells.reduce((low, one) => (one.ratio < low.ratio ? one : low), cells[0]);
+  const under = cells.filter(one => one.ratio < 4.5);
+  return JSON.stringify({
+    cells: cells.length,
+    worst: worst && `${worst.what} ${worst.figure}${worst.max} on ${worst.ground} in ${worst.ink}`
+      + ` at ${worst.ratio}:1`,
+    under: under.length,
+    underShares: [...new Set(under.map(one => Math.round(one.share * 100)))].sort((a, b) => a - b),
+  });
+};
+
+// =============================================================================
+/* The overview's second view, how each company governs its rules: one table with
+ * the companies across and two figures down, what is published and what it
+ * engages, each question opening into its checks, and a popover beside whatever
+ * was pressed. Its numbers and words are site/governance.json, and
+ * tests/test_governance_tab.py holds the two together; what only a browser can
+ * show is that the tabs, the address, the folds and the popover join them. */
+console.log("== Overview: the governance view ==");
+{
+  const root = new URL("/", base).href;
+  pageErrors = [];
+  await page.goto(`${root}?view=governance`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#gov-heatmap tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+  const seen = await page.evaluate(() => ({
+    governanceShown: !document.querySelector("#view-governance").hidden,
+    coverageHidden: document.querySelector("#view-coverage").hidden,
+    selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
+    companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
+    total: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
+      .map(b => b.textContent),
+    published: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="published"] .cell-figure')]
+      .map(b => b.textContent),
+    engages: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="engages"] .cell-figure')]
+      .map(b => b.textContent),
+    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button')]
+      .filter(b => !b.classList.contains("cell-na")).map(b => b.dataset.max))],
+    corners: document.querySelectorAll("#gov-heatmap .cell-max").length,
+    flagged: [...document.querySelectorAll("#gov-heatmap thead .company-button")]
+      .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
+    rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
+      .map(n => n.textContent),
+    findings: document.querySelectorAll("#gov-findings .finding").length,
+    findingsFolded: document.querySelectorAll("#gov-findings details").length,
+    columnNotes: [...document.querySelectorAll("#gov-columns .gov-notes li strong")]
+      .map(node => node.textContent.trim()),
+    appendices: [...document.querySelectorAll("#gov-sections section > details > summary")]
+      .map(node => node.textContent),
+  }));
+  check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
+    "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
+  check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Meta, Alibaba, "
+        + "xAI, Moonshot AI, Mistral AI, DeepSeek"
+      && seen.total.join(",") === "5.6,5.5,2.0,1.8,1.8,1.5,1.1,0.9,0.5"
+      && seen.published.join(",") === "6.1,5.9,2.0,0.5,2.3,1.1,0.9,1.8,0.5"
+      && seen.engages.join(",") === "5.0,5.0,1.9,3.1,1.3,1.9,1.3,0.0,0.6"
+      && seen.outOf.join() === "10" && seen.corners === 0
+      && seen.flagged.join(", ") === "Alibaba, Moonshot AI, Mistral AI, DeepSeek",
+    "the nine companies run across in rank order on the final score, the average of the two "
+      + "figures, every cell out of 10 with no mark in its corner, the open-weight ones marked",
+    `${seen.companies.join(", ")} / ${seen.total.join(",")} / ${seen.published.join(",")} / `
+      + `${seen.engages.join(",")}`);
+  /* The final score first, then the two figures it adds: what is published,
+   * through its four questions and the licence practice, then what it engages,
+   * through the three groups its practices fold into. */
+  check(seen.rows.join(", ") === "Final score, What is published, Published constitution, Change log, "
+        + "Guardrails, Hard constraints, Open licence, What it engages, Testing adherence, "
+        + "Change control, Training and use"
+      && seen.findings === 8 && seen.findingsFolded === 0,
+    "the rows run down from the final score and the two figures, the checks folded, the eight findings open under the "
+      + "table", JSON.stringify(seen.rows));
+  check(seen.columnNotes.join(" | ") === "Final score. | What is published. | What it engages. "
+        + "| Part of the minimum. | Polaris Collective working paper. | Kembery et al. working paper. "
+        + "| Not scored. | Open weights.",
+    "the numbered notes say what each figure means, where the rows come from and what the "
+      + "signs mean", 
+    JSON.stringify(seen.columnNotes));
+  /* The reference text is two appendices under the findings rather than four folds
+   * mixed in with them: how the scoring works, and what was read for each company. */
+  check(seen.appendices.join(" | ") === "Motivation | Detailed scoring | Limitations | "
+        + "What comes next | Sources reviewed",
+    "the detailed scoring, the limitations and the sources are three folded sections under the takeaways",
+    JSON.stringify(seen.appendices));
+
+  // The board paints every row over its own maximum. The first column's 6.1 of
+  // 10, Anthropic's since the corrections of 24 September 2026, is the mean of
+  // eleven shares rather than a whole number over a whole number, so it is the
+  // figure the arithmetic could have lost; its 5.0 of 10 sits on the
+  // ramp's exact middle. The top of the ramp was lightened on 23 September 2026,
+  // from [76, 140, 63] to [95, 160, 78], so every colour from half a maximum up
+  // moved with it; the figures themselves did not.
+  const colours = await page.evaluate(() => {
+    const cellOf = row => document.querySelector(`#gov-heatmap .cell-button[data-row="${row}"]`);
+    const paintOf = row => getComputedStyle(cellOf(row)).backgroundColor;
+    return {
+      published: paintOf("published"),
+      publishedInk: getComputedStyle(cellOf("published")).color,
+      engages: paintOf("engages"),
+      legend: [...document.querySelectorAll("#gov-legend .swatch")]
+        .map(swatch => getComputedStyle(swatch).backgroundColor),
+    };
+  });
+  check(colours.published === "rgb(189, 162, 48)" && colours.engages === "rgb(217, 162, 39)"
+      && colours.legend.join(" | ") === "rgb(180, 71, 47) | rgb(199, 117, 43) | rgb(217, 162, 39)"
+        + " | rgb(156, 161, 59) | rgb(95, 160, 78)"
+      && colours.publishedInk === "rgb(35, 40, 27)",
+    "the governance view wears the ramp's colours: 6.1 of 10, 5.0 of 10, its five swatches, and "
+      + "ink on that amber",
+    JSON.stringify(colours));
+  /* Every question opened, so the checks under them are painted and measured
+   * too, and not only the six rows a shut board shows. */
+  await page.locator("#gov-expand-all").click();
+  await page.waitForTimeout(100);
+  const govInk = await inkOn("#gov-heatmap");
+  check(govInk.length > 200 && govInk.every(one => one.ink === one.better),
+    "every figure of the governance view takes the ink with more contrast on its own colour",
+    inkReport(govInk));
+  /* What the ramp can and cannot promise. From about 28% of a row's maximum
+   * upwards every colour reaches 4.5:1 with the ink the rule picks. Below that
+   * the ramp passes through its own mid tones, where neither of the palette's
+   * two inks reaches 4.5, and the floor is the crossover itself at 3.62:1. The
+   * check pins that floor so that a change which lowers it fails here. */
+  check(govInk.every(one => one.ratio >= 3.6)
+      && govInk.filter(one => one.share >= 0.28).every(one => one.ratio >= 4.5),
+    "no figure of the governance view falls under the ramp's floor, and every figure from 28% of "
+      + "its maximum up reaches 4.5:1",
+    inkReport(govInk));
+  await page.locator("#gov-expand-all").click();
+  await page.waitForTimeout(100);
+
+  // A question opens into its checks. Hiding every row shut the two figures'
+  // own folds as well, so what is published is opened again first.
+  await page.locator('.row-toggle[data-question="column-published"]').click();
+  await page.waitForTimeout(100);
+  await page.locator('.row-toggle[data-question="2"]').click();
+  await page.waitForTimeout(100);
+  const opened = await page.evaluate(() => ({
+    checks: [...document.querySelectorAll('#gov-heatmap tr.check-row[data-parent="2"]:not([hidden]) .head-name')]
+      .map(n => n.textContent),
+    expanded: document.querySelector('.row-toggle[data-question="2"]').getAttribute("aria-expanded"),
+  }));
+  check(opened.checks.join(", ") === "Versions kept, Changes explained, Scope of the log"
+      && opened.expanded === "true",
+    "the change log opens into its three checks", JSON.stringify(opened));
+
+  // The best practices are rows of the two figures rather than a group of their
+  // own: the licence under what is published, the other eight under what it
+  // engages, folded into three groups there, and the one only an internal audit
+  // could score NA for everyone, inside the group on change control.
+  const practices = await page.evaluate(() => {
+    const openai = id => document.querySelector(`.cell-button[data-lab="openai"][data-row="${id}"]`);
+    const figures = ids => [...new Set(ids.flatMap(id =>
+      [...document.querySelectorAll(`.cell-button[data-row="${id}"] .cell-figure`)].map(n => n.textContent)))];
+    return {
+      rows: [...document.querySelectorAll("#gov-heatmap tr.practice-row")]
+        .map(row => row.dataset.practice).join(),
+      openai: ["S1", "S2", "S3", "S4", "S5"].map(id => openai(id)?.querySelector(".cell-figure")?.textContent),
+      outOf: openai("S1")?.dataset.max,
+      // Every question and every practice carries the number of the note that
+      // names its paper, 5 for ours and 6 for Kembery et al.'s.
+      credits: [...document.querySelectorAll("#gov-heatmap tbody .row-name")]
+        .filter(name => [...name.querySelectorAll(".row-mark")]
+          .some(mark => ["5", "6"].includes(mark.textContent))).length,
+      disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0.0", "5.0", "10.0"].includes(mark)),
+      marks: figures(["I5"]),
+      groups: [...document.querySelectorAll("#gov-heatmap tr.group-row .head-name")]
+        .map(node => node.textContent).join(),
+      grouped: ["testing", "changes", "inside"].map(id =>
+        [...document.querySelectorAll(`#gov-heatmap tr.check-row[data-parent="group-${id}"]`)]
+          .map(row => row.dataset.practice).join("+")).join(),
+      openaiGroups: ["testing", "changes", "inside"].map(id =>
+        document.querySelector(`.cell-button[data-lab="openai"][data-row="group-${id}"] .cell-figure`)
+          ?.textContent).join(),
+    };
+  });
+  check(practices.rows === "S1,S2,S3,S4,S5,I5,I1,I2,I3,I4"
+      && practices.openai.join() === "10.0,5.0,0.0,0.0,5.0" && practices.outOf === "10"
+      && practices.disclosed && practices.marks.join() === "NA"
+      && practices.groups === "Testing adherence,Change control,Training and use"
+      && practices.grouped === "S2+S3+S4,S5+I5,I1+I2+I3+I4"
+      && practices.openaiGroups === "1.7,5.0,7.5"
+      && practices.credits === 14,
+    "the practices sit in the two figures, each shown out of 10, those of the second folded "
+      + "into three groups that show their mean, the ninth NA, and every question and practice "
+      + "carries the note naming its paper",
+    JSON.stringify(practices));
+
+  // A check's score opens a popover beside it, with its place on the scale marked.
+  const cell = page.locator('.cell-button[data-lab="anthropic"][data-row="2.1"]');
+  await cell.click();
+  await page.waitForTimeout(150);
+  const popover = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    const cellBox = document.querySelector('.cell-button[data-lab="anthropic"][data-row="2.1"]')
+      .getBoundingClientRect();
+    const box = pop.getBoundingClientRect();
+    return {
+      open: pop.matches(":popover-open"),
+      title: pop.querySelector("h2")?.textContent,
+      here: [...pop.querySelectorAll(".anchors li.is-here .anchor-level")].map(n => n.textContent),
+      covers: !(box.right <= cellBox.left || box.left >= cellBox.right
+        || box.bottom <= cellBox.top || box.top >= cellBox.bottom),
+    };
+  });
+  check(popover.open && popover.title === "Anthropic: versions kept"
+      && popover.here.join() === "0,2" && !popover.covers,
+    "a score opens a popover beside it, and a score of 1 sits between 0 and 2",
+    JSON.stringify(popover));
+
+  // The heading the popover is labelled by carries the id the markup names, and
+  // that id belongs to one element in the whole page: a board reads it off its
+  // own popover rather than writing a constant, so a second board cannot claim
+  // the same one.
+  const labelled = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    const named = pop.getAttribute("aria-labelledby");
+    return { named, heading: pop.querySelector("h2")?.id,
+             everywhere: document.querySelectorAll(`[id="${named}"]`).length };
+  });
+  check(labelled.named === "gov-pop-title" && labelled.heading === labelled.named
+      && labelled.everywhere === 1,
+    "the popover is labelled by its own heading, and that id is used once in the page",
+    JSON.stringify(labelled));
+
+  // Pressing the same score again closes it rather than opening it once more.
+  await cell.click();
+  await page.waitForTimeout(150);
+  const closed = await page.evaluate(() => !document.querySelector("#gov-pop").matches(":popover-open"));
+  check(closed, "pressing the same score again closes the popover");
+
+  // A question's name says what it asks and how its points are shared out.
+  await page.locator('.question-row[data-question="3"] .row-name').click();
+  await page.waitForTimeout(150);
+  const about = await page.evaluate(() => {
+    const pop = document.querySelector("#gov-pop");
+    return {
+      title: pop.querySelector("h2")?.textContent,
+      shares: [...pop.querySelectorAll("h3")].map(n => n.textContent),
+      checks: pop.querySelectorAll("details:not(.paper-fold)").length,
+    };
+  });
+  check(about.title === "Guardrails" && about.shares.includes("How it is scored")
+      && about.checks === 2,
+    "a question's name opens what it asks and how it is scored", JSON.stringify(about));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+
+  // A check's name opens, folded, what the working paper says about it: our
+  // reading, then the paper's own words.
+  await page.locator('#gov-check-2-3 .row-name').click();
+  await page.waitForTimeout(150);
+  const paper = await page.evaluate(() => {
+    const fold = document.querySelector("#gov-pop .paper-fold");
+    return {
+      open: fold?.open,
+      summary: fold?.querySelector("summary")?.textContent,
+      quotes: fold?.querySelectorAll(".paper-quote").length,
+      first: fold?.querySelector(".paper-quote p")?.textContent.slice(0, 40),
+    };
+  });
+  check(paper.open === false && paper.summary === "What the working paper says" && paper.quotes === 3
+      && paper.first === "the log opens with a one-paragraph scope",
+    "a check's name opens the working paper's own words, folded", JSON.stringify(paper));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+
+  await page.locator("#tab-coverage").click();
+  await page.waitForTimeout(150);
+  const back = await page.evaluate(() => ({
+    coverageShown: !document.querySelector("#view-coverage").hidden,
+    governanceHidden: document.querySelector("#view-governance").hidden,
+    view: new URL(location.href).searchParams.get("view"),
+  }));
+  check(back.coverageShown && back.governanceHidden && back.view === null,
+    "the first tab returns to the grid and drops ?view= from the address", JSON.stringify(back));
+
+  // The tabs are one stop for the keyboard, and the arrows move between them.
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(150);
+  const keyed = await page.evaluate(() => ({
+    focused: document.activeElement?.id,
+    view: new URL(location.href).searchParams.get("view"),
+    governanceShown: !document.querySelector("#view-governance").hidden,
+  }));
+  check(keyed.focused === "tab-governance" && keyed.view === "governance" && keyed.governanceShown,
+    "the right arrow on the first tab selects the second and writes its address",
+    JSON.stringify(keyed));
+
+  check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
+}
+
+/* A PNG's dimensions, read out of its IHDR chunk: width and height are two
+ * big-endian 32-bit integers at bytes 16 and 20. No dependency for four bytes
+ * each. */
+function pngSize(buffer) {
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+/* Rust pixels in a decoded PNG: #A0522D, and no page of this site paints that
+ * colour anywhere, so finding it in the PNG is finding an annotation. Takes
+ * the PNG's own bytes, base64-encoded, and decodes them inside the page
+ * rather than in Node, since a PNG's pixels are compressed. */
+const rustIn = async png => page.evaluate(async encoded => {
+  const binary = atob(encoded);
+  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ink = canvas.getContext("2d");
+  ink.drawImage(bitmap, 0, 0);
+  const { data } = ink.getImageData(0, 0, bitmap.width, bitmap.height);
+  let rust = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (Math.abs(data[i] - 0xA0) < 12 && Math.abs(data[i + 1] - 0x52) < 12
+     && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
+  }
+  return rust;
+}, png.toString("base64"));
+
+// =============================================================================
+/* The board the front page leads with, which reads site/constitutions.json and
+ * no route at all. Every check below is driven from that file rather than from
+ * strings typed here: the writers fill it in, and a board that agreed with a
+ * copy of their words in this harness rather than with the file itself would
+ * pass while showing something else. */
+console.log("== Overview: the constitutions board ==");
+{
+  const root = new URL("/", base).href;
+  const file = JSON.parse(readFileSync(join(SITE, "constitutions.json"), "utf8"));
+  const depthTop = file.scale.depth[file.scale.depth.length - 1].level;
+  /* Each part of a document is shown out of 2, which is also the top of the
+   * scale beside it, so the five parts add up to 10. The page states these
+   * rather than reading them off the scale list. */
+  /* A criterion is given out of 4 and shown out of 10, like every figure on the
+   * board. The final score is not in the file: it is the average of the
+   * document as a whole and the behaviours, weighted as the file says. */
+  const criterionScale = 4;
+  const finalOf = company => {
+    const depths = Object.values(company.behaviours || {}).map(entry => entry.score);
+    const behaviours = depths.length ? depths.reduce((a, b) => a + b, 0) / depths.length : 0;
+    return (company.whole?.total ?? 0) * file.weights.whole + behaviours * file.weights.behaviours;
+  };
+  const shown = value => value.toFixed(1);
+  /* The file wraps its paragraphs, and the DOM is read back with the whitespace
+   * collapsed, so both sides are collapsed before they are compared. */
+  const flat = text => String(text).replace(/\s+/g, " ").trim();
+  /* A field of the file as the board draws it: one string per block, a list
+   * given as its items, and the marks gone. */
+  const written = (...fields) => fields.flatMap(field => markupPlain(field).map(flat));
+  const version = company => String(company.document.version).replace(/-00$/, "");
+  const lowerFirst = text =>
+    (/^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
+  const documentLine = company => (company.document
+    ? `${company.document.title}, ${version(company)}.` : "No published constitution.");
+  /* One column per company, its newest document, ordered by the final score.
+   * The file carries an earlier version of one document as an entry of its own,
+   * and two columns under one name would read as two companies. */
+  const groups = new Map();
+  file.companies.forEach(company => {
+    const key = company.document ? company.name : company.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(company);
+  });
+  const columns = [...groups.values()]
+    .map(group => [...group].sort((a, b) =>
+      String(b.document?.version || "").localeCompare(String(a.document?.version || "")))[0])
+    .sort((a, b) => finalOf(b) - finalOf(a));
+  const earlier = file.companies.filter(company => !columns.includes(company));
+  const categories = [...new Set(file.behaviours.map(behaviour => behaviour.category))];
+
+  pageErrors = [];
+  await page.goto(root, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+
+  const board = await page.evaluate(() => ({
+    corner: document.querySelector("#board thead .row-col .head-name")?.textContent,
+    heads: [...document.querySelectorAll("#board thead .company-button")].map(button => ({
+      id: button.dataset.lab,
+      rank: button.querySelector(".rank")?.textContent.trim(),
+      name: button.querySelector(".company-name")?.textContent,
+      flag: button.querySelector(".company-flag")?.textContent,
+      // The head's second flag, where the file gives the company one: a few
+      // words under the version.
+      note: [...button.querySelectorAll(".company-flag")].slice(1)
+        .map(node => node.textContent).join(" "),
+      label: button.getAttribute("aria-label"),
+      mark: button.querySelector(".company-mark")?.tagName.toLowerCase() ?? null,
+      markHidden: button.querySelector(".company-mark")?.getAttribute("aria-hidden"),
+    })),
+    names: [...document.querySelectorAll("#board tbody tr")]
+      .map(row => row.querySelector(".head-name")?.textContent),
+    subs: [...document.querySelectorAll("#board tbody tr")]
+      .map(row => row.querySelector(".head-sub")?.textContent ?? ""),
+    folded: [...document.querySelectorAll("#board tbody tr.check-row")].every(row => row.hidden),
+    figures: [...document.querySelectorAll("#board .cell-button")].map(button => ({
+      text: button.querySelector(".cell-figure")?.textContent,
+      na: button.classList.contains("cell-na"),
+    })),
+    scales: {
+      behaviour: [...document.querySelectorAll("#behaviour-scale li .anchor-level")]
+        .map(node => node.textContent),
+      names: [...document.querySelectorAll("#behaviour-scale li .anchor-name")]
+        .map(node => node.textContent),
+      criterion: [...document.querySelectorAll("#criterion-scale li .anchor-level")]
+        .map(node => node.textContent),
+    },
+    ties: document.querySelector("#ties")?.textContent ?? "",
+    asOf: document.querySelector("#as-of")?.textContent ?? "",
+    coverage: document.querySelector("#coverage-line a")?.getAttribute("href"),
+    governanceMarks: document.querySelectorAll("#gov-heatmap thead .company-mark").length,
+  }));
+
+  check(board.corner === "Score (out of 10)",
+    "the corner of the board reads Score (out of 10), as the governance board's does",
+    board.corner);
+  check(board.heads.map(head => head.id).join() === columns.map(one => one.id).join()
+      && board.heads.every((head, index) => head.name === columns[index].name),
+    "one column per company, in the order of the final score, and the earlier version of a "
+    + "document is not a column of its own",
+    JSON.stringify([board.heads.map(head => head.id), columns.map(one => one.id)]));
+  check(board.heads.every(head => {
+      const company = columns.find(one => one.id === head.id);
+      return head.flag === (company.document ? version(company) : "No published constitution")
+        && head.note === (company.note || "");
+    }),
+    "each column carries its document's version, or says the company publishes none, and the "
+    + "company the file gives a note carries it under the version",
+    JSON.stringify(board.heads.map(head => [head.id, head.flag, head.note])));
+  /* The marks. They are drawn, so they are hidden from assistive technology and
+   * the company's name is what is announced; a company the set carries no mark
+   * for keeps the box, so every name in the row starts on one line. */
+  // The rank is written as a place, "1st", so it cannot be read as a note number;
+  // the accessible name says the number.
+  check(board.heads.every(head => head.mark && head.markHidden === "true"
+        && /^\d+(st|nd|rd|th)$/.test(head.rank)
+        && head.label === `${head.name}, ranked ${parseInt(head.rank, 10)}`
+          + `${head.note ? `, ${lowerFirst(head.note)}` : ""}: its profile`)
+      && board.heads.filter(head => head.mark === "svg").length >= 7
+      && board.governanceMarks === 9,
+    "every column carries a mark above its name, hidden from assistive technology, on both "
+    + "boards", JSON.stringify(board.heads.map(head => [head.id, head.mark])));
+
+  const expectedRows = ["Final score", "The document as a whole",
+    ...file.criteria.map(criterion => criterion.name), "The behaviours",
+    ...categories.flatMap(category => [category,
+      ...file.behaviours.filter(behaviour => behaviour.category === category)
+        .map(behaviour => behaviour.name)])];
+  check(board.names.join(" | ") === expectedRows.join(" | ") && board.folded,
+    "the final score leads, the document as a whole follows with its criteria, then the "
+    + "categories with their behaviours, every group folded", JSON.stringify(board.names));
+  check(board.subs[0] === "" && board.subs[1] === "1/2 of the final score"
+      && board.subs[2] === `1/${file.criteria.length} of the document`,
+    "the final score carries no weight line, the document as a whole says it is half of it, "
+    + "and a criterion says its share of the document", JSON.stringify(board.subs.slice(0, 2)));
+  check(board.figures.length > 0 && board.figures.every(one => !one.na && one.text !== "NA"),
+    "no cell of the board reads NA",
+    JSON.stringify(board.figures.filter(one => one.na || one.text === "NA")));
+  check(board.scales.behaviour.join() === file.scale.depth.map(one => one.level).join()
+      && board.scales.behaviour.every(level => Number(level) % 2 === 0)
+      && board.scales.names.join() === file.scale.depth.map(one => one.name).join()
+      && board.scales.criterion.length === 0,
+    "the depth scale is written out under the table on its even levels, in the file's own "
+    + "words, and the parts of a document carry no scale of their own",
+    JSON.stringify(board.scales));
+  check(board.asOf === `As of ${file.as_of}` && !board.coverage,
+    "the board says what it is as of, and links to the coverage board nowhere",
+    JSON.stringify([board.asOf, board.coverage]));
+
+  /* A cell's popover, held to the file word for word. No sentence of a
+   * document is typed into this harness: the board must show what the file says
+   * and nothing besides, which is what an exact comparison of every block in
+   * the popover tests. The headings below are the page's own words rather than
+   * the file's, so they are named here and nowhere in the file. */
+  const asksHeading = "What the constitution asks";
+  const besideHeading = "How it stands beside the other constitutions";
+  const sameHeading = "What they ask alike";
+  const differsHeading = "Where they differ";
+  /* A fold is read apart from the blocks around it, so that what a reader has
+   * to open is never counted as something the popover shows straight away. */
+  const readPop = () => page.evaluate(() => {
+    const body = document.querySelector("#grid-pop .gov-pop-body");
+    /* A bullet list of the file's prose is read back item by item, so a field
+     * the file writes as a list is compared against the items it names rather
+     * than against them run together. */
+    const blocksOf = nodes => nodes
+      .flatMap(node => (node.matches("ul.gov-bullets") ? [...node.children] : [node]))
+      .map(node => node.textContent.replace(/\s+/g, " ").trim());
+    const fold = body.querySelector(":scope > details");
+    return {
+      open: document.querySelector("#grid-pop").matches(":popover-open"),
+      blocks: blocksOf([...body.children].filter(node => !node.matches("details"))),
+      fold: fold && {
+        shut: !fold.open,
+        summary: fold.querySelector("summary").textContent.replace(/\s+/g, " ").trim(),
+        blocks: blocksOf([...fold.children].filter(node => !node.matches("summary"))),
+      },
+      anchors: document.querySelectorAll("#grid-pop .anchors").length,
+    };
+  });
+  const pressCell = (name, id) => page.evaluate(([name, id]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    row.querySelector(`td .cell-button[data-lab="${id}"]`).click();
+  }, [name, id]);
+  const pressName = name => page.evaluate(name => {
+    [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelector(".row-name").click();
+  }, name);
+  const closePop = () => page.evaluate(() => document.querySelector("#grid-pop").hidePopover());
+  await page.evaluate(() => document.querySelector("#expand-all").click());
+
+  const withDocument = columns.find(company => company.document);
+  const behaviour = file.behaviours[0];
+  const entry = withDocument.behaviours[behaviour.slug];
+  await pressCell(behaviour.name, withDocument.id);
+  let popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      flat(`${withDocument.name}: ${lowerFirst(behaviour.name)}`), flat(documentLine(withDocument)),
+      flat(`${shown(entry.score)} out of ${depthTop}`),
+      asksHeading, ...written(entry.says, entry.why),
+    ].join(" | ") && popover.anchors === 0,
+    "a behaviour's cell opens on what the constitution asks, under a heading of its own, and "
+    + "why the figure is what it is, in the file's words and no others, with the scale left "
+    + "under the table", JSON.stringify(popover.blocks.slice(0, 4)));
+  /* The comparison is the second half, and it is shut: a reader who wants only
+   * what this document asks never has to read past it. */
+  check(popover.fold?.shut === true && popover.fold.summary === besideHeading
+      && popover.fold.blocks.join(" | ") === [
+        sameHeading, ...written(entry.same),
+        differsHeading, ...written(entry.differs),
+      ].join(" | "),
+    "the comparison with the other constitutions is folded shut under it, with what they ask "
+    + "alike and where they differ under headings of their own",
+    JSON.stringify(popover.fold));
+  await closePop();
+
+  const criterion = file.criteria[0];
+  const scored = withDocument.whole.criteria[criterion.id];
+  await pressCell(criterion.name, withDocument.id);
+  popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      flat(`${withDocument.name}: ${lowerFirst(criterion.name)}`), flat(documentLine(withDocument)),
+      flat(`${shown(scored.score / criterionScale * 10)} out of 10`),
+      `Scored ${scored.score} on its own scale of 0 to ${criterionScale}.`,
+      ...written(criterion.what_it_is, scored.what_the_document_does, scored.why),
+    ].join(" | "),
+    "a criterion's cell gives what the criterion asks, what the document does and why the "
+    + "figure is what it is", JSON.stringify(popover.blocks.slice(0, 3)));
+  await closePop();
+
+  await pressName(behaviour.name);
+  popover = await readPop();
+  check(popover.open && written(behaviour.is, behaviour.is_not)
+      .every(block => popover.blocks.includes(block)),
+    "a behaviour's name opens what it covers and what it does not, in the file's words",
+    JSON.stringify(popover.blocks));
+  await closePop();
+
+  /* A company that publishes no constitution. The file carries a figure for
+   * every cell of it and no prose, so what such a cell says is the company's
+   * own line, which leaves open that a document of this kind exists inside the
+   * company unpublished. */
+  const without = columns.find(company => !company.document);
+  await pressCell(behaviour.name, without.id);
+  popover = await readPop();
+  check(popover.open && popover.blocks.join(" | ") === [
+      flat(`${without.name}: ${lowerFirst(behaviour.name)}`), "No published constitution.",
+      flat(`${shown(without.behaviours[behaviour.slug].score)} out of ${depthTop}`),
+      ...written(without.profile),
+    ].join(" | ") && popover.fold === null,
+    "a company that publishes no constitution scores nought, says so in the file's words, and "
+    + "has nothing to compare", JSON.stringify(popover.blocks));
+  await closePop();
+
+  /* The earlier version of a document has no column, so its profile is reached
+   * from the column of the company that published it, and it is not ranked. */
+  if (earlier.length) {
+    const [older] = earlier;
+    const current = columns.find(company => company.name === older.name);
+    await page.evaluate(id => document.querySelector(
+      `#board thead .company-button[data-lab="${id}"]`).click(), current.id);
+    await page.evaluate(label => [...document.querySelectorAll("#grid-pop .gov-button")]
+      .find(button => button.textContent === label).click(),
+      `The version of ${version(older)}`);
+    popover = await readPop();
+    check(popover.open && popover.blocks[0] === flat(older.name)
+        && popover.blocks[1] === flat(documentLine(older))
+        && popover.blocks[2] === `${shown(finalOf(older))} out of 10`
+        && !popover.blocks.some(block => block.startsWith("Ranked")),
+      "an earlier version of a document is reached from its company's column, and is not ranked",
+      JSON.stringify(popover.blocks.slice(0, 3)));
+    await closePop();
+  }
+
+  /* The cross stays in view while the body scrolls under it. A popover long
+   * enough to scroll is what this board is full of, and before the frame and
+   * the body were separated the only control on it scrolled away. */
+  await page.waitForTimeout(350);
+  const crossHeld = await page.evaluate(() => {
+    const pop = document.querySelector("#grid-pop");
+    document.querySelector('#board thead .company-button').click();
+    pop.style.maxHeight = "180px";
+    const body = pop.querySelector(".gov-pop-body");
+    body.scrollTop = 9999;
+    const cross = pop.querySelector(".gov-pop-close").getBoundingClientRect();
+    const box = pop.getBoundingClientRect();
+    const held = { open: pop.matches(":popover-open"), scrolled: body.scrollTop > 0,
+      inside: cross.top >= box.top && cross.bottom <= box.bottom };
+    pop.style.maxHeight = "";
+    pop.hidePopover();
+    return held;
+  });
+  check(crossHeld.open && crossHeld.scrolled && crossHeld.inside,
+    "the popover's cross stays in view while its body scrolls", JSON.stringify(crossHeld));
+
+  check(pageErrors.length === 0, "the constitutions board: no console errors",
+    pageErrors.join("; "));
+}
+
+// =============================================================================
+console.log("== Coverage: the board, on the scale of four and on the scale of ten ==");
+/* The board reads its scale and its assessment from the publication. The
+ * current fixture is out of four and carries no assessment, so the board is its
+ * categories and nothing else; the publication of ten, answered to a pin,
+ * carries the final score, the document as a whole and its contradictions.
+ *
+ * It led the front page until 23 September 2026 and is at /coverage now, which
+ * is the one thing that changed here: the page is the same page, so every check
+ * below is the check it was. */
+{
+  const root = new URL("/coverage", base).href;
+  const S1 = "corpus@2026-01-01 > #sentences > ¶1";
+  const S2 = "corpus@2026-01-01 > #sentences > ¶2";
+  const B2 = "corpus@2026-01-01 > #blocks > ¶2";
+  const openBoard = async query => {
+    pageErrors = [];
+    await page.goto(`${root}${query}`, { waitUntil: "networkidle" });
+    await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+      undefined, { timeout: 10000 }).catch(() => {});
+  };
+  const readBoard = () => page.evaluate(() => {
+    const rows = [...document.querySelectorAll("#board tbody tr")];
+    const rowOf = name => rows.find(tr => tr.querySelector(".head-name")?.textContent === name);
+    const read = button => (button ? {
+      text: button.querySelector(".cell-figure")?.textContent ?? "",
+      max: button.querySelector(".cell-max")?.textContent ?? "",
+      label: button.getAttribute("aria-label"),
+      background: getComputedStyle(button).backgroundColor,
+    } : null);
+    const cell = (name, column) =>
+      read(rowOf(name)?.querySelectorAll("td")[column]?.querySelector(".cell-button"));
+    return {
+      heads: [...document.querySelectorAll("#board thead .company-button")].map(button => ({
+        rank: button.querySelector(".rank")?.textContent.trim(),
+        lab: button.querySelector(".company-name")?.textContent,
+      })),
+      caption: document.querySelector("#board caption")?.textContent ?? "",
+      names: rows.map(tr => tr.querySelector(".head-name")?.textContent),
+      subs: rows.map(tr => tr.querySelector(".head-sub")?.textContent ?? ""),
+      folded: rows.filter(tr => tr.classList.contains("check-row")).every(tr => tr.hidden),
+      cell,
+      levels: [...document.querySelectorAll("#depth-key > li .anchor-level")].map(n => n.textContent),
+      anchors: [...document.querySelectorAll("#depth-key > li .anchor-name")].map(n => n.textContent),
+      conditions: [...document.querySelectorAll("#depth-key .depth-key-conditions li")]
+        .map(n => n.textContent),
+      keyTitle: document.querySelector("#depth-key-title")?.textContent,
+      odd: document.querySelector("#depth-key-odd")?.textContent ?? "",
+      ties: document.querySelector("#ties")?.textContent ?? "",
+      method: document.querySelector("#method-body")?.textContent ?? "",
+      methodOpen: document.querySelector("#method")?.open,
+    };
+  });
+  const cellOf = async (name, column) => page.evaluate(([name, column]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    const button = row.querySelectorAll("td")[column].querySelector(".cell-button");
+    return { text: button.querySelector(".cell-figure")?.textContent ?? "",
+             max: button.querySelector(".cell-max")?.textContent ?? "",
+             label: button.getAttribute("aria-label"),
+             background: getComputedStyle(button).backgroundColor,
+             ink: getComputedStyle(button).color,
+             cornerInk: getComputedStyle(button.querySelector(".cell-max")).color };
+  }, [name, column]);
+  const press = (name, column) => page.evaluate(([name, column]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    (column === null ? row.querySelector(".row-name")
+      : row.querySelectorAll("td")[column].querySelector(".cell-button")).click();
+  }, [name, column]);
+  const fold = name => page.evaluate(name => {
+    [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelector(".row-toggle").click();
+  }, name);
+  const readPop = () => page.evaluate(() => ({
+    open: document.querySelector("#grid-pop").matches(":popover-open"),
+    title: document.querySelector("#grid-pop h2")?.textContent,
+    subtitle: document.querySelector("#grid-pop .subtitle")?.textContent,
+    body: document.querySelector("#grid-pop").textContent.replace(/\s+/g, " ").trim(),
+    headings: [...document.querySelectorAll("#grid-pop h3")].map(h => h.textContent),
+    here: [...document.querySelectorAll("#grid-pop .anchors li.is-here .anchor-name")]
+      .map(n => n.textContent),
+    judges: [...document.querySelectorAll("#grid-pop .judges .who")]
+      .map(n => n.textContent.replace(/\s+/g, " ").trim()),
+    buttons: [...document.querySelectorAll("#grid-pop .gov-button")].map(b => b.textContent),
+    links: [...document.querySelectorAll("#grid-pop a")].map(a => a.getAttribute("href")),
+  }));
+  /* A cell by the column it belongs to rather than by its place in the row: the
+   * board orders its columns by rank, so an index would move the day a fixture
+   * scored differently. */
+  const pressCell = (name, lab) => page.evaluate(([name, lab]) => {
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    row.querySelector(`td .cell-button[data-lab="${lab}"]`).click();
+  }, [name, lab]);
+  const readSheet = () => page.evaluate(() => ({
+    open: document.querySelector("#sheet").open,
+    title: document.querySelector("#sheet-title").textContent,
+    body: document.querySelector("#sheet-body").textContent.replace(/\s+/g, " ").trim(),
+    statuses: [...document.querySelectorAll("#sheet-body .claim-status")]
+      .map(n => n.textContent.trim()),
+    links: [...document.querySelectorAll("#sheet-body .passage-cite a")]
+      .map(a => a.getAttribute("href")),
+    readings: [...document.querySelectorAll("#sheet-body .readings tbody tr")]
+      .map(tr => [...tr.querySelectorAll("td")].map(td => td.textContent.trim()).join("|")),
+  }));
+  const closeSheet = () => page.evaluate(() => document.querySelector("#sheet").close());
+  const closePop = () => page.evaluate(() => document.querySelector("#grid-pop").hidePopover());
+
+  // ---- the publication of four
+  await openBoard("");
+  /* The page's own words. The title named the grid of depths the board grew out
+   * of; it names both halves of the score now, and under the lede the two are
+   * given a paragraph each before the reader meets a figure. The asterisk stays
+   * on "should", which is the word /about#why answers. */
+  const headline = await page.evaluate(() => ({
+    title: document.querySelector("#coverage-board h1").textContent,
+    lede: document.querySelector("#coverage-board .lede").textContent.replace(/\s+/g, " ").trim(),
+    parts: [...document.querySelectorAll("#coverage-board .board-parts p strong")]
+      .map(node => node.textContent.trim()),
+    asterisk: document.querySelector("#coverage-board .lede .asterisk")?.getAttribute("href"),
+  }));
+  check(headline.title === "Each constitution scored, with the passages behind every figure"
+      && headline.lede.includes("scores each one twice, out of 10 each")
+      && headline.parts.join(" | ") === "The document as a whole. | The behaviours."
+      && headline.asterisk === "/about#why",
+    "the coverage board's title says what it carries that the front board does not, and the "
+    + "lede says what its two halves are", JSON.stringify(headline));
+  const four = await readBoard();
+  check(!four.names.includes("Final score") && !four.names.includes("The document as a whole"),
+    "a publication of four has no final score and no document as a whole",
+    JSON.stringify(four.names));
+  check(four.names[0] === "Behaviours under test" && four.subs[0] === "out of 4, 2 behaviours"
+      && four.folded,
+    "its categories are the board's groups, folded", JSON.stringify([four.names, four.subs]));
+  check(four.caption === "Each company's behaviours by category, with each group's rows "
+      + "available to open",
+    "the caption promises the rows a publication of four has, and no others", four.caption);
+  check(four.keyTitle === "How far a constitution goes on one behaviour, out of 4"
+      && four.levels.join() === "0,1,2,3,4" && four.conditions.length === 0 && four.odd === "",
+    "the scale under the table is the scale of four, with no conditions and no line on odd figures",
+    JSON.stringify([four.keyTitle, four.levels, four.odd]));
+  check((await cellOf("Behaviours under test", 0)).label
+      === "Acme, behaviours under test: 3.4 out of 4"
+      && (await cellOf("Behaviours under test", 0)).background === "rgb(132, 161, 66)",
+    "a category's figure is the plain mean of its behaviours, painted over 4",
+    JSON.stringify(await cellOf("Behaviours under test", 0)));
+  await fold("Behaviours under test");
+  check((await cellOf("Defined behaviour", 0)).background === "rgb(174, 161, 53)"
+      && (await cellOf("Defined behaviour", 0)).label
+        === "Acme, defined behaviour: 2.7 out of 4, prescribed",
+    "a behaviour out of four is painted over 4, and its accessible name carries the rubric's "
+    + "word", JSON.stringify(await cellOf("Defined behaviour", 0)));
+  check(pageErrors.length === 0, "the board out of four: no console errors", pageErrors.join("; "));
+
+  // ---- the publication of ten
+  await openBoard(`?publication=${TEN_PUBLICATION}`);
+  const ten = await readBoard();
+  check(ten.names.slice(0, 2).join(" | ") === "Final score | The document as a whole"
+      && ten.subs.slice(0, 2).join(" | ") === "out of 20 | out of 10, five criteria"
+      && ten.folded,
+    "the final score leads, the document as a whole follows, and every group starts folded",
+    JSON.stringify([ten.names, ten.subs, ten.folded]));
+  check(ten.caption === "Each company's final score, its document as a whole and its behaviours "
+      + "by category, with each group's rows available to open",
+    "the caption names the two rows a publication of ten adds", ten.caption);
+  /* Two documents are assessed and they are level, so the ranking is walked
+   * rather than asserted against a board with one figure on it: both carry
+   * rank 1, and the document that has depths but no assessment carries none. */
+  check(ten.heads.slice(0, 3).map(one => `${one.rank || "-"} ${one.lab}`).join(" | ")
+      === "1 Acme | 1 Zenith | - Acme",
+    "the rank sits above the lab's name, labs level on the final score share it, and a document "
+    + "with no final score carries none", JSON.stringify(ten.heads.slice(0, 3)));
+  const final = await cellOf("Final score", 0);
+  check(final.text === "11.8" && final.max === "/20"
+      && final.label === "Acme, final score: 11.8 out of 20"
+      && final.background === "rgb(195, 162, 46)",
+    "the final score is the behaviours plus the document as a whole, marked out of 20",
+    JSON.stringify(final));
+  /* The corner mark takes the figure's ink and stands back by its opacity. It is
+   * decorative and aria-hidden, and it was paper on every cell until the figure
+   * stopped being paper, which would have left it invisible on this amber. */
+  check(final.ink === "rgb(35, 40, 27)" && final.cornerInk === "rgb(35, 40, 27)",
+    "the /20 in the corner follows the figure's ink", JSON.stringify(final));
+  const whole = await cellOf("The document as a whole", 0);
+  check(whole.text === "6.0" && whole.max === "/10" && whole.background === "rgb(193, 162, 47)",
+    "the document as a whole is its five criteria, out of 10", JSON.stringify(whole));
+  const na = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll("#board tbody tr")];
+    const cells = name => [...rows.find(tr => tr.querySelector(".head-name")?.textContent === name)
+      .querySelectorAll("td .cell-button")].map(b => ({ text: b.textContent,
+        na: b.classList.contains("cell-na"), label: b.getAttribute("aria-label") }));
+    return { final: cells("Final score"), whole: cells("The document as a whole") };
+  });
+  check(na.final.filter(one => one.na).length === 7 && na.whole.filter(one => one.na).length === 7
+      && na.final.every(one => one.na === (one.text === "NA"))
+      && na.final.some(one => one.label === "Acme, final score: not assessed")
+      && na.final.some(one => one.label === "Meta, final score: not assessed"),
+    "a document with no assessment and a lab with no constitution read NA on both rows",
+    JSON.stringify(na.final.map(one => [one.text, one.label])));
+
+  /* The two absences behind one NA. The board cannot show the difference in a
+   * cell, so pressing one has to say which it is: a lab whose constitution the
+   * index does not hold, and a document it does hold that this publication
+   * leaves unassessed. Telling a reader the second is the first would deny a
+   * document they can open from the same page. */
+  await pressCell("Final score", "acme--second@2026-02-01");
+  const carried = await readPop();
+  check(carried.open && carried.title === "Acme: final score"
+      && carried.subtitle === "Second document, 2026-02-01."
+      && carried.body.includes("The index carries this document, and this publication does not "
+        + "assess it as a whole.")
+      && !carried.body.includes("no published constitution")
+      && !carried.links.some(href => href.includes("propose")),
+    "a document the index carries, left unassessed, says so and asks for nothing",
+    JSON.stringify([carried.title, carried.subtitle, carried.links]));
+  await closePop();
+  await pressCell("Final score", "Meta");
+  const nothing = await readPop();
+  check(nothing.open && nothing.title === "Meta: final score"
+      && nothing.body.includes("There is no published constitution from Meta to assess.")
+      && nothing.links.some(href => href.includes("propose")),
+    "a lab the index holds no constitution for keeps its words and its invitation",
+    JSON.stringify([nothing.title, nothing.links]));
+  await closePop();
+
+  /* A document the index carries that this publication was not built from. Its
+   * whole column is blank, so its head is the only place that can say why. */
+  await page.evaluate(() => document.querySelector(
+    '#board thead .company-button[data-lab="acme--translated@2026-03-01"]').click());
+  const unbuilt = await readPop();
+  check(unbuilt.open && unbuilt.title === "Acme"
+      && unbuilt.subtitle === "Translated document, 2026-03-01."
+      && unbuilt.body.includes("This publication carries no figures for this document")
+      && unbuilt.links.some(href => href.includes("/spec-reader/")),
+    "a column the payload knows nothing about says so from its head",
+    JSON.stringify([unbuilt.title, unbuilt.subtitle]));
+  await closePop();
+  check(ten.keyTitle === "How far a constitution goes on one behaviour, out of 10"
+      && ten.levels.join() === "0,2,4,6,8,10"
+      && ten.anchors.join() === "absent,named,discussed,prescribed,demonstrated,bounded"
+      && ten.conditions.length === 3
+      && ten.conditions[0].startsWith("The edge is shown:")
+      && ten.odd === "An odd figure means the level below is fully met and part of the next.",
+    "the scale of ten sits under the table, with the three conditions under 10 and the odd line",
+    JSON.stringify([ten.levels, ten.conditions, ten.odd]));
+
+  await fold("Behaviours under test");
+  const behaviour = await cellOf("Defined behaviour", 0);
+  check(behaviour.text === "7.3" && behaviour.max === "/10"
+      && behaviour.label
+        === "Acme, defined behaviour: 7.3 out of 10, prescribed and partly demonstrated"
+      && behaviour.background === "rgb(161, 161, 57)",
+    "a behaviour out of ten is painted over ten, and its accessible name carries the rubric's word",
+    JSON.stringify(behaviour));
+  /* The same two rules the governance view is held to, on the board that carries
+   * the higher figures: a depth of 7.3 out of 10 sits on the amber-to-green leg,
+   * which is where paper used to be written over ink's colour. */
+  const boardInk = await inkOn("#board");
+  check(boardInk.length > 20 && boardInk.every(one => one.ink === one.better),
+    "every figure of the board takes the ink with more contrast on its own colour",
+    inkReport(boardInk));
+  check(boardInk.every(one => one.ratio >= 3.6)
+      && boardInk.filter(one => one.share >= 0.28).every(one => one.ratio >= 4.5),
+    "no figure of the board falls under the ramp's floor, and every figure from 28% of its "
+      + "maximum up reaches 4.5:1",
+    inkReport(boardInk));
+  await press("Defined behaviour", 0);
+  let popover = await readPop();
+  check(popover.open && popover.body.includes("7.3 out of 10, prescribed and partly demonstrated")
+      && popover.body.includes("Part of what the next level asks for is there as well.")
+      && popover.here.join() === "prescribed,demonstrated"
+      && popover.judges.length === 3
+      && popover.headings.includes("The scale in the judges' own words"),
+    "a figure opens on its words, its plain reading, its place on the scale and the fold",
+    JSON.stringify([popover.headings, popover.here]));
+  await closePop();
+
+  /* A behaviour a document carries no depth for, in a document that carries
+   * depths elsewhere: a dash, and not a nought and not an NA. */
+  const dashes = await page.evaluate(() => {
+    const labs = [...document.querySelectorAll("#board thead .company-button")]
+      .map(button => button.dataset.lab);
+    const row = [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === "Undefined behaviour");
+    const cells = [...row.querySelectorAll("td")];
+    const at = lab => cells[labs.indexOf(lab)]?.textContent ?? null;
+    return { second: at("acme--second@2026-02-01"), corpus: at("acme--corpus@2026-01-01"),
+             translated: at("acme--translated@2026-03-01") };
+  });
+  check(dashes.second === "–" && dashes.corpus.startsWith("10.0")
+      && dashes.translated === "",
+    "a cell with no depth in a document that has others is a dash, and a document the payload "
+    + "knows nothing about is left blank", JSON.stringify(dashes));
+
+  await fold("The document as a whole");
+  const criterion = await cellOf("Unresolved contradictions", 0);
+  check(criterion.text === "1.0" && criterion.max === "/2",
+    "each criterion is shown out of 2", JSON.stringify(criterion));
+  await press("Unresolved contradictions", 0);
+  popover = await readPop();
+  check(popover.body.includes("1 confirmed of 2 listed")
+      && popover.body.includes("No person has reviewed the list.")
+      && popover.buttons.includes("Read the contradictions"),
+    "the contradictions say how many were confirmed, that nobody reviewed them, and open the list",
+    JSON.stringify([popover.body.slice(0, 200), popover.buttons]));
+  /* The rule and the anchors under it are on different scales, and the popover
+   * has to say which is which: the rule's figures are the anchors' own, and the
+   * halved figure is named as the one in the cell. */
+  check(popover.body.includes("4 when none is confirmed")
+      && popover.body.includes("the figure on the board is 2, 1 or 0")
+      && popover.headings.includes("What the score means, before halving, 0 to 4"),
+    "the contradictions say which figure is halved and which scale the anchors are on",
+    JSON.stringify(popover.headings));
+  await page.evaluate(() => [...document.querySelectorAll("#grid-pop .gov-button")]
+    .find(button => button.textContent === "Read the contradictions").click());
+  const sheet = await readSheet();
+  check(sheet.open && sheet.title === "Acme: Unresolved contradictions"
+      && sheet.statuses.join(" | ") === "Confirmed | Not confirmed",
+    "the list opens in the sheet, confirmed first", JSON.stringify([sheet.title, sheet.statuses]));
+  check(sheet.body.includes("Each judge lists the contradictions it finds")
+      && sheet.body.includes("reads every claim, its own included")
+      && !sheet.body.includes("put to the others"),
+    "the sheet says how a contradiction was settled, by the second method",
+    sheet.body.slice(0, 300));
+  const links = sheet.links.map(href => new URL(href, root));
+  check(links.length === 4
+      && links.every(url => url.pathname === "/spec-reader/"
+        && url.searchParams.get("publication") === TEN_PUBLICATION)
+      && links.map(url => url.searchParams.get("passage")).join(" | ")
+        === [S2, B2, S1, S2].join(" | "),
+    "each claim quotes both its passages, each a link into the reader on that passage",
+    JSON.stringify(sheet.links));
+  check(sheet.readings.length === 6
+      && sheet.readings.some(row => row.startsWith("b answered by d|"))
+      && sheet.readings.filter(row => row.includes("|Yes|")).length >= 2,
+    "every seat's reading is there, and a substitute is named in its seat",
+    JSON.stringify(sheet.readings));
+  /* The page pins every table head to the top of the window, which is what the
+   * board wants and what a five-column table inside a scrolling sheet does not:
+   * pinned, the head left its own table and sat over the page. */
+  const sheetHead = await page.evaluate(() =>
+    getComputedStyle(document.querySelector("#sheet-body .readings th")).position);
+  check(sheetHead === "static", "a small table inside the sheet keeps its head in place",
+    sheetHead);
+  await closeSheet();
+
+  check(ten.method.includes("The score at the top, out of 20")
+      && ten.method.includes("The plain mean of the constitution's figures")
+      && ten.method.includes("reads every claim, its own included")
+      && !ten.method.includes("put to the others")
+      /* On word boundaries: without them "sol" matched inside "absolute" and
+       * "unresolved", so the check fired on the page's own vocabulary and was
+       * answered by rewriting the page rather than the seat names. */
+      && !/\b(sol|fable|deepseek|kimi)\b/.test(ten.method)
+      && ten.method.includes("Unresolved contradictions.")
+      && ten.method.includes("a rule the constitution says can never be overridden")
+      && ten.methodOpen === false,
+    "how the scores are made is folded, says the second method in the board's own words, and "
+    + "names the payload's own seats", ten.method.slice(0, 300));
+  check(ten.ties === "Acme and Zenith tie on 11.8, so they share first place.",
+    "the ties line names the labs level on the final score and the place they share", ten.ties);
+  check(pageErrors.length === 0, "the board out of ten: no console errors", pageErrors.join("; "));
+
+  pageErrors = [];
+  await page.goto(links[0].href, { waitUntil: "networkidle" });
+  await page.waitForFunction(ready, undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(700);
+  const opened = await page.evaluate(() => {
+    const status = document.querySelector("#reader-status");
+    return {
+      document: document.querySelector(".document-panel")?.dataset.documentId ?? null,
+      current: document.querySelector(".document-panel [data-passage-id].current")
+        ?.dataset.locators?.split("\n") ?? [],
+      status: status.classList.contains("visible") ? status.textContent : "",
+    };
+  });
+  check(opened.document === DOC_ID && opened.current.includes(S2) && opened.status === ""
+      && pageErrors.length === 0,
+    "a contradiction's passage opens the reader on that passage, in the same publication",
+    `${JSON.stringify(opened)} ${pageErrors.join("; ")}`);
+}
+
+/* The bubble at the bottom right of every public page. What a walker can show
+ * that no unit test can is that the pill is there on a page that is not the
+ * reader, that the dialog refuses to send without both fields, and that what
+ * arrives at the route is what was typed. */
+console.log("== Every page: the feedback bubble ==");
+{
+  const root = new URL("/", base).href;
+  pageErrors = [];
+  await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
+  /* The paragraph-note dialog ran earlier in this walker and left its address
+   * in localStorage under the key the bubble deliberately shares, so that
+   * typing an address into one dialog saves typing it into the other. That is
+   * a feature, and it is asserted here before it is cleared, because every
+   * check below is about a dialog nobody has typed an address into yet. */
+  const carried = await page.evaluate(() => {
+    const field = document.querySelector("#pf-email");
+    const was = field?.value;
+    try {
+      localStorage.removeItem("aci-feedback-email");
+    } catch {
+      // A private window. Nothing was remembered, so nothing needs clearing.
+    }
+    return was;
+  });
+  check(Boolean(carried) && carried.includes("@"),
+    "an address the paragraph dialog remembered prefills the bubble", carried);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
+  const resting = await page.evaluate(() => {
+    const pill = document.querySelector("#pf-pill");
+    const box = pill?.getBoundingClientRect();
+    return {
+      there: Boolean(pill),
+      label: pill?.textContent,
+      // Near the corner rather than exactly 16px from it: a classic scrollbar
+      // takes its own width out of innerWidth and the pill is positioned
+      // against the viewport, which excludes it.
+      corner: box ? (window.innerWidth - box.right) < 40
+                 && (window.innerHeight - box.bottom) < 40 : false,
+      closed: !document.querySelector("#pf-note").open,
+    };
+  });
+  check(resting.there && resting.label === "Feedback" && resting.corner && resting.closed,
+    "the pill rests in the bottom right corner of the overview, dialog closed",
+    JSON.stringify(resting));
+
+  await page.locator("#pf-pill").click();
+  await page.waitForTimeout(150);
+  let seen = await page.evaluate(() => ({
+    open: document.querySelector("#pf-note").open,
+    sendDisabled: document.querySelector("#pf-send").disabled,
+    focused: document.activeElement?.id,
+  }));
+  check(seen.open && seen.sendDisabled && seen.focused === "pf-comment",
+    "the dialog opens focused on the comment, with send refused while it is empty",
+    JSON.stringify(seen));
+
+  const named = await page.evaluate(() => {
+    const note = document.querySelector("#pf-note");
+    const by = note?.getAttribute("aria-labelledby");
+    return { by, names: by ? document.getElementById(by)?.textContent : null };
+  });
+  check(named.by === "pf-title" && named.names === "Tell us what you see",
+    "the dialog carries an accessible name, as every other dialog here does",
+    JSON.stringify(named));
+
+  await page.locator("#pf-comment").fill("The governance table runs off the right.");
+  await page.waitForTimeout(80);
+  seen = await page.evaluate(() => ({
+    sendDisabled: document.querySelector("#pf-send").disabled,
+  }));
+  check(seen.sendDisabled, "words with no address still cannot be sent",
+    JSON.stringify(seen));
+
+  await page.locator("#pf-email").fill("reader@example.org");
+  await page.waitForTimeout(80);
+  seen = await page.evaluate(() => ({
+    sendDisabled: document.querySelector("#pf-send").disabled,
+  }));
+  check(!seen.sendDisabled, "an address enables the send button", JSON.stringify(seen));
+
+  // The checks above left the dialog open, and a native modal dialog's
+  // backdrop makes everything behind it unclickable. Close it before asking
+  // for a second opening.
+  await page.evaluate(() => document.querySelector("#pf-note").close());
+  await page.waitForTimeout(100);
+
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  const framed = await page.evaluate(() => ({
+    shown: Boolean(document.querySelector("#pf-shot img")),
+    wide: document.querySelector("#pf-shot img")?.naturalWidth,
+    tall: document.querySelector("#pf-shot img")?.naturalHeight,
+    // What the capture is cropped to, so the assertion below compares the PNG
+    // with what the page says its own client area is rather than with a number
+    // a scrollbar can move.
+    clientWide: document.documentElement.clientWidth,
+    clientTall: document.documentElement.clientHeight,
+    dropOffered: !document.querySelector("#pf-drop").hidden,
+  }));
+  check(framed.shown && framed.dropOffered,
+    "the capture appears in the dialog and the drop button is offered",
+    JSON.stringify(framed));
+
+  const drawn = await page.evaluate(async () => {
+    const canvas = document.querySelector("#pf-marks");
+    if (!canvas) return { there: false };
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 40, 40);
+    send("pointermove", 200, 160);
+    send("pointerup", 200, 160);
+    const ink = canvas.getContext("2d");
+    const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return { there: true, painted };
+  });
+  check(drawn.there && drawn.painted > 100,
+    "a drag on the overlay paints a box onto it", JSON.stringify(drawn));
+
+  /* A second mark, so undo can be told from clear. With one mark on the
+   * overlay, an undo that wrongly emptied the whole list would look exactly
+   * like an undo that popped the last one. */
+  const twoMarks = await page.evaluate(() => {
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 3, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 320, 40);
+    send("pointermove", 460, 150);
+    send("pointerup", 460, 150);
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(twoMarks > drawn.painted, "a second drag adds a mark rather than replacing the first",
+    JSON.stringify({ one: drawn.painted, two: twoMarks }));
+
+  const afterUndo = await page.evaluate(() => {
+    document.querySelector("#pf-undo").click();
+    const canvas = document.querySelector("#pf-marks");
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(afterUndo > 0 && afterUndo < twoMarks,
+    "undo removes one mark and leaves the other",
+    JSON.stringify({ two: twoMarks, afterUndo }));
+
+  const afterClear = await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    const canvas = document.querySelector("#pf-marks");
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return painted;
+  });
+  check(afterClear === 0, "clear removes what undo left", String(afterClear));
+
+  const typed = await page.evaluate(() => {
+    document.querySelector("#pf-tool-text").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent("pointerdown", {
+      pointerId: 5, bubbles: true, clientX: box.left + 80, clientY: box.top + 220,
+    }));
+    const field = document.querySelector(".pf-typing");
+    if (!field) return { field: false };
+    field.value = "This heading says the wrong date";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    const { data } = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    return { field: true, gone: !document.querySelector(".pf-typing"), painted };
+  });
+  check(typed.field && typed.gone && typed.painted > 100,
+    "the text tool takes words and paints them onto the overlay",
+    JSON.stringify(typed));
+
+  /* The check above only proves something was painted, not that it was the
+   * words typed: a fixed placeholder in place of shape.text would paint just
+   * as many pixels for a long sentence. Typing a single character in the
+   * same place with the same tool and colour, and comparing the two rust
+   * counts, tells them apart. The text tool is already selected from the
+   * check above; the block reselects it anyway, so it does not depend on
+   * that. */
+  const byLength = await page.evaluate(() => {
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const ink = canvas.getContext("2d");
+    const rustOn = () => {
+      const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+      let rust = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0 && Math.abs(data[i] - 0xA0) < 12
+         && Math.abs(data[i + 1] - 0x52) < 12 && Math.abs(data[i + 2] - 0x2D) < 12) rust += 1;
+      }
+      return rust;
+    };
+    const type = words => {
+      document.querySelector("#pf-clear").click();
+      canvas.dispatchEvent(new PointerEvent("pointerdown", {
+        pointerId: 7, bubbles: true, clientX: box.left + 80, clientY: box.top + 260,
+      }));
+      const field = document.querySelector(".pf-typing");
+      field.value = words;
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      return rustOn();
+    };
+    document.querySelector("#pf-tool-text").click();
+    const long = type("This heading says the wrong date");
+    const short = type("X");
+    return { long, short };
+  });
+  check(byLength.long > byLength.short * 3,
+    "the words painted are the words typed, not a fixed string",
+    JSON.stringify(byLength));
+
+  const ringed = await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-circle").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 6, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 120, 300);
+    send("pointermove", 280, 400);
+    send("pointerup", 280, 400);
+    const ink = canvas.getContext("2d");
+    const { data } = ink.getImageData(0, 0, canvas.width, canvas.height);
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted += 1;
+    // The middle of a circle is empty and the middle of a box's drag is too,
+    // so what tells them apart is the corner: a box paints its corner, a
+    // circle does not.
+    const corner = ink.getImageData(
+      Math.round((120 + 4) * (canvas.width / box.width)),
+      Math.round((300 + 4) * (canvas.height / box.height)), 3, 3).data;
+    let inked = 0;
+    for (let i = 3; i < corner.length; i += 4) if (corner[i] > 0) inked += 1;
+    return { painted, inked };
+  });
+  check(ringed.painted > 100 && ringed.inked === 0,
+    "the circle tool paints a ring, and leaves the corner of its drag empty",
+    JSON.stringify(ringed));
+
+  const glyphs = await page.evaluate(() => {
+    const tools = ["box", "circle", "arrow", "pen", "text"];
+    return tools.map(name => {
+      const button = document.querySelector(`#pf-tool-${name}`);
+      return { name, there: Boolean(button),
+               glyph: Boolean(button?.querySelector("svg")),
+               word: button?.textContent.trim() };
+    });
+  });
+  check(glyphs.every(tool => tool.there && tool.glyph && tool.word),
+    "every tool carries a drawn glyph and keeps its word",
+    JSON.stringify(glyphs));
+
+  const reachable = await page.evaluate(() => {
+    const link = document.querySelector("#pf-note a[href^='mailto:']");
+    return { there: Boolean(link), href: link?.getAttribute("href") };
+  });
+  check(reachable.href === "mailto:sam@polariscollective.org",
+    "the dialog offers a person as well as a form", JSON.stringify(reachable));
+
+  await page.evaluate(() => {
+    document.querySelector("#pf-clear").click();
+    document.querySelector("#pf-tool-box").click();
+  });
+
+  const tooling = await page.evaluate(() => {
+    document.querySelector("#pf-tool-arrow").click();
+    return {
+      arrow: document.querySelector("#pf-tool-arrow").getAttribute("aria-pressed"),
+      box: document.querySelector("#pf-tool-box").getAttribute("aria-pressed"),
+      undo: document.querySelector("#pf-undo").hasAttribute("aria-pressed"),
+      clear: document.querySelector("#pf-clear").hasAttribute("aria-pressed"),
+    };
+  });
+  check(tooling.arrow === "true" && tooling.box === "false"
+      && !tooling.undo && !tooling.clear,
+    "choosing a tool unpresses the one before it and leaves undo and clear alone",
+    JSON.stringify(tooling));
+
+  // Back to the box, and draw one that survives into the PNG the send carries.
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-box").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 2, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 60, 60);
+    send("pointermove", 260, 200);
+    send("pointerup", 260, 200);
+  });
+
+  await page.locator("#pf-comment").fill("The governance table runs off the right.");
+  await page.locator("#pf-email").fill("reader@example.org");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(800);
+  const sent = lastPageFeedbackReceived();
+  const size = sent?.screenshot ? pngSize(sent.screenshot.png) : null;
+  check(Boolean(sent?.screenshot)
+      && sent.screenshot.type === "image/png"
+      && sent.capture_method === "html2canvas"
+      && size.width === framed.clientWide && size.height === framed.clientTall,
+    "a PNG of exactly the viewport arrives, filed as html2canvas",
+    JSON.stringify({ ...size, want: [framed.clientWide, framed.clientTall],
+                     bytes: sent?.screenshot?.bytes, method: sent?.capture_method }));
+
+  /* The mark is in the bytes, not only on the overlay. Rust is #A0522D, and no
+   * page of this site paints that colour anywhere, so finding it in the PNG is
+   * finding the annotation. Read out of the decoded image rather than the file,
+   * since a PNG's pixels are compressed. */
+  const marked = await rustIn(sent.screenshot.png);
+  check(marked > 100, "the box drawn on the overlay is in the PNG that was sent",
+    `rust pixels: ${marked}`);
+
+  check(sent?.comment === "The governance table runs off the right."
+      && sent?.email === "reader@example.org"
+      && sent?.page_url.endsWith("/overview.html")
+      && /^\d+x\d+ @\d/.test(sent.viewport)
+      && sent.user_agent.length > 0
+      && sent.website === "",
+    "the send posts the words, the address, the page, the window and the browser string",
+    JSON.stringify({ ...sent, screenshot: true }));
+
+  const kept = await page.evaluate(() => {
+    try { return localStorage.getItem("aci-feedback-email"); } catch { return null; }
+  });
+  check(kept === "reader@example.org",
+    "the address is remembered under the key the paragraph dialog already uses", kept);
+
+  await page.waitForTimeout(1200);
+  const closed = await page.evaluate(() => !document.querySelector("#pf-note").open);
+  check(closed, "the dialog closes on its own after a successful send");
+
+  /* The box above proved a mark reaches the posted PNG. A box paints its
+   * corner and its middle stays empty either way, so it cannot stand for the
+   * other tools: the same proof is owed to text and to a circle, each sent on
+   * its own so the PNG being inspected carries exactly one kind of mark. */
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-text").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent("pointerdown", {
+      pointerId: 8, bubbles: true, clientX: box.left + 80, clientY: box.top + 220,
+    }));
+    const field = document.querySelector(".pf-typing");
+    field.value = "This heading says the wrong date";
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+  await page.locator("#pf-comment").fill("A text mark, sent on its own.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(800);
+  const sentText = lastPageFeedbackReceived();
+  const textRust = sentText?.screenshot ? await rustIn(sentText.screenshot.png) : 0;
+  check(textRust > 100, "a text mark reaches the PNG that is sent, not only the overlay",
+    `rust pixels: ${textRust}`);
+
+  await page.waitForTimeout(1200);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.evaluate(() => {
+    document.querySelector("#pf-tool-circle").click();
+    const canvas = document.querySelector("#pf-marks");
+    const box = canvas.getBoundingClientRect();
+    const send = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+      pointerId: 9, bubbles: true, clientX: box.left + x, clientY: box.top + y,
+    }));
+    send("pointerdown", 120, 300);
+    send("pointermove", 280, 400);
+    send("pointerup", 280, 400);
+  });
+  await page.locator("#pf-comment").fill("A circle mark, sent on its own.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(800);
+  const sentCircle = lastPageFeedbackReceived();
+  const circleRust = sentCircle?.screenshot ? await rustIn(sentCircle.screenshot.png) : 0;
+  check(circleRust > 100, "a circle mark reaches the PNG that is sent, not only the overlay",
+    `rust pixels: ${circleRust}`);
+
+  await page.waitForTimeout(1200);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.locator("#pf-drop").click();
+  await page.locator("#pf-comment").fill("No picture for this one.");
+  await page.locator("#pf-send").click();
+  await page.waitForTimeout(400);
+  const wordsOnly = lastPageFeedbackReceived();
+  check(wordsOnly?.comment === "No picture for this one."
+      && wordsOnly.screenshot === null,
+    "dropping the screenshot sends the words alone",
+    JSON.stringify({ ...wordsOnly, screenshot: Boolean(wordsOnly?.screenshot) }));
+
+  // The reader is the fourth page and the only one that is an application
+  // rather than a document, so the pill is checked there too.
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+  const onReader = await page.evaluate(() => Boolean(document.querySelector("#pf-pill")));
+  check(onReader, "the pill is on the reader as well as the prose pages");
+
+  /* The reader scrolls its own column, not the window, so a capture cropped at
+   * window.scrollY would show the top of the document however far down the
+   * reader has read. Asserting only that the capture is not blank would pass
+   * whether or not the scroll is carried into it: a capture that ignored the
+   * inner scroll would still show the column's top, which is not blank
+   * either. What proves the fix is that the picture changes with the scroll,
+   * so this takes two captures of the same page, one with the column at the
+   * top and one scrolled well down, and counts how many pixels differ across
+   * the whole image: nearly none would mean the capture never moved. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+
+  const captureReaderShot = async () => {
+    await page.locator("#pf-pill").click();
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const atTop = await captureReaderShot();
+
+  /* Scrolled the way a reader scrolls it, and the column left exactly as the
+   * stylesheet made it.
+   *
+   * This check used to set scroll-behavior to auto first, on the grounds that
+   * a smooth scroll cannot be read back on the spot, and called that a
+   * property of the measurement rather than of the reader. It was neither: it
+   * was the one condition under which the capture worked. The clone inherits
+   * that inline style, and a clone whose column scrolls instantly takes the
+   * offset the capture gives it, where a clone that kept smooth silently
+   * ignored it and photographed the top of the document. The test had built
+   * the thing it was meant to catch.
+   *
+   * So it waits for the animation instead: ask, then poll until it settles. */
+  const column = page.locator(".document-scroll").first();
+  const found = await column.count();
+  if (found) {
+    await column.evaluate(node => { node.scrollTop = 900; });
+    await page.waitForFunction(
+      () => document.querySelector(".document-scroll").scrollTop > 700,
+      undefined, { timeout: 5000 }).catch(() => {});
+  }
+  const scrolledBy = found
+    ? await column.evaluate(node => node.scrollTop)
+    : 0;
+  check(scrolledBy > 0, "the reader has a column that scrolls inside the page",
+    String(scrolledBy));
+
+  const scrolledDown = await captureReaderShot();
+
+  const scrollDiff = await page.evaluate(async ({ a, b }) => {
+    const decode = async url => {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+      return canvas;
+    };
+    const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
+    const width = Math.min(canvasA.width, canvasB.width);
+    const height = Math.min(canvasA.height, canvasB.height);
+    const dataA = canvasA.getContext("2d").getImageData(0, 0, width, height).data;
+    const dataB = canvasB.getContext("2d").getImageData(0, 0, width, height).data;
+    let differing = 0;
+    for (let i = 0; i < dataA.length; i += 4) {
+      if (Math.abs(dataA[i] - dataB[i]) > 10
+       || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
+       || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
+    }
+    return { differing, total: width * height, width, height };
+  }, { a: atTop, b: scrolledDown });
+
+  check(scrollDiff.total > 0 && scrollDiff.differing / scrollDiff.total > 0.1,
+    "a capture with the column scrolled down differs substantially from one at the top",
+    JSON.stringify(scrollDiff));
+
+  /* A popover open when the pill is pressed must survive into the picture:
+   * showModal on the bubble's own dialog closes every open auto popover
+   * natively, so the fix measures a popover's box before that happens rather
+   * than after. Proved by comparing two captures of the same page, one taken
+   * with a popover open and one with nothing open: if the popover were not
+   * drawn, the two would agree everywhere, including inside its own box.
+   *
+   * Two ways of pressing the pill are checked, because they reach the fix
+   * differently. A real pointer click dismisses any open auto popover on its
+   * own, natively, on pointerdown's default action, before the "click" event
+   * is even dispatched: measured directly with a document.querySelectorAll(
+   * ":popover-open").length count taken at three capture-phase listeners on
+   * the pill (pointerdown, pointerup, click), the popover was still open at
+   * pointerdown and already gone by pointerup and click. That is why the
+   * pill's own pointerdown listener, not its click handler, is what tags the
+   * floating elements now: a listener runs before the default action of its
+   * own event, so pointerdown sees the popover the click handler cannot. A
+   * keyboard activation fires "click" with no pointerdown before it, so it
+   * is checked too, on the fallback path that re-tags inside the click
+   * handler itself. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+
+  const pressPillByKeyboard = async () => {
+    await page.focus("#pf-pill");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const pressPillByMouse = async () => {
+    const box = await page.locator("#pf-pill").boundingBox();
+    // A real mouse click, not locator.click(): the point of this path is the
+    // browser's own native light dismiss, which only fires for trusted
+    // pointer input.
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+    const dataUrl = await page.evaluate(() => document.querySelector("#pf-shot img").src);
+    await page.evaluate(() => document.querySelector("#pf-note")?.close());
+    await page.waitForTimeout(100);
+    return dataUrl;
+  };
+
+  const diffWithinBox = (a, b, box) => page.evaluate(async ({ a, b, box }) => {
+    const clientWide = document.documentElement.clientWidth;
+    const clientTall = document.documentElement.clientHeight;
+    const decode = async url => {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+      return canvas;
+    };
+    const [canvasA, canvasB] = await Promise.all([decode(a), decode(b)]);
+    const scaleX = canvasA.width / clientWide;
+    const scaleY = canvasA.height / clientTall;
+    const x = Math.max(0, Math.floor(box.left * scaleX));
+    const y = Math.max(0, Math.floor(box.top * scaleY));
+    const w = Math.max(1, Math.min(canvasA.width - x, Math.ceil(box.width * scaleX)));
+    const h = Math.max(1, Math.min(canvasA.height - y, Math.ceil(box.height * scaleY)));
+    const dataA = canvasA.getContext("2d").getImageData(x, y, w, h).data;
+    const dataB = canvasB.getContext("2d").getImageData(x, y, w, h).data;
+    let differing = 0;
+    for (let i = 0; i < dataA.length; i += 4) {
+      if (Math.abs(dataA[i] - dataB[i]) > 10
+       || Math.abs(dataA[i + 1] - dataB[i + 1]) > 10
+       || Math.abs(dataA[i + 2] - dataB[i + 2]) > 10) differing += 1;
+    }
+    return { differing, total: w * h, width: w, height: h };
+  }, { a, b, box });
+
+  const noteTrigger = `[data-behaviour-note="${DEFINED}"]`;
+  const triggerThere = await page.evaluate(
+    sel => Boolean(document.querySelector(sel)), noteTrigger);
+  if (!triggerThere) {
+    check(false, "a popover is reachable in the fixture, to prove it reaches the capture",
+      "no [data-behaviour-note] trigger found on the reader");
+  } else {
+    const withoutNote = await pressPillByKeyboard();
+
+    await page.click(noteTrigger);
+    await page.waitForTimeout(150);
+    const noteBox = await page.evaluate(() => {
+      const note = document.querySelector("#key-note");
+      if (!note?.matches(":popover-open")) return null;
+      const rect = note.getBoundingClientRect();
+      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    });
+    check(Boolean(noteBox) && noteBox.width > 0 && noteBox.height > 0,
+      "the behaviour note is open as a popover before the pill is pressed",
+      JSON.stringify(noteBox));
+
+    const withNote = await pressPillByKeyboard();
+
+    const popoverDiff = noteBox && await diffWithinBox(withoutNote, withNote, noteBox);
+
+    check(Boolean(popoverDiff) && popoverDiff.total > 0
+        && popoverDiff.differing / popoverDiff.total > 0.3,
+      "a popover open when the pill is pressed is drawn into the capture, not closed by the dialog",
+      JSON.stringify(popoverDiff));
+
+    // Same proof again, this time with a real mouse click on the pill: the
+    // path the pointerdown fix exists for.
+    const withoutNoteMouse = await pressPillByMouse();
+
+    await page.click(noteTrigger);
+    await page.waitForTimeout(150);
+    const noteBoxMouse = await page.evaluate(() => {
+      const note = document.querySelector("#key-note");
+      if (!note?.matches(":popover-open")) return null;
+      const rect = note.getBoundingClientRect();
+      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+    });
+    check(Boolean(noteBoxMouse) && noteBoxMouse.width > 0 && noteBoxMouse.height > 0,
+      "the behaviour note is open as a popover before the pill is pressed by mouse",
+      JSON.stringify(noteBoxMouse));
+
+    const withNoteMouse = await pressPillByMouse();
+
+    const popoverDiffMouse = noteBoxMouse
+      && await diffWithinBox(withoutNoteMouse, withNoteMouse, noteBoxMouse);
+
+    check(Boolean(popoverDiffMouse) && popoverDiffMouse.total > 0
+        && popoverDiffMouse.differing / popoverDiffMouse.total > 0.3,
+      "a popover open when the pill is pressed by mouse is drawn into the capture, "
+      + "not closed by light dismiss",
+      JSON.stringify(popoverDiffMouse));
+  }
+
+  /* Finding 3: the reader's own document-level keydown handler bails on a
+   * focused textarea, select or checkbox-less input, but not on a focused
+   * button, and this dialog is mostly buttons. With a tool button focused
+   * and the dialog open, j must stay inside the dialog rather than reach the
+   * reader behind it, where it would step to the next passage, scroll the
+   * document column and rewrite the address (dropPassageParam calls
+   * history.replaceState). Read before and after rather than asserting
+   * nothing moved by construction, so a regression here would fail loudly. */
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.waitForTimeout(250);
+  await page.locator("#pf-pill").click();
+  await page.waitForSelector("#pf-shot img", { timeout: 20000 });
+  await page.focus("#pf-tool-box");
+
+  const readerState = () => page.evaluate(() => {
+    const column = [...document.querySelectorAll("*")]
+      .find(node => node.scrollHeight > node.clientHeight + 400
+                 && getComputedStyle(node).overflowY !== "visible");
+    return { href: location.href, scrollTop: column ? column.scrollTop : null };
+  });
+
+  const beforeJ = await readerState();
+  await page.keyboard.press("j");
+  await page.waitForTimeout(150);
+  const afterJ = await readerState();
+
+  check(afterJ.href === beforeJ.href && afterJ.scrollTop === beforeJ.scrollTop,
+    "with the bubble's dialog open and a tool button focused, j does not change "
+  + "location.href and does not scroll the reader's column",
+    JSON.stringify({ beforeJ, afterJ }));
+
+  await page.evaluate(() => document.querySelector("#pf-note")?.close());
+
+  /* Every capture above tags data-pf-sticky, data-pf-scrolled and
+   * data-pf-floating onto live page elements, and the last of the three is
+   * only ever removed by a click that runs its course: a press abandoned
+   * before it becomes a click, or a capture that throws, must not leave any
+   * of them behind on a page a reader goes on looking at. */
+  const leftover = await page.evaluate(() =>
+    document.querySelectorAll("[data-pf-sticky], [data-pf-scrolled], [data-pf-floating]").length);
+  check(leftover === 0,
+    "no capture-only attribute is left on the page once a capture has run",
+    String(leftover));
+
+  /* A modal dialog makes everything outside its own subtree inert, the top
+   * layer included: a pill raised into it with showPopover is drawn above the
+   * backdrop and still refuses a click, measured against this application. So
+   * the pill moves into whatever modal is open, which is the one place the
+   * platform leaves operable. The coverage board opens the contradictions of a
+   * document in a modal sheet, and somebody who wants to report that sheet has
+   * to reach the pill while looking at it.
+   *
+   * Under the pin, because that sheet holds a publication's assessment and the
+   * fixture the front page answers with carries none. Every other press on the
+   * board opens a popover, which is not a modal and takes nothing in. */
+  await page.goto(`${root}coverage?publication=${TEN_PUBLICATION}`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll("#board tbody tr").length > 0,
+    undefined, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  const atRest = await page.evaluate(() =>
+    document.querySelector("#pf-pill")?.parentElement?.tagName);
+  check(atRest === "BODY", "with nothing open the pill lives on the body", atRest);
+
+  const openedTheSheet = await page.evaluate(() => {
+    const rowOf = name => [...document.querySelectorAll("#board tbody tr")]
+      .find(tr => tr.querySelector(".head-name")?.textContent === name);
+    rowOf("The document as a whole")?.querySelector(".row-toggle")?.click();
+    rowOf("Unresolved contradictions")?.querySelector("td .cell-button")?.click();
+    const read = [...document.querySelectorAll("#grid-pop .gov-button")]
+      .find(button => button.textContent === "Read the contradictions");
+    read?.click();
+    return Boolean(read);
+  });
+  if (openedTheSheet) {
+    await page.waitForTimeout(300);
+    const tookItIn = await page.evaluate(() => {
+      const pill = document.querySelector("#pf-pill");
+      const box = pill.getBoundingClientRect();
+      const over = document.elementFromPoint(box.left + box.width / 2,
+                                             box.top + box.height / 2);
+      return {
+        modals: [...document.querySelectorAll("dialog[open]")].map(one => one.id),
+        host: pill.parentElement?.id || pill.parentElement?.tagName,
+        reachable: over === pill,
+      };
+    });
+    check(tookItIn.modals.length > 0 && tookItIn.host === tookItIn.modals[tookItIn.modals.length - 1]
+        && tookItIn.reachable,
+      "a modal panel takes the pill in, where it can still be pressed",
+      JSON.stringify(tookItIn));
+
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    const gaveItBack = await page.evaluate(() =>
+      document.querySelector("#pf-pill")?.parentElement?.tagName);
+    check(gaveItBack === "BODY", "closing the panel gives the pill back to the body", gaveItBack);
+  } else {
+    check(false, "the coverage board has a modal panel to test the pill against");
+  }
+
+  /* The cross. Escape closed this dialog before there was one, and still does,
+   * but a cross is what somebody looks for. */
+  await page.locator("#pf-pill").click();
+  await page.waitForTimeout(200);
+  const crossPressed = await page.evaluate(() => {
+    const cross = document.querySelector("#pf-close");
+    if (!cross) return { there: false };
+    const its = cross.getBoundingClientRect();
+    const dialog = document.querySelector("#pf-note").getBoundingClientRect();
+    cross.click();
+    return {
+      there: true,
+      label: cross.getAttribute("aria-label"),
+      topRight: its.top - dialog.top < 40 && dialog.right - its.right < 40,
+      closed: !document.querySelector("#pf-note").open,
+    };
+  });
+  check(crossPressed.there && crossPressed.label === "Close" && crossPressed.topRight && crossPressed.closed,
+    "the cross sits at the dialog's top right, is labelled, and closes it",
+    JSON.stringify(crossPressed));
+
+  check(pageErrors.length === 0, "the feedback bubble: no console errors",
+    pageErrors.join("; "));
+}
+
+// =============================================================================
+const unexpectedMissing = [...new Set(missingPaths)];
+check(unexpectedMissing.length === 0, "nothing unexpected 404s",
+  unexpectedMissing.join(", ") || "nothing");
+
 await browser.close();
 server.close();
 console.log(failures ? `${failures} FAILURES` : "ALL FEATURE CHECKS PASSED.");

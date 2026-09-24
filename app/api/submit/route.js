@@ -12,7 +12,7 @@ import {
   specificationProblems,
 } from "../../lib/submissions.mjs";
 
-const PAGE = "/how-it-works";
+const PAGE = "/about";
 
 function back(request, outcome) {
   const url = new URL(PAGE, request.url);

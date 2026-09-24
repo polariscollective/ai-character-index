@@ -53,6 +53,6 @@ The Vercel project needs the server-side variables `.env.example` describes:
 is prefixed `NEXT_PUBLIC_`, and none may be: the browser reads routes, and routes
 read the database.
 
-Publishing the index is not a deploy at all. The reader's two payloads come from
+Publishing the index is not a deploy at all. The reader's three payloads come from
 the current publication row, so what the public sees changes with a database
 write.

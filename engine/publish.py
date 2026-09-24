@@ -21,6 +21,17 @@ a rule that lives in the code that happens to write the row is not a rule.
 The panel is the configuration's display panel, the one the index publishes, and
 every cell must also carry a depth from each of its run's judges.
 
+Depths are out of four unless --depth-prompt names the prompt of ten, which is
+read with the assessment run its depths were given with, --assessment-run. Such
+a publication also carries each document's assessment as a whole, so that run
+must have assessed every document it carries. A run that takes its criteria
+from an earlier run (`engine/assess.py --criteria-from`) is named the same way:
+its criteria and its depths are the earlier run's, read by that run's id, and
+its contradictions its own, while the build parameters record the run named. It carries no comparison paragraph
+and no depth note, since every one written so far quotes a figure out of 4, and
+its build parameters record all three choices. The portal names neither flag, so
+what it publishes is what it published before the scale of ten existed.
+
 "Exactly the panel" means the panel as the cell was seated. A judge that cannot
 answer a cell at all is replaced there, and `aci_seat_substitutions` records it;
 a cell is then held to the panel with that seat given to its substitute, which is
@@ -41,9 +52,11 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "spec-cite"))
+sys.path.insert(0, str(HERE / "panel"))
 
 import index_store               # noqa: E402
 import seat_substitutions        # noqa: E402
+import depth_call                # noqa: E402
 from store import Store          # noqa: E402
 
 # How each builder serialises, which is what its digest describes. They differ,
@@ -52,11 +65,28 @@ from store import Store          # noqa: E402
 FORMATS = {
     "payload": dict(indent=1, ensure_ascii=False),
     "documents": dict(ensure_ascii=False, separators=(",", ":")),
+    # What engine/build-links-data.mjs writes, byte for byte. Its serialise() is
+    # JSON.stringify(value, null, 2) with no trailing newline, which is exactly
+    # this call's output. test_publish.LinksFormatTest holds the two together.
+    "links": dict(indent=2, ensure_ascii=False),
+    # The two boards are not built: each is its file in site/, read as it stands
+    # and stored parsed. The digest is of this serialisation of what was stored,
+    # which is what the verifier recomputes.
+    "constitutions": dict(indent=1, ensure_ascii=False),
+    "governance": dict(indent=1, ensure_ascii=False),
+}
+# The files the two boards are written in. A publication freezes both, so it is
+# the whole of what the site shows at one moment; whether their figures agree
+# with the judges' is the publisher's to check before publishing.
+BOARD_FILES = {
+    "constitutions": ROOT / "site" / "constitutions.json",
+    "governance": ROOT / "site" / "governance.json",
 }
 BUILDERS = {
     "payload": (HERE / "panel" / "build_site_data.py",
                 ["--threshold=4", "--solid-threshold=6"]),
     "documents": (ROOT / "engine" / "build-spec-reader-data.py", []),
+    "links": (ROOT / "engine" / "build-links-data.mjs", []),
 }
 
 
@@ -77,14 +107,21 @@ def panel_seats(config, name):
     return sorted(seats)
 
 
-def require_depths(store, cells, panel):
+def require_depths(store, cells, panel, assessment_run_id=None):
     """Refuse a publication any of whose cells lacks a depth from every judge of
     its run, naming them all at once.
 
     Every judge means the panel as the cell was seated. A depth from the seat is
     not a depth from its substitute: the cell's verdicts are the substitute's, so
-    its depth must be too."""
-    given = index_store.cell_depths(store, cells)
+    its depth must be too.
+
+    `assessment_run_id` names the assessment run to read depths out of ten
+    from, under the current prompt of ten, the only one a new publication is
+    built with; without it, depths come from the scale of four, the prompt
+    every publication built so far was judged on."""
+    given = index_store.cell_depths(
+        store, cells, assessment_run_id,
+        depth_prompt=depth_call.prompt_sha256(10) if assessment_run_id is not None else None)
     recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
 
@@ -146,25 +183,38 @@ def require_declared_substitutes(store, cells, config, panel_name, panel):
             + "\n  ".join(problems))
 
 
-def _depth_complete_keys(store, matched):
+def _depth_complete_keys(store, matched, assessment_run_id=None):
     """The keys of `matched` whose every done call also carries a done depth.
 
     Read with the store's filtered selects, scoped to exactly the calls the
     candidate runs hold -- a publication's candidate set is a handful of
     cells, not the whole history of judge calls, so nothing here reads a
     table whole.
+
+    With no assessment run this reads `aci_depths`, the scale of four, exactly
+    as today. With one it reads `aci_depths_out_of_ten` instead, for the run
+    whose criteria stand for that assessment run (`index_store.criteria_run_id`)
+    and the current prompt of ten (`depth_call.prompt_sha256(10)`).
     """
     ids = sorted({call["id"] for calls in matched.values() for call in calls})
     if not ids:
         return set()
-    params = {"call_id": "in.(" + ",".join(f'"{i}"' for i in ids) + ")",
-              "status": "eq.done"}
-    done_depths = {row["call_id"] for row in store.select("aci_depths", params)}
+    call_ids = "in.(" + ",".join(f'"{i}"' for i in ids) + ")"
+    if assessment_run_id is None:
+        table = "aci_depths"
+        params = {"call_id": call_ids, "status": "eq.done"}
+    else:
+        table = "aci_depths_out_of_ten"
+        params = {"call_id": call_ids, "status": "eq.done",
+                  "assessment_run_id":
+                      f"eq.{index_store.criteria_run_id(store, assessment_run_id)}",
+                  "prompt_sha256": f"eq.{depth_call.prompt_sha256(10)}"}
+    done_depths = {row["call_id"] for row in store.select(table, params)}
     return {key for key, calls in matched.items()
             if all(call["id"] in done_depths for call in calls)}
 
 
-def choose_cells(store, behaviours, spec_versions, panel, rubric):
+def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run_id=None):
     """One run per cell, or a refusal naming every cell that has no answer.
 
     The newest run that can actually be published for the cell: it judged the
@@ -182,6 +232,9 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     The panel is compared as each cell of each run was seated: a recorded
     substitution gives its seat to the substitute for that cell of that run and
     nowhere else.
+
+    With an assessment run, "every depth done" means every depth out of ten
+    given with that run, since those are the depths the publication will carry.
 
     A cell nothing judged with this panel at all is refused here, naming every
     such cell at once. A cell some run did judge, but none of those runs has
@@ -208,7 +261,7 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
         and sorted({call["model"] for call in calls}) == seat_substitutions.seats(
             want, recorded.get(key, ()))
     }
-    publishable = _depth_complete_keys(store, matched)
+    publishable = _depth_complete_keys(store, matched, assessment_run_id)
 
     by_cell = {}
     for key in matched:
@@ -236,7 +289,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric):
     return cells
 
 
-def build(name, cells, behaviours, run_date=None, panel_name=None):
+def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
+          note_prompts=None, depth_prompt=None, assessment_run=None, comparisons=True):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -244,8 +298,17 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
     configuration, so a publication of five behaviours renders ten, five of them
     with no passages -- which a reader reads as "this specification says nothing
     about this", the one claim the index must never make by accident.
+
+    `depth_prompt` and `assessment_run` reach the payload builder, and
+    `comparisons=False` the links builder, only when given: a build that names
+    none of them is launched exactly as every publication before them was, which
+    is what lets those publications rebuild to their digests.
     """
     script, args = BUILDERS[name]
+    # The interpreter follows the builder's extension rather than a second
+    # table. The links builder is JavaScript because the assembly it needs lives
+    # in app/lib/links.mjs, and a Python port would be a second copy of it.
+    runner = ["node"] if script.suffix == ".mjs" else [sys.executable]
     with tempfile.TemporaryDirectory() as scratch:
         cells_file = Path(scratch) / "cells.json"
         cells_file.write_text(json.dumps(cells))
@@ -255,8 +318,18 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
             extra.append("--behaviours=" + ",".join(sorted(behaviours)))
             if panel_name:
                 extra.append(f"--panel={panel_name}")
+            if depth_prompt is not None:
+                extra.append(f"--depth-prompt={depth_prompt}")
+            if assessment_run is not None:
+                extra.append(f"--assessment-run={assessment_run}")
+        if name == "links":
+            extra.append("--link-runs=" + ",".join(sorted(link_runs)))
+            if note_prompts is not None:
+                extra.append("--note-prompts=" + ",".join(sorted(note_prompts)))
+            if not comparisons:
+                extra.append("--without-comparisons")
         result = subprocess.run(
-            [sys.executable, str(script), *args, *extra,
+            [*runner, str(script), *args, *extra,
              f"--cells={cells_file}", f"--out={out}"],
             capture_output=True, text=True)
         if result.returncode != 0:
@@ -266,23 +339,95 @@ def build(name, cells, behaviours, run_date=None, panel_name=None):
     return json.loads(raw), hashlib.sha256(raw).hexdigest()
 
 
+def document_note_prompts(store, out_of_ten=False):
+    """The prompt digests of the document notes a publication pins.
+
+    A document note carries no run, so its digest is what pins it: the table's
+    unique key ends in this digest, so a note written later for a cell this
+    publication carries must have a different one and is excluded rather than
+    silently swapped in.
+
+    Out of ten, only the digests of `standing` notes: every `depth` note explains
+    a figure out of 4. A digest is what the links builder filters on, whatever
+    the kind, so a standing note written under a depth note's digest would carry
+    that depth note in with it, and is refused instead.
+    """
+    if not out_of_ten:
+        return sorted({row["prompt_sha256"] for row in
+                       store.select("aci_document_notes", {"select": "prompt_sha256"})})
+    rows = store.select("aci_document_notes", {"select": "prompt_sha256,kind"})
+    standing = {row["prompt_sha256"] for row in rows if row["kind"] == "standing"}
+    shared = sorted(standing & {row["prompt_sha256"] for row in rows if row["kind"] != "standing"})
+    if shared:
+        raise SystemExit(
+            "these note prompts wrote standing notes and depth notes both, so pinning "
+            "them would carry depth notes, which quote figures out of 4, into a "
+            f"publication out of ten: {', '.join(shared)}")
+    return sorted(standing)
+
+
 def publish(store, behaviours, document_ids, rubric, published_by, notes="",
-            run_date=None, config=None):
+            run_date=None, config=None, link_runs=(), depth_prompt=None,
+            assessment_run=None, boards=None):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
     following `?publication=` can see it, and nobody else can.
+
+    With neither `depth_prompt` nor `assessment_run`, this publishes exactly what
+    it did before either existed. Every refusal comes before the first build, and
+    every build before the first write.
     """
+    if not link_runs:
+        raise SystemExit("publish: --link-runs is required, because a publication "
+                         "names the link runs it carries")
+    out_of_ten = index_store.depth_scale(depth_prompt, assessment_run) == 10
+    if out_of_ten and depth_prompt != depth_call.prompt_sha256(10):
+        # Only here: a rebuild reads the digest it recorded, whatever the prompt
+        # of ten has since become, but a new publication is built on the current one.
+        current = depth_call.prompt_sha256(10)
+        raise SystemExit(
+            f"--depth-prompt={depth_prompt} is not the prompt of ten as it stands, {current}. "
+            "A new publication carries depths given under the current prompt: give them "
+            "again (engine/panel/depth_pass.py --runs=... "
+            f"--assessment-run={index_store.criteria_run_id(store, assessment_run)} "
+            f"--go), then build with --depth-prompt={current}.")
     config = config or json.loads((HERE / "panel" / "panel-config.json").read_text())
     panel_name = config["display"]["panel"]
     panel = panel_seats(config, panel_name)
     versions = document_versions(store, document_ids)
-    cells = choose_cells(store, behaviours, versions, panel, rubric)
+    if out_of_ten:
+        index_store.assessment(store, assessment_run, versions)
+    cells = choose_cells(store, behaviours, versions, panel, rubric, assessment_run)
     require_declared_substitutes(store, cells, config, panel_name, panel)
-    require_depths(store, cells, panel)
+    require_depths(store, cells, panel, assessment_run)
+    note_prompts = document_note_prompts(store, out_of_ten)
 
-    payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name)
+    payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name,
+                                    depth_prompt=depth_prompt, assessment_run=assessment_run)
     documents, documents_sha256 = build("documents", cells, behaviours)
+    links, links_sha256 = build("links", cells, behaviours,
+                                link_runs=link_runs, note_prompts=note_prompts,
+                                comparisons=not out_of_ten)
+
+    # The two boards, frozen as they stand. `boards` maps a board to another
+    # file, for tests; every board is carried either way.
+    frozen = {name: read_board(name, (boards or {}).get(name)) for name in BOARD_FILES}
+
+    build_params = {"behaviours": sorted(behaviours),
+                    "documents": sorted(document_ids),
+                    "panel": panel_name, "rubric": rubric,
+                    "run_date": run_date,
+                    "link_runs": sorted(link_runs),
+                    "note_prompts": note_prompts}
+    # Recorded only when given, so a publication that named none of them records
+    # what every publication before them recorded, and is rebuilt the same way.
+    if depth_prompt is not None:
+        build_params["depth_prompt_sha256"] = depth_prompt
+    if assessment_run is not None:
+        build_params["assessment_run_id"] = assessment_run
+    if out_of_ten:
+        build_params["comparisons"] = False
 
     publication = {
         "published_by": published_by,
@@ -290,18 +435,28 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         "panel": panel,
         "rubric": rubric,
         "is_public": False,
-        "build_params": {"behaviours": sorted(behaviours),
-                         "documents": sorted(document_ids),
-                         "panel": panel_name, "rubric": rubric, "run_date": run_date},
+        "build_params": build_params,
         "payload": payload,
         "payload_sha256": payload_sha256,
         "documents": documents,
         "documents_sha256": documents_sha256,
+        "links": links,
+        "links_sha256": links_sha256,
     }
+    for name, (board, digest) in frozen.items():
+        publication[name] = board
+        publication[f"{name}_sha256"] = digest
     [row] = store.insert("aci_publications", [publication], returning=True)
     store.insert("aci_publication_cells",
                  [cell | {"publication_id": row["id"]} for cell in cells])
     return row, cells
+
+
+def read_board(name, path=None):
+    """One board's file as it stands, and the digest of it as it will be stored."""
+    board = json.loads(Path(path or BOARD_FILES[name]).read_text(encoding="utf-8"))
+    raw = json.dumps(board, **FORMATS[name]).encode()
+    return board, hashlib.sha256(raw).hexdigest()
 
 
 def main(argv=None):
@@ -314,18 +469,39 @@ def main(argv=None):
     parser.add_argument("--by", default=os.environ.get("USER", "publish.py"))
     parser.add_argument("--run-date", default=None,
                         help="pin provenance.runDate, for a reproducible rebuild")
+    parser.add_argument("--link-runs", required=True,
+                        help="comma-separated aci_link_runs ids this publication carries")
+    parser.add_argument("--depth-prompt", default=None,
+                        help="the depth prompt's sha256; the prompt of ten publishes depths "
+                             "out of ten, and needs --assessment-run")
+    parser.add_argument("--assessment-run", default=None,
+                        help="the aci_assessment_runs id the depths out of ten were given "
+                             "with, and whose assessment of each document is carried")
     args = parser.parse_args(argv)
+    if args.assessment_run is not None:
+        # Before the store is opened: an id that is not one is refused by name.
+        args.assessment_run = index_store.assessment_run_id(args.assessment_run)
 
     store = Store.from_env()
     index_store.install_registry(store)
+    # Passed only when given, so a publication without them is published by the
+    # same call it always was.
+    scale = {name: value for name, value in (("depth_prompt", args.depth_prompt),
+                                             ("assessment_run", args.assessment_run))
+             if value is not None}
     row, cells = publish(
         store,
         [s for s in args.behaviours.split(",") if s],
         [s for s in args.documents.split(",") if s],
-        args.rubric, args.by, args.notes, args.run_date)
+        args.rubric, args.by, args.notes, args.run_date,
+        link_runs=[s for s in args.link_runs.split(",") if s], **scale)
     print(f"published {row['id']} (not public): {len(cells)} cells")
     print(f"  payload   {row['payload_sha256'][:16]}")
     print(f"  documents {row['documents_sha256'][:16]}")
+    print(f"  links     {row['links_sha256'][:16]}")
+    for name in BOARD_FILES:
+        if row.get(f"{name}_sha256"):
+            print(f"  {name:<13} {row[name + '_sha256'][:16]}")
     return 0
 
 
