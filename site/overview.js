@@ -43,7 +43,10 @@ let menuTargets = [];
 function renderMenu(view) {
   if (!menu) return;
   const panel = document.getElementById(`view-${view}`);
-  menuTargets = [...panel.querySelectorAll("[data-menu]")];
+  // Only what is on the page: a section kept hidden because the publication
+  // could not be drawn, or a takeaways section with nothing in it, is left out.
+  menuTargets = [...panel.querySelectorAll("[data-menu]")]
+    .filter(target => !target.closest("[hidden]"));
   const list = document.createElement("ol");
   menuTargets.forEach(target => {
     const item = document.createElement("li");
@@ -112,5 +115,13 @@ document.querySelector(".views")?.addEventListener("keydown", event => {
 });
 
 showView(viewFromAddress());
-initializeConstitutions();
-initializeGovernance();
+// The sections under each board come from its file, so the menu is written
+// again once both have drawn them.
+Promise.allSettled([initializeConstitutions(), initializeGovernance()])
+  .then(results => {
+    // Settled rather than all, so one board failing leaves the other drawn; a
+    // failure is still reported, never swallowed.
+    results.filter(result => result.status === "rejected")
+      .forEach(result => console.error(result.reason));
+    renderMenu(viewFromAddress());
+  });

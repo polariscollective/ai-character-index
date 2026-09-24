@@ -39,6 +39,17 @@ export default async function Publications({ searchParams }) {
                       {row.published_by}
                     </span>
                     {row.notes && <><br />{row.notes}</>}
+                    {/* The description is the one thing on a publication that can
+                        be changed after it is built: no digest covers it. */}
+                    <details>
+                      <summary>edit the description</summary>
+                      <form method="post" action="/api/admin/publications">
+                        <input type="hidden" name="verb" value="describe" />
+                        <input type="hidden" name="publication_id" value={row.id} />
+                        <textarea name="notes" rows={3} defaultValue={row.notes || ""} />
+                        <button className="quiet" type="submit">Save the description</button>
+                      </form>
+                    </details>
                   </td>
                   <td className="mono">
                     {(row.panel || []).join(", ")}

@@ -76,3 +76,18 @@ These hold for every page, not only where they were raised.
 | A small, discreet menu on the left listing the page's sections, as Guidelight has. | done on the front page, in the left margin from 1400 px wide |
 | Takeaways for the constitutions page. | done (seven, figures checked against the board) |
 | Motivation and what comes next, both pages. | done |
+
+## Text that a publication does not yet freeze
+
+A publication freezes both boards' JSON files, so whatever lives in them is
+versioned with it. Some of the front page's text still lives in
+`site/overview.html` and ships with the deploy instead. Agreed on 24 September
+2026 to move it into the JSON later, not now.
+
+| text | where it is | status |
+|---|---|---|
+| Constitutions notes (1 to 4 under the board) | written as a list in `overview.html`; `constitutions.js` only adds the numbers on the rows. Governance's notes are in `governance.json`, so the two boards differ here. | later: move to a `notes` key in `constitutions.json`, drawn by `constitutions.js` |
+| Both intros | `overview.html` | later |
+| Motivation, What comes next, both pages | `overview.html` | later |
+| Detailed scoring, constitutions | `overview.html` | later |
+| Detailed scoring prose, Limitations, Sources reviewed, governance | `overview.html` (the scoring tables and practice lists come from `governance.json`) | later |

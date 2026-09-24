@@ -57,31 +57,22 @@
   </div>
 
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
-  <h1 id="cov-intro" data-menu="Intro">What each constitution says, and how well it is built</h1>
-  <p class="lede">
-    AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
-    behave. Each company has its own name for its document: OpenAI calls its one the Model Spec,
-    Anthropic calls its one Claude&rsquo;s Constitution. We call them all constitutions, for the
-    reasons <a href="/about#the-word">the About page gives</a>. We assess two aspects of each one:
-    the document as a whole, meaning how consistent and coherent it is, and how well it addresses
-    each desirable model behaviour. A company that publishes none scores 0.
-  </p>
-  <p class="lede">
-    Missing a constitution, or a behaviour that this index should be assessing?
-    <a href="/about?propose#propose" target="_blank"
-      rel="noopener noreferrer">Propose one</a>.
-  </p>
+  <!-- Every word of this view comes from constitutions.json, which a
+       publication freezes: see page-content.js. The markup keeps only where each
+       part goes. -->
+  <h1 id="cov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="cov-lede" hidden data-needs-board></div>
 
   <p class="grid-note" id="status" aria-live="polite">Loading.</p>
 
-  <div class="gov-toolbar">
+  <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint">
       Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
       Open a row to see the parts it is made of.
     </p>
     <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart">
+  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart" hidden data-needs-board>
     <table class="board" id="board">
       <caption class="visually-hidden">Each company's final score, its document as a whole and
         its behaviours by category, with each group's rows available to open</caption>
@@ -89,13 +80,13 @@
       <tbody></tbody>
     </table>
   </div>
-  <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
-  <div class="gov-legend" id="legend" aria-hidden="true"></div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="legend" aria-hidden="true" hidden data-needs-board></div>
   <!-- The two scales under the table rather than beside it: the board is read
        across first, and a rail down the side took a fifth of the width from it.
        They are written here once and never repeated inside a popover, so a
        reader learns what a figure means in one place. -->
-  <section class="depth-key" id="cov-scale" aria-labelledby="behaviour-scale-title">
+  <section class="depth-key" id="cov-scale" aria-labelledby="behaviour-scale-title" hidden data-needs-board>
     <h2 id="behaviour-scale-title"></h2>
     <ol class="depth-key-list" id="behaviour-scale"></ol>
   </section>
@@ -106,7 +97,7 @@
        Guidelight gives its own sections. The takeaways are written in
        constitutions.json and drawn by constitutions.js. -->
   <!-- The takeaways and the notes side by side, as on the governance view. -->
-  <div class="gov-after">
+  <div class="gov-after" hidden data-needs-board>
     <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
       <h2 id="cov-takeaways-title">Takeaways</h2>
       <div class="gov-findings-list" id="cov-findings"></div>
@@ -116,142 +107,10 @@
          numbers are the ones constitutions.js writes beside the rows' names. -->
     <aside class="gov-findings gov-notes-rail" id="cov-notes" data-menu="Notes" aria-labelledby="cov-notes-title">
     <h2 id="cov-notes-title">Notes</h2>
-    <ol class="gov-notes" id="board-notes">
-      <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
-      behaviours, each counting for half. It ranks the companies. Every figure on the board is out
-      of 10, and each row says under its name how much it counts for in the figure it belongs
-      to.</li>
-      <li value="2"><strong>The document as a whole.</strong> Whether the constitution settles a
-      clash between two of its own rules, whether a reader can tell which rules are absolute and
-      which can be lifted and by whom, whether the rules come with reasons, whether they reach the
-      situations the models are used in, and whether the document contradicts itself somewhere
-      without saying which rule wins.</li>
-      <li value="3"><strong>The behaviours.</strong> How far the constitution goes on each behaviour
-      the index asks about, from saying nothing about it to setting rules and showing them applied
-      to worked examples, on the scale above. For us, a behaviour is one precise thing a
-      constitution can ask of a model, such as deferring to users&rsquo; decisions about their own
-      lives, or not asserting what the model believes to be false. Each is written in two parts,
-      what it requires and where it stops, so that a careful reader could mark every passage of a
-      constitution that bears on it. In the <a href="/spec-reader/">doc reader</a> you can pick a
-      behaviour and read every passage of a constitution that bears on it.</li>
-      <li value="4"><strong>Categories.</strong> For now the behaviours are grouped into categories.
-      We wrote the behaviours, their definitions and the categories ourselves, and all three are
-      open to challenge.</li>
-    </ol>
+    <ol class="gov-notes" id="board-notes"></ol>
     </aside>
   </div>
-  <section class="gov-findings page-prose" id="cov-motivation" data-menu="Motivation" aria-labelledby="cov-motivation-title">
-    <details class="section-fold">
-    <summary><h2 id="cov-motivation-title">Motivation</h2></summary>
-    <p>A constitution is the document in which a company says how its models should behave, and
-    it is the only public statement against which a model&rsquo;s behaviour can be checked. Its
-    defaults shape what hundreds of millions of people come to expect of an AI system.</p>
-    <p>Nobody can program a model to follow it. A model is trained on examples, so the rules have
-    to be written precisely before anyone can train a model on them or test it against them. This
-    board reads each constitution for that precision, as a document and behaviour by
-    behaviour.</p>
-      </details>
-  </section>
-  <!-- How the figures are given, folded like the governance view's detailed
-       scoring. The table restates methodology/document-assessment-rubric.md on
-       the board's scale; that file is the canonical source. The account of the
-       behaviours is simplified on purpose and says so. -->
-  <div class="gov-more">
-    <details id="cov-method" class="gov-findings section-fold" data-menu="Detailed scoring">
-      <summary><h2>Detailed scoring</h2></summary>
-      <div class="gov-more-body">
-        <h3>Who gives the figures</h3>
-        <p>
-          No figure on this board is given by hand. Each one is, for now, the mean of three judges:
-          three frontier language models, from OpenAI, Anthropic and DeepSeek, that read the
-          constitution with a precise written definition of what they are looking for. That is a
-          simplification, and a fair one for today. Where a judge could not answer, another model
-          judged in its seat, and the doc reader says where. On the behaviours the judges score
-          the passages the panel found rather than rereading the whole document. And an OpenAI
-          model and an Anthropic model are among the judges of their own companies&rsquo;
-          constitutions.
-        </p>
-        <h3>The document as a whole</h3>
-        <p>
-          Five criteria, each given from 0 to 4 and shown out of 10, so 2 shows as 5.0. A score
-          of 1 or 3 falls between the descriptions either side of it. The document&rsquo;s figure
-          is the average of the five, each counting for 1/5.
-        </p>
-        <div class="table-scroll">
-          <table class="gov-table gov-scoring-table">
-            <thead>
-              <tr><th scope="col" class="check-col">Criterion</th><th scope="col">0</th>
-                <th scope="col">5.0</th><th scope="col">10.0</th></tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row"><strong>Clarity when two rules are contradictory.</strong> What
-                the document says, in general, when two of its own rules conflict.</th>
-                <td>Nothing.</td>
-                <td>An order of priority weighed as a whole, or an instruction to settle conflicts
-                by judgement.</td>
-                <td>A strict order that decides who wins, a rule for two rules of the same rank,
-                and examples of the order applied.</td></tr>
-              <tr><th scope="row"><strong>How firm each rule is.</strong> Whether a reader can tell,
-                for each rule, if it is absolute or a default, and who may change it.</th>
-                <td>Absolute rules and defaults are not told apart.</td>
-                <td>The absolute rules are listed, but for much of the text a rule cannot be told
-                from a hope or an explanation.</td>
-                <td>Every rule carries its force and who may change it, and commentary is marked
-                apart.</td></tr>
-              <tr><th scope="row"><strong>Reasons for the rules.</strong> Whether the rules say why
-                they exist.</th>
-                <td>Rules are stated without reasons.</td>
-                <td>Some rules carry a reason, usually the most restrictive ones.</td>
-                <td>Nearly every rule says why, specifically enough to decide a case the document
-                does not show.</td></tr>
-              <tr><th scope="row"><strong>The situations it covers.</strong> Whether it has rules
-                for six situations: conversation, actions with tools, images and audio, minors,
-                other AI agents, and deployments a business has customised.</th>
-                <td>Ordinary conversation only.</td>
-                <td>Some of the six have rules of their own.</td>
-                <td>All six have rules of their own.</td></tr>
-              <tr><th scope="row"><strong>Unsettled contradictions between rules.</strong> Two
-                passages that require responses which cannot both be given, with nothing saying
-                which prevails.</th>
-                <td>Three or more, or any that involves a rule the document calls absolute.</td>
-                <td>One or two, neither involving an absolute rule.</td>
-                <td>None.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>
-          The last criterion is not scored by a judge. Each judge lists the contradictions it
-          finds, every judge then reads every claim, and a claim counts when at least two readings
-          say it holds. The figure follows from the claims that count.
-        </p>
-        <h3>The behaviours</h3>
-        <p>
-          Each behaviour is written in two parts, what it requires and where it stops. The judges
-          read the constitution against that definition, mark every passage that bears on it, and
-          each gives a depth from 0 to 10 on the scale under the board. A behaviour&rsquo;s figure
-          is the mean of the three depths. A category is the average of its behaviours, and the
-          behaviours&rsquo; figure is the average of all of them, each counting for the same
-          share, so a category counts for as many behaviours as it holds.
-        </p>
-        <h3>The final score</h3>
-        <p>
-          The average of the document as a whole and the behaviours, each counting for 1/2. A
-          company that publishes no constitution scores 0 on every row.
-        </p>
-      </div>
-    </details>
-  </div>
-  <section class="gov-findings page-prose" id="cov-next" data-menu="What comes next" aria-labelledby="cov-next-title">
-    <details class="section-fold">
-    <summary><h2 id="cov-next-title">What comes next</h2></summary>
-    <p>New constitutions, and new versions of the ones already read, will be read as they are
-    published, and readers can <a href="/about?propose#propose">propose both</a>. The behaviours,
-    their definitions and their categories will change as they are challenged.</p>
-    <p>The next view is adherence: measuring how closely each company&rsquo;s models follow the
-    constitution it published. That is what ties the quality of a document to the behaviour of
-    the models it governs.</p>
-      </details>
-  </section>
+  <div id="cov-sections"></div>
   <!-- The board this one replaced, in one line. It is built from the index's
        own publication and every figure on it opens on the passages behind it,
        which is what this board does not carry. -->
@@ -273,45 +132,40 @@
        governance.json, which governance.js reads;
        tests/test_governance_tab.py holds the two to each other. -->
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
-  <h1 id="gov-intro" data-menu="Intro">How constitutions are governed</h1>
-  <p class="lede gov-lede">
-    Some AI companies publish a constitution, a document setting out how their
-    models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores nine companies,
-    as of September 2026, on two things: how transparent they are about the
-    constitutions they publish, and the extent to which those constitutions are
-    actually made to bind the models. The final score is the average of the two,
-    and it ranks the companies.
-  </p>
+  <!-- Every word of this view comes from governance.json, which a publication
+       freezes: see page-content.js. -->
+  <h1 id="gov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="gov-lede" class="gov-lede" hidden data-needs-board></div>
 
 
   <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
 
-  <div class="gov-toolbar">
+  <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint">
       Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
       Open a question to see the checks it is made of.
     </p>
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart">
+  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart" hidden data-needs-board>
     <table class="gov-heatmap board" id="gov-heatmap">
       <caption class="visually-hidden">Each company's final score and the two figures it adds, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
       <thead></thead>
       <tbody></tbody>
     </table>
   </div>
-  <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
-  <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="gov-legend" aria-hidden="true" hidden data-needs-board></div>
   <!-- Written by governance.js from the scores, so it cannot name a tie the
        table does not have. -->
   <p class="gov-foot" id="gov-ties"></p>
-  <p class="gov-date">As of September 2026</p>
+  <p class="gov-date" id="gov-as-of"></p>
 
   <!-- The findings and the notes side by side: the findings read straight down
        in the wider column, and the numbered notes the board's rows point to sit
        beside them, so neither pushes the other off the screen. On a phone they
        stack, findings first. -->
-  <div class="gov-after">
+  <div class="gov-after" hidden data-needs-board>
     <section class="gov-findings" id="gov-takeaways" data-menu="Takeaways" aria-labelledby="gov-findings-title">
       <h2 id="gov-findings-title">Takeaways</h2>
       <div class="gov-findings-list" id="gov-findings"></div>
@@ -325,375 +179,11 @@
     </aside>
   </div>
 
-  <section class="gov-findings page-prose" id="gov-motivation" data-menu="Motivation" aria-labelledby="gov-motivation-title">
-    <details class="section-fold">
-    <summary><h2 id="gov-motivation-title">Motivation</h2></summary>
-    <p>A constitution is the only public statement of how a company intends its models to behave,
-    which makes it the reference against which any claim about a model&rsquo;s behaviour can be
-    checked. It can serve that purpose only if outsiders can see which models it governs and when
-    it changes.</p>
-    <p>As of September 2026 significant changes can happen out of sight: a model deployed under
-    rules nobody has published, a guardrail tightened or loosened without notice, a rule weakened
-    before anything is said. This board scores what each company makes visible. It asks for
-    disclosure, and says nothing about how a company should decide what its rules are.</p>
-      </details>
-  </section>
-
   <!-- One popover for the whole board, filled with whatever was pressed and
        placed beside it. The browser closes it on Escape or a press elsewhere. -->
   <div class="gov-pop" id="gov-pop" popover role="dialog" aria-labelledby="gov-pop-title" tabindex="-1"></div>
 
-  <!-- Three folded sections after the takeaways, named as Guidelight names its
-       own: the detailed scoring, the limitations, and the sources reviewed for
-       each company. The menu on the left opens whichever is chosen. -->
-  <div class="gov-more">
-    <details id="gov-method" class="gov-findings section-fold" data-menu="Detailed scoring">
-      <summary><h2>Detailed scoring</h2></summary>
-      <div class="gov-more-body">
-        <h3>Where the rows come from</h3>
-        <p>
-          The board has two sources and no others. The four questions are the four
-          asks of Polaris Collective's working paper "Model spec governance and
-          transparency", in its draft of 10 September 2026. The ten best practices
-          beside them come from "Emerging International Best Practices for AI Model
-          Specs", a working paper by Edward Kembery and colleagues that is under
-          review. Every row on the board carries the number of the note that names
-          its source, and the paper's own words sit in the popover the row's name
-          opens. Neither paper splits a question into checks, weighs one row
-          against another, or says what earns a score. We did all three, and every
-          score on the board is ours.
-        </p>
-        <h3>How a figure is worked out</h3>
-        <p>
-          A question is split into checks, each scored from 0 to 4: three for each
-          of the first two questions and two for the others. Every check carries a
-          written description of what earns 0, what earns 2 and what earns 4, in
-          the tables below. A question's own figure is the average of its checks.
-          A best practice is scored 0, 1 or 2. Four of them carry a description
-          of each score of their own, and the others share one scale.
-        </p>
-        <p>
-          The board shows every score out of 10, as its share of the scale it was
-          given on: a check scored 3 of 4 shows 7.5, and a practice scored 1 of 2
-          shows 5.0. The score as given is in the panel that opens on it.
-        </p>
-        <p>
-          Each row belongs to one figure and one only, and every row of a figure
-          counts the same. What is published has eleven rows, the ten checks and
-          the licence practice, so each counts for 1/11 of it and a question with
-          three checks counts for 3/11. What it engages has eight, all of them
-          practices, each counting for 1/8. Every row says under its name how
-          much it counts for.
-        </p>
-        <p>
-          <strong>The final score averages the two figures</strong>, each
-          counting for half, and companies are ranked on it. Companies level on it
-          share a place. The two figures measure different things, what a company
-          has published and what it says about its own practice, so both stay on
-          the board under the final score and a reader can see which half a
-          company earned it on.
-        </p>
-        <p>
-          Below, every question, check and practice is named as it is on the
-          board. The tables say what earns 0, 2 and 4 on each check, and a score of
-          1 or 3 falls between the descriptions either side of it.
-        </p>
-        <div id="gov-scoring"></div>
-        <h3>The best practices, figure by figure</h3>
-        <p>
-          The ten best practices come from the second working paper named above,
-          note 6 under the board. Each is named below as it is on the board,
-          followed by what the paper asks and where it asks it.
-        </p>
-        <p>
-          One practice is counted in what is published, because it is a fact about
-          the published text.
-        </p>
-        <ul class="gov-bullets" id="gov-published-practices"></ul>
-        <p>
-          Four are counted in what it engages and can be checked by anyone from
-          public sources.
-        </p>
-        <ul class="gov-bullets" id="gov-engaged-practices"></ul>
-        <p>
-          Four more are counted in the same figure, and nobody outside a company
-          can see whether it follows them. The paper asks companies to say so
-          publicly, so each is scored 0, 1 or 2 on what the company publishes, and
-          0 when it publishes nothing.
-        </p>
-        <ul class="gov-bullets" id="gov-disclosed"></ul>
-        <p>
-          One is scored for nobody, for the reason note 7 gives, and is counted in
-          neither figure.
-        </p>
-        <ul class="gov-bullets" id="gov-internal"></ul>
-        <p>
-          The paper gives no description of what 0, 1 and 2 mean on a practice. In
-          our scoring, 2 is the practice in full, 1 part of it or a weaker form of
-          it, and 0 means we found nothing published.
-        </p>
-        <h3>How we looked</h3>
-        <p>
-          Every score was given by hand, by reading documents. No model judged any
-          row, and no score was taken from another ranking. The reading was done
-          between 18 and 21 September 2026, and the sources it rests on are listed
-          company by company below.
-        </p>
-        <p>
-          For each company we searched its own pages first: the constitution or
-          policy document where one exists, the developer documentation, the model
-          cards and system cards, the terms of service and usage policy, the change
-          logs and release notes, and the safety or frontier framework. We then
-          searched for the company by name against the practices it had not
-          answered, and read the outside sources listed below, among them the EU
-          Code of Practice signatory list, the Stanford Foundation Model
-          Transparency Index, and the evaluations published by the UK AI Security
-          Institute and the US Center for AI Standards and Innovation. For the four
-          practices only a company can show, the search was run one practice at a
-          time across all nine companies, so that each practice was judged the same
-          way everywhere.
-        </p>
-        <p>
-          Every row was read again on 23 and 24 September 2026, and the passage
-          behind each score was recorded with its address and its date.
-        </p>
-        <p>
-          <strong>Where nothing is published, the board says nothing is
-          published.</strong> A 0 is not a judgement that a company does not do
-          something. It says we looked and found nothing public, and a company may
-          well follow a practice without saying so. Every row on the board rests on
-          a passage quoted with its address in the popover behind the score, or on
-          a sentence there saying where we looked and found nothing. Two
-          searches failed outright, and both are named under Limitations: the
-          Chinese regulatory filings, and older copies of pages
-          that carry no date.
-        </p>
-        <p>
-          Tell us if we are wrong. The button at the bottom right of this page sends
-          us a note, and a correction that carries the address of the document is
-          the most useful thing anyone can send.
-        </p>
-        <h3>How to read the scores</h3>
-        <p>
-          <strong>Publishing a constitution and covering models with it are scored
-          separately.</strong> Alibaba's constitution names no model, and on a single
-          "has a constitution" column it would score the same as one that binds a
-          company's products.
-        </p>
-        <p>
-          <strong>The rows say more than the figure.</strong> OpenAI and Anthropic
-          are the two highest on what is published and fall short in opposite
-          ways. OpenAI keeps an archive of its versions, one short of complete,
-          where Anthropic keeps none. Anthropic names the things its models must
-          never do as a closed set, where OpenAI's top level points at detailed
-          policies it does not publish.
-        </p>
-        <p>
-          <strong>The two figures do not agree with each other.</strong> Meta
-          publishes almost nothing and is third on what it engages, which leaves it
-          sixth on the final score. Mistral AI is fifth on what is published and
-          scores 0 on what it engages, the only company that does, which leaves it
-          eighth. That is why both figures stay on the board under the final score.
-        </p>
-        <p>
-          <strong>Six of the nine companies publish no constitution.</strong> Most
-          of what the board asks about published rules cannot apply to them, which
-          is why they score so little on the first figure. Among the three that do
-          publish, the change log is what separates them.
-        </p>
-        <h3>Who the companies are</h3>
-        <p>
-          Some trading names mislead, so here are the companies behind three of
-          them. Moonshot AI is Beijing Moonshot AI Technology
-          (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is
-          杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the
-          High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI
-          SAS, of Paris.
-        </p>
-      </div>
-    </details>
-    <details id="gov-limitations" class="gov-findings section-fold" data-menu="Limitations">
-      <summary><h2>Limitations</h2></summary>
-      <div class="gov-more-body">
-        <p>
-          Both working papers were written to argue for change, and scoring them
-          gives them more precision than they were designed for. The descriptions
-          of each score are ours, and a different reading could move a company by
-          a few points. The wider picture would stay: all nine fall short on the
-          change log, none offers a comment window before one of the things a
-          model must never do is weakened, and none covers government, defence and
-          other special deployments.
-        </p>
-        <p>
-          Every score rests on a document found and dated, in the reading of 18
-          to 21 September 2026. These points are open.
-        </p>
-        <ul class="gov-bullets">
-          <li>
-            <strong>Alibaba's constitution serves no text at its own
-            address.</strong> A plain request to it returns an application shell
-            and no document, so the text used is the copy this index holds, 210
-            passages of it, word for word, at
-            <a href="/spec-reader/?spec=alibaba--model-spec@2026-04-00">its April
-            2026 version</a>. The index keeps only passages that bear on a
-            behaviour, so prefaces and boilerplate are not in it. The preface's
-            invitation to public comment and the overview's acknowledgement of
-            safeguards the service applies around the model are both confirmed,
-            and there is no statement of coverage anywhere in the document.
-            Anyone who tries to check a quotation at that address will meet the
-            same shell.
-          </li>
-          <li>
-            <strong>No older copies of the undated pages were found.</strong>
-            Where a page carries no date and no earlier copy, a quiet edit to it
-            would not show. This matters most for Google, where three of the
-            relevant documents carry no date at all, and for DeepSeek, whose
-            disclosure page has no earlier copy anyone could find.
-          </li>
-          <li>
-            <strong>The Chinese regulatory filings were not found.</strong> The
-            Cyberspace Administration of China publishes its lists as attachments
-            that could not be retrieved. So when this board says Moonshot AI
-            publishes no filing number, it means none appears on Moonshot AI's own
-            sites.
-          </li>
-          <li>
-            <strong>Whether Anthropic has signed the EU Code of Practice is
-            unconfirmed.</strong> Its July 2025 post says it "intends to sign";
-            its own page of voluntary commitments does not list it. No score
-            depends on this.
-          </li>
-          <li>
-            <strong>Which chapters of the EU Code of Practice Mistral has signed
-            is unconfirmed.</strong> The European Commission's list names Mistral
-            with no exception, and sets out chapters only for xAI. No score
-            depends on this.
-          </li>
-          <li>
-            <strong>Some details of Claude Mythos</strong> rest partly on
-            second-hand accounts. That no constitution has been published for it is
-            confirmed from Anthropic's own pages.
-          </li>
-          <li>
-            <strong>What Meta's log of updates to its Community Standards contains
-            could not be established</strong>, so the reading that it does not
-            cover AI is an inference nobody has checked.
-          </li>
-          <li>
-            <strong>The release date of Kimi K3 is disputed</strong> between
-            Moonshot AI's own blog (27 July 2026, for the downloadable model) and
-            the UK AI Security Institute and Wikipedia (16 July 2026). No score
-            depends on this.
-          </li>
-          <li>
-            <strong>All scores are ours.</strong> None comes from an established,
-            published scoring method.
-          </li>
-        </ul>
-      </div>
-    </details>
-    <section class="gov-findings page-prose" id="gov-next" data-menu="What comes next" aria-labelledby="gov-next-title">
-      <details class="section-fold">
-      <summary><h2 id="gov-next-title">What comes next</h2></summary>
-      <p>The scores will be revisited as companies publish, and a correction that carries the
-      address of a document is the most useful thing a reader can send. The four questions come
-      from a working paper that is still being written, so they may change with it.</p>
-      <p>The next view, how constitutions are regulated, follows the same documents into law:
-      which jurisdictions require a constitution to be described, to whom, and whether any requires
-      it to be published or its changes to be recorded.</p>
-          </details>
-    </section>
-    <details id="gov-sources" class="gov-findings section-fold gov-sources" data-menu="Sources reviewed">
-      <summary><h2>Sources reviewed</h2></summary>
-      <div class="gov-more-body">
-        <p>
-          What was read for each company, with the address of each document. The
-          last group holds the sources that cover more than one company.
-        </p>
-        <h3>OpenAI</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://model-spec.openai.com/2026-08-18.html" target="_blank" rel="noopener noreferrer">OpenAI Model Spec, 18 August 2026</a></li>
-          <li><a href="https://github.com/openai/model_spec/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">OpenAI Model Spec change log</a></li>
-          <li><a href="https://openai.com/index/our-approach-to-the-model-spec/" target="_blank" rel="noopener noreferrer">OpenAI, Inside our approach to the Model Spec, 25 March 2026</a></li>
-          <li><a href="https://openai.com/index/collective-alignment-aug-2025-updates/" target="_blank" rel="noopener noreferrer">OpenAI, Collective alignment, 27 August 2025</a></li>
-          <li><a href="https://openai.com/index/introducing-gpt-oss-safeguard/" target="_blank" rel="noopener noreferrer">OpenAI, gpt-oss-safeguard, 29 October 2025</a></li>
-          <li><a href="https://alignment.openai.com/model-spec-evals/" target="_blank" rel="noopener noreferrer">OpenAI, Model Spec Evals, 25 March 2026</a></li>
-        </ul>
-        <h3>Anthropic</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://www.anthropic.com/constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, 21 January 2026</a></li>
-          <li><a href="https://github.com/anthropics/claude-constitution" target="_blank" rel="noopener noreferrer">Anthropic, Claude's Constitution, the copy offered for reuse</a></li>
-          <li><a href="https://www.anthropic.com/rsp-updates" target="_blank" rel="noopener noreferrer">Anthropic, Responsible Scaling Policy update history</a></li>
-          <li><a href="https://platform.claude.com/docs/en/release-notes/system-prompts" target="_blank" rel="noopener noreferrer">Anthropic, release notes for its system prompts</a></li>
-          <li><a href="https://www.anthropic.com/research/next-generation-constitutional-classifiers" target="_blank" rel="noopener noreferrer">Anthropic, next-generation constitutional classifiers, 9 January 2026</a></li>
-        </ul>
-        <h3>Alibaba</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://s.alibaba.com/aaig/specification" target="_blank" rel="noopener noreferrer">Alibaba AI Model Spec</a></li>
-        </ul>
-        <h3>Google DeepMind</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://gemini.google/policy-guidelines/" target="_blank" rel="noopener noreferrer">Google, Gemini app safety and policy guidelines</a></li>
-          <li><a href="https://gemini.google/intl/en/our-approach/" target="_blank" rel="noopener noreferrer">Google, Our approach to the Gemini app</a></li>
-          <li><a href="https://blog.google/technology/ai/ai-principles/" target="_blank" rel="noopener noreferrer">Google, AI Principles of 2018, replaced, with a banner</a></li>
-          <li><a href="https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/strengthening-our-frontier-safety-framework/frontier-safety-framework_3-1.pdf" target="_blank" rel="noopener noreferrer">Google DeepMind, Frontier Safety Framework v3.1, 17 April 2026</a></li>
-          <li><a href="https://ai.google.dev/gemini-api/docs/safety-settings" target="_blank" rel="noopener noreferrer">Google, Gemini API safety settings</a></li>
-          <li><a href="https://blog.google/technology/ai/responsible-ai-2024-report-ongoing-work/" target="_blank" rel="noopener noreferrer">Google, the AI Principles rewritten, 4 February 2025</a></li>
-          <li><a href="https://www.markey.senate.gov/news/press-releases/senators-markey-merkley-welch-press-google-on-changes-to-ai-commitments" target="_blank" rel="noopener noreferrer">Senators Markey, Merkley and Welch to Google, 19 February 2025</a></li>
-          <li><a href="https://www.theregister.com/2025/05/08/google_gemini_update_prevents_disabling/" target="_blank" rel="noopener noreferrer">The Register, an unannounced Gemini guardrail change overrides developers' settings, May 2025</a></li>
-        </ul>
-        <h3>Mistral AI</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://legal.mistral.ai/terms/usage-policy" target="_blank" rel="noopener noreferrer">Mistral AI, usage policy, in effect from 11 June 2026</a></li>
-          <li><a href="https://legal.mistral.ai/ai-governance/models" target="_blank" rel="noopener noreferrer">Mistral AI, AI compliance hub and documentation for each model</a></li>
-          <li><a href="https://huggingface.co/mistralai/Mistral-Large-3-675B-Instruct-2512/raw/main/SYSTEM_PROMPT.txt" target="_blank" rel="noopener noreferrer">Mistral AI, the published system prompt of Mistral Large 3</a></li>
-          <li><a href="https://docs.mistral.ai/studio/conversations/moderation" target="_blank" rel="noopener noreferrer">Mistral AI, moderation and custom guardrails</a></li>
-          <li><a href="https://docs.mistral.ai/resources/changelogs" target="_blank" rel="noopener noreferrer">Mistral AI, the change log of its documentation</a></li>
-          <li><a href="https://mistral.ai/news/shieldstral/" target="_blank" rel="noopener noreferrer">Mistral AI, Shieldstral 1.0, 4 August 2026</a></li>
-          <li><a href="https://crfm.stanford.edu/fmti/December-2025/company-reports/Mistral_FinalReport_FMTI2025.html" target="_blank" rel="noopener noreferrer">Stanford Foundation Model Transparency Index, report on Mistral AI, December 2025</a></li>
-          <li><a href="https://www.newsguardtech.com/special-reports/mistral-le-chat-ai-chatbot-repeats-falsehoods-half-the-time-when-prompted-on-state-sponsored-iran-war-disinformation/" target="_blank" rel="noopener noreferrer">NewsGuard, audit of Mistral's Le Chat, 28 April 2026</a></li>
-        </ul>
-        <h3>Meta</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2" target="_blank" rel="noopener noreferrer">Meta, Advanced AI Scaling Framework v2, 7 April 2026</a></li>
-          <li><a href="https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/" target="_blank" rel="noopener noreferrer">Meta, Muse Spark Safety and Preparedness Report, 26 May 2026</a></li>
-          <li><a href="https://huggingface.co/meta-llama/Llama-Guard-4-12B" target="_blank" rel="noopener noreferrer">Meta, Llama Guard 4</a></li>
-          <li><a href="https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/" target="_blank" rel="noopener noreferrer">TechCrunch, Meta's GenAI Content Risk Standards leaked, 14 August 2025</a></li>
-        </ul>
-        <h3>xAI</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://media.x.ai/v1/website/xai-frontier-artificial-intelligence-framework-30-june-2026-99c40684.pdf" target="_blank" rel="noopener noreferrer">xAI, Frontier AI Framework, 30 June 2026</a></li>
-          <li><a href="https://github.com/xai-org/grok-prompts" target="_blank" rel="noopener noreferrer">xAI, system prompts for Grok</a></li>
-          <li><a href="https://www.pbs.org/newshour/world/grok-blocked-from-undressing-images-with-ai-in-places-where-its-illegal-x-says" target="_blank" rel="noopener noreferrer">PBS, xAI restricts Grok's image editing by statement to the press, 15 January 2026</a></li>
-        </ul>
-        <h3>Moonshot AI</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://platform.kimi.ai/docs/agreement/modeluse.md" target="_blank" rel="noopener noreferrer">Moonshot AI, terms of service of the Kimi platform</a></li>
-          <li><a href="https://platform.kimi.com/docs/agreement/userservice" target="_blank" rel="noopener noreferrer">Moonshot AI, 用户服务协议 (user agreement), updated 24 August 2026, in effect from 31 August 2026</a></li>
-          <li><a href="https://platform.kimi.ai/docs/overview.md" target="_blank" rel="noopener noreferrer">Moonshot AI, the default system prompt in its API quickstart</a></li>
-          <li><a href="https://arxiv.org/html/2507.20534v1" target="_blank" rel="noopener noreferrer">Moonshot AI, Kimi K2 technical report, safety evaluation in section 4.3</a></li>
-          <li><a href="https://arxiv.org/abs/2604.03121" target="_blank" rel="noopener noreferrer">Independent safety evaluation of Kimi K2.5, arXiv 2604.03121</a></li>
-          <li><a href="https://www.aisi.gov.uk/blog/preliminary-assessment-of-kimi-k3s-cyber-capabilities" target="_blank" rel="noopener noreferrer">UK AI Security Institute and US CAISI, preliminary assessment of Kimi K3, 23 July 2026</a></li>
-        </ul>
-        <h3>DeepSeek</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://cdn.deepseek.com/policies/zh-CN/model-algorithm-disclosure.html" target="_blank" rel="noopener noreferrer">DeepSeek, 模型原理与训练方法说明 (its disclosure on how its models work), undated</a></li>
-          <li><a href="https://cdn.deepseek.com/policies/en-US/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in English</a></li>
-          <li><a href="https://cdn.deepseek.com/policies/zh-CN/deepseek-terms-of-use.html" target="_blank" rel="noopener noreferrer">DeepSeek, terms of use, in Chinese, with a different date</a></li>
-          <li><a href="https://www.nist.gov/system/files/documents/2025/09/30/CAISI_Evaluation_of_DeepSeek_AI_Models.pdf" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek models, 30 September 2025</a></li>
-          <li><a href="https://www.nist.gov/news-events/news/2026/05/caisi-evaluation-deepseek-v4-pro" target="_blank" rel="noopener noreferrer">US CAISI, evaluation of DeepSeek V4 Pro, 1 May 2026</a></li>
-        </ul>
-        <h3>More than one company</h3>
-        <ul class="gov-bullets">
-          <li><a href="https://arxiv.org/abs/2605.24229" target="_blank" rel="noopener noreferrer">Jakkli, Rajamanoharan and Nanda, How Well Do Models Follow Their Constitutions?, arXiv 2605.24229</a></li>
-          <li><a href="https://concordia-ai.com/wp-content/uploads/2026/07/State-of-AI-Safety-in-China-2026.pdf" target="_blank" rel="noopener noreferrer">Concordia AI, State of AI Safety in China 2026, July 2026</a></li>
-          <li><a href="https://futureoflife.org/ai-safety-index-summer-2026/" target="_blank" rel="noopener noreferrer">Future of Life Institute, AI Safety Index, summer 2026</a></li>
-          <li><a href="https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai" target="_blank" rel="noopener noreferrer">European Commission, signatories of the General-Purpose AI Code of Practice, updated 31 July 2026</a></li>
-          <li><a href="https://code-of-practice.ai/" target="_blank" rel="noopener noreferrer">General-Purpose AI Code of Practice, Measure 7.1</a></li>
-        </ul>
-      </div>
-    </details>
-  </div>
+  <div id="gov-sections"></div>
   </section>
 </div>
 

@@ -8,18 +8,11 @@
  * a figure here is worth: that what is published may still change, and where
  * the method and the figures come from.
  *
- * WHICH BUILD IS ON SCREEN
+ * WHAT IT DOES NOT SAY
  *
- * These pages are static files copied into public/, identical in every
- * environment, so nothing the platform knows reaches them at build time. What
- * reaches them is a route: /api/reader/publication answers with the build this
- * page is serving and says where it stands, published, not yet published, or
- * superseded by a later one. The note carries that sentence, and a superseded
- * build also raises a second tag beside the first, because a reader who follows
- * a shared link has no other way to know the figures have moved on.
- *
- * A request that fails changes nothing but the sentence it would have added.
- * The two sentences hold whatever the network does.
+ * Which publication is on screen, and whether it is a development build or an
+ * older version, is the badge beside the wordmark's to say (brand.js), since 24
+ * September 2026. This note says only what holds of every build.
  *
  * WHY IT IS ONE FILE
  *
@@ -28,12 +21,6 @@
  * edited, and the page nobody remembered would be the one making the weaker
  * claim. Everything here is built as nodes: a page gains one script tag.
  */
-
-/* Where the published index lives. Written down rather than derived: a
- * deployment showing unpublished work cannot know the address of the one that
- * does, and a reader who has just been told this build is unpublished is owed
- * somewhere to go. */
-const PUBLISHED = "https://ai-constitutions-index.polariscollective.org";
 
 const STYLE = `
 .dev-tag {
@@ -65,19 +52,6 @@ const STYLE = `
   font-weight: 600;
   line-height: 1;
   vertical-align: 1px;
-}
-.dev-older {
-  align-self: center;
-  margin-left: 6px;
-  padding: 2px 8px;
-  border: 1px solid #5C6B3C;
-  border-radius: 999px;
-  color: #5C6B3C;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.5;
-  letter-spacing: .01em;
 }
 .dev-note {
   /* What centres a modal is its auto margin, and two of the four pages carry a
@@ -112,7 +86,7 @@ const STYLE = `
   font-weight: 600;
 }
 .dev-note p { margin: 0 0 10px; }
-.dev-note .dev-more p:last-child { margin-bottom: 14px; }
+.dev-note p:last-of-type { margin-bottom: 14px; }
 .dev-note a { color: #23281B; text-decoration: underline 2px #B7C94B; text-underline-offset: 3px; }
 .dev-note a:hover { background: #B7C94B; }
 .dev-note .dev-close {
@@ -164,21 +138,13 @@ const LINES = [
   + "of your screen.",
 ];
 
-/* Where the build on screen stands, in the route's own words. */
-const STANDING = {
-  published: "This page shows the index as published.",
-  unpublished: "This page shows a build that nobody has published yet.",
-  superseded: "This page shows an earlier publication of the index.",
-};
-
 function paragraph(text) {
   const node = document.createElement("p");
   node.textContent = text;
   return node;
 }
 
-/* The tag, the note behind it, and an empty block inside the note for whatever
- * the route turns out to say. */
+/* The tag and the note behind it. */
 function build(brand) {
   const style = document.createElement("style");
   style.textContent = STYLE;
@@ -188,9 +154,7 @@ function build(brand) {
   note.className = "dev-note";
   const title = document.createElement("h2");
   title.textContent = "Work in progress";
-  const more = document.createElement("div");
-  more.className = "dev-more";
-  note.append(title, ...LINES.map(paragraph), more);
+  note.append(title, ...LINES.map(paragraph));
 
   const close = document.createElement("button");
   close.type = "button";
@@ -214,58 +178,12 @@ function build(brand) {
 
   brand.append(tag);
   document.body.append(note);
-  return more;
-}
-
-/* The sentence about the build on screen, and the one about the deployment.
- * Both are added once the route answers, so the note is complete from the
- * moment it opens for anyone but the fastest reader. */
-async function describe(more, brand) {
-  const pin = new URLSearchParams(location.search).get("publication");
-  try {
-    const response = await fetch("/api/reader/publication"
-      + (pin ? `?publication=${encodeURIComponent(pin)}` : ""));
-    if (!response.ok) return;
-    const publication = await response.json();
-    if (STANDING[publication.standing]) {
-      more.append(paragraph(STANDING[publication.standing]));
-    }
-    if (publication.standing === "superseded") {
-      const older = document.createElement("span");
-      older.className = "dev-older";
-      older.textContent = "Older version";
-      brand.append(older);
-    }
-    /* Exactly true, never merely truthy: a route that answered without the
-     * field would otherwise make a claim about where you are that nobody has
-     * grounds for. */
-    if (publication.development === true) {
-      more.append(paragraph(
-        "This deployment shows builds of the index before anyone has published them."));
-      const out = document.createElement("p");
-      const link = document.createElement("a");
-      link.href = PUBLISHED;
-      // Its own tab: whoever is reading an unpublished build is usually in the
-      // middle of looking at something, and sending them away from it to check a
-      // figure against the published one costs them their place. noopener
-      // because a page opened this way otherwise keeps a handle on the one that
-      // opened it.
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = "the published index";
-      out.append(document.createTextNode("For readings that have been published, see "),
-                 link, document.createTextNode("."));
-      more.append(out);
-    }
-  } catch {
-    // No answer is no claim.
-  }
 }
 
 function start() {
   const brand = document.querySelector(".site-brand");
   if (!brand) return;
-  describe(build(brand), brand);
+  build(brand);
 }
 
 start();

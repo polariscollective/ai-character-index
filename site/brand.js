@@ -1,28 +1,29 @@
-/* The wordmark opens a note on what the reader is looking at.
+/* The wordmark, and the publication beside it.
  *
- * Pressing "AI Constitutions Index" in the header says which publication of the
- * index this page is serving and when it was published, leads to the change log
- * on About, and says why the index has that name. It honours a ?publication=
- * pin, the way the pages it sits on do, so a pinned draft is named as a draft.
+ * Pressing "AI Constitutions Index" in the header says why the index has that
+ * name, in About's own words: on About they are already in the document; on the
+ * other pages that page is fetched and the entry lifted from its list of the
+ * words the index uses, so it is written in one place and cannot drift.
  *
- * Why the name is About's own words. On About they are already in the document;
- * on the other pages that page is fetched and the entry lifted from its list of
- * the words the index uses, so it is written in one place and cannot drift.
+ * Beside the wordmark a small badge gives the date of the publication the page
+ * is serving, highlighted. On a development deployment it says "(development)",
+ * and on a publication older than the current one "(older version)", in the
+ * framework's one warm colour. Pressing it says which publication it is, what
+ * standing it has (published; on development, never published and so never
+ * reviewed; or older), and leads to the change log, to the most recent version
+ * when this is not it, and on development to the published index.
  *
  * It also keeps a pinned publication for the whole site. While ?publication= is
  * in the address, every link to another page of the site carries it, so the
- * reader moves between pages without leaving the publication they chose. And
- * when that publication is older than the one currently public, a tag beside
- * the wordmark says so and leads to the change log, the way dev-tag.js marks a
- * development deployment. dev-tag.js itself reads the publication unpinned,
- * because what it reports is the deployment and not the page.
+ * reader moves between pages without leaving the publication they chose.
  *
  * One file for four pages, as dev-tag.js is, and for the same reason: each page
  * keeps its own stylesheet, so this builds its own nodes and its own style.
- * Without a pin, nothing is fetched until the wordmark is pressed.
  */
 
 const ABOUT = "/about";
+/* Where the published index lives, for a reader on the development version. */
+const PUBLISHED = "https://ai-constitutions-index.polariscollective.org";
 
 /* No backticks inside this block: it is a template literal. */
 const STYLE = `
@@ -81,24 +82,32 @@ const STYLE = `
 }
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
-.older-tag {
+/* The date of the publication, written beside the wordmark rather than set in a
+   pill: small, faint, with a thin underline that says it can be pressed. Only a
+   development build or an older version takes a colour, the framework's one
+   warm colour, with the aside in brackets. */
+.pub-tag {
   align-self: center;
-  margin-left: 2px;
-  padding: 2px 8px;
-  border: 1px solid #C9A227;
-  border-radius: 999px;
-  background: #C9A227;
-  color: #23281B;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #676C58;
   font-family: "Instrument Sans", system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
   line-height: 1.5;
-  text-decoration: none;
   white-space: nowrap;
-  box-shadow: none;
+  text-decoration: underline 1px #C6C4B0;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
-.older-tag:hover, .older-tag:focus-visible { background: #B7C94B; border-color: #B7C94B; color: #23281B; }
-.older-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
+.pub-tag.is-aside { color: #A0522D; text-decoration-color: #A0522D; }
+.pub-tag:hover, .pub-tag:focus-visible, .pub-tag[aria-expanded="true"] {
+  background: #B7C94B; color: #23281B;
+}
+.pub-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
+.brand-pop ul.brand-links { margin: 12px 0 0; padding: 0; list-style: none; }
+.brand-pop ul.brand-links li { margin: 0 0 6px; }
 
 /* ---------- the header on a narrow screen ----------
  *
@@ -170,32 +179,32 @@ function pinned() {
   return new URLSearchParams(location.search).get("publication");
 }
 
-/* Which publication the page is serving, in a sentence. A read that fails says
- * so rather than naming nothing. */
-async function publicationLine() {
-  const line = node("p");
+/* "September 24, 2026", the form the owner chose for this one line. */
+const WHEN = new Intl.DateTimeFormat("en-US",
+  { day: "numeric", month: "long", year: "numeric" });
+const AT = new Intl.DateTimeFormat("en-GB",
+  { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
+
+/* The publication the page is serving and the current one, and where the first
+ * stands beside the second. Null when either cannot be read: no answer, no
+ * claim. */
+async function readStanding() {
+  const pin = pinned();
   try {
-    const pin = pinned();
-    const response = await fetch("/api/reader/publication"
-      + (pin ? `?publication=${encodeURIComponent(pin)}` : ""));
-    if (!response.ok) throw new Error(String(response.status));
-    const publication = await response.json();
-    const date = new Date(publication.published_at).toLocaleDateString("en-GB",
-      { day: "numeric", month: "long", year: "numeric" });
-    const id = node("code", "", String(publication.id).slice(0, 8));
-    // Not public covers a draft nobody has published and a publication since
-    // withdrawn: the row cannot tell the two apart, so the sentence claims neither.
-    if (publication.is_public === false) {
-      line.append(document.createTextNode("You are reading publication "), id,
-        document.createTextNode(`, dated ${date}, which is not the publication currently public.`));
-    } else {
-      line.append(document.createTextNode("You are reading publication "), id,
-        document.createTextNode(`, published on ${date}.`));
-    }
+    const [shownResponse, currentResponse] = await Promise.all([
+      fetch("/api/reader/publication"
+        + (pin ? `?publication=${encodeURIComponent(pin)}` : "")),
+      pin ? fetch("/api/reader/publication") : null,
+    ]);
+    if (!shownResponse.ok) return null;
+    const shown = await shownResponse.json();
+    const current = currentResponse?.ok ? await currentResponse.json() : shown;
+    const older = Boolean(pin) && current.id !== shown.id
+      && new Date(shown.published_at) < new Date(current.published_at);
+    return { shown, current, older, development: shown.development === true };
   } catch {
-    line.textContent = "The publication on this page could not be read.";
+    return null;
   }
-  return line;
 }
 
 /* Why the index is called what it is: the paragraphs of that entry in About's
@@ -220,60 +229,62 @@ async function whyTheName() {
   return copy.childNodes.length ? copy : null;
 }
 
-const state = { pop: null, wordmark: null, filled: false, closedAt: 0 };
+/* One popover for the header, opened by the wordmark or by the badge beside
+ * it. `trigger` is whichever opened it, which is what it is placed under and
+ * what gets the focus back. */
+const state = { pop: null, trigger: null, closedAt: 0, closedBy: null };
 
 function place() {
-  const { pop, wordmark } = state;
-  if (!pop.matches(":popover-open")) return;
-  const header = wordmark.closest(".site-header") || wordmark;
+  const { pop, trigger } = state;
+  if (!trigger || !pop.matches(":popover-open")) return;
+  const header = trigger.closest(".site-header") || trigger;
   const top = header.getBoundingClientRect().bottom + 6;
-  const left = Math.max(8, Math.min(wordmark.getBoundingClientRect().left - 8,
+  const left = Math.max(8, Math.min(trigger.getBoundingClientRect().left - 8,
     window.innerWidth - pop.offsetWidth - 8));
   pop.style.top = `${top}px`;
   pop.style.left = `${left}px`;
 }
 
-async function fill() {
-  const { pop } = state;
+function closeButton() {
   const close = node("button", "brand-close", "×");
   close.type = "button";
   close.setAttribute("aria-label", "Close");
-  close.addEventListener("click", () => pop.hidePopover());
-  const title = node("h2", "", "AI Constitutions Index");
-  title.id = "brand-pop-title";
-  const log = node("p");
-  const link = node("a", "", "Read the change log");
-  link.href = `${ABOUT}#changelog`;
-  log.append(link);
-  pop.replaceChildren(close, title, node("p", "", "Loading."));
-  const [line, why] = await Promise.all([publicationLine(), whyTheName()]);
-  pop.replaceChildren(close, title, line, log);
-  pop.append(node("h3", "", "Why this name"));
-  if (why) {
-    pop.append(why);
-    // Filled for good only once the name's explanation arrived: a read that
-    // failed, while the server restarted say, is tried again on the next press.
-    state.filled = true;
-  } else {
-    pop.append(node("p", "", "The explanation could not be loaded. It is on the About page."));
-  }
-  place();
+  close.addEventListener("click", () => state.pop.hidePopover());
+  return close;
 }
 
-function toggle(event) {
+/* Why the index has its name, which is all the wordmark opens. */
+async function whyTheNameNote(content) {
+  const title = node("h2", "", "Why this name");
+  title.id = "brand-pop-title";
+  content.append(title, node("p", "", "Loading."));
+  const why = await whyTheName();
+  content.replaceChildren(closeButton(), title);
+  content.append(why || node("p", "",
+    "The explanation could not be loaded. It is on the About page."));
+}
+
+/* Open the header's popover under `trigger`, filled by `build`, or close it if
+ * that trigger's note is the one open. */
+function openAbout(event, trigger, build) {
   event.preventDefault();
   const { pop } = state;
-  // A press on the wordmark while the note is open closes it by light dismiss
-  // on the way down; the click that follows must not open it again.
-  if (performance.now() - state.closedAt < 300) return;
+  // A press on the trigger while its note is open closes it by light dismiss on
+  // the way down; the click that follows must not open it again.
+  if (state.closedBy === trigger && performance.now() - state.closedAt < 300) return;
   if (pop.matches(":popover-open")) {
+    const same = state.trigger === trigger;
     pop.hidePopover();
-    return;
+    if (same) return;
   }
+  state.trigger = trigger;
+  pop.replaceChildren(closeButton());
+  const built = build(pop);
   pop.showPopover();
+  trigger.setAttribute("aria-expanded", "true");
   place();
   pop.focus({ preventScroll: true });
-  if (!state.filled) fill();
+  Promise.resolve(built).then(place);
 }
 
 /* The site's own pages, the ones a pin travels between. The API, the admin
@@ -290,6 +301,7 @@ function carryPin(event) {
   if (!pin) return;
   const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
   if (!link) return;
+  if (link.hasAttribute("data-unpinned")) return;
   const raw = link.getAttribute("href") || "";
   if (!raw || raw.startsWith("#")) return;
   const url = new URL(link.href, location.href);
@@ -299,28 +311,81 @@ function carryPin(event) {
   link.href = url.toString();
 }
 
-/* Beside the wordmark when the pinned publication is older than the one that
- * is public now. Two reads, the pinned one and the current one; if either
- * fails, nothing is claimed. */
-async function markOlder(brand) {
-  const pin = pinned();
-  if (!pin || !brand) return;
-  try {
-    const [pinnedResponse, currentResponse] = await Promise.all([
-      fetch(`/api/reader/publication?publication=${encodeURIComponent(pin)}`),
-      fetch("/api/reader/publication"),
-    ]);
-    if (!pinnedResponse.ok || !currentResponse.ok) return;
-    const [shown, current] = await Promise.all([pinnedResponse.json(), currentResponse.json()]);
-    if (!shown?.id || !current?.id || shown.id === current.id) return;
-    if (!(new Date(shown.published_at) < new Date(current.published_at))) return;
-    const tag = node("a", "older-tag", "Older publication");
-    tag.href = `${ABOUT}#changelog`;
-    tag.title = "This page shows an older publication of the index. See the change log.";
-    brand.append(tag);
-  } catch {
-    // No answer is no claim.
+/* The badge beside the wordmark and the note behind it. The note shares the
+ * wordmark's popover, placed under the badge, so the header has one popover and
+ * one way of closing it. */
+function publicationBadge(brand, wordmark) {
+  const badge = node("button", "pub-tag");
+  badge.type = "button";
+  badge.hidden = true;
+  badge.setAttribute("aria-haspopup", "dialog");
+  badge.setAttribute("aria-expanded", "false");
+  badge.setAttribute("aria-controls", "brand-pop");
+  wordmark.after(badge);
+  readStanding().then(standing => {
+    if (!standing) return;
+    const date = WHEN.format(new Date(standing.shown.published_at));
+    const aside = standing.older ? "older version"
+      : standing.development ? "dev" : null;
+    badge.textContent = aside ? `${date} [${aside}]` : date;
+    badge.classList.toggle("is-aside", Boolean(aside));
+    badge.setAttribute("aria-label", `Publication of ${date}${aside ? `, ${aside}` : ""}: `
+      + "what it is");
+    badge.hidden = false;
+    badge.addEventListener("click", event => openAbout(event, badge,
+      content => describePublication(content, standing, date)));
+  });
+}
+
+/* What the badge's note says. */
+function describePublication(content, { shown, older, development }, date) {
+  const title = node("h2", "", `Publication of ${date}`);
+  title.id = "brand-pop-title";
+  const id = node("p");
+  id.append(document.createTextNode(`Put online at ${AT.format(new Date(shown.published_at))}, `
+    + "publication "), node("code", "", String(shown.id).slice(0, 8)), document.createTextNode("."));
+  content.append(title, id);
+  if (older) {
+    content.append(node("p", "", "This is an older version of the index. A more recent "
+      + "publication has been made since, and its figures may differ."));
+  } else if (!development) {
+    content.append(node("p", "", "This is the publication of the index currently published."));
   }
+  if (development) {
+    content.append(node("p", "", "This is the development version of the site, which shows "
+      + "publications before anyone makes them public."));
+    // Only a draft is unreviewed: a development deployment can also be showing
+    // one that was published.
+    if (shown.is_public !== true) {
+      content.append(node("p", "", "This publication has not been published, so it has not "
+        + "been reviewed."));
+    }
+  }
+  const links = node("ul", "brand-links");
+  const item = (text, href, external, newTab = external) => {
+    const link = node("a", "", text);
+    link.href = href;
+    if (newTab) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }
+    // The way back to the most recent version must not take the pin with it.
+    if (!external && newTab) link.dataset.unpinned = "";
+    const li = node("li");
+    li.append(link);
+    links.append(li);
+  };
+  item("Go to the change log", `${ABOUT}#changelog`);
+  if (pinned()) {
+    const url = new URL(location.href);
+    url.searchParams.delete("publication");
+    // In a new tab, unpinned: on development that is the newest publication, on
+    // production the newest published one, which is what the site serves
+    // without a pin.
+    item("Back to the most recent version", url.pathname + url.search + url.hash, false, true);
+  }
+  if (development) item("Go to the published index", PUBLISHED, true);
+  content.append(links);
 }
 
 /* The header's real height, for whatever has to clear it.
@@ -378,21 +443,20 @@ function start() {
   wordmark.setAttribute("aria-haspopup", "dialog");
   wordmark.setAttribute("aria-expanded", "false");
   wordmark.setAttribute("aria-controls", "brand-pop");
-  pop.addEventListener("toggle", event => {
-    wordmark.setAttribute("aria-expanded", String(event.newState === "open"));
-  });
   pop.addEventListener("beforetoggle", event => {
     if (event.newState !== "closed") return;
     state.closedAt = performance.now();
-    if (pop.contains(document.activeElement)) wordmark.focus({ preventScroll: true });
+    state.closedBy = state.trigger;
+    state.trigger?.setAttribute("aria-expanded", "false");
+    if (pop.contains(document.activeElement)) state.trigger?.focus({ preventScroll: true });
   });
-  wordmark.addEventListener("click", toggle);
+  wordmark.addEventListener("click", event => openAbout(event, wordmark, whyTheNameNote));
   window.addEventListener("resize", place, { passive: true });
 
-  Object.assign(state, { pop, wordmark });
+  state.pop = pop;
   const header = wordmark.closest(".site-header");
   if (header) followHeight(header);
-  markOlder(wordmark.closest(".site-brand"));
+  publicationBadge(wordmark.closest(".site-brand"), wordmark);
 }
 
 start();

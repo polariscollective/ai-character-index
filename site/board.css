@@ -205,6 +205,9 @@ h1::before {
   margin-bottom: 14px;
   background: var(--energy);
 }
+/* Under the front page's tabs the tab on screen already carries the chartreuse
+   rule, so the view's title does without its own. */
+[role="tabpanel"] > h1::before { display: none; }
 /* Wider than the 66ch the framework asks for prose. This is a tool rather than
    a page of prose, and at 66ch the four sentences ran to six lines above a grid
    that wants the room. */
@@ -611,6 +614,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .section-fold[open] > summary::before { transform: rotate(45deg); }
 .section-fold > summary:hover::before { border-color: var(--ink); }
 .section-fold > summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* Hidden means hidden. The attribute's own rule is the browser's weakest, and
+   every block here that sets a display (the grid of takeaways and notes, the
+   toolbar's flex row) would otherwise stay on screen while marked hidden, which
+   is how a publication that could not be drawn kept its empty headings. */
+[hidden] { display: none !important; }
+
+/* The sentence a publication that cannot be drawn gets, clear of the tabs. */
+#status, #gov-status { margin-top: 18px; }
 
 /* The small square beside each level of the behaviour scale, painted the colour
    a cell at that depth takes. */
