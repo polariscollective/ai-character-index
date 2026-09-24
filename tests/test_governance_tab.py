@@ -32,8 +32,11 @@ PAGE = (ROOT / "site" / "overview.html").read_text(encoding="utf-8")
 # published and what it engages. Until 24 September 2026 they were ranked on the
 # first figure alone, which was the research note's own order. Six check scores
 # were corrected the same day, which swapped the first two places and moved Meta
-# and Mistral AI.
-ORDER = ["anthropic", "openai", "google", "meta", "alibaba", "xai", "moonshot",
+# and Mistral AI. A second audit then took Meta's practice on change approval to
+# 0, because the clause the board quoted puts the approval it names on model
+# deployment rather than on a change to the framework, and that dropped Meta from
+# fourth place to sixth.
+ORDER = ["anthropic", "openai", "google", "alibaba", "xai", "meta", "moonshot",
          "mistral", "deepseek"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
@@ -264,17 +267,18 @@ class TheTwoFigures(unittest.TestCase):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["5.6", "5.5", "2.0", "1.8", "1.8", "1.5", "1.1", "0.9", "0.5"])
+                         ["5.6", "5.5", "2.0", "1.8", "1.5", "1.5", "1.1", "0.9", "0.5"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
-                         ["6.1", "5.9", "2.0", "0.5", "2.3", "1.1", "0.9", "1.8", "0.5"])
+                         ["6.1", "5.9", "2.0", "2.3", "1.1", "0.5", "0.9", "1.8", "0.5"])
         # Alibaba and Moonshot AI land on exactly 1.25, which the board prints
         # as 1.3: toFixed takes a half upwards, where Python's own round() would
         # take it to the even digit and print 1.2.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.0", "5.0", "1.9", "3.1", "1.3", "1.9", "1.3", "0.0", "0.6"])
+                         ["5.0", "5.0", "1.9", "1.3", "1.9", "2.5", "1.3", "0.0", "0.6"])
         # No two companies are level on the final score, so every place is
-        # taken once. Meta and Alibaba both print 1.8 and are a hundredth apart,
-        # which is why the rank is taken from the figure and not from the print.
+        # taken once. xAI and Meta both print 1.5 and are three hundredths
+        # apart, which is why the rank is taken from the figure and not from
+        # the print.
         self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 7, 8, 9])
 
     def test_the_labs_marked_open_weights_are_the_notes(self):
@@ -489,7 +493,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertIn(f"the best score on it is {shown(on_ten(best_log))} out of 10", first)
 
     def test_the_finding_on_meta_quotes_both_of_its_figures(self):
-        # "It scores 0.5 out of 10 on what is published ... and 3.1 out of 10 on
+        # "It scores 0.5 out of 10 on what is published ... and 2.5 out of 10 on
         # what it engages, behind only OpenAI and Anthropic."
         text = next(f["text"] for f in DATA["findings"] if "Muse Spark" in f["text"])
         _, columns = totals("meta")
@@ -502,9 +506,9 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(columns["published"], totals("deepseek")[1]["published"])
         below = [lab for lab in ORDER if totals(lab)[1]["published"] < columns["published"]]
         self.assertEqual(below, [])
-        # "which puts it fourth on the final score with 1.8 out of 10"
-        self.assertIn(f"fourth on the final score with {shown(ranking('meta'))} out of 10", text)
-        self.assertEqual(rank("meta"), 4)
+        # "which puts it sixth on the final score with 1.5 out of 10"
+        self.assertIn(f"sixth on the final score with {shown(ranking('meta'))} out of 10", text)
+        self.assertEqual(rank("meta"), 6)
 
     def test_the_open_weights_finding_quotes_what_is_published(self):
         # "Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5", with Alibaba
