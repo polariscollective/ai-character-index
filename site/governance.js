@@ -962,12 +962,14 @@ function renderTies() {
  * and this is read straight down. */
 function renderFindings() {
   const list = document.createDocumentFragment();
-  board.data.findings.forEach(finding => {
+  (board.data.findings || []).forEach(finding => {
     const block = element("div", "finding");
     block.append(element("h3", "", finding.title), element("p", "", finding.text));
     list.append(block);
   });
   board.nodes.findings.replaceChildren(list);
+  // A file with no findings shows no empty heading, and the menu leaves it out.
+  board.nodes.findings.closest("section").hidden = !(board.data.findings || []).length;
 }
 
 /* ---- The reference text under the board ----------------------------------------- */
@@ -1043,6 +1045,8 @@ export async function initializeGovernance() {
   try {
     // The page's words first: the sections hold the slots the scoring tables and
     // the practice lists are drawn into, so the nodes are found after them.
+    document.querySelectorAll("#view-governance [data-needs-board]")
+      .forEach(node => { node.hidden = false; });
     renderPage("gov", data.page);
     Object.assign(board.nodes, {
       legend: byId("gov-legend"), findings: byId("gov-findings"),
@@ -1067,6 +1071,9 @@ export async function initializeGovernance() {
   } catch {
     view.nodes.table.tBodies[0].replaceChildren();
     view.nodes.table.tHead.replaceChildren();
+    document.querySelectorAll("#view-governance [data-needs-board]")
+      .forEach(node => { node.hidden = true; });
+    byId("gov-sections").replaceChildren();
     board.nodes.status.textContent = INCOMPATIBLE;
     return;
   }

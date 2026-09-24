@@ -43,7 +43,10 @@ let menuTargets = [];
 function renderMenu(view) {
   if (!menu) return;
   const panel = document.getElementById(`view-${view}`);
-  menuTargets = [...panel.querySelectorAll("[data-menu]")];
+  // Only what is on the page: a section kept hidden because the publication
+  // could not be drawn, or a takeaways section with nothing in it, is left out.
+  menuTargets = [...panel.querySelectorAll("[data-menu]")]
+    .filter(target => !target.closest("[hidden]"));
   const list = document.createElement("ol");
   menuTargets.forEach(target => {
     const item = document.createElement("li");
