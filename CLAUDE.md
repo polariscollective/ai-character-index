@@ -1553,6 +1553,44 @@ for OpenAI and none for xAI, so those two show their name alone; Alibaba is draw
 with the Alibaba Cloud mark and Google DeepMind with Google's, both recorded in
 that file.
 
+### The reader opens in two rounds of requests
+
+**Found by timing a cold arrival. Fixed.** On the `develop` preview, opening
+`/spec-reader/` with no parameters took 5.6 seconds to show any text when the
+edge cache was cold, and 0.37 seconds when it was warm. The requests themselves
+were fast enough. `initialize()` made four rounds of them, each waiting for the
+one before: the payload, then the documents' metadata with the notes and a
+links request, then the text of the opening document, then the opening
+behaviour's paragraphs and links. On a bare address the links request of the
+second round named no behaviour and no document, so it returned nothing
+useful, and it was the slowest of the round at 2.4 seconds. The routes cache
+the current publication for 60 seconds plus 300 stale, so any visitor arriving
+after six quiet minutes paid the whole chain again.
+
+The documents' metadata and the notes are now asked for beside the payload,
+for the pin the URL names, and asked again only when that pin falls back. The
+opening document's text and the opening behaviour's paragraphs and links then
+go together. With 800 ms added to every reader request, a bare arrival went
+from 8.6 to 2.0 seconds against the same data, with the same passages marked.
+
+Found on the way, and fixed with it: `ensureBehaviours` fetched a behaviour's
+paragraphs and its links in one `Promise.all`, and `initialize` awaited it
+uncaught. A publication without links answers 404 on the links route, so the
+reader showed its "could not be loaded" error in place of the text. That is
+true of `1919ee6b`, the public publication as of September 2026, so `develop`
+would have broken the public reader on deploy; the preview never showed it
+because it serves a newer build that carries links. The links now fail alone.
+
+**Not fixed, and it grows with the index.** Every cold serverless instance
+fetches a whole column from Supabase and slices it in Node
+(`app/lib/slice.mjs`). The `links` column is 4.5 MB as of September 2026 and
+the reader wants one behaviour over one or two documents of it. The column is
+kept whole because its digest is taken over its exact bytes, which is also why
+it is `json` rather than `jsonb`. Storing the slices beside the whole file at
+publication time, or slicing in a SQL function, would let a request read what
+it needs. Either one is a migration in `polaris-supabase` and a change to
+`publish.py`.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

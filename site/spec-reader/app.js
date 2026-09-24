@@ -167,16 +167,29 @@ async function loadBehaviours() {
   return payload;
 }
 
+/* The pin the payload was served from, or null for the current publication. */
+function servedPin() {
+  return state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+}
+
+/* The pin the URL asks for, before the payload has said whether it was served. */
+function askedPin() {
+  const pinned = new URLSearchParams(location.search).get("publication");
+  return payloadName(pinned) ? pinned : null;
+}
+
 /* Loaded once, beside the payload. A behaviour the registry does not describe
  * still gets a note saying so, because "nobody has written what this means" is
  * an answer and an empty popover is not. */
 let behaviourNotes = null;
 
-async function loadBehaviourNotes() {
+/* `pinned` defaults to the publication the payload resolved to. initialize
+ * passes the pin the URL asks for instead, so this can start beside the payload
+ * rather than after it, and asks again only if that pin fell back. */
+async function loadBehaviourNotes(pinned = servedPin()) {
   try {
     // The same publication the payload came from, so a pinned draft's notes
     // describe that draft rather than what the public is being shown.
-    const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
     behaviourNotes = await loadJSON(
       pinned ? `${BEHAVIOUR_NOTES_URL}?publication=${encodeURIComponent(pinned)}`
              : BEHAVIOUR_NOTES_URL);
@@ -197,8 +210,7 @@ async function loadBehaviourNotes() {
 /* Sliced like the payload and the links beside it. The documents column is
  * 1070 KB for four documents and the panel shows one, or two when comparing;
  * every other loader already said which it wanted and this one did not. */
-async function loadDocuments() {
-  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
+async function loadDocuments(pinned = servedPin()) {
   return loadJSON(`${DOCUMENTS_URL}${sliceParams(pinned, { specs: urlSpecs() })}`);
 }
 
@@ -1813,7 +1825,7 @@ async function setSelection(slugs) {
   // keeps showing the previous selection while the state already says otherwise.
   // ensureBehaviours already treats a failed fetch as nothing worth remembering
   // (it drops the slug from inFlight so a retry can ask again); this follows the
-  // same spirit loadReaderLinks does, rendering what it can rather than freezing.
+  // same spirit, rendering what it can rather than freezing.
   await ensureBehaviours(state.selectedSlugs).catch(() => {});
 
   // Read live, not the `chosen` captured before the await: a second tick that
@@ -4841,8 +4853,18 @@ async function ensureBehaviours(slugs) {
       missing.length
         ? loadJSON(`${PAYLOAD_URL}${sliceParams(pinned, { behaviours: missing })}`)
         : null,
+      /* The links fail alone. A publication built before it carried links
+       * answers 404 here, and that must cost the bubbles and nothing else: the
+       * paragraphs in the same answer are what the page is for. The entry goes,
+       * so a later tick can ask again. */
       missingLinks.length
         ? loadJSON(`${LINKS_URL}${sliceParams(pinned, { behaviours: missingLinks, specs: shown })}`)
+            .catch(error => {
+              const at = linksHeld.indexOf(entry);
+              if (at >= 0) linksHeld.splice(at, 1);
+              console.warn(`Links unavailable (${error.message}).`);
+              return null;
+            })
         : null,
     ]);
     if (payload) {
@@ -5032,48 +5054,6 @@ const LINK_WORDS = {
    * says so: it carries no locator to travel to, and its words are the note. */
   summary: "in short",
 };
-
-async function loadReaderLinks() {
-  /* One route, three answers. These were three gitignored files beside the
-   * reader, which meant no deployment ever carried them: the bubbles, the
-   * comparisons and the readings existed only on the machine that generated
-   * them. They are rows in the database, and this is the route that serves them.
-   *
-   * A failure leaves all three null, which is the reader as it was before any of
-   * this existed: no bubbles, no paragraph under a figure, and nothing said about
-   * it. A page that renders less is better than one that says the index is
-   * broken because a fetch stuttered. */
-  /* Pinned like the payload and the documents, and for the same reason: a
-   * publication carries its own links now, so a pinned page fetching them
-   * unpinned would lay today's readings over yesterday's text. Read from
-   * state.payloadSource rather than from the URL, so a pin that fell back reads
-   * the current publication's links with its payload.
-   *
-   * Sliced the same way the payload is: the same behaviours, and the documents
-   * the URL already names, so the first links fetch is not the whole
-   * publication's bubbles when the reader is about to show one document. */
-  const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
-  const slugs = urlSlugs();
-  const specs = urlSpecs();
-  try {
-    const answered = await loadJSON(
-      `${LINKS_URL}${sliceParams(pinned, { behaviours: slugs, specs })}`);
-    linkRows = answered;
-    depthRows = { cells: answered.notes?.depth || {} };
-    overviewRows = { cells: answered.notes?.standing || {} };
-    /* Recorded so ensureBehaviours does not ask again for what this has just
-     * fetched: unrecorded, the first tick after arrival would fetch these same
-     * bytes a second time. An absent parameter asks the route for everything,
-     * so an absent behaviour list covers every behaviour and an absent document
-     * list every document, which is what null says here. */
-    linksHeld.push({ slugs: slugs === undefined ? null : new Set(slugs),
-                     docs: specs.length ? new Set(specs) : null });
-  } catch {
-    linkRows = null;
-    depthRows = null;
-    overviewRows = null;
-  }
-}
 
 /* The bubbles under one judged block, one per counterpart. `data-locators` is
  * the block's own, newline separated, set a few lines above by annotatePassages.
@@ -5290,14 +5270,25 @@ async function initialize() {
   setupComparison();
   renderBehaviourList();
   try {
-    // The payload first: which publication it resolved to decides where the
-    // documents, the behaviour notes and the links are read from, so all four
-    // describe the same publication.
+    /* Two rounds of requests. On a cold cache each request waits on a
+     * serverless function, so an arrival costs one such wait for every round
+     * that has to wait for the previous one.
+     *
+     * First round: the payload, the documents' metadata and the behaviour
+     * notes, together. The documents and the notes must describe the
+     * publication the payload resolved to, and they are asked for the one the
+     * URL names; only a pin that fell back makes them ask again. */
+    const asked = askedPin();
+    const early = [loadDocuments(asked), loadBehaviourNotes(asked)];
+    early[0].catch(() => {});
     const behaviours = await loadBehaviours();
-    // The notes beside the documents, not before them: a note that fails to load
-    // must not stop the reader rendering, so its failure is swallowed.
-    const [documents] = await Promise.all([
-      loadDocuments(), loadBehaviourNotes(), loadReaderLinks()]);
+    const served = servedPin();
+    // A pin that fell back waits for the early notes to settle before asking
+    // again, or the pinned notes could land last and overwrite the current ones.
+    if (served !== asked) await Promise.allSettled(early);
+    const [documents] = served === asked
+      ? await Promise.all(early)
+      : await Promise.all([loadDocuments(served), loadBehaviourNotes(served)]);
     // The registry's own order, for setSelection to sort by: sorting by the
     // loaded payload would filter out a behaviour ticked before it arrives.
     registrySlugs = Object.keys(behaviourNotes || {});
@@ -5344,17 +5335,31 @@ async function initialize() {
        fallbacks then settle on a document nobody's fetch ever asked for. This
        writer is no different from any other: fetch what it just wrote, before
        anything is drawn. */
-    await ensureShownDocuments();
+    /* Second round: the text of the document about to be shown, and the
+     * paragraphs and links of the behaviour about to be ticked, together. They
+     * used to follow one another. Before them came a links request cut to the
+     * documents and behaviours the URL named, which on a bare address is none
+     * of either, so it returned nothing the page could use.
+     *
+     * A passage link may choose another document and add a behaviour, so the
+     * behaviours wait for it there; everywhere else they are known already. */
+    const passage = params.get(PASSAGE_PARAM);
+    await Promise.all([
+      ensureShownDocuments(),
+      ...(passage ? [] : [ensureBehaviours(state.selectedSlugs)]),
+    ]);
     state.compareFirst = savedNumber("aci-compare-first", state.compareFirst);
     // A link to a passage chooses the document, a behaviour and a band before
     // anything is drawn, and is followed to the passage once the panels are.
-    const linked = await openPassageLink(params.get(PASSAGE_PARAM));
+    const linked = await openPassageLink(passage);
     elements.compareToggle.setAttribute("aria-pressed", String(state.comparing));
     renderBehaviourList();
     // The URL has been read and the selection settled, but the panels have not
-    // been drawn: the last chance to load a behaviour the address named, or one
-    // a passage link added, before the first paint shows it.
-    await ensureBehaviours(state.selectedSlugs);
+    // been drawn: the last chance to load a behaviour a passage link added
+    // before the first paint shows it. Without one, the second round above has
+    // loaded them already, and asking again would only repeat a links request
+    // that failed there, a whole round spent on a second 404.
+    if (passage) await ensureBehaviours(state.selectedSlugs);
     state.keepPassageParam = Boolean(linked?.resolved);
     syncURL();
     state.keepPassageParam = false;
