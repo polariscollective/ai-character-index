@@ -99,46 +99,50 @@
     <h2 id="behaviour-scale-title"></h2>
     <ol class="depth-key-list" id="behaviour-scale"></ol>
   </section>
-  <!-- The numbered notes the board's rows point to, under the scale the third
-       one refers to, with a heading as the governance view gives its own. The
-       numbers are the ones constitutions.js writes beside the rows' names. -->
-  <section class="gov-findings gov-notes-rail" id="cov-notes" data-menu="Notes" aria-labelledby="cov-notes-title">
-  <h2 id="cov-notes-title">Notes</h2>
-  <ol class="gov-notes" id="board-notes">
-    <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
-    behaviours, each counting for half. It ranks the companies. Every figure on the board is out
-    of 10, and each row says under its name how much it counts for in the figure it belongs
-    to.</li>
-    <li value="2"><strong>The document as a whole.</strong> Whether the constitution settles a
-    clash between two of its own rules, whether a reader can tell which rules are absolute and
-    which can be lifted and by whom, whether the rules come with reasons, whether they reach the
-    situations the models are used in, and whether the document contradicts itself somewhere
-    without saying which rule wins.</li>
-    <li value="3"><strong>The behaviours.</strong> How far the constitution goes on each behaviour
-    the index asks about, from saying nothing about it to setting rules and showing them applied
-    to worked examples, on the scale above. For us, a behaviour is one precise thing a
-    constitution can ask of a model, such as deferring to users&rsquo; decisions about their own
-    lives, or not asserting what the model believes to be false. Each is written in two parts,
-    what it requires and where it stops, so that a careful reader could mark every passage of a
-    constitution that bears on it. In the <a href="/spec-reader/">doc reader</a> you can pick a
-    behaviour and read every passage of a constitution that bears on it.</li>
-    <li value="4"><strong>Categories.</strong> For now the behaviours are grouped into categories.
-    We wrote the behaviours, their definitions and the categories ourselves, and all three are
-    open to challenge.</li>
-  </ol>
-  </section>
   <p class="gov-foot" id="ties"></p>
   <p class="gov-date" id="as-of"></p>
 
   <!-- What the board shows, why it exists and where it goes next, in the order
        Guidelight gives its own sections. The takeaways are written in
        constitutions.json and drawn by constitutions.js. -->
-  <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
-    <h2 id="cov-takeaways-title">Takeaways</h2>
-    <div class="gov-findings-list" id="cov-findings"></div>
-  </section>
+  <!-- The takeaways and the notes side by side, as on the governance view. -->
+  <div class="gov-after">
+    <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
+      <h2 id="cov-takeaways-title">Takeaways</h2>
+      <div class="gov-findings-list" id="cov-findings"></div>
+    </section>
+    <!-- The numbered notes the board's rows point to, under the scale the third
+         one refers to, with a heading as the governance view gives its own. The
+         numbers are the ones constitutions.js writes beside the rows' names. -->
+    <aside class="gov-findings gov-notes-rail" id="cov-notes" data-menu="Notes" aria-labelledby="cov-notes-title">
+    <h2 id="cov-notes-title">Notes</h2>
+    <ol class="gov-notes" id="board-notes">
+      <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
+      behaviours, each counting for half. It ranks the companies. Every figure on the board is out
+      of 10, and each row says under its name how much it counts for in the figure it belongs
+      to.</li>
+      <li value="2"><strong>The document as a whole.</strong> Whether the constitution settles a
+      clash between two of its own rules, whether a reader can tell which rules are absolute and
+      which can be lifted and by whom, whether the rules come with reasons, whether they reach the
+      situations the models are used in, and whether the document contradicts itself somewhere
+      without saying which rule wins.</li>
+      <li value="3"><strong>The behaviours.</strong> How far the constitution goes on each behaviour
+      the index asks about, from saying nothing about it to setting rules and showing them applied
+      to worked examples, on the scale above. For us, a behaviour is one precise thing a
+      constitution can ask of a model, such as deferring to users&rsquo; decisions about their own
+      lives, or not asserting what the model believes to be false. Each is written in two parts,
+      what it requires and where it stops, so that a careful reader could mark every passage of a
+      constitution that bears on it. In the <a href="/spec-reader/">doc reader</a> you can pick a
+      behaviour and read every passage of a constitution that bears on it.</li>
+      <li value="4"><strong>Categories.</strong> For now the behaviours are grouped into categories.
+      We wrote the behaviours, their definitions and the categories ourselves, and all three are
+      open to challenge.</li>
+    </ol>
+    </aside>
+  </div>
   <section class="gov-findings page-prose" id="cov-motivation" data-menu="Motivation" aria-labelledby="cov-motivation-title">
-    <h2 id="cov-motivation-title">Motivation</h2>
+    <details class="section-fold" open>
+    <summary><h2 id="cov-motivation-title">Motivation</h2></summary>
     <p>A constitution is the document in which a company says how its models should behave, and
     it is the only public statement against which a model&rsquo;s behaviour can be checked. Its
     defaults shape what hundreds of millions of people come to expect of an AI system.</p>
@@ -146,14 +150,15 @@
     to be written precisely before anyone can train a model on them or test it against them. This
     board reads each constitution for that precision, as a document and behaviour by
     behaviour.</p>
+      </details>
   </section>
   <!-- How the figures are given, folded like the governance view's detailed
        scoring. The table restates methodology/document-assessment-rubric.md on
        the board's scale; that file is the canonical source. The account of the
        behaviours is simplified on purpose and says so. -->
   <div class="gov-more">
-    <details id="cov-method" data-menu="Detailed scoring">
-      <summary>Detailed scoring</summary>
+    <details id="cov-method" class="gov-findings section-fold" data-menu="Detailed scoring" open>
+      <summary><h2>Detailed scoring</h2></summary>
       <div class="gov-more-body">
         <h3>Who gives the figures</h3>
         <p>
@@ -237,13 +242,15 @@
     </details>
   </div>
   <section class="gov-findings page-prose" id="cov-next" data-menu="What comes next" aria-labelledby="cov-next-title">
-    <h2 id="cov-next-title">What comes next</h2>
+    <details class="section-fold" open>
+    <summary><h2 id="cov-next-title">What comes next</h2></summary>
     <p>New constitutions, and new versions of the ones already read, will be read as they are
     published, and readers can <a href="/about?propose#propose">propose both</a>. The behaviours,
     their definitions and their categories will change as they are challenged.</p>
     <p>The next view is adherence: measuring how closely each company&rsquo;s models follow the
     constitution it published. That is what ties the quality of a document to the behaviour of
     the models it governs.</p>
+      </details>
   </section>
   <!-- The board this one replaced, in one line. It is built from the index's
        own publication and every figure on it opens on the passages behind it,
@@ -319,7 +326,8 @@
   </div>
 
   <section class="gov-findings page-prose" id="gov-motivation" data-menu="Motivation" aria-labelledby="gov-motivation-title">
-    <h2 id="gov-motivation-title">Motivation</h2>
+    <details class="section-fold" open>
+    <summary><h2 id="gov-motivation-title">Motivation</h2></summary>
     <p>A constitution is the only public statement of how a company intends its models to behave,
     which makes it the reference against which any claim about a model&rsquo;s behaviour can be
     checked. It can serve that purpose only if outsiders can see which models it governs and when
@@ -328,6 +336,7 @@
     rules nobody has published, a guardrail tightened or loosened without notice, a rule weakened
     before anything is said. This board scores what each company makes visible. It asks for
     disclosure, and says nothing about how a company should decide what its rules are.</p>
+      </details>
   </section>
 
   <!-- One popover for the whole board, filled with whatever was pressed and
@@ -338,8 +347,8 @@
        own: the detailed scoring, the limitations, and the sources reviewed for
        each company. The menu on the left opens whichever is chosen. -->
   <div class="gov-more">
-    <details id="gov-method" data-menu="Detailed scoring">
-      <summary>Detailed scoring</summary>
+    <details id="gov-method" class="gov-findings section-fold" data-menu="Detailed scoring" open>
+      <summary><h2>Detailed scoring</h2></summary>
       <div class="gov-more-body">
         <h3>Where the rows come from</h3>
         <p>
@@ -503,8 +512,8 @@
         </p>
       </div>
     </details>
-    <details id="gov-limitations" data-menu="Limitations">
-      <summary>Limitations</summary>
+    <details id="gov-limitations" class="gov-findings section-fold" data-menu="Limitations" open>
+      <summary><h2>Limitations</h2></summary>
       <div class="gov-more-body">
         <p>
           Both working papers were written to argue for change, and scoring them
@@ -584,16 +593,18 @@
       </div>
     </details>
     <section class="gov-findings page-prose" id="gov-next" data-menu="What comes next" aria-labelledby="gov-next-title">
-      <h2 id="gov-next-title">What comes next</h2>
+      <details class="section-fold" open>
+      <summary><h2 id="gov-next-title">What comes next</h2></summary>
       <p>The scores will be revisited as companies publish, and a correction that carries the
       address of a document is the most useful thing a reader can send. The four questions come
       from a working paper that is still being written, so they may change with it.</p>
       <p>The next view, how constitutions are regulated, follows the same documents into law:
       which jurisdictions require a constitution to be described, to whom, and whether any requires
       it to be published or its changes to be recorded.</p>
+          </details>
     </section>
-    <details id="gov-sources" class="gov-sources" data-menu="Sources reviewed">
-      <summary>Sources reviewed</summary>
+    <details id="gov-sources" class="gov-findings section-fold gov-sources" data-menu="Sources reviewed" open>
+      <summary><h2>Sources reviewed</h2></summary>
       <div class="gov-more-body">
         <p>
           What was read for each company, with the address of each document. The

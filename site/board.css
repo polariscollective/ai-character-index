@@ -590,15 +590,20 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .board tr[data-level="3"] .row-name .head-name { font-size: 14px; font-weight: 400; }
 /* A section of the page that folds under its own heading, open by default. The
    chevron is the rows' own, so one sign means "opens" everywhere. */
-.section-fold > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+/* The heading is the section's own, styled as every section heading is; the one
+   thing folding adds is a small chevron after it, level with the words. */
+.section-fold > summary {
+  display: flex; align-items: flex-end; gap: 10px; cursor: pointer; list-style: none;
+  padding: 0; font: inherit;
+}
 .section-fold > summary::-webkit-details-marker { display: none; }
-.section-fold > summary::before {
-  content: ""; flex: none; width: 8px; height: 8px;
-  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+.section-fold > summary::after {
+  content: ""; flex: none; width: 6px; height: 6px; margin-bottom: 20px;
+  border-right: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint);
   transform: rotate(-45deg); transition: transform .15s ease;
 }
-.section-fold[open] > summary::before { transform: rotate(45deg); }
-.section-fold > summary:hover::before { border-color: var(--ink); }
+.section-fold[open] > summary::after { transform: rotate(45deg); margin-bottom: 22px; }
+.section-fold > summary:hover::after { border-color: var(--ink); }
 .section-fold > summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 
 /* The small square beside each level of the behaviour scale, painted the colour
@@ -724,7 +729,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-findings { margin-top: 40px; }
 /* A section of prose under a board: motivation, what comes next. */
 .page-prose p { margin: 0 0 12px; max-width: 72ch; font-size: 15px; line-height: 1.6; }
-.gov-more .page-prose { margin: 24px 0; }
 /* The menu of the page's sections, down the left margin. It lives in the margin
    the page's measure leaves (8vw on either side) and only where that margin is
    wide enough to hold a short title, so it never takes width from a board. It
@@ -912,9 +916,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .inline-button:hover { background: var(--energy); }
 
 /* The reference text under the board, folded. */
-.gov-more { margin-top: 40px; border-top: 1px solid var(--muted); }
-.gov-more > details { border-bottom: 1px solid rgb(92 107 60 / .2); }
-.gov-more summary {
+.gov-more { margin-top: 0; }
+.gov-more summary:not(.section-fold > summary) {
   padding: 14px 0;
   font-family: var(--display);
   font-size: 18px;
@@ -1166,5 +1169,5 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
-  .gov-pop summary::before, .section-fold > summary::before { transition: none; }
+  .gov-pop summary::before, .section-fold > summary::after { transition: none; }
 }
