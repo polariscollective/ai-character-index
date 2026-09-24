@@ -301,6 +301,7 @@ function carryPin(event) {
   if (!pin) return;
   const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
   if (!link) return;
+  if (link.hasAttribute("data-unpinned")) return;
   const raw = link.getAttribute("href") || "";
   if (!raw || raw.startsWith("#")) return;
   const url = new URL(link.href, location.href);
@@ -361,13 +362,15 @@ function describePublication(content, { shown, older, development }, date) {
     }
   }
   const links = node("ul", "brand-links");
-  const item = (text, href, external) => {
+  const item = (text, href, external, newTab = external) => {
     const link = node("a", "", text);
     link.href = href;
-    if (external) {
+    if (newTab) {
       link.target = "_blank";
       link.rel = "noopener noreferrer";
     }
+    // The way back to the most recent version must not take the pin with it.
+    if (!external && newTab) link.dataset.unpinned = "";
     const li = node("li");
     li.append(link);
     links.append(li);
@@ -376,7 +379,10 @@ function describePublication(content, { shown, older, development }, date) {
   if (pinned()) {
     const url = new URL(location.href);
     url.searchParams.delete("publication");
-    item("Back to the most recent version", url.pathname + url.search + url.hash);
+    // In a new tab, unpinned: on development that is the newest publication, on
+    // production the newest published one, which is what the site serves
+    // without a pin.
+    item("Back to the most recent version", url.pathname + url.search + url.hash, false, true);
   }
   if (development) item("Go to the published index", PUBLISHED, true);
   content.append(links);
