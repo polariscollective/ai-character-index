@@ -785,8 +785,8 @@
    "2.1": 1,
    "2.2": 0,
    "2.3": 2,
-   "3.1": 4,
-   "3.2": 1,
+   "3.1": 3,
+   "3.2": 2,
    "4.1": 4,
    "4.2": 1
   },
@@ -916,7 +916,7 @@
    "S2": 1,
    "S3": 1,
    "S4": 0,
-   "S5": 1
+   "S5": 0
   },
   "xai": {
    "S1": 0,
@@ -1878,14 +1878,14 @@
       "quote": "Our deployment safeguards will employ a defense-in-depth strategy with four main layers, each designed to catch potential misuse that might pass through previous barriers. The four layers will be: Access controls to tailor safeguards to the deployment context and group of expected users. Real-time prompt and completion classifiers and completion interventions for immediate online filtering. Asynchronous monitoring classifiers for a more detailed analysis of the completions for threats. Post-hoc jailbreak detection with rapid response procedures to quickly address any threats.",
       "title": "Anthropic's Responsible Scaling Policy, Planned ASL-3 Safeguards",
       "url": "https://www.anthropic.com/responsible-scaling-policy",
-      "date": "14 August 2026",
+      "date": "15 October 2024",
       "read": "24 September 2026"
      },
      {
       "quote": "General access to AI models (e.g. Claude.ai and our API) will use our standard safeguards.",
       "title": "Anthropic's Responsible Scaling Policy, Access controls",
       "url": "https://www.anthropic.com/responsible-scaling-policy",
-      "date": "14 August 2026",
+      "date": "15 October 2024",
       "read": "24 September 2026"
      },
      {
@@ -1896,7 +1896,7 @@
       "read": "24 September 2026"
      }
     ],
-    "looked": "The four layers are published as planned ASL-3 deployment safeguards, and their stated coverage is general access to Claude.ai and the API. We found no list of this kind for Claude Code or for Claude Gov."
+    "looked": "The four layers are published as planned ASL-3 deployment safeguards, in an overview the page dates 15 October 2024, and their stated coverage is general access to Claude.ai and the API. We found no list of this kind for Claude Code or for Claude Gov, and no later inventory of the guardrails in use."
    },
    "3.2": {
     "sources": [
@@ -2681,11 +2681,11 @@
    "S5": {
     "sources": [
      {
-      "quote": "updates to this Advanced AI Scaling Framework, internal use reports, and related deployments and disclosures, with model deployment following appropriate consultation with relevant teams and with the approval of the Chief AI Officer",
+      "quote": "The Chief AI Officer supervises and is supported by the Director of Alignment and Risk, who bears responsibility for executing the lifecycle of risk assessment and mitigation, preparedness reports, updates to this Advanced AI Scaling Framework, internal use reports, and related deployments and disclosures, with model deployment following appropriate consultation with relevant teams and with the approval of the Chief AI Officer.",
       "title": "Advanced AI Scaling Framework, version 2, section 2.3",
       "url": "https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2",
       "date": "7 April 2026",
-      "read": "23 September 2026"
+      "read": "24 September 2026"
      },
      {
       "quote": "Named the Chief AI Officer and Director of Alignment and Risk as responsible decision-makers, with whistleblower and non-compliance reporting protocols and retaliation protections.",
@@ -2695,7 +2695,7 @@
       "read": "23 September 2026"
      }
     ],
-    "looked": "The approval named here is for changes to the Advanced AI Scaling Framework. Meta publishes no constitution for it to reach."
+    "looked": "The approval this clause names is for model deployment. Updates to the framework sit among the things the Director of Alignment and Risk executes, and no approver is named for them. The change log names the same two officers as responsible decision-makers for risk decisions, and says nothing about amending any document. Meta publishes no constitution for a clause of this kind to reach."
    }
   },
   "xai": {
@@ -3252,11 +3252,11 @@
   },
   {
    "title": "Meta publishes almost nothing and engages more than most",
-   "text": "It scores 0.5 out of 10 on what is published, level with DeepSeek at the bottom of that figure, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic, which puts it fourth on the final score with 1.8 out of 10. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
+   "text": "It scores 0.5 out of 10 on what is published, level with DeepSeek at the bottom of that figure, and 2.5 out of 10 on what it engages, behind only OpenAI and Anthropic, which puts it sixth on the final score with 1.5 out of 10. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
   },
   {
    "title": "Most companies whose models anyone can download sit at the bottom, partly because of the questions",
-   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores on what is published, Mistral AI's 1.8, Moonshot AI's 0.9 and DeepSeek's 0.5, and on the final score they take the last three places. Alibaba is the exception, third on what is published with 2.3, and its Qwen models are among the most used open-weight models there are. Their licences say almost nothing about behaviour. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence and Mistral under Apache 2.0, and neither adds a condition of any kind. Moonshot AI's licence for Kimi K3 adds one sentence about behaviour, that use of the software must comply with applicable laws and regulations, and one commercial condition, a separate agreement once a model-as-a-service business passes $20 million of revenue over any twelve consecutive months. The attribution clause above 100 million monthly users belongs to the licence for Kimi K2. None of the three says anything about how its models behave in deployments the company does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
+   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores on what is published, Mistral AI's 1.8, Moonshot AI's 0.9 and DeepSeek's 0.5, and on the final score they take the last three places. Alibaba is the exception, third on what is published with 2.3, and its Qwen models are among the most used open-weight models there are. Their licences say almost nothing about behaviour. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence and Mistral under Apache 2.0, and neither adds a condition of any kind. Moonshot AI's licence for Kimi K3 adds one sentence about behaviour, that use of the software must comply with applicable laws and regulations, and two commercial conditions. Section 2 asks for a separate agreement once a model-as-a-service business passes $20 million of revenue over any twelve consecutive months, and section 3 asks that the name Kimi K3 be displayed prominently on any product or service with more than 100 million monthly active users or more than $20 million of monthly revenue. None of the three says anything about how its models behave in deployments the company does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
   },
   {
    "title": "Two companies must already write this document for a regulator, and do not publish it",
@@ -3310,7 +3310,7 @@
    "3": "What Mistral discloses to developers is real and specific: Mistral Moderation 2 documents eleven categories with their exact definitions, and custom guardrails let developers set a threshold for each category. Shieldstral 1.0 (August 2026) is a small safety model of 3 billion parameters that anyone may download under Apache 2.0, and it is the most interesting object here because it comes with no categories at all: its policy is written in plain language by whoever uses it, at the moment of use. Mistral does not state a default policy for it, or say that it reflects Mistral's own standard. For Mistral's own consumer product there are two disclosures. A sentence from November 2024 says that its moderation service for developers \"powers the moderation service in Le Chat\", which predates both the renaming to Vibe and Shieldstral. And the documentation changelog, which is public and dated, records a mitigation added to Le Chat in September 2024 against an obfuscated prompt method that could lead to data exfiltration. That changelog also dates custom guardrails for agents and conversations to March 2026 and the moderation API to November 2024. It is a product changelog rather than a register of guardrails, so guardrail changes are announced and nothing holds them in one place.",
    "4": "One absolute rule exists, the zero-tolerance clause on child sexual abuse material in the usage policy. But it binds users, and it does not reach models that are downloaded or run on customers' own servers, so it scores 1. No consultation, no ethics board, no advisory council, and no clause giving notice of changes.",
    "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
-   "practices_engaged": "No test of any kind of whether its models follow a constitution: the launch post for Mistral 3, in December 2025, has no section on safety or alignment, and the model card for Mistral Large 3 has tests of capability and known limitations but no safety evaluation. We found no named outside evaluator and no agreement giving anyone access before release. Stanford's Foundation Model Transparency Index credited Mistral with 7 of its 88 indicators in December 2025, including 0 of 2 on model behaviour policy: \"No disclosed model behavior policy detailing permitted, restricted, or prohibited behaviors.\" The Future of Life Institute's AI Safety Index for summer 2026 gives it an overall F.",
+   "practices_engaged": "No test of any kind of whether its models follow a constitution: the launch post for Mistral 3, in December 2025, has no section on safety or alignment, and the model card for Mistral Large 3 has tests of capability and known limitations but no safety evaluation. We found no named outside evaluator and no agreement giving anyone access before release. Stanford's Foundation Model Transparency Index scored Mistral 18 of its 100 indicators in December 2025, and nothing on either of the two indicators that ask about a model behaviour policy, where the report records that no information was provided. That edition also says that the first reports for Mistral and Anthropic were prepared by the index team rather than by the companies, and that 30% of the companies it contacted agreed to submit a transparency report in 2025, down from 74% in 2024. The Future of Life Institute's AI Safety Index for summer 2026 gives it an overall F.",
    "aside": {
     "title": "An easy company to ask",
     "text": "This regulatory contrast puts Mistral high on the list of companies to ask. It is established in the EU, has signed the General-Purpose AI Code of Practice, and has built a real public compliance surface: an AI compliance hub with documentation for 41 models, and pages for its Vibe Work and Vibe Code systems. The one thing it does not publish is the one Measure 7.1 obliges it to hand to the EU AI Office. A company that has already built the means to publish is an easier ask than one that has not."
@@ -3322,7 +3322,7 @@
    "3": "Llama Guard 4, Prompt Guard 2 and CyberSecEval are tools Meta publishes for developers, and they do not disclose the guardrails on Meta's own products. The fullest disclosure of those is one oblique sentence: \"An external human red team identified a handful of valid jailbreaks; the majority of these were subsequently patched in Meta AI prior to launch.\" A red team is a group brought in to attack a system; a jailbreak is a way of getting a model past its rules.",
    "4": "No set of hard constraints, no consultation, and no body with authority over either. Meta's scaling framework names the propensities a model spec will describe, among them honesty, refusal and acquiescence to shutdown, and its Muse Spark report refers to an internal behaviour specification. Neither document is published, and neither names a rule the model may never break. A member of Meta's Oversight Board, Krishnaswamy, said in March 2026: \"We don't have a mandate on gen-AI, but it's something we're trying to understand.\" Every change to its rules on behaviour in the period was announced as public relations, under pressure from outside: the removal of romantic role-play with minors in August 2025, through a spokesperson's statement to Reuters, and the worldwide pause of teenagers' access to AI characters in January 2026, through an update added to an old blog post and an exclusive given to TechCrunch.",
    "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
-   "practices_engaged": "Results of tests against the internal constitution are published, though the constitution is not (1). Outside evaluators are genuinely involved and named, Apollo Research, SecureBio, CAIS and Charlemagne Labs, though on terms that are not stated (1). The framework has a named internal sign-off, though no constitution does (1)."
+   "practices_engaged": "Results of tests against the internal constitution are published, though the constitution is not (1). Outside evaluators are genuinely involved and named, Apollo Research, SecureBio, CAIS and Charlemagne Labs, though on terms that are not stated (1). No public evidence was found of who inside Meta approves a change to a document about how its models behave, and the approval its scaling framework names is for model deployment (0)."
   },
   "xai": {
    "1": "Nothing. The acceptable use policy governs users and says nothing about the model (\"You are free to use our Service so long as you use it to be a good human\"). The Frontier AI Framework covers catastrophic risks only, and its entire statement of policy on everyday behaviour is one sentence about declining requests with clear criminal intent. Deployments for governments are marketed on \"direct, unfiltered answers\", with no statement about behaviour attached.",

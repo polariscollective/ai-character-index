@@ -2083,11 +2083,11 @@ console.log("== Overview: the governance view ==");
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
-  check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Meta, Alibaba, "
-        + "xAI, Moonshot AI, Mistral AI, DeepSeek"
-      && seen.total.join(",") === "5.6,5.5,2.0,1.8,1.8,1.5,1.1,0.9,0.5"
-      && seen.published.join(",") === "6.1,5.9,2.0,0.5,2.3,1.1,0.9,1.8,0.5"
-      && seen.engages.join(",") === "5.0,5.0,1.9,3.1,1.3,1.9,1.3,0.0,0.6"
+  check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Alibaba, xAI, "
+        + "Meta, Moonshot AI, Mistral AI, DeepSeek"
+      && seen.total.join(",") === "5.6,5.5,2.0,1.8,1.5,1.5,1.1,0.9,0.5"
+      && seen.published.join(",") === "6.1,5.9,2.0,2.3,1.1,0.5,0.9,1.8,0.5"
+      && seen.engages.join(",") === "5.0,5.0,1.9,1.3,1.9,2.5,1.3,0.0,0.6"
       && seen.outOf.join() === "10" && seen.corners === 0
       && seen.flagged.join(", ") === "Alibaba, Moonshot AI, Mistral AI, DeepSeek",
     "the nine companies run across in rank order on the final score, the average of the two "
