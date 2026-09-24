@@ -160,6 +160,8 @@ const LINES = [
   "What is published here may still change.",
   "The method comes from working papers, and every figure rests on published "
   + "documents that anyone can check.",
+  "Any feedback is welcome. You can use the Feedback button at the bottom right "
+  + "of your screen.",
 ];
 
 /* Where the build on screen stands, in the route's own words. */
