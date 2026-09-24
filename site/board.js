@@ -43,6 +43,15 @@ export const mono = text => element("span", "mono", text);
 
 export const paragraph = (text, className) => element("p", className, text);
 
+/* A rank as a place, "1st", "2nd", "3rd", so it cannot be read as a note number
+ * or a score. */
+export const place = rank => {
+  const tens = rank % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th"
+    : ({ 1: "st", 2: "nd", 3: "rd" }[rank % 10] || "th");
+  return `${rank}${suffix}`;
+};
+
 export const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh",
                          "eighth", "ninth"];
 
@@ -245,13 +254,25 @@ export function createBoard({ nodes, everyRow }) {
 
     /* ---- The table -------------------------------------------------------- */
 
-    rowName(name, sub, build, label) {
+    /* `marks` are the footnote signs a row carries beside its name, each
+     * explained once under the table. They are hidden from assistive
+     * technology, so the view says what each one means in `label`. */
+    rowName(name, sub, build, label, marks = []) {
       const button = element("button", "row-name");
       button.type = "button";
       button.setAttribute("aria-haspopup", "dialog");
       button.setAttribute("aria-expanded", "false");
       button.setAttribute("aria-label", label);
-      button.append(element("span", "head-name", name));
+      // The name and its signs on one line, the signs outside the name itself so
+      // the name's text is the name and nothing else.
+      const line = element("span", "head-line");
+      line.append(element("span", "head-name", name));
+      marks.forEach(mark => {
+        const sign = element("span", "row-mark", mark);
+        sign.setAttribute("aria-hidden", "true");
+        line.append(sign);
+      });
+      button.append(line);
       if (sub) button.append(element("span", "head-sub", sub));
       button.addEventListener("click", () => board.openPopover(button, build));
       return button;
@@ -277,16 +298,24 @@ export function createBoard({ nodes, everyRow }) {
      * itself, and it lands at the end of the accessible name: a depth's rubric
      * word, which the scale under the table spells out and which a cell four
      * characters wide cannot. */
+    /* `showMax` false leaves out the small maximum in the corner, for a board
+     * whose every figure is on one scale and says so once under the table. */
     scoreCell({ name, rowLabel, value, max, text = String(value), note, build, dataset,
-                className = "cell-button" }) {
+                className = "cell-button", showMax = true }) {
       const { cell, button } = board.cellButton(dataset,
         `${name}, ${rowLabel}: ${text} out of ${max}${note ? `, ${note}` : ""}`, build, className);
       board.paint(button, value, max);
+      // What the figure is out of, on the button whether or not the corner shows
+      // it, so anything reading the board can tell a share from a figure.
+      button.dataset.max = String(max);
       // What the score is out of, small and to the right. The accessible name
       // already says it, so a screen reader does not hear it twice.
-      const out = element("span", "cell-max", `/${max}`);
-      out.setAttribute("aria-hidden", "true");
-      button.append(element("span", "cell-figure", text), out);
+      button.append(element("span", "cell-figure", text));
+      if (showMax) {
+        const out = element("span", "cell-max", `/${max}`);
+        out.setAttribute("aria-hidden", "true");
+        button.append(out);
+      }
       return cell;
     },
 
@@ -343,8 +372,15 @@ export function createBoard({ nodes, everyRow }) {
     setExpanded(groupId, open) {
       if (open) expanded.add(groupId);
       else expanded.delete(groupId);
-      nodes.table.querySelectorAll(`tr.check-row[data-parent="${groupId}"]`)
-        .forEach(row => { row.hidden = !open; });
+      /* A group can sit inside another, so a row is shown only when every group
+       * above it is open: shutting the outer group hides what its inner groups
+       * hold, and opening it again brings back only what was open inside. */
+      const ownerOf = id => nodes.table.querySelector(`.row-toggle[data-question="${id}"]`)
+        ?.closest("tr");
+      const isShown = id => expanded.has(id)
+        && (!ownerOf(id)?.dataset.parent || isShown(ownerOf(id).dataset.parent));
+      nodes.table.querySelectorAll("tr[data-parent]")
+        .forEach(row => { row.hidden = !isShown(row.dataset.parent); });
       const toggle = nodes.table.querySelector(`.row-toggle[data-question="${groupId}"]`);
       const group = groups.get(groupId);
       toggle.setAttribute("aria-expanded", String(open));

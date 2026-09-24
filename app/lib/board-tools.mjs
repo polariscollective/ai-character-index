@@ -29,7 +29,8 @@ import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
  * each practice that carries a score. The two figures a company gets are out of
- * 10 each, and its final score is their sum, out of 20. */
+ * 10 each, and its final score is their weighted average, out of 10. The
+ * checks and practices are answered on the scale they were given on. */
 const SCALE = 4;
 const PRACTICE = 2;
 
@@ -222,14 +223,15 @@ export function governanceBoard(args = {}) {
       + "figures, and a different reading could move a company by a few points.",
     papers: governance.papers,
     measures: {
-      /* The final score ranks the companies and is the sum of the two figures.
-       * The answer carries what that sum means in the board's own words. */
+      /* The final score ranks the companies and is the weighted average of the
+       * two figures. The answer carries the weights and what they mean in the
+       * board's own words. */
       final_score: {
         name: governance.total.name,
         max: governance.total.out_of,
         means: governance.total.plain,
         reading: governance.total.about,
-        adds: governance.columns.map(column => column.id),
+        weights: governance.total.weights,
       },
       figures: governance.columns.map(column => ({
         id: column.id,

@@ -35,6 +35,10 @@
    }
   ]
  },
+ "weights": {
+  "whole": 0.5,
+  "behaviours": 0.5
+ },
  "criteria": [
   {
    "id": "conflict_rules",
@@ -171,7 +175,6 @@
     "version": "2026-08-18",
     "url": "https://model-spec.openai.com/2026-08-18.html"
    },
-   "final": 16.9,
    "whole": {
     "total": 9.5,
     "criteria": {
@@ -308,7 +311,6 @@
     "url": "https://s.alibaba.com/aaig/specification"
    },
    "note": "Names no models",
-   "final": 16.8,
    "whole": {
     "total": 8.8,
     "criteria": {
@@ -444,7 +446,6 @@
     "version": "2025-12-18",
     "url": "https://model-spec.openai.com/2025-12-18.html"
    },
-   "final": 16.0,
    "whole": {
     "total": 8.4,
     "criteria": {
@@ -580,7 +581,6 @@
     "version": "2026-01-20",
     "url": "https://www.anthropic.com/news/claude-new-constitution"
    },
-   "final": 14.7,
    "whole": {
     "total": 6.6,
     "criteria": {
@@ -710,7 +710,6 @@
    "id": "deepseek",
    "name": "DeepSeek",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {
@@ -778,7 +777,6 @@
    "id": "google",
    "name": "Google DeepMind",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {
@@ -846,7 +844,6 @@
    "id": "meta",
    "name": "Meta",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {
@@ -914,7 +911,6 @@
    "id": "mistral",
    "name": "Mistral AI",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {
@@ -982,7 +978,6 @@
    "id": "moonshot",
    "name": "Moonshot AI",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {
@@ -1050,7 +1045,6 @@
    "id": "xai",
    "name": "xAI",
    "has_constitution": false,
-   "final": 0,
    "whole": {
     "total": 0,
     "criteria": {

@@ -7,13 +7,15 @@
    "title": "Model spec governance and transparency: the state of play and four transparency asks",
    "by": "Polaris Collective",
    "status": "working paper, draft of 10 September 2026",
-   "credit": "Polaris Collective"
+   "credit": "Polaris Collective",
+   "purpose": "It sets out how companies govern their constitutions today and asks them for four kinds of transparency."
   },
   "kembery": {
    "title": "Emerging International Best Practices for AI Model Specs",
    "by": "Edward Kembery et al.",
    "status": "working paper, under review",
-   "credit": "Kembery et al."
+   "credit": "Kembery et al.",
+   "purpose": "It gathers the practices emerging internationally for writing, testing and governing a constitution."
   }
  },
  "columns": [
@@ -22,7 +24,7 @@
    "name": "What is published",
    "out_of": 10,
    "plain": "The rules anyone can read: whether a constitution exists and which models it covers, whether every change to the rules can be seen, which filters run around the models, what the model must never do, and whether the published text may be reused. It is half of the final score.",
-   "about": "This column is the part of governance a reader can check without being let in. Every row is a document, or something a document says: it exists or it does not, it names the models it governs or it does not, it records its changes or it does not. Eleven rows carry it, the ten checks of the four asks and the licence on the published text. The figure is the mean of those eleven rows' shares of their own maximum, times ten, so every check counts the same and a question with three checks weighs more than one with two.",
+   "about": "This column is the part of governance a reader can check without being let in. Every row is a document, or something a document says: it exists or it does not, it names the models it governs or it does not, it records its changes or it does not. Eleven rows carry it, the ten checks of the four asks and the licence on the published text. Every row counts the same, so a question with three checks counts for three elevenths of the figure and one with two for two elevenths.",
    "prose": "practices_published",
    "questions": [
     "1",
@@ -39,7 +41,7 @@
    "name": "What it engages",
    "out_of": 10,
    "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It is the other half of the final score.",
-   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it, and the figure is the mean of their shares of their own maximum, times ten. It is added to what is published to give the final score.",
+   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it and each counts the same, so a group counts for as many eighths as it has practices. It is added to what is published to give the final score.",
    "prose": "practices_engaged",
    "questions": [],
    "practices": [
@@ -532,7 +534,7 @@
    ]
   }
  ],
- "minimum_note": "Our proposal asks four things of every company and names the first two as its minimum: a published constitution for every model the company uses, and one public change log that says up front which layers and models it covers and how soon a change is recorded. The constitution is the object of the rules, and the log is the commitment that any change to them can be seen. The other two asks, on guardrails and hard constraints, are where the proposal says companies should go next. Meeting the minimum means 4 out of 4 on both questions.",
+ "minimum_note": "Our proposal asks four things of every company and names the first two as its minimum: a published constitution for every model the company uses, and one public change log that says up front which layers and models it covers and how soon a change is recorded. The constitution is the object of the rules, and the log is the commitment that any change to them can be seen. The other two asks, on guardrails and hard constraints, are where the proposal says companies should go next. Meeting the minimum means 10 out of 10 on both questions.",
  "supporting": [
   {
    "id": "S1",
@@ -761,6 +763,8 @@
  "disclosed_intro": "Four practices from the same working paper that nobody outside a company can see, and that the paper asks companies to state publicly. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
  "disclosure_note": "A 0 means we looked and found nothing published, at the company's own pages and at the sources listed under the board. A company may well follow a practice without saying so, and no audit anyone outside could check exists. Tell us if we are wrong.",
  "internal_note": "The paper raises this as an open problem and does not ask companies to publish it. Only an internal audit could show it. None has been done, so every company is marked NA, not assessed, and it is counted in neither figure.",
+ "open_weights_note": "Marks a company whose flagship model, or nearly, anyone can download and run. None of these questions can reach how such a model behaves once it has been downloaded, so part of a low score there reflects a limit of the questions.",
+ "ours_note": "Every score is ours, given by hand from public documents, and open to challenge. The checks under each question, the groups of practices and the weights are ours too: neither paper splits a question into checks or weighs one row against another.",
  "scores": {
   "openai": {
    "1.1": 4,
@@ -1497,11 +1501,11 @@
  "findings": [
   {
    "title": "No company meets the minimum",
-   "text": "Our proposal names its first two asks as the minimum it expects of every company: a published constitution for every model in use, and one public change log that says up front what it covers and how soon a change is recorded. Meeting it means 4 out of 4 on both questions, and no company does. OpenAI has the best pair, 2.7 on the constitution and 2.3 on the change log. Anthropic, whose constitution is the more complete, scores 3.0 and 1.0. The change log is where every company falls short, the two leaders included: across all nine, the best score on it is 2.3 out of 4."
+   "text": "Our proposal names its first two asks as the minimum it expects of every company: a published constitution for every model in use, and one public change log that says up front what it covers and how soon a change is recorded. Meeting it means 10 out of 10 on both questions, and no company does. OpenAI has the best pair, 6.7 on the constitution and 5.8 on the change log. Anthropic, whose constitution is the more complete, scores 7.5 and 2.5. The change log is where every company falls short, the two leaders included: across all nine, the best score on it is 5.8 out of 10."
   },
   {
    "title": "No company gives notice before weakening a hard constraint",
-   "text": "None has committed to warn the public, or to hear from it, before weakening one of the things its model must never do. On the check that asks for a comment window, only OpenAI and Anthropic score anything at all, 1 out of 4 each. Every weakening we found in the period went out with no advance notice. OpenAI removed a rule concerning lying and confidentiality in December 2025, with a single line in its change log. Google removed its commitments on weapons and surveillance from its AI Principles in February 2025, in a blog post that did not mention the removal. xAI restricted image editing in its Grok model in January 2026 through a statement to the press, under pressure from regulators. The terms of the Chinese companies go further, and reserve the right to change them alone, with effect as soon as they are published: DeepSeek's user agreement says a new version \"replaces the original terms\" the moment it is announced."
+   "text": "None has committed to warn the public, or to hear from it, before weakening one of the things its model must never do. On the check that asks for a comment window, only OpenAI and Anthropic score anything at all, 2.5 out of 10 each. Every weakening we found in the period went out with no advance notice. OpenAI removed a rule concerning lying and confidentiality in December 2025, with a single line in its change log. Google removed its commitments on weapons and surveillance from its AI Principles in February 2025, in a blog post that did not mention the removal. xAI restricted image editing in its Grok model in January 2026 through a statement to the press, under pressure from regulators. The terms of the Chinese companies go further, and reserve the right to change them alone, with effect as soon as they are published: DeepSeek's user agreement says a new version \"replaces the original terms\" the moment it is announced."
   },
   {
    "title": "The companies describe the guardrails they offer developers, and say little about those on their own apps",
@@ -1509,7 +1513,7 @@
   },
   {
    "title": "No company says which rules apply when its models go to governments and armed forces",
-   "text": "This is the widest gap in the grid, where all nine companies score 0 or 1. Anthropic is the only one that says in writing that some of its models fall outside its constitution, which is why it scores 1. Those models, Claude Gov and Claude Mythos, are in use and have no published constitution. OpenAI never names its Model Spec in any announcement about government or defence. Meta opened its Llama models to NATO and to EU institutions while its own acceptable use policy still prohibits military uses. Mistral is the extreme case. Its usage policy says that it \"does not apply to Mistral AI Products deployed on a customer's infrastructure, on the infrastructure of our partners, or to our open-source AI models and products\", and its chief executive has said publicly of defence customers that \"choices about deployment and usage are not our business\"."
+   "text": "This is the widest gap in the grid, where all nine companies score 0 or 2.5 out of 10. Anthropic is the only one that says in writing that some of its models fall outside its constitution, which is why it scores 2.5. Those models, Claude Gov and Claude Mythos, are in use and have no published constitution. OpenAI never names its Model Spec in any announcement about government or defence. Meta opened its Llama models to NATO and to EU institutions while its own acceptable use policy still prohibits military uses. Mistral is the extreme case. Its usage policy says that it \"does not apply to Mistral AI Products deployed on a customer's infrastructure, on the infrastructure of our partners, or to our open-source AI models and products\", and its chief executive has said publicly of defence customers that \"choices about deployment and usage are not our business\"."
   },
   {
    "title": "Alibaba's constitution is well built and names nothing it governs",
@@ -1517,7 +1521,7 @@
   },
   {
    "title": "Meta publishes almost nothing and engages more than most",
-   "text": "It scores 1.1 out of 10 on what is published, level with xAI and above only Moonshot AI and DeepSeek, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic, which puts it third on the final score with 4.3 out of 20. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
+   "text": "It scores 1.1 out of 10 on what is published, level with xAI and above only Moonshot AI and DeepSeek, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic, which puts it third on the final score with 2.1 out of 10. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
   },
   {
    "title": "Most companies whose models anyone can download sit at the bottom, partly because of the questions",
@@ -1625,8 +1629,12 @@
  "looked": "The scores were given by hand, from documents found and dated between 18 and 21 September 2026. Nothing here was judged by a model, and nothing was taken from another ranking.",
  "total": {
   "name": "Final score",
-  "out_of": 20,
-  "plain": "What is published and what it engages, added together. This figure ranks the companies.",
-  "about": "The final score is the sum of the two figures, each out of 10. They measure different things: what a company has published, which anyone can check, and what it says about its own practice, which nobody outside can. Every check under what is published has a written description of what earns 0, 2 and 4. Of the eight practices under what it engages, four have their own description of what earns 0, 1 and 2, and four share one generic scale. Both figures stay on the board under the final score, so a reader can see which half a company earned it on. Companies level on the final score share a place."
+  "out_of": 10,
+  "weights": {
+   "published": 0.5,
+   "engages": 0.5
+  },
+  "plain": "What is published and what it engages, each counting for half. This figure ranks the companies.",
+  "about": "Every figure on the board is out of 10. A score given against a scale of its own, a check out of 4 or a practice out of 2, is shown as its share of that scale, and the scale it was given on is in the panel that opens on it. A row above others is their weighted average, and each row says under its name how much it counts for. The final score is the average of the two figures, each counting for half. They measure different things: what a company has published, which anyone can check, and what it says about its own practice, which nobody outside can. Companies level on the final score share a place."
  }
 }

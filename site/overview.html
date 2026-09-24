@@ -54,19 +54,12 @@
   <h1>What each constitution says, and how well it is built</h1>
   <p class="lede">
     AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
-    behave. The index reads them and scores each one twice, out of 10 each, and the board leads
-    with the two added together.
+    behave. Each company has its own name for its document: OpenAI calls its one the Model Spec,
+    Anthropic calls its one Claude&rsquo;s Constitution. We call them all constitutions, for the
+    reasons <a href="/about#the-word">the About page gives</a>. This board ranks nine companies by
+    their constitution: how well the document is built as a whole, and how far it goes on each of
+    thirteen behaviours. A company that publishes none scores 0.
   </p>
-  <div class="board-parts">
-    <p><strong>The document as a whole.</strong> Whether the constitution settles a clash between
-    two of its own rules, whether a reader can tell which rules are absolute and which can be
-    lifted and by whom, whether the rules come with reasons, whether they reach the situations
-    the models are used in, and whether the document contradicts itself somewhere without saying
-    which rule wins.</p>
-    <p><strong>The behaviours.</strong> How far the constitution goes on each behaviour the index
-    asks about, from saying nothing about it to setting rules and showing them applied to worked
-    examples.</p>
-  </div>
   <p class="lede">
     Missing a constitution, or a behaviour the index should be asking about?
     <a href="/about?propose#propose" target="_blank"
@@ -96,6 +89,31 @@
        across first, and a rail down the side took a fifth of the width from it.
        They are written here once and never repeated inside a popover, so a
        reader learns what a figure means in one place. -->
+  <!-- The numbered notes the board's rows point to, above the scale the third
+       one refers to. The numbers are the ones constitutions.js writes beside
+       the rows' names. -->
+  <ol class="gov-notes" id="board-notes">
+    <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
+    behaviours, each counting for half. It ranks the companies. Every figure on the board is out
+    of 10, and each row says under its name how much it counts for in the figure it belongs
+    to.</li>
+    <li value="2"><strong>The document as a whole.</strong> Whether the constitution settles a
+    clash between two of its own rules, whether a reader can tell which rules are absolute and
+    which can be lifted and by whom, whether the rules come with reasons, whether they reach the
+    situations the models are used in, and whether the document contradicts itself somewhere
+    without saying which rule wins.</li>
+    <li value="3"><strong>The behaviours.</strong> How far the constitution goes on each behaviour
+    the index asks about, from saying nothing about it to setting rules and showing them applied
+    to worked examples, on the scale below. For us, a behaviour is one precise thing a
+    constitution can ask of a model, such as deferring to users&rsquo; decisions about their own
+    lives, or not asserting what the model believes to be false. Each is written in two parts,
+    what it requires and where it stops, so that a careful reader could mark every passage of a
+    constitution that bears on it. In the <a href="/spec-reader/">doc reader</a> you can pick a
+    behaviour and read every passage of a constitution that bears on it.</li>
+    <li value="4"><strong>Categories.</strong> For now the behaviours are grouped into categories.
+    We wrote the behaviours, their definitions and the categories ourselves, and all three are
+    open to challenge.</li>
+  </ol>
   <section class="depth-key" aria-labelledby="behaviour-scale-title">
     <h2 id="behaviour-scale-title"></h2>
     <ol class="depth-key-list" id="behaviour-scale"></ol>
@@ -128,26 +146,10 @@
     Some AI companies publish a constitution, a document setting out how their
     models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores nine companies,
     as of September 2026, on two things: the rules they publish, and whether
-    those rules are made to bind the models. The two are added into a final
-    score out of 20, which ranks the companies.
+    those rules are made to bind the models. The numbered notes under the board
+    say what each figure means and where each row comes from.
   </p>
-  <!-- The two figures, said before either of them appears. The class is the one
-       the first view's parts use, so both read the same. -->
-  <div class="board-parts">
-    <p class="lede"><strong>What is published, out of 10.</strong> Whether the company publishes a
-    constitution and says which models it governs, whether every change to the rules a model
-    follows can be seen, which filters it runs around its models, whether the public gets a say
-    before one of the things its model must never do is weakened, and whether the published text
-    may be reused. It is half of the final score.</p>
-    <p class="lede"><strong>What it engages, out of 10.</strong> Whether the document binds the
-    models: published tests of adherence, outside evaluators, a threshold before release, who may
-    approve a change, training, internal use and monitoring. It is the other half.</p>
-    <p class="lede"><strong>The final score, out of 20, adds the two.</strong> The companies are
-    ranked by it. The two figures measure different things, what a company publishes and what it
-    says about its own practice, so both stay on the board under it. One further practice is scored for nobody, because only an internal audit could show
-    it, and every company is marked NA on it.</p>
-  </div>
-  <p class="gov-foot" id="gov-origin"></p>
+
 
   <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
 
@@ -167,25 +169,28 @@
   </div>
   <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
   <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
-  <!-- One sentence for the final score and one per figure, written by
-       governance.js from governance.json: the two columns are named here and
-       nowhere else in the markup. -->
-  <div id="gov-columns"></div>
-  <p class="gov-foot">
-    <strong>Open weights</strong> marks a company whose flagship model, or
-    nearly, anyone can download and run. None of these questions can reach how
-    such a model behaves once it has been downloaded, so part of a low score
-    there reflects a limit of the questions.
-  </p>
   <!-- Written by governance.js from the scores, so it cannot name a tie the
        table does not have. -->
   <p class="gov-foot" id="gov-ties"></p>
   <p class="gov-date">As of September 2026</p>
 
-  <section class="gov-findings" aria-labelledby="gov-findings-title">
-    <h2 id="gov-findings-title">What the ranking shows</h2>
-    <div class="gov-findings-list" id="gov-findings"></div>
-  </section>
+  <!-- The findings and the notes side by side: the findings read straight down
+       in the wider column, and the numbered notes the board's rows point to sit
+       beside them, so neither pushes the other off the screen. On a phone they
+       stack, findings first. -->
+  <div class="gov-after">
+    <section class="gov-findings" aria-labelledby="gov-findings-title">
+      <h2 id="gov-findings-title">What the ranking shows</h2>
+      <div class="gov-findings-list" id="gov-findings"></div>
+    </section>
+    <!-- The numbered notes, written by governance.js from governance.json: what
+         each figure means, where each row comes from, and what the numbers beside
+         a row's name or a company's flag refer to. -->
+    <aside class="gov-findings gov-notes-rail" aria-labelledby="gov-notes-title">
+      <h2 id="gov-notes-title">Notes</h2>
+      <div id="gov-columns"></div>
+    </aside>
+  </div>
 
   <!-- One popover for the whole board, filled with whatever was pressed and
        placed beside it. The browser closes it on Escape or a press elsewhere. -->
@@ -205,8 +210,8 @@
           transparency", in its draft of 10 September 2026. The ten best practices
           beside them come from "Emerging International Best Practices for AI Model
           Specs", a working paper by Edward Kembery and colleagues that is under
-          review. Every row on the board says which of the two it comes from, under
-          its name, and the paper's own words sit in the popover the row's name
+          review. Every row on the board carries the number of the note that names
+          its source, and the paper's own words sit in the popover the row's name
           opens. Neither paper splits a question into checks, weighs one row
           against another, or says what earns a score. We did all three, and every
           score on the board is ours.
@@ -217,35 +222,42 @@
           of the first two questions and two for the others. Every check carries a
           written description of what earns 0, what earns 2 and what earns 4, in
           the tables below. A question's own figure is the average of its checks.
-          A best practice is scored 0, 1 or 2 against one scale that covers all of
-          them.
+          A best practice is scored 0, 1 or 2. Four of them carry a description
+          of each score of their own, and the others share one scale.
         </p>
         <p>
-          Each row belongs to one figure and one only. A figure is the mean of its
-          rows, each taken as a share of its own maximum, times ten. What is
-          published has eleven rows, the ten checks and the licence practice, so
-          every check counts the same and a question with three checks weighs more
-          than one with two. What it engages has eight, all of them practices.
+          The board shows every score out of 10, as its share of the scale it was
+          given on: a check scored 3 of 4 shows 7.5, and a practice scored 1 of 2
+          shows 5.0. The score as given is in the panel that opens on it.
         </p>
         <p>
-          <strong>The final score adds the two figures</strong>, so it is out of
-          20. They measure different things: what a company has published, and
-          what it says about its own practice. Both stay on the board under the
-          final score, so a reader can see which half a company earned it on.
+          Each row belongs to one figure and one only, and every row of a figure
+          counts the same. What is published has eleven rows, the ten checks and
+          the licence practice, so each counts for 1/11 of it and a question with
+          three checks counts for 3/11. What it engages has eight, all of them
+          practices, each counting for 1/8. Every row says under its name how
+          much it counts for.
         </p>
         <p>
-          Companies are ranked on the final score, and companies level on it share
-          a place.
+          <strong>The final score averages the two figures</strong>, each
+          counting for half, and companies are ranked on it. Companies level on it
+          share a place. The two figures measure different things, what a company
+          has published and what it says about its own practice, so both stay on
+          the board under the final score and a reader can see which half a
+          company earned it on.
         </p>
         <p>
-          The first two questions are what our working paper calls its minimum, the
-          asks it expects of every company before the other two: a published
-          constitution for every model in use, and one public change log. The
-          tables below say what earns 0, 2 and 4 on each check. A score of 1 or 3
-          falls between the descriptions either side of it.
+          Below, every question, check and practice is named as it is on the
+          board. The tables say what earns 0, 2 and 4 on each check, and a score of
+          1 or 3 falls between the descriptions either side of it.
         </p>
         <div id="gov-scoring"></div>
         <h3>The best practices, figure by figure</h3>
+        <p>
+          The ten best practices come from the second working paper named above,
+          note 6 under the board. Each is named below as it is on the board,
+          followed by what the paper asks and where it asks it.
+        </p>
         <p>
           One practice is counted in what is published, because it is a fact about
           the published text.
@@ -264,10 +276,8 @@
         </p>
         <ul class="gov-bullets" id="gov-disclosed"></ul>
         <p>
-          One is scored for nobody. The paper raises it as an open problem and does
-          not ask companies to publish it, only an internal audit could show it, no
-          such audit has been done, and every company is marked NA on it. It is
-          counted in neither figure.
+          One is scored for nobody, for the reason note 7 gives, and is counted in
+          neither figure.
         </p>
         <ul class="gov-bullets" id="gov-internal"></ul>
         <p>
@@ -334,13 +344,6 @@
           eighth. That is why both figures stay on the board under the final score.
         </p>
         <p>
-          <strong>Companies whose models anyone can download are marked.</strong>
-          Mistral AI, Moonshot AI and DeepSeek take three of the five lowest places
-          on what is published. These questions have no way to reach a model once
-          it has been downloaded, so the table marks these companies "Open
-          weights".
-        </p>
-        <p>
           <strong>Six of the nine companies publish no constitution.</strong> Most
           of what the board asks about published rules cannot apply to them, which
           is why they score so little on the first figure. Among the three that do
@@ -380,7 +383,7 @@
             reported elsewhere as part of the preface, an invitation to public
             comment and an acknowledgement of safeguards the service applies around
             the model, are neither confirmed nor ruled out. A statement of coverage
-            in the preface would change Alibaba's score on check 1.2.
+            in the preface would change Alibaba's score on coverage stated.
           </li>
           <li>
             <strong>No older copies of the undated pages were found.</strong>

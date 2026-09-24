@@ -550,13 +550,74 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    them between what anyone can check and what only the company can show. */
 /* The best practices are shown and never counted, so they stand apart, under a
    line across the table that says so. */
-.gov-heatmap .outside-row { border-top: 2px solid var(--muted); }
-.gov-heatmap .outside-row th, .gov-heatmap .outside-row td { padding-top: 22px; padding-bottom: 6px; }
-.gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
+/* The heads of a board (the final score and its halves) are marked by the thin
+   rule under them and nothing above: a heavier rule above each was tried on 24
+   September 2026 and set aside as too much. */
+.board .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
 /* Inside the supporting practices, the line between the five scored from public
    sources and the five only an audit could score. */
 
 .row-head { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.row-name .head-line { display: block; }
+.row-name .head-line .head-name { display: inline; }
+/* A footnote sign beside a row's name, explained under the table. Inline-block
+   so the name's underline does not run under it. */
+.row-mark {
+  display: inline-block; margin-left: 2px; font-size: 9px; font-weight: 400;
+  color: var(--muted); vertical-align: super; line-height: 0;
+}
+
+/* The numbered notes under the governance board. The number is the list's own,
+   in mono since it is a reference a reader matches against the table. */
+.gov-notes { margin: 16px 0 8px; padding-left: 28px; max-width: 86ch; color: var(--muted); font-size: 14px; }
+.gov-notes li { margin: 0 0 6px; padding-left: 4px; }
+.gov-notes li::marker { font-family: var(--mono, "IBM Plex Mono", monospace); font-size: 11px; }
+.company-flag .row-mark { vertical-align: super; }
+
+/* A row's name says its level too, one step per level: the final score and
+   its two halves in the display face, a figure's own rows bold, and the rows
+   folded under those regular, so a head never reads as one of its own rows. */
+.board tr[data-level="0"] .row-name .head-name { font-family: var(--display); font-size: 19px; font-weight: 600; }
+.board tr[data-level="1"] .row-name .head-name { font-family: var(--display); font-size: 17px; font-weight: 600; }
+.board tr[data-level="2"] .row-name .head-name { font-size: 14px; font-weight: 600; }
+.board tr[data-level="3"] .row-name .head-name { font-size: 14px; font-weight: 400; }
+/* A section of the page that folds under its own heading, open by default. The
+   chevron is the rows' own, so one sign means "opens" everywhere. */
+.section-fold > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.section-fold > summary::-webkit-details-marker { display: none; }
+.section-fold > summary::before {
+  content: ""; flex: none; width: 8px; height: 8px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+.section-fold[open] > summary::before { transform: rotate(45deg); }
+.section-fold > summary:hover::before { border-color: var(--ink); }
+.section-fold > summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+
+/* The small square beside each level of the behaviour scale, painted the colour
+   a cell at that depth takes. */
+.scale-swatch {
+  display: inline-block; width: 12px; height: 12px; margin-right: 6px;
+  border-radius: 2px; vertical-align: -1px;
+}
+
+/* The final score's cells carry a border a shade darker than their own colour:
+   a translucent ink laid over the background, which runs under the border, so
+   each cell darkens its own colour rather than taking one colour for all. */
+.board tr[data-level="0"] .cell-button { border: 2px solid rgb(35 40 27 / .28); }
+
+/* Only the final score keeps the underline: on every row it weighed the table
+   down. The others still take the highlight on hover and focus, so a name still
+   reads as something to press. */
+.board tr[data-level]:not([data-level="0"]) .row-name .head-name { text-decoration: none; }
+
+/* Where a board says how deep a row sits (`data-level`, 0 at the final score),
+   its cells step in with it, the way a group's rows already did: a row's figure
+   starts further right the deeper the average it belongs to, so the eye reads
+   which figures are made of which. The final score and its two halves are the
+   heads and stay full width, so there are two steps. */
+.board tr[data-level="2"] .cell-button { width: 90%; margin-left: 10%; }
+.board tr[data-level="3"] .cell-button { width: 80%; margin-left: 20%; }
 .row-name, .company-button {
   padding: 0;
   border: 0;
@@ -603,12 +664,14 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border: 0;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
 }
-.row-toggle:hover { background: var(--energy); border-color: var(--energy); }
+/* A bare chevron, no ring: the ring drew a second shape beside every name. On
+   hover the chevron takes the ink, which is feedback enough. */
+.row-toggle:hover::before { border-color: var(--ink); }
 .row-toggle::before, .gov-pop summary::before {
   content: "";
   width: 7px;
@@ -641,7 +704,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .depth-key h2 { margin: 0 0 8px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink); }
 .depth-key-list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 28px; }
 .depth-key-list > li { display: flex; gap: 8px; align-items: baseline; }
-.depth-key .anchor-level { flex: none; width: 1.4em; font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.depth-key .anchor-level { flex: none; width: 3.2em; white-space: nowrap; font-family: var(--mono); font-weight: 600; color: var(--ink); }
 .depth-key .anchor-name { font-weight: 600; color: var(--ink); }
 .depth-key-conditions { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; }
 .depth-key-conditions li { position: relative; padding-left: 13px; }
@@ -652,6 +715,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    table should meet what it shows without pressing anything, and the detail that
    used to sit beside them is folded into the two appendices below. */
 .gov-findings { margin-top: 40px; }
+/* The findings and the notes, side by side below the board. */
+.gov-after { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 40px; align-items: start; }
+/* Each column takes its whole third: the findings' own measure and the notes'
+   would otherwise leave both narrower than the split. */
+.gov-after .finding p, .gov-after .gov-notes { max-width: none; }
+.gov-notes-rail .gov-notes { margin-top: 0; }
+@media (max-width: 880px) {
+  .gov-after { grid-template-columns: 1fr; gap: 0; }
+}
 .gov-findings h2 {
   margin: 0 0 12px;
   font-family: var(--display);
@@ -1055,5 +1127,5 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
-  .gov-pop summary::before { transition: none; }
+  .gov-pop summary::before, .section-fold > summary::before { transition: none; }
 }
