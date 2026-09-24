@@ -2083,11 +2083,11 @@ console.log("== Overview: the governance view ==");
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
-  check(seen.companies.join(", ") === "OpenAI, Anthropic, Meta, Google DeepMind, Alibaba, "
+  check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Meta, Alibaba, "
         + "xAI, Moonshot AI, Mistral AI, DeepSeek"
-      && seen.total.join(",") === "5.6,5.5,2.1,2.0,1.8,1.5,1.1,0.7,0.5"
-      && seen.published.join(",") === "6.1,5.9,1.1,2.0,2.3,1.1,0.9,1.4,0.5"
-      && seen.engages.join(",") === "5.0,5.0,3.1,1.9,1.3,1.9,1.3,0.0,0.6"
+      && seen.total.join(",") === "5.6,5.5,2.0,1.8,1.8,1.5,1.1,0.9,0.5"
+      && seen.published.join(",") === "6.1,5.9,2.0,0.5,2.3,1.1,0.9,1.8,0.5"
+      && seen.engages.join(",") === "5.0,5.0,1.9,3.1,1.3,1.9,1.3,0.0,0.6"
       && seen.outOf.join() === "10" && seen.corners === 0
       && seen.flagged.join(", ") === "Alibaba, Moonshot AI, Mistral AI, DeepSeek",
     "the nine companies run across in rank order on the final score, the average of the two "
@@ -2115,9 +2115,10 @@ console.log("== Overview: the governance view ==");
     "the method and the sources are the two folded appendices under the findings",
     JSON.stringify(seen.appendices));
 
-  // The board paints every row over its own maximum. OpenAI's 6.1 of 10 is the
-  // mean of eleven shares rather than a whole number over a whole number, so it
-  // is the figure the arithmetic could have lost; its 5.0 of 10 sits on the
+  // The board paints every row over its own maximum. The first column's 6.1 of
+  // 10, Anthropic's since the corrections of 24 September 2026, is the mean of
+  // eleven shares rather than a whole number over a whole number, so it is the
+  // figure the arithmetic could have lost; its 5.0 of 10 sits on the
   // ramp's exact middle. The top of the ramp was lightened on 23 September 2026,
   // from [76, 140, 63] to [95, 160, 78], so every colour from half a maximum up
   // moved with it; the figures themselves did not.

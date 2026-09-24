@@ -197,6 +197,13 @@ const practiceScore = (labId, id) => governance.supporting_scores[labId]?.[id]
   ?? governance.internal_scores[labId]?.[id] ?? null;
 const unscoredIds = () => governance.columns.flatMap(column => column.unscored || []);
 
+/* The passages one row rests on, or the sentence saying where we looked and
+ * found nothing. The four practices only a company can show keep the block they
+ * have always had; every check and every other practice reads from `evidence`,
+ * which carries the same shape. */
+const evidenceOf = (labId, id) => governance.internal_evidence[labId]?.[id]
+  ?? governance.evidence?.[labId]?.[id] ?? null;
+
 /* One column's rows, in the order the board shows them: its questions with
  * their checks, then its practices. */
 const questionOf = id => governance.questions.find(question => question.id === id);
@@ -300,6 +307,7 @@ export function governanceBoard(args = {}) {
             id: check.id,
             figure: governance.scores[company.id][check.id],
             max: SCALE,
+            evidence: evidenceOf(company.id, check.id),
           })),
           found: governance.profiles[company.id][id],
         })),
@@ -307,7 +315,7 @@ export function governanceBoard(args = {}) {
           id,
           figure: practiceScore(company.id, id),
           max: PRACTICE,
-          evidence: governance.internal_evidence[company.id]?.[id] ?? null,
+          evidence: evidenceOf(company.id, id),
           note: governance.supporting_notes[company.id]?.[id] ?? null,
         })),
         found: governance.profiles[company.id][column.prose],
