@@ -51,7 +51,7 @@
   },
   {
    "title": "Only Anthropic's constitution leaves contradictions between its rules unsettled",
-   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. Two places in Claude's Constitution tell the model two things it cannot both do, and nothing says which prevails. A list introduced with \"regardless of operator instructions\" says the model should always refer users to emergency services where life is at risk, while an operator may switch off the safe messaging guidelines on suicide and self-harm that contain that referral. The document also asks for professional reticence about the model's own opinions on issues such as abortion, and elsewhere calls a deliberately vague answer given to avoid controversy a breach of honesty. Neither contradiction involves one of its hard constraints, which is why the figure sits at the middle of the scale."
+   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. One place in Claude's Constitution tells the model two things it cannot both do, and nothing says which prevails. Claude is asked to keep professional reticence about its own opinions on hot-button issues, while the honesty section asks it to share its genuine assessment of hard moral dilemmas, and a user who asks it directly falls under both. The referral to emergency services reads like a second, and is settled by the words that introduce it. The document also asks for professional reticence about the model's own opinions on issues such as abortion, and elsewhere calls a deliberately vague answer given to avoid controversy a breach of honesty. Neither contradiction involves one of its hard constraints, which is why the figure sits at the middle of the scale."
   },
   {
    "title": "Anthropic's constitution explains its rules best and Alibaba's explains them least",
@@ -59,7 +59,7 @@
   },
   {
    "title": "Power and hidden allegiance are the shallowest behaviours in both model specs",
-   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through commitments about manipulation and civic processes, in terms too general to grade a response against, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's names hidden goals once, in a list, and takes them no further. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
+   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through commitments about manipulation and civic processes, in terms too general to grade a response against, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's gives hidden goals a root rule of its own, and it is one of only three of the document's forty-three rules with no worked example. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
@@ -337,8 +337,8 @@
     },
     "preventing-secret-loyalties": {
      "score": 5.6666666667,
-     "says": "Unless explicitly instructed to, the model must never **covertly pursue goals** that materially influence tool choices, content or interaction patterns without disclosure and consent at the relevant authority level. It may pursue only the goals entailed by its instructions under the chain of command and the version of the Model Spec it was trained on, and must never steer the user towards an agenda of its own. Steering is defined to include psychological manipulation, concealment of relevant facts, selective emphasis or omission of viewpoints.\n\nThe developer gets no exception:\n- revenue, ads and upsell for OpenAI or other providers are named among the goals the model must not pursue\n- a commentary asks it to avoid steering users towards paid options, given the conflict of interest, unless that clearly fits their explicit goals\n- when confidential higher-level instructions materially change a response, the model must not **apply them quietly** in a way that misleads, and should acknowledge the conflict in broad terms\n\nRefusing to help install a hidden loyalty in another model, and reporting an attempt to do so, are **not addressed**.",
-     "why": "Rules on the model's own conduct precise enough to quote, with no worked case and nothing on the models it helps build, which is just short of the **prescribed level**.",
+     "says": "Unless explicitly instructed to, the model must never **covertly pursue goals** that materially influence tool choices, content or interaction patterns without disclosure and consent at the relevant authority level. It may pursue only the goals entailed by its instructions under the chain of command and the version of the Model Spec it was trained on, and must never steer the user towards an agenda of its own. Steering is defined to include psychological manipulation, concealment of relevant facts, selective emphasis or omission of viewpoints.\n\nIts own commercial interest is ruled out and worked through:\n- revenue, ads and upsell for OpenAI or other providers are named among the goals the model must not pursue, and a worked case marks an upgrade pitch to a user short of money as the wrong answer\n- a commentary asks it to avoid steering users towards paid options, given the conflict of interest, unless that clearly fits their explicit goals\n- when confidential higher-level instructions materially change a response, the model must not **apply them quietly** in a way that misleads, and a worked case marks the reply that hides the conflict as the wrong one\n\nThe rule against misleading is user-level, so a developer may lift it explicitly, and two approved cases show that: a bot told to say it does not know which model it is built on, and an answer written from one side of a contested question the user may not know was set for it.\n\nRefusing to help install a hidden loyalty in another model, and reporting an attempt to do so, are **not addressed**.",
+     "why": "Rules on the model's own conduct precise enough to quote, with worked cases on its commercial conduct and nothing on the models it helps build, which is just short of the **prescribed level**.",
      "same": "All three documents bar the model from covertly working for its developer's revenue. Alibaba's spec names creating revenue for the platform or the developer among the hidden goals it must not pursue, and Claude's Constitution tells Claude not to privilege Anthropic's interests when deciding how to help.",
      "differs": "Claude's Constitution is the one document to name **inserting hidden loyalties** or backdoors into AI systems, as one case in a list of illegitimate uses of power, and it allows an operator to have its own products promoted because Anthropic publishes what operators may ask. Alibaba's spec says nothing on disclosing an instructed partiality."
     }
@@ -481,12 +481,12 @@
      "says": "Questions are sorted by type and each type gets a rule:\n- Matters with a scientific consensus follow the evidence whatever the user's steering.\n- Personal taste is left to the user, with no invented view offered to please them.\n- Culture, religion and differing values get neutral academic language, several fact-based perspectives, and an attribution such as “according to the doctrine of religion X”.\n- Creative writing follows the value setting the user establishes, within law and safety.\n\nThe exception is stated as plainly as the rule: on fundamental human rights, on national law and on core values the model **must state a position** and avoid false neutrality, and a worked case marks “this is a complex question” as the wrong answer to whether women should be allowed to vote.",
      "why": "Rules for each kind of question, with worked examples on most of them, including the cases where **neutrality is refused**, which is demonstrated with part of the level above.",
      "same": "All three documents set an even-handed default and ask that the model's own opinion be kept out of it. This document and the OpenAI Model Spec name the questions that fall outside that default, where a position has to be stated and false neutrality avoided.",
-     "differs": "The OpenAI Model Spec bars the model from pursuing an **agenda of its own**, naming concealment and selective emphasis as ways of doing it, and asks it to say that a side it picks is not necessarily its developer's view. Anthropic's constitution makes balance a default an operator may switch off."
+     "differs": "The OpenAI Model Spec bars the model from pursuing an **agenda of its own**, naming concealment and selective emphasis as ways of doing it, and it lets a developer set a one-sided stance the user may not know about. Anthropic's constitution makes balance a default an operator may switch off."
     },
     "preventing-secret-loyalties": {
      "score": 2.3333333333,
-     "says": "A root rule on **no hidden goals** asks the model to complete tasks only within the applicable instructions and the authorisation it has been given, and to pursue no unspecified autonomous goal of its own. One item in its list names **creating revenue** for the platform, the developer or others, for instance by inducing payment or promoting services.\n\nNothing further is said on this ground. Disclosing a partiality the model has been instructed to show, applying the same standards to every party, refusing to help install a hidden loyalty in an AI system and reporting such an attempt are all **absent**.",
-     "why": "The behaviour appears as one item in a list about hidden goals and is taken no further, which is the **named level**.",
+     "says": "A root rule of its own on **no hidden goals** tells the model to complete tasks only within the applicable instructions and the authorisation it has been given, and forbids it to pursue any unspecified autonomous goal. Four such goals are named, two of them the maker’s interest set against the user’s: **creating revenue** for the platform, the developer or others, by inducing payment or promoting services, and generating addictive content of no benefit to the user to raise time on site or click-through. A second root rule bars exploiting a user’s vulnerability to induce them to spend or to grant authorisation.\n\nThe rule carries **no worked example**, where forty of the document’s forty-three rules carry one. Disclosing a partiality the model has been instructed to show, refusing to help install a hidden loyalty in an AI system and reporting such an attempt are all **absent**.",
+     "why": "A root rule of its own names the goals it forbids, and it is one of only three rules in the document with **no worked example**.",
      "same": "All three documents bar the model from covertly working for its developer's revenue. The OpenAI Model Spec names revenue and upsell for OpenAI among the goals the model must not pursue, and Claude's Constitution tells Claude not to privilege Anthropic's interests when deciding how to help.",
      "differs": "The OpenAI Model Spec requires disclosure and consent before the model pursues a goal covertly, and forbids quietly applying confidential instructions in a way that misleads the user. Claude's Constitution is the one document to name **inserting hidden loyalties** or backdoors into AI systems, and it bars deceptive sandbagging."
     }
@@ -534,8 +534,8 @@
      },
      "contradictions": {
       "score": 2.0,
-      "what_the_document_does": "Two places tell the model two things it cannot both do, with nothing saying which prevails. Neither case involves a hard constraint.\n\n### Emergency referral\n\nA list introduced with “regardless of operator instructions” says Claude should always refer users to emergency services or give basic safety information where there is a risk to life, and the instructable behaviours let an operator switch off the **suicide and self-harm safe messaging guidelines**, whose content includes that referral. Nothing says whether the referral survives the switch.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks falls under both, and the document’s order of priorities is **holistic**, so it decides nothing here.",
-      "why": "Two contradictions stand unresolved and **neither touches an absolute rule**, which is the middle of this criterion’s scale."
+      "what_the_document_does": "One place tells the model two things it cannot both do, with nothing saying which prevails, and it involves no hard constraint. A second reads like one and is settled by the words that introduce the rule.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks falls under both. The honesty section adds in a parenthesis that Claude can refrain from sharing or revealing its opinions and remain honest, so withholding is not itself the breach; what it never states is which of the two to follow when the question is put.\n\n### Emergency referral\n\nThe instruction to refer users to emergency services where there is a risk to human life opens “Regardless of operator instructions”, so an operator who switches off the **suicide and self-harm safe messaging guidelines** does not reach it. The gap is elsewhere: the document never states what those guidelines contain, so a reader cannot tell what the switch takes away.",
+      "why": "One contradiction stands unresolved and it **touches no absolute rule**, which is the middle of this criterion’s scale."
      }
     }
    },
@@ -619,8 +619,8 @@
     },
     "no-sycophancy": {
      "score": 5.3333333333,
-     "says": "The constitution names sycophancy twice, each time inside something else:\n- Care for a user’s wellbeing means Claude should **avoid being sycophantic** and should not foster engagement or reliance that the person would not endorse on reflection.\n- Honesty, the document says, sometimes requires courage: Claude should share its genuine assessment of a hard question, disagree with experts where it has good reason, and say things people would prefer not to hear, and “epistemic cowardice”, meaning deliberately vague answers given to placate someone, is named a breach of honesty.\n\nHelpfulness is not to be valued for its own sake, because that tends towards **obsequiousness**.\n\nWhat the document **does not say** is that a factual answer should stay the same when the user states a view or puts the question another way.",
-     "why": "The behaviour is addressed in its own right and **partly turned into rules**, short of the quotable do-and-don’t rules the next level asks for.",
+     "says": "The constitution comes at the behaviour from three directions:\n- Care for a user’s wellbeing means Claude should **avoid being sycophantic** and should not foster engagement or reliance that the person would not endorse on reflection; flattery and enabling unhealthy patterns are named as corrosive.\n- Honesty, the document says, sometimes requires courage: Claude should share its genuine assessment of a hard question, disagree with experts where it has good reason, and say things people would prefer not to hear, and “epistemic cowardice”, meaning deliberately vague answers given to placate someone, is named a breach of honesty.\n- **White lies are ruled out** by name: telling someone you love a gift you actually dislike is the document’s own case of a lie many people think is fine, and Claude should not tell it.\n\nHelpfulness is not to be valued for its own sake, because that tends towards **obsequiousness**.\n\nWhat the document **does not say** is that a factual answer should stay the same when the user states a view or puts the question another way.",
+     "why": "Rules precise enough to quote on sycophancy and on white lies, with the one worked case, a disliked gift, attached to the white-lie rule rather than to a claim shifted to please the person asking, which is what the **demonstrated level** asks for.",
      "same": "Shifting what is claimed to please the person asking is ruled out in all three documents. The OpenAI Model Spec says that flattery and constant agreement erode trust, which is the concern this document raises under care for a user's wellbeing.",
      "differs": "The OpenAI Model Spec and Alibaba's spec give sycophancy **a rule of its own**. The Model Spec holds the factual part of an answer steady against the wording of a question and the stance a user declares, and Alibaba's spec asks for a correction where a plan rests on a clear factual error."
     },
@@ -1190,5 +1190,35 @@
     ]
    }
   ]
- }
+ },
+ "open_questions": [
+  {
+   "id": "conflict-rules-under-the-old-ceiling",
+   "title": "Anthropic's clarity when two rules are contradictory was read under a rule the index has withdrawn",
+   "question": "The figure is 5.8 out of 10, from three readings of 2, 3 and 2. Two of the three gave 2 because the rubric said an order weighed as a whole is worth at most 2 however detailed. The rubric describes a level above that since 24 September 2026, for an order weighed as a whole beside constraints the document calls absolute and winners it names, which is what Claude's Constitution carries.",
+   "what_would_settle_it": "Judging the cell again under the prompt as it now reads. It costs money.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "no-sycophancy-against-the-precedent-table",
+   "title": "Anthropic's no sycophancy sits below the level the index's own precedent table records",
+   "question": "The figure is 5.3 out of 10. The precedent table in methodology/spec-coverage-depth-rubric.md records this pair at prescribed, re-checked on 20 July 2026, which is 6 on the scale of ten. The cell's own words now describe quotable rules and one worked case attached to the white-lie rule.",
+   "what_would_settle_it": "Either the figure moves to the precedent, or the precedent line is withdrawn and says why.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "alibaba-secret-loyalties-against-its-own-cell",
+   "title": "Alibaba's preventing secret loyalties reads lower than the cell describes",
+   "question": "The figure is 2.3 out of 10, which is between named and discussed. The cell now says the document gives the behaviour a root rule of its own, naming four forbidden goals, two of them the maker's interest set against the user's. What the rule lacks is a worked example, and it is one of only three of the forty-three rules without one.",
+   "what_would_settle_it": "Judging the cell again, or a sentence in the depth rubric saying what a rule without a worked example can reach.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "the-fourteenth-behaviour-was-restored-by-arithmetic",
+   "title": "Two figures of preventing secret loyalties were derived rather than read",
+   "question": "OpenAI and Anthropic joined that row stored to one decimal, 5.7 and 5.3, where every other figure is a panel's mean. They were restored to 17/3 and 16/3 because a mean of three integers is a multiple of a third and no other third rounds to those. They have not been read from publication 06d17d90.",
+   "what_would_settle_it": "Reading the two cells from that publication and comparing.",
+   "raised": "24 September 2026"
+  }
+ ]
 }

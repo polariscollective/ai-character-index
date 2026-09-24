@@ -136,3 +136,129 @@ popover opened, for a figure carrying three or more decimals. Two remain and bot
 are arXiv identifiers.
 
 **To undo.** Interpolate the score directly again.
+
+---
+
+## 5. The rubric's new level reaches the prompt, the page and the tests
+
+**Answers:** a fault entry 3 introduced, found by the second audit.
+
+**Before.** Entry 3 wrote the level 3 into
+`methodology/document-assessment-rubric.md` and nowhere else. That rubric says of
+itself that it is "the canonical source they restate: a change of substance here
+has to land in the prompt too", and the change did not.
+`engine/panel/prompts/assessment-criteria-v1.txt` went on asking judges for a
+ceiling the index had withdrawn, and `site/document-assessment.js` went on
+showing a reader three levels where the rubric described four.
+
+**After.** The prompt carries the level 3 in the rubric's own words. The site's
+anchor table carries it, so a reader opening the criterion sees the level a
+figure of 3 sits on. Two tests moved with the rule and one parser opened:
+`test_assessment_call.py` holds the prompt to "at most 2 on its own" and to the
+new line, `test_site_rubrics.py` reads any level the prompt describes rather than
+only the even ones, and its guard expects 0, 2, 3 and 4 on conflict rules.
+
+**What this does not change.** No figure. The readings on the board were taken
+under the old prompt, which is worth knowing: two of Anthropic's three readings
+gave 2 because of the ceiling, so its 2.3333 may understate the document under
+the rule as it now stands. Judging that cell again would cost money and is the
+owner's call.
+
+**To undo.** Restore the flat ceiling in all three places.
+
+---
+
+## 6. The fourteenth behaviour's figures are means again
+
+**Answers:** the second audit, all three of its document readers independently.
+
+**Before.** `preventing-secret-loyalties` joined the board on 24 September from
+publication `06d17d90` with OpenAI at 5.7 and Anthropic at 5.3, stored to one
+decimal, while Alibaba on the same row carried 2.3333333333. Those were the only
+two figures on the board that were not a panel's mean, which is the fault entry 2
+removed everywhere else.
+
+**After.** OpenAI 5.6666666667 and Anthropic 5.3333333333.
+
+**How the values were established.** Not read from the publication, which is not
+in this repository, but derived: a mean of three integers is a multiple of a
+third, and the only third that rounds to 5.7 at one decimal is 17/3, as the only
+third that rounds to 5.3 is 16/3. Alibaba's 7/3 on the same row confirms three
+seats. Both are worth checking against `06d17d90` when someone next has the
+database open.
+
+**What moves with it.** A takeaway that called no sycophancy level with
+preventing secret loyalties as Anthropic's lowest behaviour is false against the
+stored figures and true against these, which is the second audit's finding and is
+not yet applied.
+
+**To undo.** Write 5.7 and 5.3 back.
+
+---
+
+## 7. The thirteen wrong cells of the second audit
+
+The second audit ran on 24 September against the board as it then stood and is in
+the five sections it names. It found 315 cells: 180 correct, 110 defensible with
+a caveat, 13 wrong and 12 whose rule permits no figure. The thirteen are answered
+here, in two changelogs of their own:
+
+- `2026-09-24-fix2-constitutions-changelog.md`, nine fields over five cells, no
+  figure touched, verified on 280 numeric tokens.
+- `2026-09-24-fix2-governance-changelog.md`, eight cells, four figures moved.
+
+The one worth naming here: Mistral's paragraph carried a sentence in quotation
+marks attributed to Stanford's Foundation Model Transparency Index that the
+report does not contain, under a count that was wrong twice over, 7 of 88 where
+the index has 100 indicators and Mistral scores 18. The quotation is gone and the
+counts are right. No figure moved: Mistral is nought on all four rows under any
+reading.
+
+Two figures moved a rank. Meta's separate sign-off fell from 1 to 0, because the
+clause the board quoted from the middle of a sentence puts the approval on model
+deployment rather than on changes to the framework, and Meta falls from fourth to
+sixth. Anthropic's two guardrail checks moved in opposite directions, 3.1 from 4
+to 3 and 3.2 from 1 to 2, which cancel exactly and leave its figure and its first
+place untouched.
+
+---
+
+## 8. The tensions are written down rather than argued each time
+
+**Answers:** nothing in an audit. The owner asked for it on 24 September.
+
+`site/constitutions.json` and `site/governance.json` each carry an
+`open_questions` array now: four and five entries, each with what the tension is,
+what would settle it, and the date it was raised. They are the questions an audit
+can state and cannot answer, the ones that need a decision or another judging
+run: a figure read under a rule the index has since withdrawn, a figure below the
+level the index's own precedent table records, two rows scored equal on unequal
+evidence, a scale with no written anchor deciding a place, and a first place
+about a tenth wide.
+
+Nothing renders them yet. They sit in the files the boards are built from, so
+they travel into a publication with everything else and can be read back at any
+version.
+
+**To undo.** Delete the key from both files.
+
+---
+
+## 9. Two takeaways said what their cells had stopped saying
+
+**Answers:** a consequence of instructing the fix agent to report rather than
+edit what it found in the takeaways, which turned out to be in the file it was
+editing.
+
+**Before.** "Two places in Claude's Constitution tell the model two things it
+cannot both do", with the emergency-services example, and "Alibaba's names hidden
+goals once, in a list, and takes them no further."
+
+**After.** One place, with the contested-opinion example, and a sentence saying
+the referral reads like a second and is settled by the words that introduce it.
+And Alibaba's gives hidden goals a root rule of its own, one of only three of its
+forty-three rules with no worked example.
+
+**What this does not change.** No figure. Every figure the seven takeaways cite
+was recomputed against the board on 24 September and every one matches, including
+the 42 behaviour figures and the highest at 9.3.
