@@ -21,8 +21,7 @@
    "id": "published",
    "name": "What is published",
    "out_of": 10,
-   "ranks": true,
-   "plain": "The rules anyone can read: whether a constitution exists and which models it covers, whether every change to the rules can be seen, which filters run around the models, what the model must never do, and whether the published text may be reused. This figure ranks the companies.",
+   "plain": "The rules anyone can read: whether a constitution exists and which models it covers, whether every change to the rules can be seen, which filters run around the models, what the model must never do, and whether the published text may be reused. It is half of the final score.",
    "about": "This column is the part of governance a reader can check without being let in. Every row is a document, or something a document says: it exists or it does not, it names the models it governs or it does not, it records its changes or it does not. Eleven rows carry it, the ten checks of the four asks and the licence on the published text. The figure is the mean of those eleven rows' shares of their own maximum, times ten, so every check counts the same and a question with three checks weighs more than one with two.",
    "prose": "practices_published",
    "questions": [
@@ -39,9 +38,8 @@
    "id": "engages",
    "name": "What it engages",
    "out_of": 10,
-   "ranks": false,
-   "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It sits beside the first figure and does not enter the rank.",
-   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it, and the figure is the mean of their shares of their own maximum, times ten. It does not rank the companies. It says how much of the second thing each one shows.",
+   "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It is the other half of the final score.",
+   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it, and the figure is the mean of their shares of their own maximum, times ten. It is added to what is published to give the final score.",
    "prose": "practices_engaged",
    "questions": [],
    "practices": [
@@ -56,6 +54,40 @@
    ],
    "unscored": [
     "I5"
+   ],
+   "groups": [
+    {
+     "id": "testing",
+     "name": "Testing adherence",
+     "plain": "Whether anyone can see how well the models follow the constitution: a published test of adherence, outside evaluators with access to test it, and a threshold a model must meet before it is released.",
+     "practices": [
+      "S2",
+      "S3",
+      "S4"
+     ]
+    },
+    {
+     "id": "changes",
+     "name": "Change control",
+     "plain": "Who may change the constitution: whether the company publishes who approves a change, and whether a second team can veto one on safety grounds. Only the first is scored.",
+     "practices": [
+      "S5"
+     ],
+     "unscored": [
+      "I5"
+     ]
+    },
+    {
+     "id": "inside",
+     "name": "Training and use",
+     "plain": "Whether the constitution is the text the models are actually held to: trained on, followed by the models the company uses internally, the same text inside as outside, and checked in use.",
+     "practices": [
+      "I1",
+      "I2",
+      "I3",
+      "I4"
+     ]
+    }
    ]
   }
  ],
@@ -1485,11 +1517,11 @@
   },
   {
    "title": "Meta publishes almost nothing and engages more than most",
-   "text": "It scores 1.1 out of 10 on what is published, level with xAI and above only Moonshot AI and DeepSeek, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
+   "text": "It scores 1.1 out of 10 on what is published, level with xAI and above only Moonshot AI and DeepSeek, and 3.1 out of 10 on what it engages, behind only OpenAI and Anthropic, which puts it third on the final score with 4.3 out of 20. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\" Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read. A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The one that leaked in 2025 was titled \"GenAI: Content Risk Standards\" and was described as standards of permitted content with examples, which is neither of the two forms a constitution usually takes: a set of rules, or an explanatory text."
   },
   {
    "title": "Most companies whose models anyone can download sit at the bottom, partly because of the questions",
-   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores on what is published, Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5. Alibaba is the exception, third on 2.3, and its Qwen models are among the most used open-weight models there are. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
+   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them hold three of the five lowest scores on what is published, Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5, and on the final score they take the last three places. Alibaba is the exception, third on what is published with 2.3, and its Qwen models are among the most used open-weight models there are. Three of them attach a licence with no restriction on behaviour at all. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, Mistral under Apache 2.0, and Moonshot AI under licences whose only added clauses are commercial: attribution above 100 million monthly users, and a separate agreement above $20 million in revenue. None of the three says anything about how its models behave in deployments it does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
   },
   {
    "title": "Two companies must already write this document for a regulator, and do not publish it",
@@ -1591,5 +1623,10 @@
   }
  },
  "looked": "The scores were given by hand, from documents found and dated between 18 and 21 September 2026. Nothing here was judged by a model, and nothing was taken from another ranking.",
- "not_added": "The checks are scored 0 to 4, with a written description of what earns 0, 2 and 4 on every line. The practices are scored 0, 1 or 2 against one generic scale with no line of their own. A single total would give a precision the figures behind it do not have. Adding them would mean putting the practices on the same anchored scale and scoring the nine companies again, which is separate work."
+ "total": {
+  "name": "Final score",
+  "out_of": 20,
+  "plain": "What is published and what it engages, added together. This figure ranks the companies.",
+  "about": "The final score is the sum of the two figures, each out of 10. They measure different things: what a company has published, which anyone can check, and what it says about its own practice, which nobody outside can. Every check under what is published has a written description of what earns 0, 2 and 4. Of the eight practices under what it engages, four have their own description of what earns 0, 1 and 2, and four share one generic scale. Both figures stay on the board under the final score, so a reader can see which half a company earned it on. Companies level on the final score share a place."
+ }
 }

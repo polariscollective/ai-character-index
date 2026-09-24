@@ -555,9 +555,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-heatmap .outside-row th { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--ink); }
 /* Inside the supporting practices, the line between the five scored from public
    sources and the five only an audit could score. */
-.gov-heatmap .practice-divider { border-top: 1px solid var(--muted); }
-.gov-heatmap .practice-divider th, .gov-heatmap .practice-divider td { padding-top: 12px; padding-bottom: 6px; }
-.gov-heatmap .divider-note { color: var(--muted); font-size: 13px; vertical-align: middle; }
 
 .row-head { display: flex; gap: 8px; align-items: center; min-height: 44px; }
 .row-name, .company-button {

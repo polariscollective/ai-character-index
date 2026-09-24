@@ -2059,6 +2059,8 @@ console.log("== Overview: the governance view ==");
     coverageHidden: document.querySelector("#view-coverage").hidden,
     selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
     companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
+    total: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
+      .map(b => b.textContent),
     published: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="published"] .cell-figure')]
       .map(b => b.textContent),
     engages: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="engages"] .cell-figure')]
@@ -2078,29 +2080,29 @@ console.log("== Overview: the governance view ==");
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
-  check(seen.companies.join(", ") === "OpenAI, Anthropic, Alibaba, Google DeepMind, Mistral AI, "
-        + "Meta, xAI, Moonshot AI, DeepSeek"
-      && seen.published.join(",") === "6.1,5.9,2.3,2.0,1.4,1.1,1.1,0.9,0.5"
-      && seen.engages.join(",") === "5.0,5.0,1.3,1.9,0.0,3.1,1.9,1.3,0.6"
+  check(seen.companies.join(", ") === "OpenAI, Anthropic, Meta, Google DeepMind, Alibaba, "
+        + "xAI, Moonshot AI, Mistral AI, DeepSeek"
+      && seen.total.join(",") === "11.1,10.9,4.3,3.9,3.5,3.0,2.2,1.4,1.1"
+      && seen.published.join(",") === "6.1,5.9,1.1,2.0,2.3,1.1,0.9,1.4,0.5"
+      && seen.engages.join(",") === "5.0,5.0,3.1,1.9,1.3,1.9,1.3,0.0,0.6"
       && seen.outOf.join() === "/10"
-      && seen.flagged.join(", ") === "Alibaba, Mistral AI, Moonshot AI, DeepSeek",
-    "the nine companies run across in rank order on what is published, Meta and xAI level on it "
-      + "and apart on what they engage, both figures out of 10, the open-weight ones marked",
-    `${seen.companies.join(", ")} / ${seen.published.join(",")} / ${seen.engages.join(",")}`);
-  /* Two figures, never one: the rows run down from what is published, through
-   * its four questions and the licence practice, then from what it engages
-   * through its eight and the one nobody can score. */
-  check(seen.rows.join(", ") === "What is published, Published constitution, Change log, "
-        + "Guardrails, Hard constraints, Open licence, What it engages, Adherence tests published, "
-        + "Outside testers, Release threshold, Change approval published, "
-        + "What only the company can show, Trained to follow it, Internal models, Same text inside, "
-        + "Monitored in use, Separate sign-off"
+      && seen.flagged.join(", ") === "Alibaba, Moonshot AI, Mistral AI, DeepSeek",
+    "the nine companies run across in rank order on the final score, which adds the two "
+      + "figures out of 10, the open-weight ones marked",
+    `${seen.companies.join(", ")} / ${seen.total.join(",")} / ${seen.published.join(",")} / `
+      + `${seen.engages.join(",")}`);
+  /* The final score first, then the two figures it adds: what is published,
+   * through its four questions and the licence practice, then what it engages,
+   * through the three groups its practices fold into. */
+  check(seen.rows.join(", ") === "Final score, What is published, Published constitution, Change log, "
+        + "Guardrails, Hard constraints, Open licence, What it engages, Testing adherence, "
+        + "Change control, Training and use"
       && seen.findings === 8 && seen.findingsFolded === 0,
-    "the rows run down from the two figures, the checks folded, the eight findings open under the "
+    "the rows run down from the final score and the two figures, the checks folded, the eight findings open under the "
       + "table", JSON.stringify(seen.rows));
-  check(seen.columnNotes.join(" | ") === "What is published, out of 10. | What it engages, "
-        + "out of 10. | The two are not added.",
-    "one sentence under the table for each figure, and one saying why they are not added",
+  check(seen.columnNotes.join(" | ") === "Final score, out of 20. | What is published, out of 10. "
+        + "| What it engages, out of 10.",
+    "one sentence under the table for the final score and one for each figure",
     JSON.stringify(seen.columnNotes));
   /* The reference text is two appendices under the findings rather than four folds
    * mixed in with them: how the scoring works, and what was read for each company. */
@@ -2167,8 +2169,8 @@ console.log("== Overview: the governance view ==");
 
   // The best practices are rows of the two figures rather than a group of their
   // own: the licence under what is published, the other eight under what it
-  // engages, the four only the company can show marked by a line, and the one
-  // only an internal audit could score NA for everyone.
+  // engages, folded into three groups there, and the one only an internal audit
+  // could score NA for everyone, inside the group on change control.
   const practices = await page.evaluate(() => {
     const openai = id => document.querySelector(`.cell-button[data-lab="openai"][data-row="${id}"]`);
     const figures = ids => [...new Set(ids.flatMap(id =>
@@ -2182,16 +2184,25 @@ console.log("== Overview: the governance view ==");
         .map(node => node.textContent).filter(text => /Polaris Collective|Kembery/.test(text)).length,
       disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0", "1", "2"].includes(mark)),
       marks: figures(["I5"]),
-      divider: document.querySelector("#gov-heatmap tr.practice-divider .head-name")?.textContent,
+      groups: [...document.querySelectorAll("#gov-heatmap tr.group-row .head-name")]
+        .map(node => node.textContent).join(),
+      grouped: ["testing", "changes", "inside"].map(id =>
+        [...document.querySelectorAll(`#gov-heatmap tr.check-row[data-parent="group-${id}"]`)]
+          .map(row => row.dataset.practice).join("+")).join(),
+      openaiGroups: ["testing", "changes", "inside"].map(id =>
+        document.querySelector(`.cell-button[data-lab="openai"][data-row="group-${id}"] .cell-figure`)
+          ?.textContent).join(),
     };
   });
-  check(practices.rows === "S1,S2,S3,S4,S5,I1,I2,I3,I4,I5"
+  check(practices.rows === "S1,S2,S3,S4,S5,I5,I1,I2,I3,I4"
       && practices.openai.join() === "2,1,0,0,1" && practices.outOf === "/2"
       && practices.disclosed && practices.marks.join() === "NA"
-      && practices.divider === "What only the company can show"
+      && practices.groups === "Testing adherence,Change control,Training and use"
+      && practices.grouped === "S2+S3+S4,S5+I5,I1+I2+I3+I4"
+      && practices.openaiGroups === "0.3,1.0,1.5"
       && practices.credits === 14,
-    "the practices sit in the two figures, the four only the company can show under their own "
-      + "line, the ninth NA, and every row of either figure says which paper it comes from",
+    "the practices sit in the two figures, those of the second folded into three groups "
+      + "that show their mean, the ninth NA, and every row of either figure says which paper it comes from",
     JSON.stringify(practices));
 
   // A check's score opens a popover beside it, with its place on the scale marked.

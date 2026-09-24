@@ -1232,6 +1232,21 @@ papers are not in this repository, because the memo is an unpublished draft and
 Kembery and colleagues' paper is under review, so a quote cannot be checked
 against its source here and the test holds only their shape.
 
+**The two figures are added now, and the order changed with it.** Since 24
+September 2026 the board leads with a final score out of 20, the sum of what is
+published and what it engages, and ranks the companies by it. Before, it ranked
+on what is published alone and said the two were never added, on the ground that
+the checks are anchored and the practices share one generic scale. The audit of
+23 September (`docs/audits/2026-09-23-every-figure-defended.md`) had already
+found that ground false for `I1` to `I4`, which carry anchors of their own, so the
+explanation under the sum says only what is true: the two measure different
+things, and both stay on the board so a reader can see which half a company
+earned its score on. The order moved a lot. Meta goes from sixth to third on the
+strength of what it engages, Alibaba from third to fifth, and Mistral AI from
+fifth to eighth, and the ties of 21 September disappear. The practices of what
+it engages also fold now, into three groups of `column.groups` that show their
+mean and change nothing about the figure.
+
 ### Depth runs to ten, and a document is scored as a whole
 
 The grid was green wherever a lab had published anything. Of the 52 cells of the

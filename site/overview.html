@@ -127,8 +127,9 @@
   <p class="lede gov-lede">
     Some AI companies publish a constitution, a document setting out how their
     models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores nine companies,
-    as of September 2026, on two things side by side: the rules they publish, and
-    whether those rules are made to bind the models.
+    as of September 2026, on two things: the rules they publish, and whether
+    those rules are made to bind the models. The two are added into a final
+    score out of 20, which ranks the companies.
   </p>
   <!-- The two figures, said before either of them appears. The class is the one
        the first view's parts use, so both read the same. -->
@@ -137,14 +138,13 @@
     constitution and says which models it governs, whether every change to the rules a model
     follows can be seen, which filters it runs around its models, whether the public gets a say
     before one of the things its model must never do is weakened, and whether the published text
-    may be reused. This is the figure the companies are ranked by.</p>
+    may be reused. It is half of the final score.</p>
     <p class="lede"><strong>What it engages, out of 10.</strong> Whether the document binds the
     models: published tests of adherence, outside evaluators, a threshold before release, who may
-    approve a change, training, internal use and monitoring. It sits beside the rank and does not
-    enter it.</p>
-    <p class="lede"><strong>The two are never added.</strong> The checks are anchored line by
-    line and the practices are not, so a single total would read as more precise than the scores
-    behind it. One further practice is scored for nobody, because only an internal audit could show
+    approve a change, training, internal use and monitoring. It is the other half.</p>
+    <p class="lede"><strong>The final score, out of 20, adds the two.</strong> The companies are
+    ranked by it. The two figures measure different things, what a company publishes and what it
+    says about its own practice, so both stay on the board under it. One further practice is scored for nobody, because only an internal audit could show
     it, and every company is marked NA on it.</p>
   </div>
   <p class="gov-foot" id="gov-origin"></p>
@@ -160,16 +160,16 @@
   </div>
   <div class="matrix-wrap">
     <table class="gov-heatmap board" id="gov-heatmap">
-      <caption class="visually-hidden">Each company's two figures, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
+      <caption class="visually-hidden">Each company's final score and the two figures it adds, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
       <thead></thead>
       <tbody></tbody>
     </table>
   </div>
   <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
   <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
-  <!-- One sentence per figure, and the sentence saying why the two are not
-       added, written by governance.js from governance.json: the two columns are
-       named here and nowhere else in the markup. -->
+  <!-- One sentence for the final score and one per figure, written by
+       governance.js from governance.json: the two columns are named here and
+       nowhere else in the markup. -->
   <div id="gov-columns"></div>
   <p class="gov-foot">
     <strong>Open weights</strong> marks a company whose flagship model, or
@@ -228,16 +228,14 @@
           than one with two. What it engages has eight, all of them practices.
         </p>
         <p>
-          <strong>The two figures are never added.</strong> The checks are anchored
-          line by line; the practices share one generic scale with no line of their
-          own. A single total would give a precision the scores behind it do not
-          have. Adding them would mean putting the practices on the same anchored
-          scale and scoring the nine companies again, which is separate work and
-          has not been done.
+          <strong>The final score adds the two figures</strong>, so it is out of
+          20. They measure different things: what a company has published, and
+          what it says about its own practice. Both stay on the board under the
+          final score, so a reader can see which half a company earned it on.
         </p>
         <p>
-          Companies are ranked on what is published. The second figure never breaks
-          a tie, so companies level on the first share a place.
+          Companies are ranked on the final score, and companies level on it share
+          a place.
         </p>
         <p>
           The first two questions are what our working paper calls its minimum, the
@@ -330,10 +328,10 @@
         </p>
         <p>
           <strong>The two figures do not agree with each other.</strong> Meta
-          publishes almost nothing and is third on what it engages. Mistral AI is
-          fifth on what is published and scores 0 on what it engages, the only
-          company that does. That is why the two are shown side by side rather than
-          merged.
+          publishes almost nothing and is third on what it engages, which makes it
+          third on the final score. Mistral AI is fifth on what is published and
+          scores 0 on what it engages, the only company that does, which leaves it
+          eighth. That is why both figures stay on the board under the final score.
         </p>
         <p>
           <strong>Companies whose models anyone can download are marked.</strong>

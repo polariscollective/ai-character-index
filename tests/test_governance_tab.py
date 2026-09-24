@@ -28,11 +28,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = json.loads((ROOT / "site" / "governance.json").read_text(encoding="utf-8"))
 PAGE = (ROOT / "site" / "overview.html").read_text(encoding="utf-8")
 
-# The board's order, which is the research note's own: companies are ranked on
-# what is published. Meta and xAI land on the same figure, and the second figure
-# never breaks a tie, so they share sixth place and the next rank is eighth.
-ORDER = ["openai", "anthropic", "alibaba", "google", "mistral", "meta", "xai",
-         "moonshot", "deepseek"]
+# The board's order: companies are ranked on the final score, the sum of what is
+# published and what it engages. Until 24 September 2026 they were ranked on the
+# first figure alone, which was the research note's own order.
+ORDER = ["openai", "anthropic", "meta", "google", "alibaba", "xai", "moonshot",
+         "mistral", "deepseek"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
 
@@ -73,11 +73,13 @@ def totals(lab):
     return by_question, by_column
 
 
-RANKED_BY = next(column["id"] for column in DATA["columns"] if column["ranks"])
-
-
 def ranking(lab):
-    return totals(lab)[1][RANKED_BY]
+    # The final score: the two figures, added.
+    return sum(totals(lab)[1].values())
+
+
+def published(lab):
+    return totals(lab)[1]["published"]
 
 
 def shown(value):
@@ -87,8 +89,8 @@ def shown(value):
 
 
 def rank(lab):
-    # One more than the number of labs ahead on the figure the board ranks by.
-    # The second figure breaks no tie, so labs level share a place.
+    # One more than the number of labs ahead on the final score. Labs level on
+    # it share a place.
     key = round(ranking(lab), 9)
     return 1 + sum(1 for other in ORDER if round(ranking(other), 9) > key)
 
@@ -190,8 +192,8 @@ class TheTwoFigures(unittest.TestCase):
             for field in ("name", "plain", "about", "prose"):
                 self.assertTrue(column.get(field, "").strip(), f"{column['id']} {field}")
             self.assertEqual(column["out_of"], 10)
-        # One of the two ranks the companies, and one does not.
-        self.assertEqual([column["ranks"] for column in DATA["columns"]], [True, False])
+        # Neither ranks the companies on its own: the final score does.
+        self.assertTrue(all("ranks" not in column for column in DATA["columns"]))
 
     def test_every_scored_row_is_counted_once(self):
         questions = [qid for column in DATA["columns"] for qid in column["questions"]]
@@ -205,6 +207,24 @@ class TheTwoFigures(unittest.TestCase):
         self.assertEqual(len(CHECKS) + len(published["practices"]), 11)
         self.assertEqual(len(engages["practices"]), 8)
 
+    def test_a_column_groups_its_rows_without_changing_them(self):
+        # Groups are how the board folds a column's practices, and nothing more:
+        # each practice and each unscored row sits in exactly one group, in the
+        # column's own order, so the figure is still the mean of every practice.
+        for column in DATA["columns"]:
+            groups = column.get("groups")
+            if not groups:
+                continue
+            for group in groups:
+                for field in ("id", "name", "plain"):
+                    self.assertTrue(group.get(field, "").strip(), f"{column['id']} {field}")
+                self.assertTrue(group["practices"], group["id"])
+            self.assertEqual([pid for group in groups for pid in group["practices"]],
+                             column["practices"])
+            self.assertEqual([pid for group in groups for pid in group.get("unscored", [])],
+                             column.get("unscored", []))
+            self.assertEqual(len({group["id"] for group in groups}), len(groups))
+
     def test_the_unscored_practice_is_in_neither_figure(self):
         unscored = [pid for column in DATA["columns"] for pid in column.get("unscored", [])]
         self.assertEqual(unscored, [practice["id"] for practice in AUDIT_ONLY])
@@ -217,30 +237,36 @@ class TheTwoFigures(unittest.TestCase):
         self.assertIn("in neither figure", Path(ROOT / "site" / "governance.js")
                       .read_text(encoding="utf-8"))
 
-    def test_the_two_are_never_added(self):
-        # The board says why in one sentence, under the table and in the popover
-        # each figure's name opens.
-        self.assertIn("A single total would give a precision", DATA["not_added"])
-        self.assertIn("0 to 4", DATA["not_added"])
-        self.assertIn("0, 1 or 2", DATA["not_added"])
-        self.assertIn("The two figures are never added", FLAT)
+    def test_the_final_score_adds_the_two(self):
+        # Out of 20, the two figures' maxima added, and the board says what the
+        # sum is made of, without claiming every practice shares one scale: four
+        # of them carry anchors of their own.
+        total = DATA["total"]
+        self.assertEqual(total["out_of"], sum(column["out_of"] for column in DATA["columns"]))
+        self.assertIn("0, 2 and 4", total["about"])
+        self.assertIn("0, 1 and 2", total["about"])
+        anchored = [practice for practice in DATA["internal"] if practice.get("anchors")]
+        self.assertIn(f"{len(anchored)} have their own description".replace("4", "four"),
+                      total["about"])
+        self.assertIn("ranks the companies", total["plain"])
+        self.assertIn("The final score adds the two figures", FLAT)
+        self.assertNotIn("never added", FLAT)
 
-    def test_the_ranking_is_the_first_figure_alone(self):
+    def test_the_ranking_is_the_final_score(self):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["6.1", "5.9", "2.3", "2.0", "1.4", "1.1", "1.1", "0.9", "0.5"])
+                         ["11.1", "10.9", "4.3", "3.9", "3.5", "3.0", "2.2", "1.4", "1.1"])
+        self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
+                         ["6.1", "5.9", "1.1", "2.0", "2.3", "1.1", "0.9", "1.4", "0.5"])
         # Alibaba and Moonshot AI land on exactly 1.25, which the board prints
         # as 1.3: toFixed takes a half upwards, where Python's own round() would
         # take it to the even digit and print 1.2.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.0", "5.0", "1.3", "1.9", "0.0", "3.1", "1.9", "1.3", "0.6"])
-        self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 6, 8, 9])
-        # Meta and xAI are level on the figure that ranks and apart on the one
-        # that does not, which is the tie the second figure is not allowed to
-        # break.
-        self.assertEqual(ranking("meta"), ranking("xai"))
-        self.assertNotEqual(totals("meta")[1]["engages"], totals("xai")[1]["engages"])
+                         ["5.0", "5.0", "3.1", "1.9", "1.3", "1.9", "1.3", "0.0", "0.6"])
+        # No two companies are level on the final score, so every place is
+        # taken once.
+        self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 7, 8, 9])
 
     def test_the_labs_marked_open_weights_are_the_notes(self):
         marked = {lab["id"] for lab in DATA["labs"] if lab.get("open_weights")}
@@ -404,19 +430,25 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(columns["published"], totals("xai")[1]["published"])
         below = [lab for lab in ORDER if totals(lab)[1]["published"] < columns["published"]]
         self.assertEqual(below, ["moonshot", "deepseek"])
+        # "which puts it third on the final score with 4.3 out of 20"
+        self.assertIn(f"third on the final score with {shown(ranking('meta'))} out of 20", text)
+        self.assertEqual(rank("meta"), 3)
 
-    def test_the_open_weights_finding_quotes_the_figure_it_ranks_on(self):
+    def test_the_open_weights_finding_quotes_what_is_published(self):
         # "Mistral AI's 1.4, Moonshot AI's 0.9 and DeepSeek's 0.5", with Alibaba
         # named as the one open-weight company that is not near the bottom.
         text = next(f["text"] for f in DATA["findings"] if "Moonshot AI's" in f["text"])
         for lab, label in (("mistral", "Mistral AI's"), ("moonshot", "Moonshot AI's"),
                            ("deepseek", "DeepSeek's")):
-            self.assertIn(f"{label} {shown(ranking(lab))}", text, lab)
-        self.assertIn(f"third on {shown(ranking('alibaba'))}", text)
-        self.assertEqual(rank("alibaba"), 3)
-        # The three it names are three of the five lowest on that figure.
-        lowest = set(sorted(ORDER, key=ranking)[:5])
+            self.assertIn(f"{label} {shown(published(lab))}", text, lab)
+        self.assertIn(f"third on what is published with {shown(published('alibaba'))}", text)
+        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 2)
+        # The three it names are three of the five lowest on that figure, and
+        # the last three on the final score.
+        lowest = set(sorted(ORDER, key=published)[:5])
         self.assertTrue({"mistral", "moonshot", "deepseek"} <= lowest, lowest)
+        self.assertIn("on the final score they take the last three places", text)
+        self.assertEqual(set(ORDER[-3:]), {"mistral", "moonshot", "deepseek"})
 
     def test_the_findings_on_whole_columns_hold(self):
         # "On the check that asks for a comment period, every company scores 0 or 1"

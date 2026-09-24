@@ -29,7 +29,7 @@ import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
  * each practice that carries a score. The two figures a company gets are out of
- * 10 each and are never added, which the answer says in so many words. */
+ * 10 each, and its final score is their sum, out of 20. */
 const SCALE = 4;
 const PRACTICE = 2;
 
@@ -201,7 +201,8 @@ const unscoredIds = () => governance.columns.flatMap(column => column.unscored |
 const questionOf = id => governance.questions.find(question => question.id === id);
 
 /**
- * The board of governance: nine companies on two figures.
+ * The board of governance: nine companies on a final score and the two figures
+ * it adds.
  *
  * It belongs to no publication. Nothing in it was judged by a panel: the scores
  * were given by hand from public documents, as of the date the data carries,
@@ -221,23 +222,27 @@ export function governanceBoard(args = {}) {
       + "figures, and a different reading could move a company by a few points.",
     papers: governance.papers,
     measures: {
-      /* Two figures side by side, never added. The answer carries the reason in
-       * the board's own words, because a client that added them would publish a
-       * number nobody scored. */
+      /* The final score ranks the companies and is the sum of the two figures.
+       * The answer carries what that sum means in the board's own words. */
+      final_score: {
+        name: governance.total.name,
+        max: governance.total.out_of,
+        means: governance.total.plain,
+        reading: governance.total.about,
+        adds: governance.columns.map(column => column.id),
+      },
       figures: governance.columns.map(column => ({
         id: column.id,
         name: column.name,
         max: column.out_of,
         means: column.plain,
         reading: column.about,
-        ranks_the_companies: column.ranks === true,
         made_of: {
           questions: column.questions,
           practices: column.practices,
           counted_in_no_figure: column.unscored || [],
         },
       })),
-      not_added: governance.not_added,
       minimum: governance.minimum_note,
       questions: governance.questions.map(question => ({
         id: question.id,
@@ -280,11 +285,11 @@ export function governanceBoard(args = {}) {
       name: company.name,
       rank: company.rank,
       open_weights: company.open_weights === true,
+      final_score: company.total,
       figures: governance.columns.map(column => ({
         id: column.id,
         figure: company.byColumn[column.id],
         max: column.out_of,
-        ranks_the_companies: column.ranks === true,
         questions: column.questions.map(id => ({
           id,
           figure: company.byQuestion[id],
