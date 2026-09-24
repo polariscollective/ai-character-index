@@ -91,6 +91,11 @@ const STYLE = `
      node --check saw nothing, because the result is still valid JavaScript. */
   margin: auto;
   width: min(460px, calc(100vw - 32px));
+  /* The note runs to five paragraphs on a development deployment showing an
+     older publication, which is taller than a phone. It scrolls rather than
+     being cut off at the bottom of the screen. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   padding: 18px 20px 20px;
   border: 1px solid #5C6B3C;
   border-radius: 4px;
@@ -121,6 +126,32 @@ const STYLE = `
   cursor: pointer;
 }
 .dev-note .dev-close:hover { background: #B7C94B; }
+
+/* On a phone.
+ *
+ * The tag is a button, and at 11px with two pixels of padding it stood 21px
+ * tall, which is a target for a pointer and not for a thumb. It grows to 32
+ * here rather than to the 44 the platforms ask for, because it sits on the
+ * brand line of a 54px header and a 44px pill would set the height of the
+ * whole header. The note it opens takes the full width of the screen, less a
+ * gutter, and its Close is a proper target.
+ *
+ * Nothing below moves the wording. What a figure on this page is worth is the
+ * same claim on a phone as on a desk. */
+@media (max-width: 700px) {
+  .dev-tag { min-height: 32px; padding: 5px 10px; }
+  .dev-note {
+    width: calc(100vw - 16px);
+    /* A modal dialog is capped by the browser's own max-width, the window less
+       six pixels and two of its own ems. Left alone, that is what decides the
+       width here and the line above decides nothing. */
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+  .dev-note .dev-close { min-height: 44px; padding: 10px 18px; font-size: 14px; }
+}
 `;
 
 /* Said about the index rather than about this build: whoever reads it is being

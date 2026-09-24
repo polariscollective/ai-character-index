@@ -352,9 +352,39 @@
   .choice button:focus-visible { outline: 2px solid var(--energy); outline-offset: -2px; }
   /* Without JavaScript the dialog is an ordinary block on the page. */
   .propose-dialog[open] { display: block; }
+  /* On a phone the dialog takes the screen. A form of seven fields has no room
+     to spare for a margin, and the eight pixels left on each side are there to
+     say that what is behind the dialog is still a page.
+
+     Measured in dvh as well as vh, and the dvh line second so that whatever
+     does not know it keeps the vh one: a phone browser counts its own toolbars
+     inside vh, so a dialog cut to 64px short of 100vh still ran under the
+     address bar.
+
+     The body is given the room the head leaves rather than a figure of its own.
+     Its ceiling elsewhere is the window less 150px, which assumed a title on
+     one line; here the title takes two and the difference was cut off the
+     bottom of the form. A column that hands the head its height and the body
+     the rest cannot be wrong about it. */
   @media (max-width: 640px) {
-    .dialog-head { padding: 16px 18px 14px; }
-    .dialog-body { padding: 16px 18px 22px; }
+    .propose-dialog {
+      width: calc(100vw - 16px);
+      /* A modal dialog is capped by the browser's own max-width, which is the
+         window less six pixels and two of its own ems. Left alone, that is what
+         decides the width here and the line above decides nothing. */
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 16px);
+      max-height: calc(100dvh - 16px);
+    }
+    .propose-dialog[open] { display: flex; flex-direction: column; }
+    .dialog-head { flex: none; padding: 16px 18px 14px; }
+    .dialog-body { flex: 1 1 auto; min-height: 0; max-height: none;
+                   padding: 16px 18px 22px; }
+    /* Both switches and the close are text where a pointer would do, and a
+       thumb needs the height the platforms ask for. */
+    .dialog-close { min-height: 44px; padding: 10px 12px; }
+    .choice button { min-height: 44px; }
+    .open-propose { min-height: 44px; }
   }
 
   /* ---------- the citation block ---------- */
