@@ -60,19 +60,19 @@
   <!-- Every word of this view comes from constitutions.json, which a
        publication freezes: see page-content.js. The markup keeps only where each
        part goes. -->
-  <h1 id="cov-intro" data-menu="Intro"></h1>
-  <div id="cov-lede"></div>
+  <h1 id="cov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="cov-lede" hidden data-needs-board></div>
 
   <p class="grid-note" id="status" aria-live="polite">Loading.</p>
 
-  <div class="gov-toolbar">
+  <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint">
       Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
       Open a row to see the parts it is made of.
     </p>
     <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart">
+  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart" hidden data-needs-board>
     <table class="board" id="board">
       <caption class="visually-hidden">Each company's final score, its document as a whole and
         its behaviours by category, with each group's rows available to open</caption>
@@ -80,13 +80,13 @@
       <tbody></tbody>
     </table>
   </div>
-  <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
-  <div class="gov-legend" id="legend" aria-hidden="true"></div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="legend" aria-hidden="true" hidden data-needs-board></div>
   <!-- The two scales under the table rather than beside it: the board is read
        across first, and a rail down the side took a fifth of the width from it.
        They are written here once and never repeated inside a popover, so a
        reader learns what a figure means in one place. -->
-  <section class="depth-key" id="cov-scale" aria-labelledby="behaviour-scale-title">
+  <section class="depth-key" id="cov-scale" aria-labelledby="behaviour-scale-title" hidden data-needs-board>
     <h2 id="behaviour-scale-title"></h2>
     <ol class="depth-key-list" id="behaviour-scale"></ol>
   </section>
@@ -97,7 +97,7 @@
        Guidelight gives its own sections. The takeaways are written in
        constitutions.json and drawn by constitutions.js. -->
   <!-- The takeaways and the notes side by side, as on the governance view. -->
-  <div class="gov-after">
+  <div class="gov-after" hidden data-needs-board>
     <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
       <h2 id="cov-takeaways-title">Takeaways</h2>
       <div class="gov-findings-list" id="cov-findings"></div>
@@ -134,28 +134,28 @@
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
   <!-- Every word of this view comes from governance.json, which a publication
        freezes: see page-content.js. -->
-  <h1 id="gov-intro" data-menu="Intro"></h1>
-  <div id="gov-lede" class="gov-lede"></div>
+  <h1 id="gov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="gov-lede" class="gov-lede" hidden data-needs-board></div>
 
 
   <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
 
-  <div class="gov-toolbar">
+  <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint">
       Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
       Open a question to see the checks it is made of.
     </p>
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart">
+  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart" hidden data-needs-board>
     <table class="gov-heatmap board" id="gov-heatmap">
       <caption class="visually-hidden">Each company's final score and the two figures it adds, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
       <thead></thead>
       <tbody></tbody>
     </table>
   </div>
-  <p class="grid-note slides-note">The board slides sideways to reach the other companies.</p>
-  <div class="gov-legend" id="gov-legend" aria-hidden="true"></div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="gov-legend" aria-hidden="true" hidden data-needs-board></div>
   <!-- Written by governance.js from the scores, so it cannot name a tie the
        table does not have. -->
   <p class="gov-foot" id="gov-ties"></p>
@@ -165,7 +165,7 @@
        in the wider column, and the numbered notes the board's rows point to sit
        beside them, so neither pushes the other off the screen. On a phone they
        stack, findings first. -->
-  <div class="gov-after">
+  <div class="gov-after" hidden data-needs-board>
     <section class="gov-findings" id="gov-takeaways" data-menu="Takeaways" aria-labelledby="gov-findings-title">
       <h2 id="gov-findings-title">Takeaways</h2>
       <div class="gov-findings-list" id="gov-findings"></div>

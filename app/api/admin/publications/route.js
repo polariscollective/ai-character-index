@@ -6,10 +6,11 @@
  * says; the links payload is JavaScript for the mirror of that reason, because the
  * assembly it needs already lives in app/lib/links.mjs.
  *
- * Visibility is an update of one column, and the only update this table allows --
- * the grant is column-level, so a publication's bytes stay immutable while its
- * visibility moves. */
+ * Visibility and the description are the only updates this table allows -- the
+ * grants are column-level, on is_public and on notes, so a publication's bytes
+ * stay immutable while its visibility and what is said of it move. */
 import { select, update } from "../../../lib/supabase.mjs";
+import { isPublicationId } from "../../../lib/publications.mjs";
 import { startJob } from "../../../lib/jobs.mjs";
 import { requireOperator } from "../../../auth.mjs";
 import { formRoute, refuse } from "../../../lib/admin-routes.mjs";
@@ -60,6 +61,17 @@ export const POST = formRoute("/admin/publications", requireOperator, async (fie
         + "write rather than a deploy."
       : "Withdrawn. The reader falls back to the newest publication still public, "
         + "and this one stays readable by its link.";
+  }
+
+  if (verb === "describe") {
+    const id = fields.one("publication_id");
+    if (!isPublicationId(id)) refuse("no such publication");
+    const notes = (fields.one("notes") || "").trim();
+    if (notes.length > 2000) refuse("a description is at most 2000 characters");
+    const [row] = await select("aci_publications", `select=id&id=eq.${id}`);
+    if (!row) refuse("no such publication");
+    await update("aci_publications", `id=eq.${id}`, { notes });
+    return "Description saved. No digest covers it, so nothing published has moved.";
   }
 
   refuse(`unknown action ${verb || "(none)"}`);

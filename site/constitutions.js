@@ -807,8 +807,13 @@ export async function initializeConstitutions() {
   try {
     // The page's words first: the title, the introduction, the notes and the
     // sections under the board are the file's, like its figures.
+    // What the markup keeps hidden until there is a board to go with it: the
+    // title, the board, and the takeaways and notes beside each other.
+    document.querySelectorAll("#view-coverage [data-needs-board]")
+      .forEach(node => { node.hidden = false; });
     renderPage("cov", data.page);
     renderNotes(byId("board-notes"), data.page.notes);
+    byId("cov-notes").hidden = !(data.page.notes || []).length;
     state.data = data;
     data.companies.forEach(company => { company.final = finalOf(data, company); });
     state.companies = ranked(currentPerCompany(data.companies));
@@ -841,6 +846,9 @@ export async function initializeConstitutions() {
   } catch {
     board.nodes.table.tBodies[0].replaceChildren();
     board.nodes.table.tHead.replaceChildren();
+    document.querySelectorAll("#view-coverage [data-needs-board]")
+      .forEach(node => { node.hidden = true; });
+    byId("cov-sections").replaceChildren();
     nodes.status.textContent = INCOMPATIBLE;
     return;
   }
