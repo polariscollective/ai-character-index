@@ -80,6 +80,12 @@ const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
 
 const shown = value => value.toFixed(1);
 
+/* A figure inside a sentence, on whatever scale it was given. The file carries
+ * the judges' own means, which are thirds as often as not, and 3.3333333333 in
+ * running prose is a number nobody asked to see. One decimal, and none at all
+ * where the figure is whole. */
+const onScale = value => String(Number(value.toFixed(1)));
+
 /* A version whose day is 00 has no day recorded, so it is shown without one. */
 const shownVersion = version => String(version || "").replace(/-00$/, "");
 
@@ -499,8 +505,8 @@ function criterionScore(content, company, criterion) {
   const entry = company.whole?.criteria?.[criterion.id] || {};
   board.titled(content, `${company.name}: ${lowerFirst(criterion.name)}`, documentLine(company));
   content.append(board.figure(shown(part), ` out of ${shownMax()}`),
-    element("p", "subtitle", `Scored ${criterionScore10(company, criterion)} on its own scale `
-      + `of 0 to ${CRITERION_SCALE}.`));
+    element("p", "subtitle", `Scored ${onScale(criterionScore10(company, criterion))} on its own `
+      + `scale of 0 to ${CRITERION_SCALE}.`));
   renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
 }
@@ -837,6 +843,41 @@ function renderTies() {
  * /coverage and is linked from nowhere: it carries the readings behind each
  * figure, which are working material rather than what the index publishes. */
 
+/* The takeaways under the board, read straight down, each a title and a
+ * paragraph from the file. The section stays hidden while the file has none. */
+function renderTakeaways(takeaways) {
+  const node = byId("cov-findings");
+  if (!node) return;
+  node.closest("section").hidden = takeaways.length === 0;
+  node.replaceChildren(...takeaways.map(({ title, text }) => {
+    const block = element("div", "finding");
+    block.append(element("h3", "", title), element("p", "", text));
+    return block;
+  }));
+}
+
+/* When the publication the file names was put online, to the minute, in place of
+ * the file's month. The month stays if the route does not answer, so the line
+ * is never empty and never a guess. */
+const WHEN = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  timeZone: "UTC", timeZoneName: "short",
+});
+
+async function showPublishedAt(publication) {
+  if (!publication) return;
+  try {
+    const response = await fetch(
+      `/api/reader/publication?publication=${encodeURIComponent(publication)}`);
+    if (!response.ok) return;
+    const { id, published_at: at } = await response.json();
+    if (id !== publication || !at) return;
+    nodes.asOf.textContent = `As of ${WHEN.format(new Date(at)).replace(",", " at")}`;
+  } catch {
+    // The file's month is already on the page.
+  }
+}
+
 /* ---- Loading ---------------------------------------------------------------- */
 
 export async function initializeConstitutions() {
@@ -889,6 +930,8 @@ export async function initializeConstitutions() {
   renderScales();
   renderTies();
   nodes.asOf.textContent = data.as_of ? `As of ${data.as_of}` : "";
+  renderTakeaways(data.takeaways || []);
+  showPublishedAt(data.publication);
   board.wirePopover([document.querySelector("#view-coverage .matrix-wrap")]);
   board.nodes.expandAll.addEventListener("click", () => board.expandEvery());
   nodes.status.textContent = "";

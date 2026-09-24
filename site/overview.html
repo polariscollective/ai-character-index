@@ -48,6 +48,12 @@
     <button type="button" class="view-tab" role="tab" id="tab-governance"
       aria-controls="view-governance" aria-selected="false" tabindex="-1"
       data-view="governance">How constitutions are governed</button>
+    <!-- The two views the index is building, shown so a reader sees where it is
+         going, and disabled until they exist. -->
+    <button type="button" class="view-tab view-tab-coming" role="tab" aria-disabled="true"
+      disabled>How constitutions are regulated <span class="coming">In preparation</span></button>
+    <button type="button" class="view-tab view-tab-coming" role="tab" aria-disabled="true"
+      disabled>Adherence of models to constitutions <span class="coming">In preparation</span></button>
   </div>
 
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
@@ -120,6 +126,33 @@
   </section>
   <p class="gov-foot" id="ties"></p>
   <p class="gov-date" id="as-of"></p>
+
+  <!-- What the board shows, why it exists and where it goes next, in the order
+       Guidelight gives its own sections. The takeaways are written in
+       constitutions.json and drawn by constitutions.js. -->
+  <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
+    <h2 id="cov-takeaways-title">Takeaways</h2>
+    <div class="gov-findings-list" id="cov-findings"></div>
+  </section>
+  <section class="gov-findings page-prose" id="cov-motivation" data-menu="Motivation" aria-labelledby="cov-motivation-title">
+    <h2 id="cov-motivation-title">Motivation</h2>
+    <p>A constitution is the document in which a company says how its models should behave, and
+    it is the only public statement against which a model&rsquo;s behaviour can be checked. Its
+    defaults shape what hundreds of millions of people come to expect of an AI system.</p>
+    <p>Nobody can program a model to follow it. A model is trained on examples, so the rules have
+    to be written precisely before anyone can train a model on them or test it against them. This
+    board reads each constitution for that precision, as a document and behaviour by
+    behaviour.</p>
+  </section>
+  <section class="gov-findings page-prose" id="cov-next" data-menu="What comes next" aria-labelledby="cov-next-title">
+    <h2 id="cov-next-title">What comes next</h2>
+    <p>New constitutions, and new versions of the ones already read, will be read as they are
+    published, and readers can <a href="/about?propose#propose">propose both</a>. The behaviours,
+    their definitions and their categories will change as they are challenged.</p>
+    <p>The next view is adherence: measuring how closely each company&rsquo;s models follow the
+    constitution it published. That is what ties the quality of a document to the behaviour of
+    the models it governs.</p>
+  </section>
   <!-- The board this one replaced, in one line. It is built from the index's
        own publication and every figure on it opens on the passages behind it,
        which is what this board does not carry. -->
@@ -192,6 +225,18 @@
       <div id="gov-columns"></div>
     </aside>
   </div>
+
+  <section class="gov-findings page-prose" id="gov-motivation" data-menu="Motivation" aria-labelledby="gov-motivation-title">
+    <h2 id="gov-motivation-title">Motivation</h2>
+    <p>A constitution is the only public statement of how a company intends its models to behave,
+    which makes it the reference against which any claim about a model&rsquo;s behaviour can be
+    checked. It can serve that purpose only if outsiders can see which models it governs and when
+    it changes.</p>
+    <p>As of September 2026 significant changes can happen out of sight: a model deployed under
+    rules nobody has published, a guardrail tightened or loosened without notice, a rule weakened
+    before anything is said. This board scores what each company makes visible. It asks for
+    disclosure, and says nothing about how a company should decide what its rules are.</p>
+  </section>
 
   <!-- One popover for the whole board, filled with whatever was pressed and
        placed beside it. The browser closes it on Escape or a press elsewhere. -->
@@ -446,6 +491,15 @@
         </ul>
       </div>
     </details>
+    <section class="gov-findings page-prose" id="gov-next" data-menu="What comes next" aria-labelledby="gov-next-title">
+      <h2 id="gov-next-title">What comes next</h2>
+      <p>The scores will be revisited as companies publish, and a correction that carries the
+      address of a document is the most useful thing a reader can send. The four questions come
+      from a working paper that is still being written, so they may change with it.</p>
+      <p>The next view, how constitutions are regulated, follows the same documents into law:
+      which jurisdictions require a constitution to be described, to whom, and whether any requires
+      it to be published or its changes to be recorded.</p>
+    </section>
     <details id="gov-sources" class="gov-sources" data-menu="Sources reviewed">
       <summary>Sources reviewed</summary>
       <div class="gov-more-body">

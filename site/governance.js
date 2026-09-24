@@ -76,7 +76,10 @@ const share = value => {
   return value.toFixed(2);
 };
 const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
-const onItsScale = (value, max) => `Scored ${value} on its own scale of 0 to ${max}.`;
+/* One decimal at most, and none where the figure is whole: a score reaching a
+ * sentence is read, not computed with. */
+const onItsScale = (value, max) =>
+  `Scored ${Number(Number(value).toFixed(1))} on its own scale of 0 to ${max}.`;
 
 const board = { data: null, labs: [], nodes: {} };
 

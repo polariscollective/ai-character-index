@@ -24,7 +24,9 @@ import { initializeGovernance } from "./governance.js";
  * through views rather than out to where they came from. Other parameters are
  * kept. */
 const VIEWS = ["coverage", "governance"];
-const tabs = [...document.querySelectorAll(".view-tab")];
+// The views that exist; the two the index is still building are tabs a reader
+// can see but not choose.
+const tabs = [...document.querySelectorAll('.view-tab:not([aria-disabled="true"])')];
 
 function viewFromAddress() {
   const asked = new URLSearchParams(location.search).get("view");

@@ -36,10 +36,26 @@ What the document says, in general, when two of its own rules conflict.
 - **0**: Nothing.
 - **2**: An order of priority between its rules that the document asks to be
   weighed as a whole, or an instruction to settle conflicts by judgement or by
-  the document's spirit. Either is at most 2, however detailed.
+  the document's spirit. Either is at most 2 on its own, however detailed.
+- **3**: That order, and beside it rules that do decide a clash in advance:
+  constraints the document calls absolute and gives the win to whatever is
+  weighed against them, or a named winner for a particular pair of its rules, or
+  worked cases showing the order applied. A document of this shape settles some
+  clashes before the reader reaches it and leaves the rest to judgement, which is
+  neither of the two levels around it.
 - **4**: A strict order that decides who wins whenever two ranks conflict, a rule
   for two rules of the same rank that names a winner or an outcome, and examples
   of the order applied.
+
+The ceiling on 2 is about what an order weighed as a whole can earn by itself.
+It was written flat, "at most 2, however detailed", and a document that pairs a
+holistic order with absolute constraints and named winners then had nowhere to
+sit: the rule that covers it said 2, and the rule that says an odd number means
+between the two levels around it said 3. Claude's Constitution is that document,
+in its own words ("Here, the notion of prioritization is holistic rather than
+strict") and with seven hard constraints that no instruction can lift. The level
+above is written out now rather than left to the reader of two rules that
+disagree.
 
 The judge also lists the numbers of the passages that state these general rules,
 counting only passages about conflicts between the document's own rules or

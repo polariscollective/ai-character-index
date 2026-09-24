@@ -419,6 +419,13 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .view-tab:hover { background: var(--energy); color: var(--ink); }
 .view-tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--energy); }
 .view-tab:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* A view that does not exist yet: visible, quiet, and not pressable. The label
+   under it says why, in the faint ink every muted line on the page uses. */
+.view-tab-coming, .view-tab-coming:hover { color: var(--faint); font-weight: 400; background: none; cursor: default; }
+.view-tab-coming .coming {
+  margin-left: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px;
+  font-size: 11px; white-space: nowrap;
+}
 
 .visually-hidden {
   position: absolute;
@@ -715,6 +722,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    table should meet what it shows without pressing anything, and the detail that
    used to sit beside them is folded into the two appendices below. */
 .gov-findings { margin-top: 40px; }
+/* A section of prose under a board: motivation, what comes next. */
+.page-prose p { margin: 0 0 12px; max-width: 72ch; font-size: 15px; line-height: 1.6; }
+.gov-more .page-prose { margin: 24px 0; }
 /* The menu of the page's sections, down the left margin. It lives in the margin
    the page's measure leaves (8vw on either side) and only where that margin is
    wide enough to hold a short title, so it never takes width from a board. It
@@ -1056,6 +1066,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
      as the tab. */
   .views { gap: 0 12px; }
   .view-tab { flex: 1 1 0; min-width: 0; text-align: left; }
+  /* The two views still to come take a row of their own on a phone. */
+  .view-tab-coming { flex: 1 1 40%; }
   /* The pill above the board, at the height a thumb finds. Its 33 pixels are
      about right for a pointer and under what a finger reliably hits. */
   .gov-button { padding: 9px 16px; }

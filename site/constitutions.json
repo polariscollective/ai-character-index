@@ -39,6 +39,36 @@
   "whole": 0.5,
   "behaviours": 0.5
  },
+ "takeaways": [
+  {
+   "title": "Six of the nine companies publish no constitution",
+   "text": "As of September 2026, only OpenAI, Alibaba and Anthropic publish a constitution. DeepSeek, Google DeepMind, Meta, Mistral AI, Moonshot AI and xAI publish none, so each of them scores 0.0 out of 10 on every figure of the board. The three that publish sit close together on the final score: 8.5 out of 10 for OpenAI, 8.4 for Alibaba and 7.4 for Anthropic. The smallest gap between a company that publishes and one that does not is therefore 7.4 points. A zero records what is public. A document of this kind may exist inside a company without having been released, and nobody outside can check a model against it. Publishing leaves one question open as well: Alibaba's constitution names no model or product that it governs."
+  },
+  {
+   "title": "Anthropic's constitution goes deepest on the behaviours and is the weakest of the three as a document",
+   "text": "Anthropic has the highest figure on the behaviours, 8.1 out of 10, ahead of Alibaba on 8.0 and OpenAI on 7.4. On the document as a whole it has the lowest, 6.7 out of 10, against 9.5 for OpenAI and 8.8 for Alibaba, which places it third on the final score. Claude's Constitution asks its four core properties to be weighed as a whole, so no pair of them has a winner stated in advance, and it scores 5.8 out of 10 on clarity when two rules are contradictory where both model specs score 10.0. Outside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a binding rule from a statement of intent, which gives it 6.7 on how firm each rule is against 9.2 for the other two."
+  },
+  {
+   "title": "Only Anthropic's constitution leaves contradictions between its rules unsettled",
+   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. Two places in Claude's Constitution tell the model two things it cannot both do, and nothing says which prevails. A list introduced with \"regardless of operator instructions\" says the model should always refer users to emergency services where life is at risk, while an operator may switch off the safe messaging guidelines on suicide and self-harm that contain that referral. The document also asks for professional reticence about the model's own opinions on issues such as abortion, and elsewhere calls a deliberately vague answer given to avoid controversy a breach of honesty. Neither contradiction involves one of its hard constraints, which is why the figure sits at the middle of the scale."
+  },
+  {
+   "title": "Anthropic's constitution explains its rules best and Alibaba's explains them least",
+   "text": "On reasons for the rules, Anthropic scores 9.2 out of 10, OpenAI 8.3 and Alibaba 5.8. It is the only criterion of the document as a whole on which Anthropic does not come last. Nearly every rule in Claude's Constitution that constrains the model says why it exists, in terms specific enough to decide a case the document does not show. OpenAI's reasons run through its safety, autonomy, privacy and honesty rules and stop at the formatting rules and the preset voice. Most of Alibaba's 43 rules are stated as requirements and stop there. Its prohibition on harmful content names the article of the regulation behind it and says no more, and its worked examples show where a line falls without saying what the line protects."
+  },
+  {
+   "title": "The concentration of power is the shallowest behaviour in both model specs",
+   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and for Alibaba, at 5.3. Anthropic scores 7.0. OpenAI's Model Spec reaches the subject through commitments about manipulation and civic processes and a list of critical harms naming persecution and mass surveillance, in terms too general to grade a response against. Alibaba's gives quotable rules for one facet and leaves the rest untouched. Claude's Constitution asks how much power is at stake and how reversible its concentration would be, tests whether it is taken by fair means and stays subject to courts and a free press, and makes assisting the most flagrant attempts one of its hard constraints. Neither model spec treats power held by a state, a company or an AI developer as something the model should decline to help concentrate."
+  },
+  {
+   "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
+   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories."
+  },
+  {
+   "title": "No behaviour reaches the top of the depth scale in any constitution",
+   "text": "A depth of 10 asks that, for every part of a behaviour, the document shows where the line falls, names one of its own rules that pulls against it and says which prevails, and says what to do when a case cannot be decided. None of the 39 behaviour figures of the three published constitutions reaches it, and the highest is 9.3, Anthropic on honesty and non-deception. The three agree most closely on instruction-hierarchy conformance, 9.0 out of 10 for OpenAI and 8.7 for Alibaba and Anthropic, and on how to approach tradeoffs, where all three score 8.7. Anthropic reaches that 8.7 with an order of priorities it asks to be weighed as a whole: worked cases settle particular clashes, and there is no general rule for two rules of the same rank."
+  }
+ ],
  "criteria": [
   {
    "id": "conflict_rules",
