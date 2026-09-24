@@ -2078,7 +2078,7 @@ console.log("== Overview: the governance view ==");
     findingsFolded: document.querySelectorAll("#gov-findings details").length,
     columnNotes: [...document.querySelectorAll("#gov-columns .gov-notes li strong")]
       .map(node => node.textContent.trim()),
-    appendices: [...document.querySelectorAll(".gov-more > details > summary")]
+    appendices: [...document.querySelectorAll("#view-governance .gov-more > details > summary")]
       .map(node => node.textContent),
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
