@@ -205,6 +205,9 @@ h1::before {
   margin-bottom: 14px;
   background: var(--energy);
 }
+/* Under the front page's tabs the tab on screen already carries the chartreuse
+   rule, so the view's title does without its own. */
+[role="tabpanel"] > h1::before { display: none; }
 /* Wider than the 66ch the framework asks for prose. This is a tool rather than
    a page of prose, and at 66ch the four sentences ran to six lines above a grid
    that wants the room. */
