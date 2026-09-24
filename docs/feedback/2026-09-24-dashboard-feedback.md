@@ -38,8 +38,8 @@ These hold for every page, not only where they were raised.
 | Rename "What wins when two rules clash" to "Clarity when two rules are contradictory". | done |
 | Rename "Clashes the document leaves unsettled" to "Unsettled contradictions between rules". | done |
 | Scoring should be simpler; why are the document's criteria out of 2? | done (everything out of 10, weights written) |
-| "As of September 2026" should carry an exact date and time. | content: which date, the data's last update or the last deploy? |
-| A behaviour on secret loyalties, or folded into an existing one, citing the paper mentioned by a colleague. | parked |
+| "As of September 2026" should carry an exact date and time. | done on the constitutions board: the date and time its publication was put online. The governance board is scored by hand and keeps its month. |
+| A behaviour on secret loyalties, or folded into an existing one, citing the paper mentioned by a colleague. | done: "Preventing secret loyalties" was judged in publication `06d17d90`, and the board now carries it as a fourteenth behaviour, under autonomy, oversight and authority, with its readings and comparison. The takeaways were revised for the new figures. The paper is not yet cited anywhere on the site. |
 
 ## How constitutions are governed (second tab)
 
@@ -64,7 +64,7 @@ These hold for every page, not only where they were raised.
 
 | point | status |
 |---|---|
-| Update for a site with tabs, not only the original index. There will be four: what the constitutions say, how constitutions are governed, how constitutions are regulated (forthcoming), adherence of models to constitutions (forthcoming). Mention all four in the Ambition section. | content |
+| Update for a site with tabs, not only the original index. There will be four: what the constitutions say, how constitutions are governed, how constitutions are regulated (forthcoming), adherence of models to constitutions (forthcoming). Mention all four in the Ambition section. | done; the two views to come are disabled tabs marked "In preparation" |
 | "How constitutions are regulated" as a work-in-progress tab: track how far constitutions are mentioned in regulation, from the owner's governance memo. | content: needs the memo, which is not in this repository |
 | "Adherence of models to constitutions": link the evals, the missing link between a constitution's quality and governance and how models actually behave. | later |
 
@@ -74,5 +74,5 @@ These hold for every page, not only where they were raised.
 |---|---|
 | Each board page gets sections like Guidelight's assessments page (https://guidelight.ai/assessments#takeaways): takeaways, motivation, detailed scoring, limitations, what comes next. Reuse Guidelight's section titles. | done for the sections whose text exists: governance has Takeaways, Notes, Detailed scoring, Limitations and Sources reviewed; the constitutions page has Notes and the behaviour scale. Motivation, What we assessed and What comes next need writing |
 | A small, discreet menu on the left listing the page's sections, as Guidelight has. | done on the front page, in the left margin from 1400 px wide |
-| Takeaways for the constitutions page. | content |
-| Motivation and what comes next, both pages. | content |
+| Takeaways for the constitutions page. | done (seven, figures checked against the board) |
+| Motivation and what comes next, both pages. | done |
