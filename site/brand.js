@@ -82,24 +82,30 @@ const STYLE = `
 }
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
+/* The date of the publication, written beside the wordmark rather than set in a
+   pill: small, faint, with a thin underline that says it can be pressed. Only a
+   development build or an older version takes a colour, the framework's one
+   warm colour, with the aside in brackets. */
 .pub-tag {
   align-self: center;
-  margin-left: 2px;
-  padding: 1px 6px;
+  margin-left: 4px;
+  padding: 0;
   border: 0;
-  border-radius: 3px;
-  background: #B7C94B;
-  color: #23281B;
-  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  font-size: 11px;
+  background: none;
+  color: #676C58;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 12px;
   line-height: 1.5;
   white-space: nowrap;
+  text-decoration: underline 1px #C6C4B0;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
-.pub-tag.is-aside { background: none; color: #A0522D; box-shadow: inset 0 0 0 1px #A0522D; }
-.pub-tag:hover, .pub-tag:focus-visible { background: #23281B; color: #F1EFE3; box-shadow: none; }
+.pub-tag.is-aside { color: #A0522D; text-decoration-color: #A0522D; }
+.pub-tag:hover, .pub-tag:focus-visible, .pub-tag[aria-expanded="true"] {
+  background: #B7C94B; color: #23281B;
+}
 .pub-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
-.pub-tag[aria-expanded="true"] { background: #23281B; color: #F1EFE3; box-shadow: none; }
 .brand-pop ul.brand-links { margin: 12px 0 0; padding: 0; list-style: none; }
 .brand-pop ul.brand-links li { margin: 0 0 6px; }
 
@@ -173,7 +179,8 @@ function pinned() {
   return new URLSearchParams(location.search).get("publication");
 }
 
-const WHEN = new Intl.DateTimeFormat("en-GB",
+/* "September 24, 2026", the form the owner chose for this one line. */
+const WHEN = new Intl.DateTimeFormat("en-US",
   { day: "numeric", month: "long", year: "numeric" });
 const AT = new Intl.DateTimeFormat("en-GB",
   { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
@@ -318,8 +325,8 @@ function publicationBadge(brand, wordmark) {
     if (!standing) return;
     const date = WHEN.format(new Date(standing.shown.published_at));
     const aside = standing.older ? "older version"
-      : standing.development ? "development" : null;
-    badge.textContent = aside ? `${date} (${aside})` : date;
+      : standing.development ? "dev" : null;
+    badge.textContent = aside ? `${date} [${aside}]` : date;
     badge.classList.toggle("is-aside", Boolean(aside));
     badge.setAttribute("aria-label", `Publication of ${date}${aside ? `, ${aside}` : ""}: `
       + "what it is");
