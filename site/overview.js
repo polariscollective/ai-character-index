@@ -112,5 +112,13 @@ document.querySelector(".views")?.addEventListener("keydown", event => {
 });
 
 showView(viewFromAddress());
-initializeConstitutions();
-initializeGovernance();
+// The sections under each board come from its file, so the menu is written
+// again once both have drawn them.
+Promise.allSettled([initializeConstitutions(), initializeGovernance()])
+  .then(results => {
+    // Settled rather than all, so one board failing leaves the other drawn; a
+    // failure is still reported, never swallowed.
+    results.filter(result => result.status === "rejected")
+      .forEach(result => console.error(result.reason));
+    renderMenu(viewFromAddress());
+  });

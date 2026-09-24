@@ -2078,7 +2078,7 @@ console.log("== Overview: the governance view ==");
     findingsFolded: document.querySelectorAll("#gov-findings details").length,
     columnNotes: [...document.querySelectorAll("#gov-columns .gov-notes li strong")]
       .map(node => node.textContent.trim()),
-    appendices: [...document.querySelectorAll("#view-governance .gov-more > details > summary")]
+    appendices: [...document.querySelectorAll("#gov-sections section > details > summary")]
       .map(node => node.textContent),
   }));
   check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
@@ -2111,7 +2111,8 @@ console.log("== Overview: the governance view ==");
     JSON.stringify(seen.columnNotes));
   /* The reference text is two appendices under the findings rather than four folds
    * mixed in with them: how the scoring works, and what was read for each company. */
-  check(seen.appendices.join(" | ") === "Detailed scoring | Limitations | Sources reviewed",
+  check(seen.appendices.join(" | ") === "Motivation | Detailed scoring | Limitations | "
+        + "What comes next | Sources reviewed",
     "the detailed scoring, the limitations and the sources are three folded sections under the takeaways",
     JSON.stringify(seen.appendices));
 

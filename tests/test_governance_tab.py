@@ -133,10 +133,34 @@ class GovernancePanel(HTMLParser):
 
 PANEL = GovernancePanel()
 PANEL.feed(PAGE)
-# The panel's prose on one line: the markup wraps a sentence wherever it fits,
-# so a phrase this file quotes would otherwise have to be quoted with its
-# indentation.
-FLAT = re.sub(r"\s+", " ", "".join(PANEL.text))
+
+
+def plain(markup):
+    """A field of the file's light markup as a reader sees it: the marks gone."""
+    text = re.sub(r"\[([^\]]+)\]\([^)\s]+\)", r"\1", markup)
+    text = text.replace("**", "")
+    return re.sub(r"(?m)^(### |- )", "", text)
+
+
+def page_text(page):
+    """Every word of a board's page as governance.json carries it: the title, the
+    introduction and each section, tables included."""
+    parts = [page["title"], plain(page["intro"])]
+    for section in page["sections"]:
+        parts.append(section["title"])
+        for block in section["blocks"]:
+            if isinstance(block, str):
+                parts.append(plain(block))
+            elif "table" in block:
+                parts.extend(plain(cell) for row in [block["table"]["head"], *block["table"]["rows"]]
+                             for cell in row)
+    return " ".join(parts)
+
+
+# The panel's prose on one line, the page's markup and the page's words in the
+# file together: since 24 September 2026 the file carries every sentence the
+# page shows, so a phrase this file quotes is looked for in both.
+FLAT = re.sub(r"\s+", " ", "".join(PANEL.text) + " " + page_text(DATA["page"]))
 
 
 class TheData(unittest.TestCase):

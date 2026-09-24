@@ -44,6 +44,7 @@
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
+import { FORMAT, renderPage } from "./page-content.js";
 import { createBoard, element, level, rankBy, place, ORDINALS } from "./board.js";
 /* The mark of each company, above its name. One module for both boards, and it
  * says where the drawings come from and which two companies have none. */
@@ -672,7 +673,7 @@ function headRow() {
     // Drawn, quiet and decorative: the name under it is what is read out, and a
     // company the set has no mark for keeps the space so every name starts on
     // one line.
-    button.append(companyMark(lab.id));
+    button.append(companyMark(lab.mark));
     button.append(element("span", "company-name", lab.name));
     if (lab.open_weights) {
       const flag = element("span", "company-flag", "Open weights");
@@ -1030,22 +1031,27 @@ export async function initializeGovernance() {
     nodes: { table: byId("gov-heatmap"), pop: byId("gov-pop"), expandAll: byId("gov-expand-all") },
     everyRow: { show: "Show every row", hide: "Hide every row" },
   });
-  board.nodes = {
-    status: byId("gov-status"), legend: byId("gov-legend"), findings: byId("gov-findings"),
-    scoring: byId("gov-scoring"), publishedPractices: byId("gov-published-practices"),
-    engagedPractices: byId("gov-engaged-practices"), disclosed: byId("gov-disclosed"),
-    internal: byId("gov-internal"), ties: byId("gov-ties"), columns: byId("gov-columns"),
-    origin: byId("gov-origin"),
-  };
+  board.nodes = { status: byId("gov-status") };
   // From the publication being served, never from a file: see publication-data.js.
   const data = await loadBoard("governance");
-  if (!data?.columns?.length || !data?.labs?.length) {
+  if (data?.format !== FORMAT || !data.columns?.length || !data.labs?.length) {
     board.nodes.status.textContent = INCOMPATIBLE;
     return;
   }
   // A board missing a key this page reads is a publication this version of the
   // site cannot draw, and the reader is told so rather than shown half a board.
   try {
+    // The page's words first: the sections hold the slots the scoring tables and
+    // the practice lists are drawn into, so the nodes are found after them.
+    renderPage("gov", data.page);
+    Object.assign(board.nodes, {
+      legend: byId("gov-legend"), findings: byId("gov-findings"),
+      scoring: byId("gov-scoring"), publishedPractices: byId("gov-published-practices"),
+      engagedPractices: byId("gov-engaged-practices"), disclosed: byId("gov-disclosed"),
+      internal: byId("gov-internal"), ties: byId("gov-ties"), columns: byId("gov-columns"),
+      origin: byId("gov-origin"),
+    });
+    byId("gov-as-of").textContent = data.as_of ? `As of ${data.as_of}` : "";
     board.data = data;
     board.labs = ranked(data);
     // Where the questions and the practices come from, said once, above the board.
