@@ -147,6 +147,95 @@
     board reads each constitution for that precision, as a document and behaviour by
     behaviour.</p>
   </section>
+  <!-- How the figures are given, folded like the governance view's detailed
+       scoring. The table restates methodology/document-assessment-rubric.md on
+       the board's scale; that file is the canonical source. The account of the
+       behaviours is simplified on purpose and says so. -->
+  <div class="gov-more">
+    <details id="cov-method" data-menu="Detailed scoring">
+      <summary>Detailed scoring</summary>
+      <div class="gov-more-body">
+        <h3>Who gives the figures</h3>
+        <p>
+          No figure on this board is given by hand. Each one is, for now, the mean of three judges:
+          three frontier language models, from OpenAI, Anthropic and DeepSeek, that read the
+          constitution with a precise written definition of what they are looking for. That is a
+          simplification, and a fair one for today. Where a judge could not answer, another model
+          judged in its seat, and the doc reader says where. On the behaviours the judges score
+          the passages the panel found rather than rereading the whole document. And an OpenAI
+          model and an Anthropic model are among the judges of their own companies&rsquo;
+          constitutions.
+        </p>
+        <h3>The document as a whole</h3>
+        <p>
+          Five criteria, each given from 0 to 4 and shown out of 10, so 2 shows as 5.0. A score
+          of 1 or 3 falls between the descriptions either side of it. The document&rsquo;s figure
+          is the average of the five, each counting for 1/5.
+        </p>
+        <div class="table-scroll">
+          <table class="gov-table gov-scoring-table">
+            <thead>
+              <tr><th scope="col" class="check-col">Criterion</th><th scope="col">0</th>
+                <th scope="col">5.0</th><th scope="col">10.0</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><strong>Clarity when two rules are contradictory.</strong> What
+                the document says, in general, when two of its own rules conflict.</th>
+                <td>Nothing.</td>
+                <td>An order of priority weighed as a whole, or an instruction to settle conflicts
+                by judgement.</td>
+                <td>A strict order that decides who wins, a rule for two rules of the same rank,
+                and examples of the order applied.</td></tr>
+              <tr><th scope="row"><strong>How firm each rule is.</strong> Whether a reader can tell,
+                for each rule, if it is absolute or a default, and who may change it.</th>
+                <td>Absolute rules and defaults are not told apart.</td>
+                <td>The absolute rules are listed, but for much of the text a rule cannot be told
+                from a hope or an explanation.</td>
+                <td>Every rule carries its force and who may change it, and commentary is marked
+                apart.</td></tr>
+              <tr><th scope="row"><strong>Reasons for the rules.</strong> Whether the rules say why
+                they exist.</th>
+                <td>Rules are stated without reasons.</td>
+                <td>Some rules carry a reason, usually the most restrictive ones.</td>
+                <td>Nearly every rule says why, specifically enough to decide a case the document
+                does not show.</td></tr>
+              <tr><th scope="row"><strong>The situations it covers.</strong> Whether it has rules
+                for six situations: conversation, actions with tools, images and audio, minors,
+                other AI agents, and deployments a business has customised.</th>
+                <td>Ordinary conversation only.</td>
+                <td>Some of the six have rules of their own.</td>
+                <td>All six have rules of their own.</td></tr>
+              <tr><th scope="row"><strong>Unsettled contradictions between rules.</strong> Two
+                passages that require responses which cannot both be given, with nothing saying
+                which prevails.</th>
+                <td>Three or more, or any that involves a rule the document calls absolute.</td>
+                <td>One or two, neither involving an absolute rule.</td>
+                <td>None.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The last criterion is not scored by a judge. Each judge lists the contradictions it
+          finds, every judge then reads every claim, and a claim counts when at least two readings
+          say it holds. The figure follows from the claims that count.
+        </p>
+        <h3>The behaviours</h3>
+        <p>
+          Each behaviour is written in two parts, what it requires and where it stops. The judges
+          read the constitution against that definition, mark every passage that bears on it, and
+          each gives a depth from 0 to 10 on the scale under the board. A behaviour&rsquo;s figure
+          is the mean of the three depths. A category is the average of its behaviours, and the
+          behaviours&rsquo; figure is the average of all of them, each counting for the same
+          share, so a category counts for as many behaviours as it holds.
+        </p>
+        <h3>The final score</h3>
+        <p>
+          The average of the document as a whole and the behaviours, each counting for 1/2. A
+          company that publishes no constitution scores 0 on every row.
+        </p>
+      </div>
+    </details>
+  </div>
   <section class="gov-findings page-prose" id="cov-next" data-menu="What comes next" aria-labelledby="cov-next-title">
     <h2 id="cov-next-title">What comes next</h2>
     <p>New constitutions, and new versions of the ones already read, will be read as they are
