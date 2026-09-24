@@ -74,8 +74,14 @@ def totals(lab):
 
 
 def ranking(lab):
-    # The final score: the two figures, added.
-    return sum(totals(lab)[1].values())
+    # The final score: the two figures, averaged with the weights the file gives.
+    columns = totals(lab)[1]
+    return sum(columns[cid] * weight for cid, weight in DATA["total"]["weights"].items())
+
+
+def on_ten(value, scale=SCALE):
+    # What the board shows for a score given on a scale of its own.
+    return value / scale * 10
 
 
 def published(lab):
@@ -237,26 +243,26 @@ class TheTwoFigures(unittest.TestCase):
         self.assertIn("in neither figure", Path(ROOT / "site" / "governance.js")
                       .read_text(encoding="utf-8"))
 
-    def test_the_final_score_adds_the_two(self):
-        # Out of 20, the two figures' maxima added, and the board says what the
-        # sum is made of, without claiming every practice shares one scale: four
-        # of them carry anchors of their own.
+    def test_the_final_score_averages_the_two(self):
+        # Out of 10 like every figure on the board, and the average of the two
+        # with weights that add to one, each weight said on the row it weighs.
         total = DATA["total"]
-        self.assertEqual(total["out_of"], sum(column["out_of"] for column in DATA["columns"]))
-        self.assertIn("0, 2 and 4", total["about"])
-        self.assertIn("0, 1 and 2", total["about"])
-        anchored = [practice for practice in DATA["internal"] if practice.get("anchors")]
-        self.assertIn(f"{len(anchored)} have their own description".replace("4", "four"),
-                      total["about"])
+        self.assertEqual(total["out_of"], 10)
+        self.assertEqual(sorted(total["weights"]), sorted(COLUMNS))
+        self.assertAlmostEqual(sum(total["weights"].values()), 1)
         self.assertIn("ranks the companies", total["plain"])
-        self.assertIn("The final score adds the two figures", FLAT)
+        self.assertIn("Every figure on the board is out of 10", total["about"])
+        self.assertIn("The final score averages the two figures", FLAT)
         self.assertNotIn("never added", FLAT)
+        # The page no longer says every practice shares one scale: four carry
+        # anchors of their own.
+        self.assertNotIn("one scale that covers all of them", FLAT)
 
     def test_the_ranking_is_the_final_score(self):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["11.1", "10.9", "4.3", "3.9", "3.5", "3.0", "2.2", "1.4", "1.1"])
+                         ["5.6", "5.5", "2.1", "2.0", "1.8", "1.5", "1.1", "0.7", "0.5"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
                          ["6.1", "5.9", "1.1", "2.0", "2.3", "1.1", "0.9", "1.4", "0.5"])
         # Alibaba and Moonshot AI land on exactly 1.25, which the board prints
@@ -406,16 +412,17 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(max(combined.values()), combined["openai"])
         first = DATA["findings"][0]["text"]
         openai, anthropic = totals("openai")[0], totals("anthropic")[0]
-        self.assertIn(f"OpenAI has the best pair, {shown(openai['1'])} on the constitution "
-                      f"and {shown(openai['2'])} on the change log", first)
-        self.assertIn(f"scores {shown(anthropic['1'])} and {shown(anthropic['2'])}.", first)
+        self.assertIn(f"OpenAI has the best pair, {shown(on_ten(openai['1']))} on the "
+                      f"constitution and {shown(on_ten(openai['2']))} on the change log", first)
+        self.assertIn(f"scores {shown(on_ten(anthropic['1']))} and "
+                      f"{shown(on_ten(anthropic['2']))}.", first)
         # The minimum is the first two questions, and the finding says what
         # meeting it means on the board's own scale.
         self.assertEqual([q["id"] for q in DATA["questions"] if q.get("minimum")], ["1", "2"])
-        self.assertIn("4 out of 4 on both questions", first)
-        # "across all nine, the best score on it is 2.3 out of 4"
+        self.assertIn("10 out of 10 on both questions", first)
+        # "across all nine, the best score on it is 5.8 out of 10"
         best_log = max(totals(lab)[0]["2"] for lab in ORDER)
-        self.assertIn(f"the best score on it is {shown(best_log)} out of 4", first)
+        self.assertIn(f"the best score on it is {shown(on_ten(best_log))} out of 10", first)
 
     def test_the_finding_on_meta_quotes_both_of_its_figures(self):
         # "It scores 1.1 out of 10 on what is published ... and 3.1 out of 10 on
@@ -430,8 +437,8 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(columns["published"], totals("xai")[1]["published"])
         below = [lab for lab in ORDER if totals(lab)[1]["published"] < columns["published"]]
         self.assertEqual(below, ["moonshot", "deepseek"])
-        # "which puts it third on the final score with 4.3 out of 20"
-        self.assertIn(f"third on the final score with {shown(ranking('meta'))} out of 20", text)
+        # "which puts it third on the final score with 2.1 out of 10"
+        self.assertIn(f"third on the final score with {shown(ranking('meta'))} out of 10", text)
         self.assertEqual(rank("meta"), 3)
 
     def test_the_open_weights_finding_quotes_what_is_published(self):

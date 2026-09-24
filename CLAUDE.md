@@ -1232,20 +1232,34 @@ papers are not in this repository, because the memo is an unpublished draft and
 Kembery and colleagues' paper is under review, so a quote cannot be checked
 against its source here and the test holds only their shape.
 
-**The two figures are added now, and the order changed with it.** Since 24
-September 2026 the board leads with a final score out of 20, the sum of what is
-published and what it engages, and ranks the companies by it. Before, it ranked
-on what is published alone and said the two were never added, on the ground that
-the checks are anchored and the practices share one generic scale. The audit of
-23 September (`docs/audits/2026-09-23-every-figure-defended.md`) had already
-found that ground false for `I1` to `I4`, which carry anchors of their own, so the
-explanation under the sum says only what is true: the two measure different
-things, and both stay on the board so a reader can see which half a company
-earned its score on. The order moved a lot. Meta goes from sixth to third on the
-strength of what it engages, Alibaba from third to fifth, and Mistral AI from
-fifth to eighth, and the ties of 21 September disappear. The practices of what
-it engages also fold now, into three groups of `column.groups` that show their
-mean and change nothing about the figure.
+**Every figure on both front boards is out of 10, and a row says what it
+weighs.** Since 24 September 2026 the governance board and the constitutions
+board follow one rule. A score given on a scale of its own, a check out of 4, a
+practice out of 2, a criterion out of 4, is shown as its share of that scale,
+and the scale it was given on is said in the popover it opens. A row above others
+is their weighted average, and each row says under its name what it counts for,
+as a fraction of the figure it belongs to ("1/11 of what is published", "1/13 of
+the behaviours") rather than of the row just above it, because every leaf of a
+figure counts the same. The final score is the average of the two halves, each
+counting for 1/2, on both boards, where it had been a sum out of 20 for a day and
+before that, on the governance board, not a sum at all. The constitutions board
+works the final score out from the document and the behaviours rather than
+reading it from `constitutions.json`, which no longer carries it, and gained a
+row for the behaviours so the tree has the same shape on both boards.
+
+The order of the governance board moved when the two figures were first
+combined. Meta goes from sixth to third on the strength of what it engages,
+Alibaba from third to fifth, and Mistral AI from fifth to eighth, and the ties of
+21 September disappear. The explanation under the combined score says only what
+is true: the two figures measure different things. It no longer claims every
+practice shares one generic scale, which the audit of 23 September
+(`docs/audits/2026-09-23-every-figure-defended.md`) had found false for `I1` to
+`I4`.
+
+What a row is, where it comes from and what its signs mean moved out of the text
+above each board into numbered notes, and the rows carry the numbers. The
+practices of what it engages fold into three groups of `column.groups`, which
+show their mean and change nothing about the figure.
 
 ### Depth runs to ten, and a document is scored as a whole
 

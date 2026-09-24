@@ -2012,7 +2012,9 @@ const inkOn = selector => page.evaluate(selector => {
       const style = getComputedStyle(node);
       const ground = style.backgroundColor;
       const figure = node.querySelector(".cell-figure")?.textContent ?? "";
-      const max = node.querySelector(".cell-max")?.textContent ?? "";
+      // The corner mark where a board shows one, else the maximum the cell
+      // carries: the two boards on the front page show no corner mark.
+      const max = node.querySelector(".cell-max")?.textContent ?? `/${node.dataset.max ?? ""}`;
       return {
         what: `${node.dataset.lab ?? ""} ${node.dataset.row ?? ""}`.trim(),
         figure,
@@ -2065,15 +2067,16 @@ console.log("== Overview: the governance view ==");
       .map(b => b.textContent),
     engages: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="engages"] .cell-figure')]
       .map(b => b.textContent),
-    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button[data-row="published"] .cell-max, '
-      + '#gov-heatmap .cell-button[data-row="engages"] .cell-max')].map(b => b.textContent))],
+    outOf: [...new Set([...document.querySelectorAll('#gov-heatmap .cell-button')]
+      .filter(b => !b.classList.contains("cell-na")).map(b => b.dataset.max))],
+    corners: document.querySelectorAll("#gov-heatmap .cell-max").length,
     flagged: [...document.querySelectorAll("#gov-heatmap thead .company-button")]
       .filter(b => b.querySelector(".company-flag")).map(b => b.querySelector(".company-name").textContent),
     rows: [...document.querySelectorAll("#gov-heatmap tbody tr:not([hidden]) .row-name .head-name")]
       .map(n => n.textContent),
     findings: document.querySelectorAll("#gov-findings .finding").length,
     findingsFolded: document.querySelectorAll("#gov-findings details").length,
-    columnNotes: [...document.querySelectorAll("#gov-columns .gov-foot strong")]
+    columnNotes: [...document.querySelectorAll("#gov-columns .gov-notes li strong")]
       .map(node => node.textContent.trim()),
     appendices: [...document.querySelectorAll(".gov-more > details > summary")]
       .map(node => node.textContent),
@@ -2082,13 +2085,13 @@ console.log("== Overview: the governance view ==");
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
   check(seen.companies.join(", ") === "OpenAI, Anthropic, Meta, Google DeepMind, Alibaba, "
         + "xAI, Moonshot AI, Mistral AI, DeepSeek"
-      && seen.total.join(",") === "11.1,10.9,4.3,3.9,3.5,3.0,2.2,1.4,1.1"
+      && seen.total.join(",") === "5.6,5.5,2.1,2.0,1.8,1.5,1.1,0.7,0.5"
       && seen.published.join(",") === "6.1,5.9,1.1,2.0,2.3,1.1,0.9,1.4,0.5"
       && seen.engages.join(",") === "5.0,5.0,3.1,1.9,1.3,1.9,1.3,0.0,0.6"
-      && seen.outOf.join() === "/10"
+      && seen.outOf.join() === "10" && seen.corners === 0
       && seen.flagged.join(", ") === "Alibaba, Moonshot AI, Mistral AI, DeepSeek",
-    "the nine companies run across in rank order on the final score, which adds the two "
-      + "figures out of 10, the open-weight ones marked",
+    "the nine companies run across in rank order on the final score, the average of the two "
+      + "figures, every cell out of 10 with no mark in its corner, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.total.join(",")} / ${seen.published.join(",")} / `
       + `${seen.engages.join(",")}`);
   /* The final score first, then the two figures it adds: what is published,
@@ -2100,9 +2103,11 @@ console.log("== Overview: the governance view ==");
       && seen.findings === 8 && seen.findingsFolded === 0,
     "the rows run down from the final score and the two figures, the checks folded, the eight findings open under the "
       + "table", JSON.stringify(seen.rows));
-  check(seen.columnNotes.join(" | ") === "Final score, out of 20. | What is published, out of 10. "
-        + "| What it engages, out of 10.",
-    "one sentence under the table for the final score and one for each figure",
+  check(seen.columnNotes.join(" | ") === "Final score. | What is published. | What it engages. "
+        + "| Part of the minimum. | Polaris Collective working paper. | Kembery et al. working paper. "
+        + "| Not scored. | Open weights.",
+    "the numbered notes say what each figure means, where the rows come from and what the "
+      + "signs mean", 
     JSON.stringify(seen.columnNotes));
   /* The reference text is two appendices under the findings rather than four folds
    * mixed in with them: how the scoring works, and what was read for each company. */
@@ -2155,7 +2160,10 @@ console.log("== Overview: the governance view ==");
   await page.locator("#gov-expand-all").click();
   await page.waitForTimeout(100);
 
-  // A question opens into its checks.
+  // A question opens into its checks. Hiding every row shut the two figures'
+  // own folds as well, so what is published is opened again first.
+  await page.locator('.row-toggle[data-question="column-published"]').click();
+  await page.waitForTimeout(100);
   await page.locator('.row-toggle[data-question="2"]').click();
   await page.waitForTimeout(100);
   const opened = await page.evaluate(() => ({
@@ -2179,10 +2187,13 @@ console.log("== Overview: the governance view ==");
       rows: [...document.querySelectorAll("#gov-heatmap tr.practice-row")]
         .map(row => row.dataset.practice).join(),
       openai: ["S1", "S2", "S3", "S4", "S5"].map(id => openai(id)?.querySelector(".cell-figure")?.textContent),
-      outOf: openai("S1")?.querySelector(".cell-max")?.textContent,
-      credits: [...document.querySelectorAll("#gov-heatmap tbody .row-name .head-sub")]
-        .map(node => node.textContent).filter(text => /Polaris Collective|Kembery/.test(text)).length,
-      disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0", "1", "2"].includes(mark)),
+      outOf: openai("S1")?.dataset.max,
+      // Every question and every practice carries the number of the note that
+      // names its paper, 5 for ours and 6 for Kembery et al.'s.
+      credits: [...document.querySelectorAll("#gov-heatmap tbody .row-name")]
+        .filter(name => [...name.querySelectorAll(".row-mark")]
+          .some(mark => ["5", "6"].includes(mark.textContent))).length,
+      disclosed: figures(["I1", "I2", "I3", "I4"]).every(mark => ["0.0", "5.0", "10.0"].includes(mark)),
       marks: figures(["I5"]),
       groups: [...document.querySelectorAll("#gov-heatmap tr.group-row .head-name")]
         .map(node => node.textContent).join(),
@@ -2195,14 +2206,15 @@ console.log("== Overview: the governance view ==");
     };
   });
   check(practices.rows === "S1,S2,S3,S4,S5,I5,I1,I2,I3,I4"
-      && practices.openai.join() === "2,1,0,0,1" && practices.outOf === "/2"
+      && practices.openai.join() === "10.0,5.0,0.0,0.0,5.0" && practices.outOf === "10"
       && practices.disclosed && practices.marks.join() === "NA"
       && practices.groups === "Testing adherence,Change control,Training and use"
       && practices.grouped === "S2+S3+S4,S5+I5,I1+I2+I3+I4"
-      && practices.openaiGroups === "0.3,1.0,1.5"
+      && practices.openaiGroups === "1.7,5.0,7.5"
       && practices.credits === 14,
-    "the practices sit in the two figures, those of the second folded into three groups "
-      + "that show their mean, the ninth NA, and every row of either figure says which paper it comes from",
+    "the practices sit in the two figures, each shown out of 10, those of the second folded "
+      + "into three groups that show their mean, the ninth NA, and every question and practice "
+      + "carries the note naming its paper",
     JSON.stringify(practices));
 
   // A check's score opens a popover beside it, with its place on the scale marked.
@@ -2350,8 +2362,15 @@ console.log("== Overview: the constitutions board ==");
   /* Each part of a document is shown out of 2, which is also the top of the
    * scale beside it, so the five parts add up to 10. The page states these
    * rather than reading them off the scale list. */
-  const criterionTop = 2;
-  const wholeTop = file.criteria.length * criterionTop;
+  /* A criterion is given out of 4 and shown out of 10, like every figure on the
+   * board. The final score is not in the file: it is the average of the
+   * document as a whole and the behaviours, weighted as the file says. */
+  const criterionScale = 4;
+  const finalOf = company => {
+    const depths = Object.values(company.behaviours || {}).map(entry => entry.score);
+    const behaviours = depths.length ? depths.reduce((a, b) => a + b, 0) / depths.length : 0;
+    return (company.whole?.total ?? 0) * file.weights.whole + behaviours * file.weights.behaviours;
+  };
   const shown = value => value.toFixed(1);
   /* The file wraps its paragraphs, and the DOM is read back with the whitespace
    * collapsed, so both sides are collapsed before they are compared. */
@@ -2376,7 +2395,7 @@ console.log("== Overview: the constitutions board ==");
   const columns = [...groups.values()]
     .map(group => [...group].sort((a, b) =>
       String(b.document?.version || "").localeCompare(String(a.document?.version || "")))[0])
-    .sort((a, b) => b.final - a.final);
+    .sort((a, b) => finalOf(b) - finalOf(a));
   const earlier = file.companies.filter(company => !columns.includes(company));
   const categories = [...new Set(file.behaviours.map(behaviour => behaviour.category))];
 
@@ -2423,7 +2442,8 @@ console.log("== Overview: the constitutions board ==");
     governanceMarks: document.querySelectorAll("#gov-heatmap thead .company-mark").length,
   }));
 
-  check(board.corner === "Company by rank", "the corner of the board reads Company by rank",
+  check(board.corner === "Score (out of 10)",
+    "the corner of the board reads Score (out of 10), as the governance board's does",
     board.corner);
   check(board.heads.map(head => head.id).join() === columns.map(one => one.id).join()
       && board.heads.every((head, index) => head.name === columns[index].name),
@@ -2441,8 +2461,11 @@ console.log("== Overview: the constitutions board ==");
   /* The marks. They are drawn, so they are hidden from assistive technology and
    * the company's name is what is announced; a company the set carries no mark
    * for keeps the box, so every name in the row starts on one line. */
+  // The rank is written as a place, "1st", so it cannot be read as a note number;
+  // the accessible name says the number.
   check(board.heads.every(head => head.mark && head.markHidden === "true"
-        && head.label === `${head.name}, ranked ${head.rank}`
+        && /^\d+(st|nd|rd|th)$/.test(head.rank)
+        && head.label === `${head.name}, ranked ${parseInt(head.rank, 10)}`
           + `${head.note ? `, ${lowerFirst(head.note)}` : ""}: its profile`)
       && board.heads.filter(head => head.mark === "svg").length >= 7
       && board.governanceMarks === 9,
@@ -2450,17 +2473,17 @@ console.log("== Overview: the constitutions board ==");
     + "boards", JSON.stringify(board.heads.map(head => [head.id, head.mark])));
 
   const expectedRows = ["Final score", "The document as a whole",
-    ...file.criteria.map(criterion => criterion.name),
+    ...file.criteria.map(criterion => criterion.name), "The behaviours",
     ...categories.flatMap(category => [category,
       ...file.behaviours.filter(behaviour => behaviour.category === category)
         .map(behaviour => behaviour.name)])];
   check(board.names.join(" | ") === expectedRows.join(" | ") && board.folded,
     "the final score leads, the document as a whole follows with its criteria, then the "
     + "categories with their behaviours, every group folded", JSON.stringify(board.names));
-  check(board.subs[0] === `out of ${wholeTop + depthTop}`
-      && board.subs[1] === `out of ${wholeTop}, ${file.criteria.length} criteria`,
-    "the final score is out of the two halves added together, and the document as a whole out "
-    + "of its criteria", JSON.stringify(board.subs.slice(0, 2)));
+  check(board.subs[0] === "" && board.subs[1] === "1/2 of the final score"
+      && board.subs[2] === `1/${file.criteria.length} of the document`,
+    "the final score carries no weight line, the document as a whole says it is half of it, "
+    + "and a criterion says its share of the document", JSON.stringify(board.subs.slice(0, 2)));
   check(board.figures.length > 0 && board.figures.every(one => !one.na && one.text !== "NA"),
     "no cell of the board reads NA",
     JSON.stringify(board.figures.filter(one => one.na || one.text === "NA")));
@@ -2550,7 +2573,8 @@ console.log("== Overview: the constitutions board ==");
   popover = await readPop();
   check(popover.open && popover.blocks.join(" | ") === [
       flat(`${withDocument.name}: ${lowerFirst(criterion.name)}`), flat(documentLine(withDocument)),
-      flat(`${shown(scored.score / 2)} out of ${criterionTop}`),
+      flat(`${shown(scored.score / criterionScale * 10)} out of 10`),
+      `Scored ${scored.score} on its own scale of 0 to ${criterionScale}.`,
       ...written(criterion.what_it_is, scored.what_the_document_does, scored.why),
     ].join(" | "),
     "a criterion's cell gives what the criterion asks, what the document does and why the "
@@ -2594,7 +2618,7 @@ console.log("== Overview: the constitutions board ==");
     popover = await readPop();
     check(popover.open && popover.blocks[0] === flat(older.name)
         && popover.blocks[1] === flat(documentLine(older))
-        && popover.blocks[2] === `${shown(older.final)} out of ${wholeTop + depthTop}`
+        && popover.blocks[2] === `${shown(finalOf(older))} out of 10`
         && !popover.blocks.some(block => block.startsWith("Ranked")),
       "an earlier version of a document is reached from its company's column, and is not ranked",
       JSON.stringify(popover.blocks.slice(0, 3)));

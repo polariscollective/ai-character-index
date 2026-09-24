@@ -7,10 +7,13 @@
  * out of that file, and a board that says more than its file says would be a
  * board nobody could correct by editing the file.
  *
- * What is written here rather than in the file is the shape of the board: that a
- * final score is out of 20, that a criterion is shown halved so the five add up
- * to 10, that companies are ranked by the final score and that level companies
- * share a place. Those are properties of the table, not claims about a document.
+ * What is written here rather than in the file is the shape of the board: that
+ * every figure is shown out of 10, that a criterion given out of 4 is shown as
+ * its share of that scale, that a row above others is their weighted average
+ * and says under its name how much it counts for, that the final score is the
+ * average of the two halves the file weighs, that companies are ranked by it and
+ * that level companies share a place. Those are properties of the table, not
+ * claims about a document.
  *
  * The table, the folds, the popover and the colours are site/board.js, which the
  * governance board and the coverage board draw from too. The two scales are
@@ -27,7 +30,7 @@
  * the browser.
  */
 
-import { createBoard, element, mono, paragraph, ORDINALS, level, rankBy } from "./board.js";
+import { createBoard, element, mono, paragraph, ORDINALS, level, rankBy, place } from "./board.js";
 /* The mark of each company, above its name. One module for both boards, and it
  * says where the drawings come from and which two companies have none. */
 import { companyMark } from "./company-marks.js";
@@ -44,19 +47,36 @@ const nodes = {};
 
 /* ---- The figures, and what each row is out of ------------------------------- */
 
-/* Every maximum is read off the file's own scales rather than written down, so a
- * file that scores a behaviour out of something else moves the board with it.
- * The one arithmetic rule the board keeps is the halving: a criterion is scored
- * on its own scale and shown at half of it, which is what makes five criteria
- * add up to the same 10 the behaviours are out of. */
+/* Every figure the table shows is out of 10. A behaviour's depth already is; a
+ * criterion is given out of 4 and shown as its share of that, with the score it
+ * was given said in its popover. */
+const TEN = 10;
+const CRITERION_SCALE = 4;
+const onTen = (value, max) => value / max * TEN;
+/* A behaviour's depth is out of the top level of the file's own scale, which is
+ * 10: read off the file so a scale that changes moves the board with it. */
 const depthMax = () => state.data.scale.depth[state.data.scale.depth.length - 1].level;
-/* Each part of a document is read out of 2, which is also what the scale beside
- * it describes, so the five parts add up to the same 10 the behaviours are out
- * of. The figures in the file are on that scale already. */
-const SHOWN_MAX = 2;
-const shownMax = () => SHOWN_MAX;
-const wholeMax = () => state.data.criteria.length * SHOWN_MAX;
-const finalMax = () => wholeMax() + depthMax();
+const shownMax = () => TEN;
+const wholeMax = () => TEN;
+const finalMax = () => TEN;
+
+/* What a row counts for, said under its name. A behaviour says what it counts
+ * for in the behaviours rather than in its category, because every behaviour
+ * counts the same there. */
+/* The numbers of the notes under the board, which site/overview.html writes. */
+const NOTE = { final: "1", whole: "2", behaviours: "3", categories: "4" };
+
+/* A weight as the count it is: "3/11" says three of eleven rows, which a
+ * percentage rounds away. A weight the file gives as a share is written as
+ * the smallest fraction it is. */
+const frac = (count, of) => `${count}/${of}`;
+const share = value => {
+  for (let of = 1; of <= 20; of += 1) {
+    if (Math.abs(value * of - Math.round(value * of)) < 1e-9) return frac(Math.round(value * of), of);
+  }
+  return value.toFixed(2);
+};
+const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
 
 const shown = value => value.toFixed(1);
 
@@ -72,10 +92,12 @@ const mean = values =>
 
 const number = value => (Number.isFinite(value) ? value : null);
 
-/* A criterion as the board shows it: the file's figure halved. */
+/* A criterion as the file gives it, out of 4, and as the board shows it. */
+const criterionScore10 = (company, criterion) =>
+  number(company.whole?.criteria?.[criterion.id]?.score);
 const criterionPart = (company, criterion) =>
-  (number(company.whole?.criteria?.[criterion.id]?.score) === null
-    ? null : company.whole.criteria[criterion.id].score / 2);
+  (criterionScore10(company, criterion) === null
+    ? null : onTen(criterionScore10(company, criterion), CRITERION_SCALE));
 
 const wholeTotal = company => number(company.whole?.total);
 
@@ -88,6 +110,17 @@ const categoryFigure = (company, members) =>
   mean(members.map(member => depthOf(company, member)).filter(value => value !== null));
 
 const behavioursFigure = company => categoryFigure(company, state.data.behaviours);
+
+/* The final score: the document as a whole and the behaviours, averaged with the
+ * weights the file gives them. Worked out here rather than read from the file,
+ * so it cannot disagree with the two figures it is made of. */
+const finalOf = (data, company) => {
+  const whole = number(company.whole?.total) ?? 0;
+  const behaviours = mean(data.behaviours
+    .map(behaviour => number(company.behaviours?.[behaviour.slug]?.score))
+    .filter(value => value !== null)) ?? 0;
+  return whole * data.weights.whole + behaviours * data.weights.behaviours;
+};
 
 /* Companies by the score the board leads with. A rank is one more than the
  * number of companies ahead, so companies level on the final score share a place
@@ -295,9 +328,10 @@ function figureItem(value, max, name, label, open) {
 /* ---- What each popover says ------------------------------------------------- */
 
 function aboutFinal(content) {
+  const weights = state.data.weights;
   board.titled(content, `Final score, out of ${finalMax()}`,
-    `The two halves added together, each out of ${wholeMax()}: the document as a whole, and the `
-    + "behaviours.");
+    `The average of two halves, each out of ${TEN}: the document as a whole, counting for `
+    + `${share(weights.whole)}, and the behaviours, counting for ${share(weights.behaviours)}.`);
   const table = element("table", "readings figures");
   const headRow = element("tr");
   ["Rank", "Company", "Final score"].forEach(name => {
@@ -334,14 +368,16 @@ function finalScore(content, company) {
   const whole = wholeTotal(company);
   const behaviours = behavioursFigure(company);
   if (whole !== null) {
-    parts.append(figureItem(whole, wholeMax(), "The document as a whole",
+    parts.append(figureItem(whole, wholeMax(),
+      `The document as a whole, counting for ${share(state.data.weights.whole)}`,
       `The document as a whole, ${shown(whole)} out of ${wholeMax()}`,
       rest => wholeScore(rest, company)));
   }
   if (behaviours !== null) {
     const item = element("li");
     item.append(board.chip(behaviours, depthMax(), shown(behaviours)),
-      element("span", "", "The behaviours, the mean of every behaviour on the board"));
+      element("span", "", `The behaviours, the mean of every behaviour on the board, counting `
+        + `for ${share(state.data.weights.behaviours)}`));
     parts.append(item);
   }
   content.append(parts);
@@ -416,8 +452,9 @@ function profile(content, company) {
 
 function aboutWhole(content) {
   board.titled(content, "The document as a whole",
-    `${state.data.criteria.length} criteria, each out of ${shownMax()}, adding up to a total out `
-    + `of ${wholeMax()}.`);
+    `${state.data.criteria.length} criteria, each given out of ${CRITERION_SCALE} and shown out of `
+    + `${TEN}. The figure is their average, each counting for `
+    + `${frac(1, state.data.criteria.length)}.`);
   state.data.criteria.forEach(criterion => {
     const fold = element("details");
     const summary = element("summary");
@@ -449,8 +486,8 @@ function wholeScore(content, company) {
 
 function aboutCriterion(content, criterion) {
   board.titled(content, criterion.name,
-    `One of the ${state.data.criteria.length} criteria on the document as a whole, out of `
-    + `${shownMax()}.`);
+    `One of the ${state.data.criteria.length} criteria on the document as a whole, given out of `
+    + `${CRITERION_SCALE} and shown out of ${TEN}.`);
   sentences(content, criterion.what_it_is, criterion.why_it_matters);
 }
 
@@ -462,9 +499,43 @@ function criterionScore(content, company, criterion) {
   const part = criterionPart(company, criterion);
   const entry = company.whole?.criteria?.[criterion.id] || {};
   board.titled(content, `${company.name}: ${lowerFirst(criterion.name)}`, documentLine(company));
-  content.append(board.figure(shown(part), ` out of ${shownMax()}`));
+  content.append(board.figure(shown(part), ` out of ${shownMax()}`),
+    element("p", "subtitle", `Scored ${criterionScore10(company, criterion)} on its own scale `
+      + `of 0 to ${CRITERION_SCALE}.`));
   renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
+}
+
+function aboutBehaviours(content) {
+  const every = state.data.behaviours.length;
+  board.titled(content, "The behaviours",
+    `The mean of all ${every} behaviours, each out of ${depthMax()} and each counting for `
+    + `${frac(1, every)}. It counts for ${share(state.data.weights.behaviours)} of the `
+    + "final score.");
+  const list = element("ul", "check-list");
+  state.categories.forEach(({ name, members }) => list.append(element("li", "",
+    `${name}: ${members.length} ${members.length === 1 ? "behaviour" : "behaviours"}, `
+    + `${frac(members.length, every)} of the behaviours`)));
+  content.append(list);
+}
+
+function behavioursScore(content, company) {
+  const value = behavioursFigure(company);
+  const every = state.data.behaviours.length;
+  board.titled(content, `${company.name}: the behaviours`, documentLine(company));
+  content.append(board.figure(shown(value), ` out of ${depthMax()}`),
+    element("p", "subtitle", `The mean of all ${every} behaviours. Each category counts for as `
+      + "many behaviours as it holds."));
+  const list = element("ul", "check-list");
+  state.categories.forEach(category => {
+    const figure = categoryFigure(company, category.members);
+    if (figure === null) return;
+    list.append(figureItem(figure, depthMax(),
+      `${category.name}, ${frac(category.members.length, every)}`,
+      `${category.name}, ${shown(figure)} out of ${depthMax()}`,
+      rest => categoryScore(rest, company, category)));
+  });
+  content.append(list);
 }
 
 function aboutCategory(content, category) {
@@ -553,14 +624,16 @@ function behaviourCell(content, company, behaviour) {
 const rowId = (groupId, index) => `board-row-${groupId}-${index}`;
 
 const cellFor = (company, rowLabel, row, rest) => board.scoreCell({
-  name: company.name, rowLabel, dataset: { lab: company.id, row }, ...rest,
+  name: company.name, rowLabel, dataset: { lab: company.id, row }, showMax: false, ...rest,
 });
 
 function headRow() {
   const row = element("tr");
   const corner = element("th", "row-col");
   corner.scope = "col";
-  corner.append(element("span", "head-name", "Company by rank"));
+  // The same corner as the governance board's, so the two read alike.
+  corner.append(element("span", "head-name", "Score (out of 10)"),
+    element("span", "head-sub", "companies by rank"));
   row.append(corner);
   state.companies.forEach(company => {
     const cell = element("th");
@@ -572,7 +645,7 @@ function headRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", `${company.name}, ranked ${company.rank}`
       + `${company.note ? `, ${lowerFirst(company.note)}` : ""}: its profile`);
-    button.append(element("span", "rank", String(company.rank)));
+    button.append(element("span", "rank", place(company.rank)));
     // Drawn, quiet and decorative: the name under it is what is read out, and a
     // company the set has no mark for keeps the space so every name starts on
     // one line.
@@ -598,31 +671,37 @@ function renderTable() {
   const body = document.createDocumentFragment();
   const companies = state.companies;
 
+  const weights = state.data.weights;
+  const everyBehaviour = state.data.behaviours.length;
+
   /* The final score, one row above every group, as the governance board's total. */
-  const total = element("tr", "total-row");
-  total.append(board.rowHead(null, board.rowName("Final score", `out of ${finalMax()}`, aboutFinal,
-    `Final score, out of ${finalMax()}: how it is worked out`)));
+  const total = element("tr", "total-row outside-row");
+  total.dataset.level = "0";
+  total.append(board.rowHead(null, board.rowName("Final score", null, aboutFinal,
+    `Final score, out of ${finalMax()}: how it is worked out`, [NOTE.final])));
   companies.forEach(company => {
     total.append(cellFor(company, "final score", "final", {
-      value: company.final, max: finalMax(), text: shown(company.final),
+      value: company.final, max: TEN, text: shown(company.final),
       build: content => finalScore(content, company),
     }));
   });
   body.append(total);
 
-  /* The document as a whole: its total on the group row, the criteria folded
-   * under it, each shown at half its own score so the five add up to the total. */
-  const wholeRow = element("tr", "question-row");
+  /* The document as a whole: the average of its criteria on the group row, the
+   * criteria folded under it. */
+  // The two halves of the final score wear the same style: two figures of one
+  // rank, each opening into what it averages.
+  const wholeRow = element("tr", "total-row outside-row half-row");
+  wholeRow.dataset.level = "1";
   wholeRow.append(board.rowHead(
     board.rowToggle("whole", state.data.criteria.map((criterion, index) => rowId("whole", index)),
       { parts: "criteria", name: "The document as a whole" }),
-    board.rowName("The document as a whole",
-      `out of ${wholeMax()}, ${state.data.criteria.length} criteria`, aboutWhole,
-      "The document as a whole: what it measures")));
+    board.rowName("The document as a whole", weightLine(share(weights.whole), "the final score"),
+      aboutWhole, "The document as a whole: what it measures", [NOTE.whole])));
   companies.forEach(company => {
     const whole = wholeTotal(company);
     wholeRow.append(cellFor(company, "the document as a whole", "whole", {
-      value: whole, max: wholeMax(), text: shown(whole),
+      value: whole, max: TEN, text: shown(whole),
       build: content => wholeScore(content, company),
     }));
   });
@@ -630,34 +709,58 @@ function renderTable() {
 
   state.data.criteria.forEach((criterion, index) => {
     const sub = board.subRow(rowId("whole", index), "whole",
-      board.rowName(criterion.name, `out of ${shownMax()}`,
+      board.rowName(criterion.name,
+        weightLine(frac(1, state.data.criteria.length), "the document"),
         content => aboutCriterion(content, criterion), `${criterion.name}: what it asks`));
+    sub.dataset.level = "2";
     companies.forEach(company => {
       const part = criterionPart(company, criterion);
       sub.append(cellFor(company, lowerFirst(criterion.name), criterion.id, {
-        value: part, max: shownMax(), text: shown(part),
+        value: part, max: TEN, text: shown(part),
         build: content => criterionScore(content, company, criterion),
       }));
     });
     body.append(sub);
   });
 
-  /* Each category: the mean of its behaviours on the group row, the behaviours
-   * folded under it. */
+  /* The behaviours: every behaviour's depth averaged, which is the other half of
+   * the final score, then each category with its behaviours folded under it. A
+   * category counts for as many thirteenths as it has behaviours, which is what
+   * the mean of every behaviour amounts to. */
+  const behavioursRow = element("tr", "total-row outside-row half-row");
+  behavioursRow.dataset.level = "1";
+  behavioursRow.append(board.rowHead(
+    board.rowToggle("behaviours", state.categories.map(category => `board-row-${category.id}`),
+      { parts: "categories", name: "The behaviours" }),
+    board.rowName("The behaviours",
+    weightLine(share(weights.behaviours), "the final score"), aboutBehaviours,
+    "The behaviours: how they are averaged", [NOTE.behaviours])));
+  companies.forEach(company => {
+    const value = behavioursFigure(company);
+    behavioursRow.append(cellFor(company, "the behaviours", "behaviours", {
+      value, max: TEN, text: shown(value),
+      build: content => behavioursScore(content, company),
+    }));
+  });
+  body.append(behavioursRow);
+
   state.categories.forEach(category => {
     const { id, name, members } = category;
     const row = element("tr", "question-row");
+    row.id = `board-row-${id}`;
     row.dataset.question = id;
+    row.dataset.parent = "behaviours";
+    row.dataset.level = "2";
     row.append(board.rowHead(
       board.rowToggle(id, members.map((member, index) => rowId(id, index)),
         { parts: "behaviours", name }),
-      board.rowName(name, `out of ${depthMax()}, ${members.length} `
-        + `${members.length === 1 ? "behaviour" : "behaviours"}`,
-        content => aboutCategory(content, category), `${name}: what it measures`)));
+      board.rowName(name, weightLine(frac(members.length, everyBehaviour), "the behaviours"),
+        content => aboutCategory(content, category), `${name}: what it measures`,
+        [NOTE.categories])));
     companies.forEach(company => {
       const value = categoryFigure(company, members);
       row.append(cellFor(company, lowerFirst(name), id, {
-        value, max: depthMax(), text: shown(value),
+        value, max: TEN, text: shown(value),
         build: content => categoryScore(content, company, category),
       }));
     });
@@ -665,13 +768,14 @@ function renderTable() {
 
     members.forEach((behaviour, index) => {
       const sub = board.subRow(rowId(id, index), id,
-        board.rowName(behaviour.name, `out of ${depthMax()}`,
+        board.rowName(behaviour.name, weightLine(frac(1, everyBehaviour), "the behaviours"),
           content => aboutBehaviour(content, behaviour),
           `${behaviour.name}: what it covers`));
+      sub.dataset.level = "3";
       companies.forEach(company => {
         const score = depthOf(company, behaviour);
         sub.append(cellFor(company, lowerFirst(behaviour.name), behaviour.slug, {
-          value: score, max: depthMax(), text: shown(score),
+          value: score, max: TEN, text: shown(score),
           build: content => behaviourCell(content, company, behaviour),
         }));
       });
@@ -688,8 +792,8 @@ function renderTable() {
 function renderLegend() {
   const legend = document.createDocumentFragment();
   legend.append(element("span", "", "Colour goes from nothing scored to the most a row can score:"),
-    element("span", "", "none"), board.swatches([0, 0.25, 0.5, 0.75, 1], 1),
-    element("span", "", "all"));
+    element("span", "", "none (0)"), board.swatches([0, 2.5, 5, 7.5, 10], TEN),
+    element("span", "", "all (10)"));
   nodes.legend.replaceChildren(legend);
 }
 
@@ -701,7 +805,14 @@ function renderScales() {
     const item = element("li");
     const text = element("span");
     text.append(element("span", "anchor-name", name), document.createTextNode(`: ${plain}`));
-    item.append(element("span", "anchor-level", String(at)), text);
+    // The colour a cell at this depth takes on the board, so the scale doubles
+    // as the key to it.
+    const swatch = element("span", "scale-swatch");
+    swatch.setAttribute("aria-hidden", "true");
+    board.paint(swatch, at, depthMax());
+    const level = element("span", "anchor-level");
+    level.append(swatch, document.createTextNode(String(at)));
+    item.append(level, text);
     behaviours.append(item);
   });
   nodes.behaviourScaleTitle.textContent =
@@ -755,6 +866,7 @@ export async function initializeConstitutions() {
     return;
   }
   state.data = data;
+  data.companies.forEach(company => { company.final = finalOf(data, company); });
   state.companies = ranked(currentPerCompany(data.companies));
 
   /* Grouped by first appearance rather than alphabetically, so the file's own
@@ -771,6 +883,9 @@ export async function initializeConstitutions() {
     ({ id: `category-${index}`, name, members }));
 
   renderTable();
+  // The behaviours open by default, each category shut: the categories are what
+  // a reader compares first, and a behaviour is one press away.
+  board.setExpanded("behaviours", true);
   renderLegend();
   renderScales();
   renderTies();

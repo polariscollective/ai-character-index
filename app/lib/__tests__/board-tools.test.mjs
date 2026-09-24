@@ -51,15 +51,16 @@ test("the board of governance answers the nine companies in the board's own orde
   const answer = governanceBoard();
   assert.equal(answer.companies.length, 9);
   assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 2, 3]);
-  // Two figures out of 10, and a final score out of 20 that adds them and
-  // ranks the companies.
+  // Two figures out of 10, and a final score out of 10 that averages them with
+  // the weights it names, and ranks the companies.
   assert.deepEqual(answer.measures.figures.map(figure => figure.max), [10, 10]);
-  assert.equal(answer.measures.final_score.max, 20);
-  assert.deepEqual(answer.measures.final_score.adds, ["published", "engages"]);
+  assert.equal(answer.measures.final_score.max, 10);
+  const weights = answer.measures.final_score.weights;
+  assert.deepEqual(Object.keys(weights), ["published", "engages"]);
   assert.deepEqual(answer.companies[0].figures.map(figure => figure.max), [10, 10]);
   for (const company of answer.companies) {
-    const sum = company.figures.reduce((total, figure) => total + figure.figure, 0);
-    assert.ok(Math.abs(company.final_score - sum) < 1e-9, company.name);
+    const mean = company.figures.reduce((total, figure) => total + figure.figure * weights[figure.id], 0);
+    assert.ok(Math.abs(company.final_score - mean) < 1e-9, company.name);
   }
   const finals = answer.companies.map(company => company.final_score);
   assert.deepEqual(finals, [...finals].sort((a, b) => b - a));
