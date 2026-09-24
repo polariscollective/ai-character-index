@@ -23,14 +23,17 @@ RUN pip install --no-cache-dir "openai>=1.0"
 # be a second copy of it, and this repository has published wrong figures off exactly
 # that kind of drift before. So the image carries a Node runtime and the two files
 # that builder's import graph actually reaches: links.mjs and the supabase.mjs it
-# imports in turn. Not the site, not the reader, not Next, and not the rest of
-# app/lib either -- no Slack client, no submissions, no feedback, no admin data.
+# imports in turn. Not the site, beyond the two board files a publication
+# freezes, not the reader, not Next, and not the rest of app/lib
+# either -- no Slack client, no submissions, no feedback, no admin data.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
 
 COPY engine/ ./engine/
 COPY app/lib/links.mjs app/lib/supabase.mjs ./app/lib/
+# The two boards a publication freezes (engine/publish.py BOARD_FILES).
+COPY site/constitutions.json site/governance.json ./site/
 ENV PYTHONPATH=/app/engine
 
 # Only the OpenRouter key reaches this container, and that is a requirement

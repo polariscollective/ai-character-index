@@ -43,6 +43,7 @@
  * rather than a model's, but one rule for the whole page is easier to keep.
  */
 
+import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
 import { createBoard, element, level, rankBy, place, ORDINALS } from "./board.js";
 /* The mark of each company, above its name. One module for both boards, and it
  * says where the drawings come from and which two companies have none. */
@@ -1023,15 +1024,6 @@ function renderScoring() {
   fill(board.nodes.internal, engages.unscored || []);
 }
 
-async function loadGovernance() {
-  try {
-    const response = await fetch("/governance.json");
-    return response.ok ? await response.json() : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function initializeGovernance() {
   const byId = id => document.getElementById(id);
   view = createBoard({
@@ -1045,23 +1037,33 @@ export async function initializeGovernance() {
     internal: byId("gov-internal"), ties: byId("gov-ties"), columns: byId("gov-columns"),
     origin: byId("gov-origin"),
   };
-  const data = await loadGovernance();
-  if (!data) {
-    board.nodes.status.textContent = "The governance scores could not be loaded.";
+  // From the publication being served, never from a file: see publication-data.js.
+  const data = await loadBoard("governance");
+  if (!data?.columns?.length || !data?.labs?.length) {
+    board.nodes.status.textContent = INCOMPATIBLE;
     return;
   }
-  board.data = data;
-  board.labs = ranked(data);
-  // Where the questions and the practices come from, said once, above the board.
-  if (board.nodes.origin) board.nodes.origin.textContent = data.origin;
-  renderTable();
-  // Both figures open by default, each question and group shut.
-  data.columns.forEach(column => view.setExpanded(columnKey(column), true));
-  renderLegend();
-  renderColumns();
-  renderTies();
-  renderFindings();
-  renderScoring();
+  // A board missing a key this page reads is a publication this version of the
+  // site cannot draw, and the reader is told so rather than shown half a board.
+  try {
+    board.data = data;
+    board.labs = ranked(data);
+    // Where the questions and the practices come from, said once, above the board.
+    if (board.nodes.origin) board.nodes.origin.textContent = data.origin;
+    renderTable();
+    // Both figures open by default, each question and group shut.
+    data.columns.forEach(column => view.setExpanded(columnKey(column), true));
+    renderLegend();
+    renderColumns();
+    renderTies();
+    renderFindings();
+    renderScoring();
+  } catch {
+    view.nodes.table.tBodies[0].replaceChildren();
+    view.nodes.table.tHead.replaceChildren();
+    board.nodes.status.textContent = INCOMPATIBLE;
+    return;
+  }
   view.wirePopover();
   view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
   board.nodes.status.textContent = "";

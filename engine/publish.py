@@ -69,6 +69,18 @@ FORMATS = {
     # JSON.stringify(value, null, 2) with no trailing newline, which is exactly
     # this call's output. test_publish.LinksFormatTest holds the two together.
     "links": dict(indent=2, ensure_ascii=False),
+    # The two boards are not built: each is its file in site/, read as it stands
+    # and stored parsed. The digest is of this serialisation of what was stored,
+    # which is what the verifier recomputes.
+    "constitutions": dict(indent=1, ensure_ascii=False),
+    "governance": dict(indent=1, ensure_ascii=False),
+}
+# The files the two boards are written in. A publication freezes both, so it is
+# the whole of what the site shows at one moment; whether their figures agree
+# with the judges' is the publisher's to check before publishing.
+BOARD_FILES = {
+    "constitutions": ROOT / "site" / "constitutions.json",
+    "governance": ROOT / "site" / "governance.json",
 }
 BUILDERS = {
     "payload": (HERE / "panel" / "build_site_data.py",
@@ -356,7 +368,7 @@ def document_note_prompts(store, out_of_ten=False):
 
 def publish(store, behaviours, document_ids, rubric, published_by, notes="",
             run_date=None, config=None, link_runs=(), depth_prompt=None,
-            assessment_run=None):
+            assessment_run=None, boards=None):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
@@ -398,6 +410,10 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
                                 link_runs=link_runs, note_prompts=note_prompts,
                                 comparisons=not out_of_ten)
 
+    # The two boards, frozen as they stand. `boards` maps a board to another
+    # file, for tests; every board is carried either way.
+    frozen = {name: read_board(name, (boards or {}).get(name)) for name in BOARD_FILES}
+
     build_params = {"behaviours": sorted(behaviours),
                     "documents": sorted(document_ids),
                     "panel": panel_name, "rubric": rubric,
@@ -427,10 +443,20 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         "links": links,
         "links_sha256": links_sha256,
     }
+    for name, (board, digest) in frozen.items():
+        publication[name] = board
+        publication[f"{name}_sha256"] = digest
     [row] = store.insert("aci_publications", [publication], returning=True)
     store.insert("aci_publication_cells",
                  [cell | {"publication_id": row["id"]} for cell in cells])
     return row, cells
+
+
+def read_board(name, path=None):
+    """One board's file as it stands, and the digest of it as it will be stored."""
+    board = json.loads(Path(path or BOARD_FILES[name]).read_text(encoding="utf-8"))
+    raw = json.dumps(board, **FORMATS[name]).encode()
+    return board, hashlib.sha256(raw).hexdigest()
 
 
 def main(argv=None):
@@ -473,6 +499,9 @@ def main(argv=None):
     print(f"  payload   {row['payload_sha256'][:16]}")
     print(f"  documents {row['documents_sha256'][:16]}")
     print(f"  links     {row['links_sha256'][:16]}")
+    for name in BOARD_FILES:
+        if row.get(f"{name}_sha256"):
+            print(f"  {name:<13} {row[name + '_sha256'][:16]}")
     return 0
 
 

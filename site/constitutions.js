@@ -30,12 +30,11 @@
  * the browser.
  */
 
+import { pinned, INCOMPATIBLE, loadBoard } from "./publication-data.js";
 import { createBoard, element, mono, paragraph, ORDINALS, level, rankBy, place } from "./board.js";
 /* The mark of each company, above its name. One module for both boards, and it
  * says where the drawings come from and which two companies have none. */
 import { companyMark } from "./company-marks.js";
-
-const FILE = "/constitutions.json";
 
 const byId = id => document.getElementById(id);
 
@@ -865,13 +864,13 @@ const WHEN = new Intl.DateTimeFormat("en-GB", {
 });
 
 async function showPublishedAt(publication) {
-  if (!publication) return;
   try {
-    const response = await fetch(
-      `/api/reader/publication?publication=${encodeURIComponent(publication)}`);
+    const response = await fetch(publication
+      ? `/api/reader/publication?publication=${encodeURIComponent(publication)}`
+      : "/api/reader/publication");
     if (!response.ok) return;
     const { id, published_at: at } = await response.json();
-    if (id !== publication || !at) return;
+    if ((publication && id !== publication) || !at) return;
     nodes.asOf.textContent = `As of ${WHEN.format(new Date(at)).replace(",", " at")}`;
   } catch {
     // The file's month is already on the page.
@@ -894,44 +893,49 @@ export async function initializeConstitutions() {
     everyRow: { show: "Show every row", hide: "Hide every row" },
   });
 
-  let data = null;
-  try {
-    const response = await fetch(FILE);
-    if (response.ok) data = await response.json();
-  } catch {
-    data = null;
-  }
+  const data = await loadBoard("constitutions");
   if (!data?.companies?.length || !data?.behaviours?.length || !data?.criteria?.length) {
-    nodes.status.textContent = "The board could not be loaded.";
+    nodes.status.textContent = INCOMPATIBLE;
     return;
   }
-  state.data = data;
-  data.companies.forEach(company => { company.final = finalOf(data, company); });
-  state.companies = ranked(currentPerCompany(data.companies));
+  // A board missing a key this page reads is a publication this version of the
+  // site cannot draw, and the reader is told so rather than shown half a board.
+  try {
+    state.data = data;
+    data.companies.forEach(company => { company.final = finalOf(data, company); });
+    state.companies = ranked(currentPerCompany(data.companies));
 
-  /* Grouped by first appearance rather than alphabetically, so the file's own
-   * order decides which category leads. An id of its own for each group: a
-   * category's name is a sentence, and the board addresses a group inside a CSS
-   * selector. */
-  const byCategory = new Map();
-  data.behaviours.forEach(behaviour => {
-    const name = behaviour.category || "Behaviours";
-    if (!byCategory.has(name)) byCategory.set(name, []);
-    byCategory.get(name).push(behaviour);
-  });
-  state.categories = [...byCategory].map(([name, members], index) =>
-    ({ id: `category-${index}`, name, members }));
+    /* Grouped by first appearance rather than alphabetically, so the file's own
+     * order decides which category leads. An id of its own for each group: a
+     * category's name is a sentence, and the board addresses a group inside a CSS
+     * selector. */
+    const byCategory = new Map();
+    data.behaviours.forEach(behaviour => {
+      const name = behaviour.category || "Behaviours";
+      if (!byCategory.has(name)) byCategory.set(name, []);
+      byCategory.get(name).push(behaviour);
+    });
+    state.categories = [...byCategory].map(([name, members], index) =>
+      ({ id: `category-${index}`, name, members }));
 
-  renderTable();
-  // The behaviours open by default, each category shut: the categories are what
-  // a reader compares first, and a behaviour is one press away.
-  board.setExpanded("behaviours", true);
-  renderLegend();
-  renderScales();
-  renderTies();
-  nodes.asOf.textContent = data.as_of ? `As of ${data.as_of}` : "";
-  renderTakeaways(data.takeaways || []);
-  showPublishedAt(data.publication);
+    renderTable();
+    // The behaviours open by default, each category shut: the categories are what
+    // a reader compares first, and a behaviour is one press away.
+    board.setExpanded("behaviours", true);
+    renderLegend();
+    renderScales();
+    renderTies();
+    nodes.asOf.textContent = data.as_of ? `As of ${data.as_of}` : "";
+    renderTakeaways(data.takeaways || []);
+    // When the publication the board came from was put online: the pinned one, or
+    // the current one.
+    showPublishedAt(pinned());
+  } catch {
+    board.nodes.table.tBodies[0].replaceChildren();
+    board.nodes.table.tHead.replaceChildren();
+    nodes.status.textContent = INCOMPATIBLE;
+    return;
+  }
   board.wirePopover([document.querySelector("#view-coverage .matrix-wrap")]);
   board.nodes.expandAll.addEventListener("click", () => board.expandEvery());
   nodes.status.textContent = "";

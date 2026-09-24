@@ -9,6 +9,7 @@ taken back.
 
 Run: python3 engine/test_publish.py
 """
+import hashlib
 import json
 import shutil
 import subprocess
@@ -905,3 +906,18 @@ class LinkRunsRequiredTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BoardsTest(unittest.TestCase):
+    """A publication freezes both boards as they stand, and each digest is the one
+    the verifier recomputes from what was stored."""
+
+    def test_each_board_reserialises_to_its_digest(self):
+        for name in publish.BOARD_FILES:
+            board, digest = publish.read_board(name)
+            again = hashlib.sha256(
+                json.dumps(board, **publish.FORMATS[name]).encode()).hexdigest()
+            self.assertEqual(digest, again, name)
+            # The site's own file, unchanged: what is frozen is what is shipped.
+            shipped = json.loads(publish.BOARD_FILES[name].read_text(encoding="utf-8"))
+            self.assertEqual(board, shipped, name)

@@ -45,7 +45,8 @@ const SHARED_WITH_THE_CURRENT = { [TEN_PUBLICATION]: new Set(["documents.json", 
 
 
 /**
- * Answers /api/reader/documents, /api/reader/links and /api/reader/payload,
+ * Answers /api/reader/documents, /api/reader/links, /api/reader/payload and the
+ * two boards, /api/reader/constitutions and /api/reader/governance,
  * or returns false so the caller falls through to its static handler.
  *
  * `dataDir` is the reader's data directory in whatever tree is being served,
@@ -76,6 +77,20 @@ export async function serveReaderRoute(request, response, dataDir, payloadName) 
         boundary: null, source: null, defined: false, judged: false,
       },
     }));
+    return true;
+  }
+  /* The two boards of the front page, as a publication freezes them: the site's
+   * own files, for the current publication. A pinned publication of the fixture
+   * carries none, which is the case a walker checks the page says so for. */
+  if (which === "constitutions" || which === "governance") {
+    if (pinned !== null) {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "no such publication" }));
+      return true;
+    }
+    const body = await readFile(new URL(`../site/${which}.json`, import.meta.url));
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(body);
     return true;
   }
   const name = payloadName;

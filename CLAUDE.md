@@ -1605,6 +1605,29 @@ publication time, or slicing in a SQL function, would let a request read what
 it needs. Either one is a migration in `polaris-supabase` and a change to
 `publish.py`.
 
+### A publication carries the whole of what the site shows
+
+Since 24 September 2026 the front page reads neither board from a file. A
+publication freezes `site/constitutions.json` and `site/governance.json` as they
+stand when it is built, in the `constitutions` and `governance` columns of
+`aci_publications` with their digests (`20260924160000_aci_a_publication_carries_both_boards.sql`
+in `polaris-supabase`), and the page reads them from `/api/reader/constitutions`
+and `/api/reader/governance`, from the publication being served or the one
+`?publication=` pins. The boards are still written as files in this repository;
+publishing is what puts them in front of the public, and whether their figures
+agree with the judges' is the publisher's to check, which nothing does for them.
+
+A publication that cannot be drawn, because it predates the columns, lacks a key
+the page reads, or fails to load, is not shown under today's boards. The page
+and the reader say one sentence instead, the same for every cause, and point to
+the Feedback button for the raw data (`site/publication-data.js`). The public
+site therefore needs a publication built with both boards made public as soon as
+this code is deployed, or it shows that sentence.
+
+The MCP server still reads `governance.json` from the file it ships, so what an
+agent is told and what the page shows can differ until it reads the publication
+too.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,

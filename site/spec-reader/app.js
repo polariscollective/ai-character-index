@@ -15,6 +15,11 @@
  * /api/reader/documents, built by engine/build-spec-reader-data.py.
  */
 
+/* What the reader says when the publication it is serving cannot be read with
+ * this version of the site: one sentence for every cause, shared with the front
+ * page's boards. */
+import { INCOMPATIBLE } from "/publication-data.js";
+
 const DOCUMENTS_URL = "/api/reader/documents";
 /* Which publication the reader shows, resolved in this order:
  *   1. ?publication=<uuid> -- a pin, which lets one publication be linked to and
@@ -4945,6 +4950,9 @@ async function ensureBehaviours(slugs) {
               const at = linksHeld.indexOf(entry);
               if (at >= 0) linksHeld.splice(at, 1);
               console.warn(`Links unavailable (${error.message}).`);
+              // The passages are shown; what is missing is said, not left blank.
+              elements.readerStatus.classList.add("visible");
+              elements.readerStatus.textContent = INCOMPATIBLE;
               return null;
             })
         : null,
@@ -5452,7 +5460,7 @@ async function initialize() {
     if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
   } catch (error) {
     elements.readerStatus.classList.add("visible");
-    elements.readerStatus.textContent = "The cached spec documents or the reader's behaviour set could not be loaded. Serve this directory over HTTP and reload.";
+    elements.readerStatus.textContent = INCOMPATIBLE;
     console.error(error);
   }
 }
