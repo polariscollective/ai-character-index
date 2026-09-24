@@ -2,29 +2,16 @@
  * The two boards of the overview, as answers.
  *
  * A client asking the index what it holds should be able to get what a reader
- * sees: the figures, the scale each one is on, and the words that say what a
- * figure at that value means. Both functions are built from the files the pages
- * are built from, so a client and a reader are never told different things.
+ * sees. Both boards are read from the publication the answer is about, which
+ * froze them when it was built (the constitutions and governance columns of
+ * aci_publications), exactly as the front page reads them, so a client and a
+ * reader are never told different things. A publication built before boards
+ * were frozen answers that it is not compatible, as the page says.
  *
- *   site/document-assessment.js  the criteria of the first board and its figures
- *   site/depth-scale.js          the depth levels and what each one asks for
- *   site/governance.js           the ranking of the second board
- *   site/governance.json         its scores, its scales and its words
- *
- * Nothing here writes a figure down and nothing here writes a rubric down. The
- * few sentences that are this module's own say what a whole row measures, which
- * is the one thing neither of those files states in a sentence.
- *
- * Pure, as app/lib/mcp-tools.mjs is: the first takes a snapshot, the second
- * takes nothing, and a fixture exercises both with no network. The JSON is
- * imported the way app/lib/admin-data.mjs imports the panel's configuration.
+ * Pure, as app/lib/mcp-tools.mjs is: each takes a snapshot and its arguments,
+ * and a fixture exercises both with no network.
  */
-import governance from "../../site/governance.json" with { type: "json" };
 import { ranked as rankedCompanies } from "../../site/governance.js";
-import { CRITERIA, SHOWN_MAX, WHOLE_MAX, FINAL_MAX, CONTRADICTIONS_RULE, HALVING,
-         HOW_SETTLED, NOT_REVIEWED, orderedClaims, wholeFigures, behavioursFigure,
-         categoryFigure, finalFigure } from "../../site/document-assessment.js";
-import { depthScaleOf, levelsOf } from "../../site/depth-scale.js";
 import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
@@ -38,156 +25,146 @@ const PRACTICE = 2;
 const matches = (name, wanted) =>
   !wanted || String(name).toLowerCase().includes(String(wanted).toLowerCase().trim());
 
-/** The behaviours of one publication, grouped as the board groups them. */
-function groupsOf(behaviours) {
-  const byName = new Map();
-  behaviours.forEach(behaviour => {
-    const name = behaviour.category || "Behaviours under test";
-    if (!byName.has(name)) byName.set(name, []);
-    byName.get(name).push(behaviour);
-  });
-  return [...byName].map(([name, members]) => ({ name, members }));
+/* The first board as the front page draws it, from the board the publication
+ * froze (site/constitutions.json as it stood when the publication was built).
+ * Every figure is out of 10, as on the page: a criterion given out of 4 is
+ * answered with both, and the final score is the average of the document as a
+ * whole and the behaviours, with the weights the board carries. */
+const TEN = 10;
+const CRITERION_SCALE = 4;
+const mean = values => (values.length
+  ? values.reduce((sum, value) => sum + value, 0) / values.length : null);
+const numeric = value => (Number.isFinite(value) ? value : null);
+
+/** A depth read against the board's own scale: the level at or below it. */
+function depthLevel(value, scale) {
+  const levels = [...scale].sort((a, b) => a.level - b.level);
+  const reached = [...levels].reverse().find(level => value >= level.level) || levels[0];
+  return { level: reached.level, name: reached.name, means: reached.plain,
+           and_part_of_the_next: value > reached.level };
 }
 
 /**
- * What a depth of this size reads as: the highest level at or below it.
+ * The board of constitutions: what the front page shows, every figure with what
+ * it rests on, for the publication being answered from.
  *
- * A mean of three readings lands between levels most of the time, and a figure
- * reported without the level under it is a number with nothing behind it. The
- * level's own line comes from site/depth-scale.js, which is held to the judges'
- * prompt, so nothing here paraphrases a rubric.
+ * `args.company` narrows it to the companies whose name matches. The comparison
+ * each behaviour's popover folds away is left out, as the page folds it: a
+ * company's answer is about its own constitution.
  */
-function levelAt(mean, scale) {
-  const levels = levelsOf(scale);
-  const reached = [...levels].reverse().find(level => mean >= level.level) || levels[0];
-  return {
-    level: reached.level,
-    anchor: reached.anchor,
-    means: reached.brief,
-    and_part_of_the_next: mean > reached.level,
+export function constitutionsBoard(snapshot, args = {}) {
+  const board = snapshot?.constitutions;
+  if (!board?.companies?.length || !board.behaviours?.length || !board.criteria?.length
+      || !board.weights || !board.scale?.depth) {
+    throw new ToolError(INCOMPATIBLE);
+  }
+  const scale = board.scale.depth;
+  const categories = [...new Set(board.behaviours.map(one => one.category))];
+  const figures = company => {
+    const depths = board.behaviours
+      .map(one => numeric(company.behaviours?.[one.slug]?.score)).filter(v => v !== null);
+    const behaviours = mean(depths) ?? 0;
+    const whole = numeric(company.whole?.total) ?? 0;
+    return { whole, behaviours,
+             final: whole * board.weights.whole + behaviours * board.weights.behaviours };
   };
-}
-
-/* What a whole row of the first board measures. The criteria and the depth
- * levels say what each figure inside a row means; these four say what the row
- * is. */
-const MEASURED = {
-  score: `The two halves of the board added together: the document as a whole out of `
-    + `${WHOLE_MAX}, and how far it goes on the behaviours out of ${WHOLE_MAX}.`,
-  whole: "How the constitution is built, read over the whole document on five criteria.",
-  behaviours: "The mean of the constitution's depths over every behaviour the index asks "
-    + "about.",
-  depth: "How far the constitution goes on one behaviour, from saying nothing about it to "
-    + "setting rules and showing them applied.",
-  group: "The mean of the constitution's depths over the behaviours in one group.",
-};
-
-/** A criterion as the board describes it, before any company is scored on it. */
-function criterionMeasure(criterion) {
-  return {
-    key: criterion.key,
-    name: criterion.name,
-    max: SHOWN_MAX,
-    asked: criterion.asks,
-    anchors: criterion.anchors,
-    scored: criterion.key === "contradictions" ? CONTRADICTIONS_RULE : HALVING,
-    ...(criterion.key === "contradictions"
-      ? { how_settled: HOW_SETTLED, reviewed: NOT_REVIEWED }
-      : {}),
-  };
-}
-
-/**
- * The board of constitutions: every figure of one publication, with its scale.
- *
- * A document the publication carries but nobody assessed answers null for the
- * score and for the document as a whole, which is what the board shows of it.
- */
-export function constitutionsBoard({ publication, payload, documents }, args = {}) {
-  const scale = depthScaleOf(payload);
-  const behaviours = payload.behaviours || [];
-  const assessment = payload.assessment && typeof payload.assessment === "object"
-    ? payload.assessment : {};
-  const groups = groupsOf(behaviours);
-  const all = documents.documents || [];
-  const columns = all.filter(document => matches(document.lab, args.company));
-  if (!columns.length) {
-    throw new ToolError(`no constitution from ${args.company}. This publication carries: `
-      + `${[...new Set(all.map(document => document.lab))].join(", ")}`);
+  // Ranked as the page ranks: by the final score, companies level on it sharing
+  // a place and the next place skipped.
+  const scored = board.companies.map(company => ({ company, ...figures(company) }))
+    .sort((a, b) => b.final - a.final);
+  const ranked = scored.map(entry => ({
+    ...entry,
+    rank: 1 + scored.filter(other => other.final - entry.final > 1e-9).length,
+  }));
+  const chosen = ranked.filter(entry => matches(entry.company.name, args.company));
+  if (!chosen.length) {
+    throw new ToolError(`no company called ${args.company}. This board carries: `
+      + `${board.companies.map(company => company.name).join(", ")}`);
   }
   return {
-    publication,
+    publication: snapshot.publication,
+    as_of: board.as_of ?? null,
     measures: {
-      score: { max: FINAL_MAX, means: MEASURED.score },
-      whole_document: {
-        max: WHOLE_MAX,
-        means: MEASURED.whole,
-        criteria: CRITERIA.map(criterionMeasure),
+      final_score: {
+        max: TEN,
+        means: "The average of the document as a whole and the behaviours. It ranks the "
+          + "companies.",
+        weights: board.weights,
       },
-      behaviours: { max: scale, means: MEASURED.behaviours },
-      group: { max: scale, means: MEASURED.group },
-      depth: {
-        max: scale,
-        means: MEASURED.depth,
-        levels: levelsOf(scale).map(({ level, anchor, brief, bar }) =>
-          ({ level, anchor, means: brief, asked: bar })),
+      whole_document: {
+        max: TEN,
+        means: "How the constitution is built, read over the whole document: the average of "
+          + `${board.criteria.length} criteria, each given from 0 to ${CRITERION_SCALE} and `
+          + "shown out of 10.",
+        criteria: board.criteria.map(criterion => ({
+          id: criterion.id, name: criterion.name, given_out_of: CRITERION_SCALE,
+          means: criterion.what_it_is, why_it_matters: criterion.why_it_matters ?? null,
+        })),
+      },
+      behaviours: {
+        max: TEN,
+        means: "How far the constitution goes on each behaviour, the average over every "
+          + "behaviour, each counting the same.",
+        depth_scale: scale.map(({ level, name, plain }) => ({ level, name, means: plain })),
+        behaviours: board.behaviours.map(one => ({
+          slug: one.slug, name: one.name, category: one.category,
+          is: one.is ?? null, is_not: one.is_not ?? null,
+        })),
       },
     },
-    constitutions: columns.map(column => {
-      const held = assessment[column.id] ?? null;
-      const final = finalFigure(behaviours, held, column);
-      const figure = behavioursFigure(behaviours, column);
-      const whole = held ? wholeFigures(held) : null;
-      const claims = orderedClaims(held);
-      return {
-        id: column.id,
-        lab: column.lab,
-        title: column.title,
-        version: column.version,
-        source_url: column.sourceUrl ?? null,
-        score: final ? { figure: final.value, max: FINAL_MAX } : null,
-        whole_document: whole
-          ? {
-            figure: whole.total,
-            max: WHOLE_MAX,
-            criteria: CRITERIA.map((criterion, index) => ({
-              key: criterion.key,
-              figure: whole.parts[index],
-              max: SHOWN_MAX,
-            })),
-            contradictions: {
-              listed: claims.length,
-              confirmed: claims.filter(claim => claim.confirmed).length,
-            },
-          }
-          : null,
-        behaviours: figure
-          ? {
-            figure: figure.value,
-            max: scale,
-            over: figure.count,
-            level: levelAt(figure.value, scale),
-            groups: groups.map(group => {
-              const value = categoryFigure(group.members, column);
-              return value === null
-                ? null
-                : { name: group.name, figure: value, max: scale,
-                    level: levelAt(value, scale) };
-            }).filter(Boolean),
-            cells: behaviours.map(behaviour => {
-              const depth = behaviour.coverage?.[column.id]?.depth;
-              return Number.isFinite(depth?.mean)
-                ? { behaviour: behaviour.slug, name: behaviour.name,
-                    group: behaviour.category ?? null, figure: depth.mean, max: scale,
-                    level: levelAt(depth.mean, scale) }
-                : null;
-            }).filter(Boolean),
-          }
-          : null,
-      };
-    }),
+    takeaways: board.takeaways ?? [],
+    companies: chosen.map(({ company, whole, behaviours, final, rank }) => ({
+      id: company.id,
+      name: company.name,
+      rank,
+      document: company.document ?? null,
+      publishes_a_constitution: Boolean(company.document),
+      final_score: final,
+      profile: company.profile ?? null,
+      whole_document: {
+        figure: whole,
+        criteria: board.criteria.map(criterion => {
+          const entry = company.whole?.criteria?.[criterion.id] ?? {};
+          const given = numeric(entry.score);
+          return {
+            id: criterion.id, name: criterion.name,
+            figure: given === null ? null : given / CRITERION_SCALE * TEN, given,
+            what_the_document_does: entry.what_the_document_does ?? null,
+            why: entry.why ?? null,
+          };
+        }),
+      },
+      behaviours: {
+        figure: behaviours,
+        categories: categories.map(name => ({
+          name,
+          figure: mean(board.behaviours.filter(one => one.category === name)
+            .map(one => numeric(company.behaviours?.[one.slug]?.score))
+            .filter(v => v !== null)),
+        })),
+        cells: board.behaviours.map(one => {
+          const entry = company.behaviours?.[one.slug] ?? {};
+          const figure = numeric(entry.score);
+          return {
+            behaviour: one.slug, name: one.name, category: one.category, figure,
+            level: figure === null ? null : depthLevel(figure, scale),
+            says: entry.says ?? null, why: entry.why ?? null,
+          };
+        }),
+      },
+    })),
   };
 }
+
+/* The governance board of the publication being answered from. Set at the head
+ * of governanceBoard, which is synchronous, so the helpers below read the one
+ * board that call is about and no other. */
+let governance = null;
+
+/* What a board tool says of a publication that cannot answer it, in the words
+ * the site uses. */
+export const INCOMPATIBLE = "This publication is not compatible with this version of the "
+  + "index: it carries no board of this kind, or not in a shape this server reads.";
 
 /* A practice by its id, from either list, and whether any figure counts it. The
  * one the paper raises as an open problem is counted in neither. */
@@ -212,11 +189,15 @@ const questionOf = id => governance.questions.find(question => question.id === i
  * The board of governance: nine companies on a final score and the two figures
  * it adds.
  *
- * It belongs to no publication. Nothing in it was judged by a panel: the scores
- * were given by hand from public documents, as of the date the data carries,
- * and the answer says so in `as_of` and `scored_by`.
+ * Read from the board the publication froze. Nothing in it was judged by a
+ * panel: the scores were given by hand from public documents, as of the date
+ * the data carries, and the answer says so in `as_of` and `scored_by`.
  */
-export function governanceBoard(args = {}) {
+export function governanceBoard(snapshot, args = {}) {
+  if (!snapshot?.governance?.columns || !snapshot.governance.labs) {
+    throw new ToolError(INCOMPATIBLE);
+  }
+  governance = snapshot.governance;
   const companies = rankedCompanies(governance)
     .filter(company => matches(company.name, args.company));
   if (!companies.length) {
@@ -224,6 +205,7 @@ export function governanceBoard(args = {}) {
       + `${governance.labs.map(lab => lab.name).join(", ")}`);
   }
   return {
+    publication: snapshot.publication,
     as_of: governance.as_of,
     researched: governance.researched,
     scored_by: "Polaris Collective, by hand from public documents. No panel judged these "

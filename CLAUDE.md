@@ -1624,9 +1624,11 @@ the Feedback button for the raw data (`site/publication-data.js`). The public
 site therefore needs a publication built with both boards made public as soon as
 this code is deployed, or it shows that sentence.
 
-The MCP server still reads `governance.json` from the file it ships, so what an
-agent is told and what the page shows can differ until it reads the publication
-too.
+The MCP server reads the same columns. `constitutions_board` and
+`governance_board` answer from the boards of the publication being served, and
+`constitutions_board` now answers the board the front page shows rather than the
+one `/coverage` rebuilds from the payload. A publication without boards answers
+that it is not compatible, as the page does.
 
 ## Where the fork is heading
 

@@ -7,48 +7,68 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { constitutionsBoard, governanceBoard } from "../board-tools.mjs";
+import { constitutionsBoard, governanceBoard, INCOMPATIBLE } from "../board-tools.mjs";
 import { ToolError } from "../mcp-tools.mjs";
 
-const read = async name => JSON.parse(await readFile(
-  new URL(`../../../tests/fixtures/reader/${name}`, import.meta.url), "utf8"));
-
-const payload = await read("ten/behaviours.json");
-const documents = await read("documents.json");
+/* A publication as the MCP server reads it, carrying both boards as they are
+ * frozen: the site's own files. */
+const board = async name => JSON.parse(await readFile(
+  new URL(`../../../site/${name}.json`, import.meta.url), "utf8"));
+const constitutions = await board("constitutions");
+const governance = await board("governance");
 const snapshot = () => ({
   publication: { id: "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14",
-                 published_at: "2026-09-21T10:00:00+00:00" },
-  payload, documents, notes: {},
+                 published_at: "2026-09-21T10:00:00+00:00", is_public: true },
+  payload: { behaviours: [] }, documents: { documents: [] }, notes: {},
+  constitutions, governance,
 });
 
-test("the board of constitutions answers every figure with its scale", () => {
+test("the board of constitutions answers what the front page shows, out of 10", () => {
   const answer = constitutionsBoard(snapshot());
   assert.equal(answer.publication.id, "c3a5e0d2-9f47-4b8e-a1d6-5e2f7b9c0a14");
-  assert.equal(answer.measures.score.max, 20);
-  assert.equal(answer.measures.depth.max, 10);
-  assert.equal(answer.measures.depth.levels.length, 6);
-  assert.equal(answer.measures.whole_document.criteria.length, 5);
-  const one = answer.constitutions.find(item => item.score);
-  assert.ok(one, "no constitution carries a score");
-  assert.equal(one.score.max, 20);
-  assert.equal(one.whole_document.criteria.length, 5);
-  assert.ok(one.behaviours.cells.length > 0);
-  assert.ok(one.behaviours.cells.every(cell => cell.max === 10 && cell.level.means));
+  assert.equal(answer.measures.final_score.max, 10);
+  assert.deepEqual(answer.measures.final_score.weights, constitutions.weights);
+  assert.equal(answer.measures.whole_document.criteria.length, constitutions.criteria.length);
+  assert.equal(answer.companies.length, constitutions.companies.length);
+  // Ranked by the final score, the average of the two halves with the board's weights.
+  const finals = answer.companies.map(company => company.final_score);
+  assert.deepEqual(finals, [...finals].sort((a, b) => b - a));
+  assert.equal(answer.companies[0].rank, 1);
+  for (const company of answer.companies) {
+    const expected = company.whole_document.figure * constitutions.weights.whole
+      + company.behaviours.figure * constitutions.weights.behaviours;
+    assert.ok(Math.abs(company.final_score - expected) < 1e-9, company.name);
+    assert.equal(company.behaviours.cells.length, constitutions.behaviours.length);
+  }
+  // A criterion is answered on both scales: as given out of 4, and as shown.
+  const one = answer.companies.find(company => company.publishes_a_constitution);
+  const criterion = one.whole_document.criteria[0];
+  assert.equal(criterion.figure, criterion.given / 4 * 10);
+  assert.ok(one.behaviours.cells.every(cell => cell.level && cell.says !== undefined));
+  // The comparison the page folds away is not in a company's answer.
+  assert.ok(one.behaviours.cells.every(cell => !("same" in cell) && !("differs" in cell)));
+  assert.deepEqual(answer.takeaways, constitutions.takeaways ?? []);
 });
 
 test("a company argument narrows it, and an unknown one says what there is", () => {
-  const all = constitutionsBoard(snapshot());
-  const named = constitutionsBoard(snapshot(), { company: "zenith" });
-  assert.ok(named.constitutions.length >= 1);
-  assert.ok(named.constitutions.length < all.constitutions.length);
-  assert.ok(named.constitutions.every(one => one.lab === "Zenith"));
+  const named = constitutionsBoard(snapshot(), { company: "openai" });
+  assert.equal(named.companies.length, 1);
+  assert.equal(named.companies[0].name, "OpenAI");
   assert.throws(() => constitutionsBoard(snapshot(), { company: "nobody at all" }),
                 error => error instanceof ToolError
-                  && /This publication carries/.test(error.message));
+                  && /This board carries/.test(error.message));
+});
+
+test("a publication that froze no boards is not compatible, on either tool", () => {
+  const bare = { ...snapshot(), constitutions: null, governance: null };
+  assert.throws(() => constitutionsBoard(bare),
+                error => error instanceof ToolError && error.message === INCOMPATIBLE);
+  assert.throws(() => governanceBoard(bare),
+                error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });
 
 test("the board of governance answers the nine companies in the board's own order", () => {
-  const answer = governanceBoard();
+  const answer = governanceBoard(snapshot());
   assert.equal(answer.companies.length, 9);
   assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 2, 3]);
   // Two figures out of 10, and a final score out of 10 that averages them with
@@ -79,7 +99,7 @@ test("the board of governance answers the nine companies in the board's own orde
 });
 
 test("a company argument narrows the governance board too", () => {
-  const answer = governanceBoard({ company: "anthropic" });
+  const answer = governanceBoard(snapshot(), { company: "anthropic" });
   assert.equal(answer.companies.length, 1);
   assert.equal(answer.companies[0].name, "Anthropic");
   const [published, engages] = answer.companies[0].figures;
@@ -90,7 +110,7 @@ test("a company argument narrows the governance board too", () => {
     .flatMap(figure => [...figure.questions.map(one => one.id),
                         ...figure.practices.map(one => one.id)]);
   assert.equal(new Set(rows).size, rows.length);
-  assert.throws(() => governanceBoard({ company: "nobody at all" }),
+  assert.throws(() => governanceBoard(snapshot(), { company: "nobody at all" }),
                 error => error instanceof ToolError && /This board carries/.test(error.message));
 });
 

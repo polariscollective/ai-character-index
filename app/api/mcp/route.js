@@ -143,16 +143,17 @@ const handler = createMcpHandler(
         + "governance_board scores what the companies do around them instead. A "
         + "company that publishes no constitution is on the board at nought and "
         + "says so.\n\n"
-        + "Each constitution answers with a score out of 20, in two halves.\n\n"
-        + "The document as a whole, out of 10, is five criteria: what wins when "
-        + "two of its own rules clash, how firm each rule is and who may lift "
-        + "it, whether the rules say why they exist, which of the situations a "
-        + "model is used in have rules of their own, and the clashes the "
-        + "document leaves unsettled.\n\n"
-        + "How far it goes on each behaviour, out of 10 each, over the behaviours "
-        + "the index carries, grouped under honesty and epistemics, harm and "
-        + "safety, autonomy, oversight and authority, and helpfulness and "
-        + "judgement. The "
+        + "Each company answers with a final score out of 10, the average of two "
+        + "halves, each counting for half, and is ranked by it.\n\n"
+        + "The document as a whole, out of 10, is the average of five criteria, each "
+        + "given from 0 to 4 and shown out of 10: clarity when two rules are "
+        + "contradictory, how firm each rule is and who may lift it, whether the "
+        + "rules say why they exist, which of the situations a model is used in "
+        + "have rules of their own, and unsettled contradictions between rules.\n\n"
+        + "The behaviours, out of 10, are the average of how far the constitution "
+        + "goes on each behaviour the index carries, grouped under honesty and "
+        + "epistemics, harm and safety, autonomy, oversight and authority, and "
+        + "helpfulness and judgement. The "
         + "scale is 0 absent, 2 named, 4 discussed, 6 prescribed, 8 demonstrated "
         + "with worked examples, and 10 bounded, which asks that the edge be "
         + "shown, that a clash with another of the document's own rules be "
@@ -160,9 +161,9 @@ const handler = createMcpHandler(
         + "tell apart. An odd figure means the level below is fully met and the "
         + "one above only in part.\n\n"
         + "Every figure comes back with the level it reads as, what the document "
-        + "says on that row, how that stands beside the other constitutions, and "
-        + "why the figure is what it is, so a figure can be read without a "
-        + "second call.\n\n"
+        + "says on that row and why the figure is what it is, so a figure can be "
+        + "read without a second call. The answer is the board the publication "
+        + "froze, the same one the front page shows, with its takeaways.\n\n"
         + "Pass company to narrow to one, such as OpenAI. This is the board on "
         + "the index's front page. The whole board runs to a few tens of "
         + "thousands of characters.",
@@ -217,7 +218,7 @@ const handler = createMcpHandler(
           "One company's name, or part of it, such as Anthropic. All nine by "
           + "default."),
       }),
-    }, args => answer(() => governanceBoard(args)));
+    }, args => answer(snapshot => governanceBoard(snapshot, args)));
 
     server.registerTool("compare_documents", {
       title: "Compare two documents on one behaviour",

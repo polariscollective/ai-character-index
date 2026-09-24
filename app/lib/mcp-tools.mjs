@@ -622,17 +622,19 @@ Two tools answer with a whole scored board rather than with passages, and they
 answer different questions about the same companies.
 
 constitutions_board scores the documents. How far each published constitution
-goes: a score out of 20 per document, being the document as a whole out of 10
-over five criteria, and how far it goes out of 10 on each behaviour the index
-carries. It carries the publication's own figures.
+goes: a final score out of 10 per company, the average of the document as a
+whole out of 10 over five criteria and how far it goes out of 10 on the
+behaviours the index carries. It is the board the publication froze, the one
+the front page shows.
 
 governance_board scores what the companies do around those documents. Whether a
 company publishes a constitution at all, whether it logs the changes it makes to
 it, what it says about the filters that sit outside the model, which rules it
 declares can never be lifted, and what it states about training, testing and
 monitoring against its own text. Nine companies, two figures out of 10 each,
-never added. Those scores were given by hand from public documents, that board
-belongs to no publication, and a nought there means nothing public was found.
+averaged into a final score out of 10. Those scores were given by hand from
+public documents, and a nought there means nothing public was found. The board
+is the one the publication froze, as the front page shows it.
 
 Both take an optional company, and both carry the wording each figure was given
 against, so a figure can be read without a second call.
