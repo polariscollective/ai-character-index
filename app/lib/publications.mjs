@@ -46,6 +46,18 @@ export function servesDevelopment(env = process.env) {
   return where !== "production";
 }
 
+/**
+ * The query fragment that picks a pinned publication.
+ *
+ * On a development deployment a pin reaches any publication, which is how a
+ * build nobody has published is looked at on a real surface. On production it
+ * reaches only a published one: a copied address is not a way in to a draft, and
+ * a pin to one answers as if the publication did not exist.
+ */
+export function pinnedPublication(pin, env = process.env) {
+  return servesDevelopment(env) ? `id=eq.${pin}` : `id=eq.${pin}&is_public=is.true`;
+}
+
 /** The query fragment that picks the current publication. */
 export function currentPublication(env = process.env) {
   const newest = "order=published_at.desc&limit=1";
@@ -69,7 +81,7 @@ export function currentPublication(env = process.env) {
 export async function resolvePublicationId(pin, fetchImpl = fetch) {
   if (pin) {
     const rows = await select("aci_publications",
-                              `id=eq.${pin}&select=id`, fetchImpl);
+                              `${pinnedPublication(pin)}&select=id`, fetchImpl);
     return rows.length ? rows[0].id : null;
   }
   const rows = await select("aci_publications",
@@ -202,7 +214,7 @@ export async function publicationRow(id, fetchImpl = fetch) {
   const columns = "id,published_at,published_by,notes,panel,rubric,"
                 + "is_public,payload_sha256,documents_sha256";
   const query = id
-    ? `id=eq.${id}&select=${columns}`
+    ? `${pinnedPublication(id)}&select=${columns}`
     : `select=${columns}&${currentPublication()}`;
   const rows = await select("aci_publications", query, fetchImpl);
   if (!rows.length) return null;

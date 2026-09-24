@@ -68,9 +68,14 @@ class PromptTest(unittest.TestCase):
         text = assessment_call.system_prompt("contradictions")
         self.assertIn("strict and places the two rules at different ranks", text)
 
-    def test_the_criteria_prompt_caps_a_vague_conflict_rule_at_two(self):
+    def test_the_criteria_prompt_holds_a_vague_conflict_rule_to_two_on_its_own(self):
+        """An order weighed as a whole earns 2 by itself, and 3 beside rules that
+        decide a clash in advance. The flat ceiling was withdrawn on 24 September
+        2026 because it left a document of that shape with nowhere to sit."""
         text = assessment_call.system_prompt("criteria")
-        self.assertIn("Either is at most 2, however detailed.", text)
+        self.assertIn("Either is at most 2 on its own, however detailed.", text)
+        self.assertIn("3 = that order, and beside it rules that do decide a clash in advance",
+                      text)
 
     def test_the_finding_prompt_asks_for_every_contradiction_and_no_score(self):
         v1 = (PROMPTS / "assessment-contradictions-v1.txt").read_text()

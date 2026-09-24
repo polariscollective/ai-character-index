@@ -42,7 +42,9 @@ DOCUMENT_ASSESSMENT_JS = ROOT / "site" / "document-assessment.js"
 # "CONFLICT_RULES: what the document says, ...", and not "CONFLICT_RULES: <0 to 4>"
 QUESTION = re.compile(r"^([A-Z_]+): ([a-z].*)$")
 # "2 = an order of priority between its rules ..."
-ANCHOR = re.compile(r"^([024]) = (.+)$")
+# Any level the prompt describes, not only the even ones: conflict rules gained
+# a 3 on 24 September 2026 and the site has to show whatever the prompt asks.
+ANCHOR = re.compile(r"^(\d) = (.+)$")
 # "2. actions the model takes on its own with tools, such as sending, buying or deleting;"
 SITUATION = re.compile(r"^\d\. (.+?)[;.]$")
 
@@ -77,8 +79,8 @@ def site_module(path, expression):
 
 
 def prompt_criteria():
-    """The four criteria the judges were asked, each with its question and its
-    anchors at 0, 2 and 4, and the six situations the fourth names."""
+    """The four criteria the judges were asked, each with its question and every
+    anchor it describes, and the six situations the fourth names."""
     lines = assessment_call.PROMPTS["criteria"].read_text(encoding="utf-8").splitlines()
     asks, anchors, situations, key = {}, {}, [], None
     for line in lines:
@@ -150,7 +152,11 @@ class PromptCriteriaTest(unittest.TestCase):
         asks, anchors, situations = prompt_criteria()
         self.assertEqual(sorted(asks), sorted(assessment_call.CRITERIA))
         for key in assessment_call.CRITERIA:
-            self.assertEqual(sorted(anchors[key]), [0, 2, 4], key)
+            # Every criterion describes 0, 2 and 4. Conflict rules describes 3 as
+            # well, added on 24 September 2026 for an order weighed as a whole
+            # beside rules that decide a clash in advance.
+            expected = [0, 2, 3, 4] if key == "conflict_rules" else [0, 2, 4]
+            self.assertEqual(sorted(anchors[key]), expected, key)
         self.assertEqual(len(situations), 6)
 
 

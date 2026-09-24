@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { currentPublication, isPublicationId, publicationColumn, publicationRow,
          readerResponse, resetHeldColumns, resolvePublicationId,
-         SERVES_DEVELOPMENT } from "../publications.mjs";
+         SERVES_DEVELOPMENT, pinnedPublication } from "../publications.mjs";
 
 const ID = "3114dd65-c6f2-5cb3-bf98-af5b314381c3";
 
@@ -143,14 +143,23 @@ test("production ignores the variable however it is set", () => {
   );
 });
 
-test("a pin asks for that publication", async () => {
+test("a pin asks for that publication, and on production only a published one", async () => {
   const { calls, fetchImpl } = stub([{ documents: { ok: 1 } }]);
   await publicationColumn("documents", ID, fetchImpl);
   assert.match(calls[0].url, new RegExp(`id=eq\\.${ID}`));
   assert.doesNotMatch(calls[0].url, /order=/);
-  // A pin reaches a draft: previewing what is about to be published is the
-  // whole point of having a draft at all.
-  assert.doesNotMatch(calls[0].url, /is_public/);
+  // A copied address is not a way in to a draft on production: the pin asks
+  // for a published row, and a draft answers as if it did not exist.
+  assert.match(calls[0].url, /is_public=is\.true/);
+});
+
+test("on a development deployment a pin reaches a draft", () => {
+  // Previewing what is about to be published is what a development deployment
+  // is for, so there a pin names any publication.
+  const env = { [SERVES_DEVELOPMENT]: "true" };
+  assert.equal(pinnedPublication(ID, env), `id=eq.${ID}`);
+  assert.match(pinnedPublication(ID, {}), /is_public=is\.true/);
+  assert.match(pinnedPublication(ID, { ...env, VERCEL_ENV: "production" }), /is_public=is\.true/);
 });
 
 /* A surface that cites a build has to know whether anyone published it: served

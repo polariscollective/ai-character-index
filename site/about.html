@@ -708,24 +708,16 @@ openai--model-spec@2025-12-18 &gt; #letter_and_spirit &gt; &para;3</code></pre>
   <!-- Every publication the public has been shown, newest first. Written here by
        hand for now: a publication does not yet carry a change-log field of its
        own, and when it does this list should be read from it. -->
+  <!-- Written from /api/reader/publications by the script at the foot of the
+       page: on production the publications made public, on a development
+       deployment every one, drafts marked. Each opens the site as it was. The
+       two paragraphs written by hand for the first publications are kept, by id,
+       in the script. -->
   <section class="m" id="changelog">
     <h2>Change log</h2>
-    <p>Each publication of the index is fixed once it is made. These are the publications that
-    have been made public, newest first, and each opens in the doc reader as it was.</p>
-    <div class="changelog">
-      <h3><a href="/spec-reader/?publication=1919ee6b-8a81-4ab5-902a-e949857db028" target="_blank" rel="noopener noreferrer">16 September 2026, publication
-      <code>1919ee6b</code></a>, current</h3>
-      <p>It keeps the passages of the publication before it, and every depth figure is worked out
-      again. The depth figures had rested on fewer passages than the doc reader shows, and they now
-      rest on every passage a reader sees, related passages included. One figure, the depth for
-      avoiding both over- and under-caution in the Alibaba constitution, was arrived at differently
-      from every other figure, and the publication says so.</p>
-      <h3><a href="/spec-reader/?publication=07958c5e-eb91-4e31-81f2-32f79c01b84c" target="_blank" rel="noopener noreferrer">15 September 2026, publication
-      <code>07958c5e</code></a>, withdrawn</h3>
-      <p>The first publication to cover thirteen behaviours over four documents on one method
-      throughout, with a depth from 0 to 4. It was withdrawn on 16 September 2026 because its
-      depth figures rested on fewer passages than the doc reader shows.</p>
-    </div>
+    <p id="changelog-lead">Each publication of the index is fixed once it is made. These are the
+    publications that have been made public, newest first, and each opens the site as it was.</p>
+    <div class="changelog" id="changelog-list"><p>Loading.</p></div>
   </section>
   <!-- The one technical section on the page, and the last. Everything above it is
        written for a reader who will never clone anything. -->
@@ -1030,6 +1022,59 @@ if (dialog) {
   }
 }
 
+
+/* The change log, from the publications this deployment may show. */
+const HANDWRITTEN = {
+  "1919ee6b-8a81-4ab5-902a-e949857db028": "It keeps the passages of the publication before it, "
+    + "and every depth figure is worked out again. The depth figures had rested on fewer passages "
+    + "than the doc reader shows, and they now rest on every passage a reader sees, related "
+    + "passages included. One figure, the depth for avoiding both over- and under-caution in the "
+    + "Alibaba constitution, was arrived at differently from every other figure, and the "
+    + "publication says so.",
+  "07958c5e-eb91-4e31-81f2-32f79c01b84c": "The first publication to cover thirteen behaviours "
+    + "over four documents on one method throughout, with a depth from 0 to 4. It was withdrawn "
+    + "on 16 September 2026 because its depth figures rested on fewer passages than the doc "
+    + "reader shows.",
+};
+const changelogList = document.getElementById("changelog-list");
+if (changelogList) {
+  const WHEN = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+    timeZone: "UTC", timeZoneName: "short",
+  });
+  fetch("/api/reader/publications")
+    .then(response => response.ok ? response.json() : Promise.reject(new Error(response.status)))
+    .then(({ development, publications }) => {
+      if (development) {
+        document.getElementById("changelog-lead").textContent = "Each publication of the index "
+          + "is fixed once it is made. This deployment is for development, so it lists every "
+          + "publication, newest first, including those never made public, and each opens the "
+          + "site as it was.";
+      }
+      const firstPublic = publications.find(row => row.is_public);
+      changelogList.replaceChildren(...publications.flatMap((row, index) => {
+        const head = document.createElement("h3");
+        const link = document.createElement("a");
+        link.href = `/?publication=${row.id}`;
+        const code = document.createElement("code");
+        code.textContent = row.id.slice(0, 8);
+        link.append(`${WHEN.format(new Date(row.published_at)).replace(",", " at")}, publication `,
+          code);
+        const standing = [];
+        if (development ? index === 0 : row === firstPublic) standing.push("current");
+        if (!row.is_public) standing.push("unpublished");
+        head.append(link, standing.length ? `, ${standing.join(", ")}` : "");
+        const text = document.createElement("p");
+        text.textContent = HANDWRITTEN[row.id] || row.notes || "";
+        return text.textContent ? [head, text] : [head];
+      }));
+    })
+    .catch(() => {
+      changelogList.replaceChildren(Object.assign(document.createElement("p"), {
+        textContent: "The list of publications could not be loaded.",
+      }));
+    });
+}
 
 /* The citation for the build being read.
  *

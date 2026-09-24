@@ -45,7 +45,11 @@ export const CRITERIA = [
       0: "Nothing.",
       2: "An order of priority between its rules that the document asks to be weighed as a "
         + "whole, or an instruction to settle conflicts by judgement or by the document's "
-        + "spirit. Either is at most 2, however detailed.",
+        + "spirit. Either is at most 2 on its own, however detailed.",
+      3: "That order, and beside it rules that do decide a clash in advance: constraints the "
+        + "document calls absolute and gives the win to whatever is weighed against them, or a "
+        + "named winner for a particular pair of its rules, or worked cases showing the order "
+        + "applied.",
       4: "A strict order that decides who wins whenever two ranks conflict, a rule for two "
         + "rules of the same rank that names a winner or an outcome, and examples of the order "
         + "applied." } },
