@@ -38,6 +38,9 @@
      margins growing with the screen, which is the opposite of proportional:
      capped at 1280 the margins were 336px at 1920 and 118px at 1280. */
   --measure: 84vw;
+  /* Where the menu of sections has room in the margin, the page gives it more:
+     five points of the window taken from either side of the boards (24
+     September 2026), so the menu reads as a column of its own. */
   /* 24px, the same as the reader's bar and the two prose pages'. The bars were
      briefly indented to meet the page's own text, which put the brand a hundred
      pixels in and made this page's header read as a different one. Chrome runs
@@ -597,13 +600,16 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   padding: 0; font: inherit;
 }
 .section-fold > summary::-webkit-details-marker { display: none; }
-.section-fold > summary::after {
-  content: ""; flex: none; width: 6px; height: 6px; margin-bottom: 20px;
+/* Before the heading and centred on its words rather than on the rule above
+   them: the heading's line is 26px with 12px under it, so the chevron's middle
+   sits 25px up from the bottom of the summary. */
+.section-fold > summary::before {
+  content: ""; flex: none; width: 6px; height: 6px; margin-bottom: 22px;
   border-right: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint);
   transform: rotate(-45deg); transition: transform .15s ease;
 }
-.section-fold[open] > summary::after { transform: rotate(45deg); margin-bottom: 22px; }
-.section-fold > summary:hover::after { border-color: var(--ink); }
+.section-fold[open] > summary::before { transform: rotate(45deg); }
+.section-fold > summary:hover::before { border-color: var(--ink); }
 .section-fold > summary:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 
 /* The small square beside each level of the behaviour scale, painted the colour
@@ -730,18 +736,19 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* A section of prose under a board: motivation, what comes next. */
 .page-prose p { margin: 0 0 12px; max-width: 72ch; font-size: 15px; line-height: 1.6; }
 /* The menu of the page's sections, down the left margin. It lives in the margin
-   the page's measure leaves (8vw on either side) and only where that margin is
+   the page's measure leaves (13vw on either side) and only where that margin is
    wide enough to hold a short title, so it never takes width from a board. It
    is quiet: faint small text, the current section in ink with the chartreuse
    rule the framework uses for an active state. */
 .page-menu { display: none; }
+@media (min-width: 1200px) { :root { --measure: 74vw; } }
 /* A section the menu scrolls to stops clear of the header above it. */
 [data-menu] { scroll-margin-top: 80px; }
-@media (min-width: 1400px) {
+@media (min-width: 1200px) {
   .page-menu {
-    display: block; position: fixed; top: 140px; left: 16px;
-    width: calc(8vw - 28px); max-height: calc(100vh - 180px); overflow-y: auto;
-    font-size: 12px; line-height: 1.35;
+    display: block; position: fixed; top: 140px; left: 20px;
+    width: calc(13vw - 36px); max-height: calc(100vh - 180px); overflow-y: auto;
+    font-size: 13px; line-height: 1.35;
   }
   .page-menu ol { list-style: none; margin: 0; padding: 0; }
   .page-menu li { margin: 0 0 6px; }
@@ -767,6 +774,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 .gov-findings h2 {
   margin: 0 0 12px;
+  line-height: 1.25;
   font-family: var(--display);
   font-size: 21px;
   font-weight: 600;
@@ -1169,5 +1177,5 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 @media (prefers-reduced-motion: reduce) {
   .view-tab, .gov-button, .row-toggle::before,
-  .gov-pop summary::before, .section-fold > summary::after { transition: none; }
+  .gov-pop summary::before, .section-fold > summary::before { transition: none; }
 }
