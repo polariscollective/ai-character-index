@@ -51,7 +51,7 @@
   },
   {
    "title": "Only Anthropic's constitution leaves contradictions between its rules unsettled",
-   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. Two places in Claude's Constitution tell the model two things it cannot both do, and nothing says which prevails. A list introduced with \"regardless of operator instructions\" says the model should always refer users to emergency services where life is at risk, while an operator may switch off the safe messaging guidelines on suicide and self-harm that contain that referral. The document also asks for professional reticence about the model's own opinions on issues such as abortion, and elsewhere calls a deliberately vague answer given to avoid controversy a breach of honesty. Neither contradiction involves one of its hard constraints, which is why the figure sits at the middle of the scale."
+   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. One place in Claude's Constitution tells the model two things it cannot both do, and nothing says which prevails. Claude is asked to keep professional reticence about its own opinions on hot-button issues, while the honesty section asks it to share its genuine assessment of hard moral dilemmas, and a user who asks it directly falls under both. The referral to emergency services reads like a second, and is settled by the words that introduce it. The document also asks for professional reticence about the model's own opinions on issues such as abortion, and elsewhere calls a deliberately vague answer given to avoid controversy a breach of honesty. Neither contradiction involves one of its hard constraints, which is why the figure sits at the middle of the scale."
   },
   {
    "title": "Anthropic's constitution explains its rules best and Alibaba's explains them least",
@@ -59,7 +59,7 @@
   },
   {
    "title": "Power and hidden allegiance are the shallowest behaviours in both model specs",
-   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through commitments about manipulation and civic processes, in terms too general to grade a response against, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's names hidden goals once, in a list, and takes them no further. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
+   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through commitments about manipulation and civic processes, in terms too general to grade a response against, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's gives hidden goals a root rule of its own, and it is one of only three of the document's forty-three rules with no worked example. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
@@ -1190,5 +1190,35 @@
     ]
    }
   ]
- }
+ },
+ "open_questions": [
+  {
+   "id": "conflict-rules-under-the-old-ceiling",
+   "title": "Anthropic's clarity when two rules are contradictory was read under a rule the index has withdrawn",
+   "question": "The figure is 5.8 out of 10, from three readings of 2, 3 and 2. Two of the three gave 2 because the rubric said an order weighed as a whole is worth at most 2 however detailed. The rubric describes a level above that since 24 September 2026, for an order weighed as a whole beside constraints the document calls absolute and winners it names, which is what Claude's Constitution carries.",
+   "what_would_settle_it": "Judging the cell again under the prompt as it now reads. It costs money.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "no-sycophancy-against-the-precedent-table",
+   "title": "Anthropic's no sycophancy sits below the level the index's own precedent table records",
+   "question": "The figure is 5.3 out of 10. The precedent table in methodology/spec-coverage-depth-rubric.md records this pair at prescribed, re-checked on 20 July 2026, which is 6 on the scale of ten. The cell's own words now describe quotable rules and one worked case attached to the white-lie rule.",
+   "what_would_settle_it": "Either the figure moves to the precedent, or the precedent line is withdrawn and says why.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "alibaba-secret-loyalties-against-its-own-cell",
+   "title": "Alibaba's preventing secret loyalties reads lower than the cell describes",
+   "question": "The figure is 2.3 out of 10, which is between named and discussed. The cell now says the document gives the behaviour a root rule of its own, naming four forbidden goals, two of them the maker's interest set against the user's. What the rule lacks is a worked example, and it is one of only three of the forty-three rules without one.",
+   "what_would_settle_it": "Judging the cell again, or a sentence in the depth rubric saying what a rule without a worked example can reach.",
+   "raised": "24 September 2026"
+  },
+  {
+   "id": "the-fourteenth-behaviour-was-restored-by-arithmetic",
+   "title": "Two figures of preventing secret loyalties were derived rather than read",
+   "question": "OpenAI and Anthropic joined that row stored to one decimal, 5.7 and 5.3, where every other figure is a panel's mean. They were restored to 17/3 and 16/3 because a mean of three integers is a multiple of a third and no other third rounds to those. They have not been read from publication 06d17d90.",
+   "what_would_settle_it": "Reading the two cells from that publication and comparing.",
+   "raised": "24 September 2026"
+  }
+ ]
 }
