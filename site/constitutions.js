@@ -730,7 +730,7 @@ function renderTable() {
 
   /* The behaviours: every behaviour's depth averaged, which is the other half of
    * the final score, then each category with its behaviours folded under it. A
-   * category counts for as many thirteenths as it has behaviours, which is what
+   * category counts for its share of every behaviour on the board, which is what
    * the mean of every behaviour amounts to. */
   const behavioursRow = element("tr", "total-row outside-row half-row");
   behavioursRow.dataset.level = "1";

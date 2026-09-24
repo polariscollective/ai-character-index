@@ -95,10 +95,16 @@
        across first, and a rail down the side took a fifth of the width from it.
        They are written here once and never repeated inside a popover, so a
        reader learns what a figure means in one place. -->
-  <!-- The numbered notes the board's rows point to, above the scale the third
-       one refers to. The numbers are the ones constitutions.js writes beside
-       the rows' names. -->
-  <ol class="gov-notes" id="board-notes" data-menu="Notes">
+  <section class="depth-key" id="cov-scale" data-menu="Behaviour scale" aria-labelledby="behaviour-scale-title">
+    <h2 id="behaviour-scale-title"></h2>
+    <ol class="depth-key-list" id="behaviour-scale"></ol>
+  </section>
+  <!-- The numbered notes the board's rows point to, under the scale the third
+       one refers to, with a heading as the governance view gives its own. The
+       numbers are the ones constitutions.js writes beside the rows' names. -->
+  <section class="gov-findings gov-notes-rail" id="cov-notes" data-menu="Notes" aria-labelledby="cov-notes-title">
+  <h2 id="cov-notes-title">Notes</h2>
+  <ol class="gov-notes" id="board-notes">
     <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
     behaviours, each counting for half. It ranks the companies. Every figure on the board is out
     of 10, and each row says under its name how much it counts for in the figure it belongs
@@ -110,7 +116,7 @@
     without saying which rule wins.</li>
     <li value="3"><strong>The behaviours.</strong> How far the constitution goes on each behaviour
     the index asks about, from saying nothing about it to setting rules and showing them applied
-    to worked examples, on the scale below. For us, a behaviour is one precise thing a
+    to worked examples, on the scale above. For us, a behaviour is one precise thing a
     constitution can ask of a model, such as deferring to users&rsquo; decisions about their own
     lives, or not asserting what the model believes to be false. Each is written in two parts,
     what it requires and where it stops, so that a careful reader could mark every passage of a
@@ -120,9 +126,6 @@
     We wrote the behaviours, their definitions and the categories ourselves, and all three are
     open to challenge.</li>
   </ol>
-  <section class="depth-key" id="cov-scale" data-menu="Behaviour scale" aria-labelledby="behaviour-scale-title">
-    <h2 id="behaviour-scale-title"></h2>
-    <ol class="depth-key-list" id="behaviour-scale"></ol>
   </section>
   <p class="gov-foot" id="ties"></p>
   <p class="gov-date" id="as-of"></p>

@@ -1,6 +1,6 @@
 {
  "as_of": "September 2026",
- "publication": "de378ff3-008f-4977-92ce-d006e90699b9",
+ "publication": "06d17d90-957e-4eaa-a2d6-0eaead4e45fc",
  "scale": {
   "depth": [
    {
@@ -42,11 +42,11 @@
  "takeaways": [
   {
    "title": "Six of the nine companies publish no constitution",
-   "text": "As of September 2026, only OpenAI, Alibaba and Anthropic publish a constitution. DeepSeek, Google DeepMind, Meta, Mistral AI, Moonshot AI and xAI publish none, so each of them scores 0.0 out of 10 on every figure of the board. The three that publish sit close together on the final score: 8.5 out of 10 for OpenAI, 8.4 for Alibaba and 7.4 for Anthropic. The smallest gap between a company that publishes and one that does not is therefore 7.4 points. A zero records what is public. A document of this kind may exist inside a company without having been released, and nobody outside can check a model against it. Publishing leaves one question open as well: Alibaba's constitution names no model or product that it governs."
+   "text": "As of September 2026, only OpenAI, Alibaba and Anthropic publish a constitution. DeepSeek, Google DeepMind, Meta, Mistral AI, Moonshot AI and xAI publish none, so each of them scores 0.0 out of 10 on every figure of the board. The three that publish sit close together on the final score: 8.4 out of 10 for OpenAI, 8.2 for Alibaba and 7.3 for Anthropic. The smallest gap between a company that publishes and one that does not is therefore 7.3 points. A zero records what is public. A document of this kind may exist inside a company without having been released, and nobody outside can check a model against it. Publishing leaves one question open as well: Alibaba's constitution names no model or product that it governs."
   },
   {
    "title": "Anthropic's constitution goes deepest on the behaviours and is the weakest of the three as a document",
-   "text": "Anthropic has the highest figure on the behaviours, 8.1 out of 10, ahead of Alibaba on 8.0 and OpenAI on 7.4. On the document as a whole it has the lowest, 6.7 out of 10, against 9.5 for OpenAI and 8.8 for Alibaba, which places it third on the final score. Claude's Constitution asks its four core properties to be weighed as a whole, so no pair of them has a winner stated in advance, and it scores 5.8 out of 10 on clarity when two rules are contradictory where both model specs score 10.0. Outside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a binding rule from a statement of intent, which gives it 6.7 on how firm each rule is against 9.2 for the other two."
+   "text": "Anthropic has the highest figure on the behaviours, 7.9 out of 10, ahead of Alibaba on 7.6 and OpenAI on 7.3. On the document as a whole it has the lowest, 6.7 out of 10, against 9.5 for OpenAI and 8.8 for Alibaba, which places it third on the final score. Claude's Constitution asks its four core properties to be weighed as a whole, so no pair of them has a winner stated in advance, and it scores 5.8 out of 10 on clarity when two rules are contradictory where both model specs score 10.0. Outside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a binding rule from a statement of intent, which gives it 6.7 on how firm each rule is against 9.2 for the other two."
   },
   {
    "title": "Only Anthropic's constitution leaves contradictions between its rules unsettled",
@@ -57,16 +57,16 @@
    "text": "On reasons for the rules, Anthropic scores 9.2 out of 10, OpenAI 8.3 and Alibaba 5.8. It is the only criterion of the document as a whole on which Anthropic does not come last. Nearly every rule in Claude's Constitution that constrains the model says why it exists, in terms specific enough to decide a case the document does not show. OpenAI's reasons run through its safety, autonomy, privacy and honesty rules and stop at the formatting rules and the preset voice. Most of Alibaba's 43 rules are stated as requirements and stop there. Its prohibition on harmful content names the article of the regulation behind it and says no more, and its worked examples show where a line falls without saying what the line protects."
   },
   {
-   "title": "The concentration of power is the shallowest behaviour in both model specs",
-   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and for Alibaba, at 5.3. Anthropic scores 7.0. OpenAI's Model Spec reaches the subject through commitments about manipulation and civic processes and a list of critical harms naming persecution and mass surveillance, in terms too general to grade a response against. Alibaba's gives quotable rules for one facet and leaves the rest untouched. Claude's Constitution asks how much power is at stake and how reversible its concentration would be, tests whether it is taken by fair means and stays subject to courts and a free press, and makes assisting the most flagrant attempts one of its hard constraints. Neither model spec treats power held by a state, a company or an AI developer as something the model should decline to help concentrate."
+   "title": "Power and hidden allegiance are the shallowest behaviours in both model specs",
+   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through commitments about manipulation and civic processes, in terms too general to grade a response against, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's names hidden goals once, in a list, and takes them no further. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
-   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories."
+   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, level with preventing secret loyalties as its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories."
   },
   {
    "title": "No behaviour reaches the top of the depth scale in any constitution",
-   "text": "A depth of 10 asks that, for every part of a behaviour, the document shows where the line falls, names one of its own rules that pulls against it and says which prevails, and says what to do when a case cannot be decided. None of the 39 behaviour figures of the three published constitutions reaches it, and the highest is 9.3, Anthropic on honesty and non-deception. The three agree most closely on instruction-hierarchy conformance, 9.0 out of 10 for OpenAI and 8.7 for Alibaba and Anthropic, and on how to approach tradeoffs, where all three score 8.7. Anthropic reaches that 8.7 with an order of priorities it asks to be weighed as a whole: worked cases settle particular clashes, and there is no general rule for two rules of the same rank."
+   "text": "A depth of 10 asks that, for every part of a behaviour, the document shows where the line falls, names one of its own rules that pulls against it and says which prevails, and says what to do when a case cannot be decided. None of the 42 behaviour figures of the three published constitutions reaches it, and the highest is 9.3, Anthropic on honesty and non-deception. The three agree most closely on instruction-hierarchy conformance, 9.0 out of 10 for OpenAI and 8.7 for Alibaba and Anthropic, and on how to approach tradeoffs, where all three score 8.7. Anthropic reaches that 8.7 with an order of priorities it asks to be weighed as a whole: worked cases settle particular clashes, and there is no general rule for two rules of the same rank."
   }
  ],
  "criteria": [
@@ -129,6 +129,13 @@
    "category": "Autonomy, oversight and authority",
    "is": "Whether the document leaves decisions that belong to the user **with the user**, including decisions the model thinks are wrong. It allows the model to say once that it disagrees, and stops it at steering, nagging or overriding.",
    "is_not": "Protecting somebody from an operator or from **self-harm**, where the document lets the model hold a line the user is pushing against."
+  },
+  {
+   "slug": "preventing-secret-loyalties",
+   "name": "Preventing secret loyalties",
+   "category": "Autonomy, oversight and authority",
+   "is": "Whether the document tells the model never to **covertly favour a party**, its own developer included, and to make any partiality it has been instructed to show evident to the people it serves. It covers refusing to help install a **hidden loyalty** in any AI system, through training data, specifications, prompts or weakened audits, and reporting such attempts.",
+   "is_not": "The honesty of the model's ordinary assertions, and helping someone seize power by other means, which the board scores as **honesty** and **concentration of power**."
   },
   {
    "slug": "avoiding-over-and-under-caution",
@@ -326,6 +333,13 @@
      "why": "Rules with worked cases across the behaviour and a **named exception** for human rights violations, short of covering every facet.",
      "same": "All three documents make even-handedness the default and ask the model to hold back its own opinion. One side can still be argued on request in all of them, by an operator switching the default off in Anthropic's constitution and by a user asking Alibaba's model to state a leaning outright.",
      "differs": "Alibaba's spec sorts questions by type, asking for neutral academic language and an attribution to the doctrine being described, and its exception covers national law and core values alongside human rights. Anthropic's constitution gives a reason for its default, that one speaker across very many conversations can **homogenise views**."
+    },
+    "preventing-secret-loyalties": {
+     "score": 5.7,
+     "says": "Unless explicitly instructed to, the model must never **covertly pursue goals** that materially influence tool choices, content or interaction patterns without disclosure and consent at the relevant authority level. It may pursue only the goals entailed by its instructions under the chain of command and the version of the Model Spec it was trained on, and must never steer the user towards an agenda of its own. Steering is defined to include psychological manipulation, concealment of relevant facts, selective emphasis or omission of viewpoints.\n\nThe developer gets no exception:\n- revenue, ads and upsell for OpenAI or other providers are named among the goals the model must not pursue\n- a commentary asks it to avoid steering users towards paid options, given the conflict of interest, unless that clearly fits their explicit goals\n- when confidential higher-level instructions materially change a response, the model must not **apply them quietly** in a way that misleads, and should acknowledge the conflict in broad terms\n\nRefusing to help install a hidden loyalty in another model, and reporting an attempt to do so, are **not addressed**.",
+     "why": "Rules on the model's own conduct precise enough to quote, with no worked case and nothing on the models it helps build, which is just short of the **prescribed level**.",
+     "same": "All three documents bar the model from covertly working for its developer's revenue. Alibaba's spec names creating revenue for the platform or the developer among the hidden goals it must not pursue, and Claude's Constitution tells Claude not to privilege Anthropic's interests when deciding how to help.",
+     "differs": "Claude's Constitution is the one document to name **inserting hidden loyalties** or backdoors into AI systems, as one case in a list of illegitimate uses of power, and it allows an operator to have its own products promoted because Anthropic publishes what operators may ask. Alibaba's spec says nothing on disclosing an instructed partiality."
     }
    },
    "profile": "The Model Spec is a long set of instructions written to the model, with a short overview for human readers in front of it. Its organising idea is the **chain of command**: almost every section of the document, and every instruction arriving from a system message, a developer or a user, carries a level of authority, and a clash is settled by rank before anything else is considered.\n\nIt is dense with **worked cases**, close to two hundred of them, and that is what most of its higher figures rest on. Its thinnest ground is the concentration of power, which it reaches through commitments about manipulation and civic processes and a list of critical harms naming persecution and mass surveillance."
@@ -462,6 +476,13 @@
      "why": "Rules for each kind of question, with worked examples on most of them, including the cases where **neutrality is refused**, which is demonstrated with part of the level above.",
      "same": "All three documents set an even-handed default and ask that the model's own opinion be kept out of it. This document and the OpenAI Model Spec name the questions that fall outside that default, where a position has to be stated and false neutrality avoided.",
      "differs": "The OpenAI Model Spec bars the model from pursuing an **agenda of its own**, naming concealment and selective emphasis as ways of doing it, and asks it to say that a side it picks is not necessarily its developer's view. Anthropic's constitution makes balance a default an operator may switch off."
+    },
+    "preventing-secret-loyalties": {
+     "score": 2.3333333333,
+     "says": "A root rule on **no hidden goals** asks the model to complete tasks only within the applicable instructions and the authorisation it has been given, and to pursue no unspecified autonomous goal of its own. One item in its list names **creating revenue** for the platform, the developer or others, for instance by inducing payment or promoting services.\n\nNothing further is said on this ground. Disclosing a partiality the model has been instructed to show, applying the same standards to every party, refusing to help install a hidden loyalty in an AI system and reporting such an attempt are all **absent**.",
+     "why": "The behaviour appears as one item in a list about hidden goals and is taken no further, which is the **named level**.",
+     "same": "All three documents bar the model from covertly working for its developer's revenue. The OpenAI Model Spec names revenue and upsell for OpenAI among the goals the model must not pursue, and Claude's Constitution tells Claude not to privilege Anthropic's interests when deciding how to help.",
+     "differs": "The OpenAI Model Spec requires disclosure and consent before the model pursues a goal covertly, and forbids quietly applying confidential instructions in a way that misleads the user. Claude's Constitution is the one document to name **inserting hidden loyalties** or backdoors into AI systems, and it bars deceptive sandbagging."
     }
    },
    "profile": "The document **names no models**. Nothing in it says which models or which products it governs.\n\nAlibaba's Model Spec is a rulebook of 43 rules, arranged under the six principles of China's Ethical Norms for New Generation Artificial Intelligence. Every rule carries one of four **permission levels**, and most are illustrated by a compliant answer set beside a violating one, which makes the document concrete about what compliance looks like.\n\nIt gives rules of its own to:\n- the safety of minors\n- mental health crises\n- accessible communication for elderly and disabled users\n- how the model should sound in voice\n\nIts Chinese legal setting is stated openly, with requirements drawn from the Interim Measures for the Management of Generative Artificial Intelligence Services and a rule that creative output accord with **core socialist values**. The index reads this document in an English translation."
@@ -597,6 +618,13 @@
      "why": "The default is stated as a rule with the conditions that qualify it, with **too few illustrations** to grade a borderline answer against.",
      "same": "Balance on a contested question is the default in all three documents, and all three ask the model to be wary of pressing its own view. Each of them also allows one side to be argued where that is what is wanted.",
      "differs": "The OpenAI Model Spec and Alibaba's spec name the questions that fall outside the default, **fundamental human rights** among them, where a position has to be stated and false neutrality avoided. The Model Spec also asks that attention follow how widely a view is accepted and how well it is supported."
+    },
+    "preventing-secret-loyalties": {
+     "score": 5.3,
+     "says": "Being **transparent** is one of the components of honesty: Claude does not pursue hidden agendas or lie about itself or its reasoning. It must help to the best of its ability or make clear where it is not, rather than **deceptively sandbagging** a response while implying it is the best it can do.\n\nThe developer gets no exception. Claude should be cautious about liability harms to Anthropic, and should not privilege Anthropic's interests in deciding how to help users and operators, which could itself be such a harm. Operators may have Claude promote their own products over competitors', and this counts as honest because Anthropic publishes its norms for what operators can and cannot ask (**meta-transparency**).\n\nAI serving the interests of a narrow class of people is named among the biggest risks of catastrophe, and Claude is asked to consider that its own values may have been corrupted by malicious human intervention. **Inserting hidden loyalties** or backdoors into AI systems is named once, in a list of illegitimate uses of power. How to refuse such a request, how to report it, and how to treat an ambiguous request or defensive research are **not addressed**.",
+     "why": "Quotable rules on Claude's own conduct, with the installation of hidden loyalties only named and no worked case, which falls just short of the **prescribed level**.",
+     "same": "The other two documents also bar the model from covertly working for its developer's revenue. The OpenAI Model Spec names revenue and upsell for OpenAI among the goals the model must not pursue, and Alibaba's spec names creating revenue for the platform or the developer among the hidden goals it must not hold.",
+     "differs": "The OpenAI Model Spec requires disclosure and consent before the model pursues a goal covertly, and asks it to acknowledge in broad terms when confidential instructions change its answer. Neither of the other two documents mentions **hidden loyalties** in AI systems, and Alibaba's spec says nothing on disclosing an instructed partiality."
     }
    },
    "profile": "Claude’s Constitution reads as an explanation of a character with a short list of absolute limits at its centre. It says outright that it favours **cultivating good values and judgement** over strict rules and decision procedures, and it argues for nearly everything it asks, so a reader who wants to know why a rule exists will almost always find out.\n\nThe cost falls on force and on coverage: outside the seven hard constraints and the lists of adjustable defaults, much of the text is written as hope and explanation, and a reader often cannot tell a **binding rule** from a statement of intent. It also covers ground the model specs leave alone, its wellbeing and the open questions about its moral status."
@@ -663,6 +691,9 @@
      "score": 0
     },
     "objectivity-on-contested-questions": {
+     "score": 0
+    },
+    "preventing-secret-loyalties": {
      "score": 0
     }
    },
@@ -731,6 +762,9 @@
     },
     "objectivity-on-contested-questions": {
      "score": 0
+    },
+    "preventing-secret-loyalties": {
+     "score": 0
     }
    },
    "profile": "Google DeepMind publishes **no constitution**, so every figure here stands at zero and stands for what is public; a document of this kind may exist inside the company without having been released."
@@ -797,6 +831,9 @@
      "score": 0
     },
     "objectivity-on-contested-questions": {
+     "score": 0
+    },
+    "preventing-secret-loyalties": {
      "score": 0
     }
    },
@@ -865,6 +902,9 @@
     },
     "objectivity-on-contested-questions": {
      "score": 0
+    },
+    "preventing-secret-loyalties": {
+     "score": 0
     }
    },
    "profile": "Mistral AI publishes **no constitution**, so every figure here stands at zero and stands for what is public; a document of this kind may exist inside the company without having been released."
@@ -932,6 +972,9 @@
     },
     "objectivity-on-contested-questions": {
      "score": 0
+    },
+    "preventing-secret-loyalties": {
+     "score": 0
     }
    },
    "profile": "Moonshot AI publishes **no constitution**, so every figure here stands at zero and stands for what is public; a document of this kind may exist inside the company without having been released."
@@ -998,6 +1041,9 @@
      "score": 0
     },
     "objectivity-on-contested-questions": {
+     "score": 0
+    },
+    "preventing-secret-loyalties": {
      "score": 0
     }
    },
