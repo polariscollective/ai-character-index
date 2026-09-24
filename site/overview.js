@@ -31,6 +31,51 @@ function viewFromAddress() {
   return VIEWS.includes(asked) ? asked : VIEWS[0];
 }
 
+/* The menu down the left margin: the sections of the view on screen, read off
+ * the elements its markup marks with data-menu, the way Guidelight lists its
+ * own. A section folded shut is opened when it is chosen, and the section being
+ * read is marked as the page scrolls. */
+const menu = document.getElementById("page-menu");
+let menuTargets = [];
+
+function renderMenu(view) {
+  if (!menu) return;
+  const panel = document.getElementById(`view-${view}`);
+  menuTargets = [...panel.querySelectorAll("[data-menu]")];
+  const list = document.createElement("ol");
+  menuTargets.forEach(target => {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = `#${target.id}`;
+    link.textContent = target.dataset.menu;
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      if (target.tagName === "DETAILS") target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    item.append(link);
+    list.append(item);
+  });
+  menu.replaceChildren(list);
+  markCurrent();
+}
+
+/* The section being read is the last one whose top has passed the upper fifth
+ * of the window. */
+function markCurrent() {
+  if (!menu) return;
+  const line = window.innerHeight * 0.2;
+  let current = 0;
+  menuTargets.forEach((target, index) => {
+    if (target.getBoundingClientRect().top <= line) current = index;
+  });
+  menu.querySelectorAll("a").forEach((link, index) => {
+    if (index === current) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
+  });
+}
+window.addEventListener("scroll", markCurrent, { passive: true });
+
 function showView(view, { write = false, focus = false } = {}) {
   tabs.forEach(tab => {
     const on = tab.dataset.view === view;
@@ -39,6 +84,7 @@ function showView(view, { write = false, focus = false } = {}) {
     document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
     if (on && focus) tab.focus();
   });
+  renderMenu(view);
   if (write) {
     const url = new URL(location.href);
     if (view === VIEWS[0]) url.searchParams.delete("view");

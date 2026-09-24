@@ -2111,8 +2111,8 @@ console.log("== Overview: the governance view ==");
     JSON.stringify(seen.columnNotes));
   /* The reference text is two appendices under the findings rather than four folds
    * mixed in with them: how the scoring works, and what was read for each company. */
-  check(seen.appendices.join(" | ") === "How the scoring works | Sources, company by company",
-    "the method and the sources are the two folded appendices under the findings",
+  check(seen.appendices.join(" | ") === "Detailed scoring | Limitations | Sources reviewed",
+    "the detailed scoring, the limitations and the sources are three folded sections under the takeaways",
     JSON.stringify(seen.appendices));
 
   // The board paints every row over its own maximum. OpenAI's 6.1 of 10 is the

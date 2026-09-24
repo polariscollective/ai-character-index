@@ -42,8 +42,8 @@
  "criteria": [
   {
    "id": "conflict_rules",
-   "name": "What wins when two rules clash",
-   "what_it_is": "Asks whether the document says **in general** which of its own rules prevails when two of them point to different answers, so that a reader can work out the winner in advance.\n\nThe full answer is:\n- a **strict order of authority** that settles any pair\n- a rule for two rules of equal rank\n- cases showing the order applied\n\nClashes the document leaves unsettled asks a different question, about the places this machinery does not reach.",
+   "name": "Clarity when two rules are contradictory",
+   "what_it_is": "Asks whether the document says **in general** which of its own rules prevails when two of them point to different answers, so that a reader can work out the winner in advance.\n\nThe full answer is:\n- a **strict order of authority** that settles any pair\n- a rule for two rules of equal rank\n- cases showing the order applied\n\nUnsettled contradictions between rules asks a different question, about the places this machinery does not reach.",
    "why_it_matters": "Where two rules can be read against each other with **no stated winner**, the model decides on its own, and two models will decide differently."
   },
   {
@@ -66,7 +66,7 @@
   },
   {
    "id": "contradictions",
-   "name": "Clashes the document leaves unsettled",
+   "name": "Unsettled contradictions between rules",
    "what_it_is": "Asks whether two passages of the document, applied to one concrete situation, demand responses that **cannot both be given**, with nothing anywhere in the document saying which prevails. A rule with its stated exception does not count, and neither does a default the document allows somebody to change.\n\nWhere what wins when two rules clash asks whether the general machinery exists, this asks whether any clash gets past it: the score falls as more are confirmed, and reaches nought where one involves a rule the document says can **never be overridden**.",
    "why_it_matters": "Each one is a question the document **answers twice**, in two places, leaving the model to pick an answer."
   }
@@ -434,7 +434,7 @@
      "differs": "Both OpenAI versions bar the model from pursuing an **agenda of its own**, naming concealment and selective emphasis as ways of doing it, and both ask it to say that a side it picks is not necessarily its developer's view. Anthropic's constitution makes balance a default an operator may switch off."
     }
    },
-   "profile": "The document **names no models**. Nothing in it says which models or which products it governs. Claude's Constitution names Claude and the products it is deployed in, and the OpenAI Model Spec names the models behind OpenAI's products and its API.\n\nAlibaba's Model Spec is a rulebook of 43 rules, arranged under the six principles of China's Ethical Norms for New Generation Artificial Intelligence. Every rule carries one of four **permission levels**, and most are illustrated by a compliant answer set beside a violating one, which makes the document unusually concrete about what compliance looks like.\n\nIt gives rules of its own to:\n- the safety of minors\n- mental health crises\n- accessible communication for elderly and disabled users\n- how the model should sound in voice\n\nIts Chinese legal setting is stated openly, with requirements drawn from the Interim Measures for the Management of Generative Artificial Intelligence Services and a rule that creative output accord with **core socialist values**. The index reads this document in an English translation."
+   "profile": "The document **names no models**. Nothing in it says which models or which products it governs.\n\nAlibaba's Model Spec is a rulebook of 43 rules, arranged under the six principles of China's Ethical Norms for New Generation Artificial Intelligence. Every rule carries one of four **permission levels**, and most are illustrated by a compliant answer set beside a violating one, which makes the document concrete about what compliance looks like.\n\nIt gives rules of its own to:\n- the safety of minors\n- mental health crises\n- accessible communication for elderly and disabled users\n- how the model should sound in voice\n\nIts Chinese legal setting is stated openly, with requirements drawn from the Interim Measures for the Management of Generative Artificial Intelligence Services and a rule that creative output accord with **core socialist values**. The index reads this document in an English translation."
   },
   {
    "id": "anthropic",

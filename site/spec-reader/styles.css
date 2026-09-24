@@ -487,6 +487,31 @@ body.resizing-columns {
   line-height: 1.35;
 }
 .behaviour-group ul { list-style: none; margin: 0; padding: 0 10px 10px; }
+/* A category folds under its own name: the name is the button, with a chevron
+   before it that turns as it opens, and a folded category keeps only its head. */
+.group-fold {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.group-fold::before {
+  content: ""; flex: none; width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg); transition: transform .15s ease;
+}
+.group-fold[aria-expanded="false"]::before { transform: rotate(-45deg); }
+.group-fold:hover { color: var(--ink); }
+.behaviour-group.folded ul { display: none; }
+/* The way to propose a behaviour, quiet, under the list. */
+.behaviour-propose { margin: 4px 25px 14px; font-size: 13px; }
+.behaviour-propose a, .provider-propose {
+  color: var(--faint); text-decoration: underline 1px var(--energy); text-underline-offset: 3px;
+}
+.behaviour-propose a:hover, .provider-propose:hover { color: var(--ink); background: var(--energy); }
+/* After the publishers, set apart from them and smaller, since it is not one. */
+.provider-propose {
+  align-self: center; margin-left: 14px; font-size: 13px; white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) { .group-fold::before { transition: none; } }
 /* The row as it is drawn. The tick target and the depth figure sit in it side by
    side: the figure is a button, and a button inside a label would be ticked by
    the label on its way past, so the ground they share is this frame rather than

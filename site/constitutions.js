@@ -356,8 +356,7 @@ function aboutFinal(content) {
     rows.append(row);
   });
   table.append(head, rows);
-  content.append(table, paragraph("Companies are ranked by this score. Companies level on it "
-    + "share a place, and the next rank skips."));
+  content.append(table, paragraph("Companies are ranked by this score."));
 }
 
 function finalScore(content, company) {

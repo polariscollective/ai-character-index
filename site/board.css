@@ -715,6 +715,33 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    table should meet what it shows without pressing anything, and the detail that
    used to sit beside them is folded into the two appendices below. */
 .gov-findings { margin-top: 40px; }
+/* The menu of the page's sections, down the left margin. It lives in the margin
+   the page's measure leaves (8vw on either side) and only where that margin is
+   wide enough to hold a short title, so it never takes width from a board. It
+   is quiet: faint small text, the current section in ink with the chartreuse
+   rule the framework uses for an active state. */
+.page-menu { display: none; }
+/* A section the menu scrolls to stops clear of the header above it. */
+[data-menu] { scroll-margin-top: 80px; }
+@media (min-width: 1400px) {
+  .page-menu {
+    display: block; position: fixed; top: 140px; left: 16px;
+    width: calc(8vw - 28px); max-height: calc(100vh - 180px); overflow-y: auto;
+    font-size: 12px; line-height: 1.35;
+  }
+  .page-menu ol { list-style: none; margin: 0; padding: 0; }
+  .page-menu li { margin: 0 0 6px; }
+  .page-menu a {
+    display: block; padding: 2px 0 2px 8px; border-left: 2px solid transparent;
+    color: var(--faint); text-decoration: none;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .page-menu a:hover { color: var(--ink); }
+  .page-menu a[aria-current="true"] { color: var(--ink); border-left-color: var(--energy); }
+  .page-menu a:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+}
+@media (prefers-reduced-motion: reduce) { .page-menu a { transition: none; } }
+
 /* The findings and the notes, side by side below the board. */
 .gov-after { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 40px; align-items: start; }
 /* Each column takes its whole third: the findings' own measure and the notes'

@@ -1303,11 +1303,29 @@ function behaviourGroups() {
   }));
 }
 
+/* The categories a reader has folded shut in the menu, by name, so a repaint of
+ * the list keeps them shut. */
+const foldedGroups = new Set();
+
 function renderBehaviourList() {
   const groups = behaviourGroups();
   const empty = groups.length === 0;
   document.body.classList.toggle("no-behaviours", empty);
   elements.behaviourToolbar.hidden = empty;
+
+  /* Before the payload has arrived there is nothing to list yet, which is not
+   * the same as a publication with no behaviours: saying the latter while the
+   * page loads told a reader arriving on a cold server that it had nothing to
+   * show. */
+  if (empty && !state.payload) {
+    elements.behaviourList.innerHTML = `
+      <div class="behaviour-empty" aria-live="polite">
+        <strong>Loading the behaviours.</strong>
+        <p>The first visit after a quiet spell can take a few seconds.</p>
+      </div>`;
+    updateExportControl();
+    return;
+  }
 
   if (empty) {
     elements.behaviourList.innerHTML = `
@@ -1322,14 +1340,19 @@ function renderBehaviourList() {
 
   const selected = new Set(state.selectedSlugs);
   elements.behaviourList.innerHTML = groups.map(group => `
-    <section class="behaviour-group texture-${group.texture}">
+    <section class="behaviour-group texture-${group.texture}${foldedGroups.has(group.name) ? " folded" : ""}"
+      data-group="${escapeHTML(group.name)}">
       <!-- The depth column's scale, said once at its top rather than beside every
            figure; each figure's spoken form carries it for a screen reader. It is
            also the way into the rubric the figures are scored on: a reader who
            wants to know what a 1 means asks the scale, in place, rather than
            leaving for the methodology page. -->
       <div class="behaviour-group-head">
-        <h2>${escapeHTML(group.name)}</h2>
+        <h2><button
+          type="button"
+          class="group-fold"
+          aria-expanded="${String(!foldedGroups.has(group.name))}"
+        >${escapeHTML(group.name)}</button></h2>
         <button
           type="button"
           class="depth-head"
@@ -1415,6 +1438,18 @@ function renderBehaviourList() {
   `).join("");
   elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
     input.addEventListener("change", () => toggleBehaviour(input.dataset.behaviour, input.checked));
+  });
+  // A category folds under its own name, and stays folded across repaints.
+  elements.behaviourList.querySelectorAll(".group-fold").forEach(button => {
+    button.addEventListener("click", () => {
+      const section = button.closest(".behaviour-group");
+      const name = section.dataset.group;
+      const fold = !foldedGroups.has(name);
+      if (fold) foldedGroups.add(name);
+      else foldedGroups.delete(name);
+      section.classList.toggle("folded", fold);
+      button.setAttribute("aria-expanded", String(!fold));
+    });
   });
   elements.behaviourList.querySelectorAll("[data-behaviour-note]").forEach(button => {
     button.addEventListener("click", event => {
@@ -1850,7 +1885,43 @@ function toggleBehaviour(slug, checked) {
   // Not awaited: a tick marks the box at once and lets the bubbles for the
   // ticked behaviour arrive as they load, rather than freezing the menu on a
   // network round trip.
-  setSelection([...next]);
+  const painted = setSelection([...next]);
+  /* Ticking a behaviour takes the reader to where the document defines it:
+   * the highlights land first, and a fifth of a second later the reader moves,
+   * so the eye sees the text change before it is carried off. Only the
+   * behaviour just ticked, and only if it is still ticked by then. */
+  if (checked) {
+    painted.then(() => setTimeout(() => {
+      if (state.selectedSlugs.includes(slug)) goToDefining(slug);
+    }, 200));
+  }
+}
+
+/* The first passage of the first document on screen that is the defining
+ * statement of `slug`, or failing one, the first passage citing it at all. It is
+ * scrolled to and outlined for a moment, and the focus is left where it was, on
+ * the box just ticked, so a reader ticking several in a row keeps their place in
+ * the menu. */
+function goToDefining(slug) {
+  const panel = panels()[0];
+  if (!panel) return;
+  const behaviour = (state.payload?.behaviours || []).find(one => one.slug === slug);
+  const blocks = [...panel.querySelectorAll(".document-body .passage[data-passage-id]")];
+  const target = blocks.find(block => (block.dataset.defining || "").split(" ").includes(slug))
+    || (behaviour && blocks.find(block => (block.dataset.behaviours || "")
+      .split(" \u00b7 ").includes(behaviour.name)));
+  if (!target) return;
+  const body = target.closest(".document-body");
+  let sectionChild = target;
+  while (sectionChild.parentElement && sectionChild.parentElement !== body) {
+    sectionChild = sectionChild.parentElement;
+  }
+  (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
+  updateSectionVisibility(panel);
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.add("linked-block");
+  setTimeout(() => target.classList.remove("linked-block"), 2500);
+  requestAnimationFrame(updateRails);
 }
 
 function escapeHTML(value) {
@@ -3065,6 +3136,11 @@ function annotatePassages(panel, doc) {
     if (!anchored) return;
 
     number += 1;
+    // The behaviours this passage is the defining statement of, by slug, so a
+    // behaviour just ticked can be taken to its first one.
+    block.dataset.defining = marks
+      .filter(mark => mark.band === "defining" && mark.anchored.length)
+      .map(mark => mark.behaviour.slug).join(" ");
     block.dataset.passageId = `${doc.id}-passage-${number}`;
     block.dataset.documentId = doc.id;
     block.dataset.passageNumber = String(number);
@@ -3542,6 +3618,12 @@ function renderProviderTabs(panel, doc, side = 0) {
   if (!group) return;
   group.setAttribute("aria-label",
     state.comparing ? PUBLISHER_GROUP_LABELS[side] || "Publisher" : "Publisher");
+  // After the publishers, quietly, the way to add one: a link rather than a
+  // publisher, so it is styled apart and never pressed.
+  const propose = document.createElement("a");
+  propose.className = "provider-propose";
+  propose.href = "/about?propose&kind=specification#propose";
+  propose.textContent = "Propose a constitution";
   group.replaceChildren(...labsOf().map(lab => {
     const button = document.createElement("button");
     button.type = "button";
@@ -3550,7 +3632,7 @@ function renderProviderTabs(panel, doc, side = 0) {
     button.textContent = lab;
     button.setAttribute("aria-pressed", String(lab === doc.lab));
     return button;
-  }));
+  }), propose);
 }
 
 /* `side` is the panel's position, 0 on the left, which is what names a control

@@ -47,21 +47,21 @@
       data-view="coverage">What the constitutions say</button>
     <button type="button" class="view-tab" role="tab" id="tab-governance"
       aria-controls="view-governance" aria-selected="false" tabindex="-1"
-      data-view="governance">How companies govern them</button>
+      data-view="governance">How constitutions are governed</button>
   </div>
 
   <section id="view-coverage" role="tabpanel" aria-labelledby="tab-coverage">
-  <h1>What each constitution says, and how well it is built</h1>
+  <h1 id="cov-intro" data-menu="Intro">What each constitution says, and how well it is built</h1>
   <p class="lede">
     AI companies publish constitutions: documents setting out how their models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a>
     behave. Each company has its own name for its document: OpenAI calls its one the Model Spec,
     Anthropic calls its one Claude&rsquo;s Constitution. We call them all constitutions, for the
-    reasons <a href="/about#the-word">the About page gives</a>. This board ranks nine companies by
-    their constitution: how well the document is built as a whole, and how far it goes on each of
-    thirteen behaviours. A company that publishes none scores 0.
+    reasons <a href="/about#the-word">the About page gives</a>. We assess two aspects of each one:
+    the document as a whole, meaning how consistent and coherent it is, and how well it addresses
+    each desirable model behaviour. A company that publishes none scores 0.
   </p>
   <p class="lede">
-    Missing a constitution, or a behaviour the index should be asking about?
+    Missing a constitution, or a behaviour that this index should be assessing?
     <a href="/about?propose#propose" target="_blank"
       rel="noopener noreferrer">Propose one</a>.
   </p>
@@ -75,7 +75,7 @@
     </p>
     <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap">
+  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart">
     <table class="board" id="board">
       <caption class="visually-hidden">Each company's final score, its document as a whole and
         its behaviours by category, with each group's rows available to open</caption>
@@ -92,7 +92,7 @@
   <!-- The numbered notes the board's rows point to, above the scale the third
        one refers to. The numbers are the ones constitutions.js writes beside
        the rows' names. -->
-  <ol class="gov-notes" id="board-notes">
+  <ol class="gov-notes" id="board-notes" data-menu="Notes">
     <li value="1"><strong>Final score.</strong> The average of the document as a whole and the
     behaviours, each counting for half. It ranks the companies. Every figure on the board is out
     of 10, and each row says under its name how much it counts for in the figure it belongs
@@ -114,7 +114,7 @@
     We wrote the behaviours, their definitions and the categories ourselves, and all three are
     open to challenge.</li>
   </ol>
-  <section class="depth-key" aria-labelledby="behaviour-scale-title">
+  <section class="depth-key" id="cov-scale" data-menu="Behaviour scale" aria-labelledby="behaviour-scale-title">
     <h2 id="behaviour-scale-title"></h2>
     <ol class="depth-key-list" id="behaviour-scale"></ol>
   </section>
@@ -141,13 +141,14 @@
        governance.json, which governance.js reads;
        tests/test_governance_tab.py holds the two to each other. -->
   <section id="view-governance" role="tabpanel" aria-labelledby="tab-governance" hidden>
-  <h1>How each company governs the rules its models follow</h1>
+  <h1 id="gov-intro" data-menu="Intro">How constitutions are governed</h1>
   <p class="lede gov-lede">
     Some AI companies publish a constitution, a document setting out how their
     models should<a class="asterisk" href="/about#why" aria-label="What should means here">*</a> behave. This view scores nine companies,
-    as of September 2026, on two things: the rules they publish, and whether
-    those rules are made to bind the models. The numbered notes under the board
-    say what each figure means and where each row comes from.
+    as of September 2026, on two things: how transparent they are about the
+    constitutions they publish, and the extent to which those constitutions are
+    actually made to bind the models. The final score is the average of the two,
+    and it ranks the companies.
   </p>
 
 
@@ -160,7 +161,7 @@
     </p>
     <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every row</button>
   </div>
-  <div class="matrix-wrap">
+  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart">
     <table class="gov-heatmap board" id="gov-heatmap">
       <caption class="visually-hidden">Each company's final score and the two figures it adds, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
       <thead></thead>
@@ -179,14 +180,14 @@
        beside them, so neither pushes the other off the screen. On a phone they
        stack, findings first. -->
   <div class="gov-after">
-    <section class="gov-findings" aria-labelledby="gov-findings-title">
-      <h2 id="gov-findings-title">What the ranking shows</h2>
+    <section class="gov-findings" id="gov-takeaways" data-menu="Takeaways" aria-labelledby="gov-findings-title">
+      <h2 id="gov-findings-title">Takeaways</h2>
       <div class="gov-findings-list" id="gov-findings"></div>
     </section>
     <!-- The numbered notes, written by governance.js from governance.json: what
          each figure means, where each row comes from, and what the numbers beside
          a row's name or a company's flag refer to. -->
-    <aside class="gov-findings gov-notes-rail" aria-labelledby="gov-notes-title">
+    <aside class="gov-findings gov-notes-rail" id="gov-notes" data-menu="Notes" aria-labelledby="gov-notes-title">
       <h2 id="gov-notes-title">Notes</h2>
       <div id="gov-columns"></div>
     </aside>
@@ -196,12 +197,12 @@
        placed beside it. The browser closes it on Escape or a press elsewhere. -->
   <div class="gov-pop" id="gov-pop" popover role="dialog" aria-labelledby="gov-pop-title" tabindex="-1"></div>
 
-  <!-- Two appendices, folded, after the findings: how the scoring works, and what
-       was read for each company. Everything that was in four folds mixed with the
-       findings is still here, moved and with its framing shortened. -->
+  <!-- Three folded sections after the takeaways, named as Guidelight names its
+       own: the detailed scoring, the limitations, and the sources reviewed for
+       each company. The menu on the left opens whichever is chosen. -->
   <div class="gov-more">
-    <details id="gov-method">
-      <summary>How the scoring works</summary>
+    <details id="gov-method" data-menu="Detailed scoring">
+      <summary>Detailed scoring</summary>
       <div class="gov-more-body">
         <h3>Where the rows come from</h3>
         <p>
@@ -313,8 +314,8 @@
           well follow a practice without saying so. Every score above 0 on the four
           practices only a company can show rests on a passage the company
           published, quoted with its address in the popover behind that score. Two
-          searches failed outright, and both are named under what could not be
-          established: the Chinese regulatory filings, and older copies of pages
+          searches failed outright, and both are named under Limitations: the
+          Chinese regulatory filings, and older copies of pages
           that carry no date.
         </p>
         <p>
@@ -358,7 +359,11 @@
           High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI
           SAS, of Paris.
         </p>
-        <h3>What could not be established</h3>
+      </div>
+    </details>
+    <details id="gov-limitations" data-menu="Limitations">
+      <summary>Limitations</summary>
+      <div class="gov-more-body">
         <p>
           Both working papers were written to argue for change, and scoring them
           gives them more precision than they were designed for. The descriptions
@@ -434,8 +439,8 @@
         </ul>
       </div>
     </details>
-    <details id="gov-sources" class="gov-sources">
-      <summary>Sources, company by company</summary>
+    <details id="gov-sources" class="gov-sources" data-menu="Sources reviewed">
+      <summary>Sources reviewed</summary>
       <div class="gov-more-body">
         <p>
           What was read for each company, with the address of each document. The
@@ -527,6 +532,9 @@
   </section>
 </div>
 
+<!-- The sections of the view on screen, down the left margin on a wide screen.
+     overview.js fills it from the data-menu marks of the visible view. -->
+<nav class="page-menu" id="page-menu" aria-label="Sections of this page"></nav>
 <script type="module" src="/overview.js"></script>
 <!-- The development mark beside the wordmark, which appears only where the
      publication on screen has not been published. One file for every page:
