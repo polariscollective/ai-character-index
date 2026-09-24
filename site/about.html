@@ -120,6 +120,9 @@
   .changelog h3 a { color: var(--ink); text-decoration: underline 2px var(--energy);
                     text-underline-offset: 4px; box-shadow: none; }
   .changelog h3 a:hover, .changelog h3 a:focus-visible { background: var(--energy); }
+  .changelog-toggle { margin: 14px 0 0; padding: 4px 12px; border: 1px solid var(--olive, #5C6B3C);
+    border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+  .changelog-toggle:hover, .changelog-toggle:focus-visible { background: var(--energy); }
 
   /* The two steps, numbered because they come in that order. */
   section.m ol.steps { max-width: 66ch; margin: 8px 0 0; padding-left: 1.4em; }
@@ -1052,7 +1055,10 @@ if (changelogList) {
           + "site as it was.";
       }
       const firstPublic = publications.find(row => row.is_public);
-      changelogList.replaceChildren(...publications.flatMap((row, index) => {
+      /* On development every publication is listed, and most drafts are noise:
+         the newest is always shown, as it is the one this deployment serves, and
+         so is every published one; the other drafts wait behind a button. */
+      const entries = publications.map((row, index) => {
         const head = document.createElement("h3");
         const link = document.createElement("a");
         link.href = `/?publication=${row.id}`;
@@ -1066,8 +1072,30 @@ if (changelogList) {
         head.append(link, standing.length ? `, ${standing.join(", ")}` : "");
         const text = document.createElement("p");
         text.textContent = HANDWRITTEN[row.id] || row.notes || "";
-        return text.textContent ? [head, text] : [head];
-      }));
+        const entry = document.createElement("div");
+        entry.className = "changelog-entry";
+        entry.append(...(text.textContent ? [head, text] : [head]));
+        entry.hidden = development && index > 0 && !row.is_public;
+        return entry;
+      });
+      const hidden = entries.filter(entry => entry.hidden);
+      const shown = [...entries];
+      if (hidden.length) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "changelog-toggle";
+        const label = open => `${open ? "Hide" : "Show"} unpublished (${hidden.length})`;
+        toggle.textContent = label(false);
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") !== "true";
+          hidden.forEach(entry => { entry.hidden = !open; });
+          toggle.setAttribute("aria-expanded", String(open));
+          toggle.textContent = label(open);
+        });
+        shown.push(toggle);
+      }
+      changelogList.replaceChildren(...shown);
     })
     .catch(() => {
       changelogList.replaceChildren(Object.assign(document.createElement("p"), {
