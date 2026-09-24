@@ -52,7 +52,11 @@ function renderMenu(view) {
     link.textContent = target.dataset.menu;
     link.addEventListener("click", event => {
       event.preventDefault();
-      if (target.tagName === "DETAILS") target.open = true;
+      // A folded section is opened whenever it is chosen here, however it was
+      // left: the section itself, or the fold inside it.
+      const fold = target.tagName === "DETAILS" ? target
+        : target.querySelector(":scope > details.section-fold");
+      if (fold) fold.open = true;
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     item.append(link);

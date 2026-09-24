@@ -404,7 +404,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .views {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 28px;
+  gap: 4px 22px;
   margin: 18px 0 0;
   border-bottom: 1px solid var(--line);
 }
@@ -425,10 +425,10 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 /* A view that does not exist yet: visible, quiet, and not pressable. The label
    under it says why, in the faint ink every muted line on the page uses. */
 .view-tab-coming, .view-tab-coming:hover { color: var(--faint); font-weight: 400; background: none; cursor: default; }
-.view-tab-coming .coming {
-  margin-left: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px;
-  font-size: 11px; white-space: nowrap;
-}
+/* Its label sits under its name, small and unboxed, so a view still to come is
+   no wider than its name and the four fit on one line. */
+.view-tab-coming { padding-top: 4px; padding-bottom: 3px; line-height: 1.25; text-align: left; }
+.view-tab-coming .coming { display: block; font-size: 10px; white-space: nowrap; }
 
 .visually-hidden {
   position: absolute;
