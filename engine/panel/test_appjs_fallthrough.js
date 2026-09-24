@@ -83,7 +83,10 @@ eval(consts + "\n" +
      urlSlugs() already is for loadBehaviours(). */
   extractFn("function urlSpecs()") + "\n" +
   extractFn("async function loadBehaviours()") + "\n" +
-  extractOrThrowing("async function loadDocuments()") + "\n" +
+  /* loadDocuments defaults its pin to servedPin(), so initialize can ask for
+     the documents beside the payload rather than after it. */
+  extractFn("function servedPin()") + "\n" +
+  extractOrThrowing("async function loadDocuments(pinned = servedPin())") + "\n" +
   "runner = async (search, map) => { fetchMap = map; asked = []; location = { search }; initialParams = new URLSearchParams(search); state.payloadSource = undefined; return loadBehaviours(); };\n" +
   "documentsRunner = async (search, map) => { await runner(search, map); return loadDocuments(); };\n" +
   "readAsked = () => asked;\n" +
