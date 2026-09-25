@@ -84,21 +84,26 @@ const STYLE = `
 }
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
-/* The index's name over the collective's, as one block centred on the mark,
-   in the height the header already has. */
+/* The index's name over the collective's, as one link centred on the mark, in
+   the height the header already has: a press anywhere on it opens the note,
+   which is where the collective's own address is. The index's name is in the
+   framework's olive green (chartreuse never writes), the collective's in a dark
+   grey. */
 .site-header .site-brand .brand-stack {
   display: flex; flex-direction: column; justify-content: center; gap: 1px;
-  line-height: 1.15;
+  line-height: 1.15; text-decoration: none;
 }
-.site-header .site-brand .brand-stack .wordmark { line-height: 1.15; }
+.site-header .site-brand .brand-stack .brand-name { color: #5C6B3C; }
 .site-header .site-brand .brand-stack .collective {
-  margin: 0; padding: 0; font-size: 11px; font-weight: 400; line-height: 1.2;
-  color: #676C58; letter-spacing: 0; text-transform: none;
+  display: block; margin: 0; padding: 0;
+  font-family: "Instrument Sans", system-ui, sans-serif; font-size: 11px; font-weight: 400;
+  line-height: 1.2; color: #4F5344; letter-spacing: 0; text-transform: none;
 }
-.site-header .site-brand .brand-stack .collective:hover { color: #23281B; }
-/* The index's name in the framework's olive green, the collective's in grey:
-   chartreuse never writes, and olive reads on the paper ground. */
-.site-header .site-brand .brand-stack .wordmark { color: #5C6B3C; }
+.site-header .site-brand .brand-stack:hover .brand-name { background: #B7C94B; color: #23281B; }
+/* A phone keeps its header to the index's name, as it always has. */
+@media (max-width: 900px) {
+  .site-header .site-brand .brand-stack .collective { display: none; }
+}
 /* The mark a little larger, now that it stands beside two lines of name. */
 .site-header .site-brand .polaris-mark { width: 26px; height: 26px; }
 /* The date of the publication, written beside the wordmark rather than set in a
