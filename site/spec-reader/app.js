@@ -4233,6 +4233,12 @@ function openSpecPicker(button) {
     const detail = document.createElement("small");
     detail.textContent = versionLabel(doc.version);
     option.append(name, detail);
+    if (doc.judged === false) {
+      const status = document.createElement("small");
+      status.className = "spec-choice-status";
+      status.textContent = "Under analysis";
+      option.append(status);
+    }
     option.addEventListener("click", () => {
       picker.hidePopover();
       chooseSpec(panel, doc.id);

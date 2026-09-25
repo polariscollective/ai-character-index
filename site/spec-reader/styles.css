@@ -2242,7 +2242,16 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 
 .spec-choice:hover { background: var(--chrome-deep); color: var(--ink); }
-.spec-choice[aria-selected="true"] { color: var(--ink); }
+/* The version on screen, marked as the framework marks a selected row: a
+   chartreuse wash and a chartreuse rule down its left edge. */
+.spec-choice[aria-selected="true"] {
+  background: rgb(183 201 75 / .22);
+  box-shadow: inset 3px 0 0 var(--energy);
+  color: var(--ink);
+}
+.spec-choice[aria-selected="true"]:hover { background: rgb(183 201 75 / .32); }
+/* A version no panel has read yet, said under its date. */
+.spec-choice .spec-choice-status { font-family: var(--ui); }
 .spec-choice-lab { display: block; font-size: 13px; font-weight: 600; }
 .spec-choice small { display: block; margin-top: 2px; color: var(--faint); font-family: var(--mono); font-size: 11px; }
 
