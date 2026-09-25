@@ -99,7 +99,14 @@ const STYLE = `
   font-family: "Instrument Sans", system-ui, sans-serif; font-size: 11px; font-weight: 400;
   line-height: 1.2; color: #4F5344; letter-spacing: 0; text-transform: none;
 }
-.site-header .site-brand .brand-stack:hover .brand-name { background: #B7C94B; color: #23281B; }
+/* One highlight for the whole block, both lines, since it is one link. */
+.site-header .site-brand .brand-stack { padding: 1px 4px; margin: 0 -4px; border-radius: 3px; }
+.site-header .site-brand .brand-stack:hover,
+.site-header .site-brand .brand-stack:focus-visible { background: #B7C94B; }
+.site-header .site-brand .brand-stack:hover .brand-name,
+.site-header .site-brand .brand-stack:hover .collective,
+.site-header .site-brand .brand-stack:focus-visible .brand-name,
+.site-header .site-brand .brand-stack:focus-visible .collective { background: none; color: #23281B; }
 /* The publication's date sits level with the collective's line, the lower of
    the two, so the block reads as a name and, under it, who and when. */
 .site-header .site-brand .brand-stack + .pub-tag { position: relative; top: 7px; }
