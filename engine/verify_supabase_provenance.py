@@ -137,7 +137,8 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
     recorded = {argument: params[key] for key, argument in
                 (("depth_prompt_sha256", "depth_prompt"),
                  ("assessment_run_id", "assessment_run"),
-                 ("comparisons", "comparisons"))
+                 ("comparisons", "comparisons"),
+                 ("unanalysed_documents", "unanalysed"))
                 if key in params}
     built = {}
     for name in ("payload", "documents", "links"):

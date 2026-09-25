@@ -1676,6 +1676,14 @@ function updateBehaviourDepths() {
    * wrong, and a stale note is worse: it reads as the answer to the question
    * just asked. */
   closeDepthNote();
+  /* Nothing to tick when every document on screen is still under analysis: no
+   * behaviour has passages or a depth there, so the boxes are shown and not
+   * offered. A document beside a judged one keeps them, for the judged one. */
+  const underAnalysis = shown.length > 0 && shown.every(doc => doc.judged === false);
+  elements.behaviourList.classList.toggle("under-analysis", underAnalysis);
+  elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
+    input.disabled = underAnalysis;
+  });
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(cell => {
     const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
     const depths = shown.map(doc => panelDepth(behaviour, doc.id));
@@ -3784,12 +3792,22 @@ function renderProviderTabs(panel, doc, side = 0) {
   propose.className = "provider-propose";
   propose.href = "/about?propose&kind=specification#propose";
   propose.textContent = "Propose a constitution";
+  const documents = state.payload?.documents || [];
   group.replaceChildren(...labsOf().map(lab => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "provider-tab";
     button.dataset.lab = lab;
     button.textContent = lab;
+    // How many documents the publisher has here, small beside its name.
+    const count = documents.filter(one => one.lab === lab).length;
+    if (count > 1) {
+      const badge = document.createElement("span");
+      badge.className = "provider-count";
+      badge.textContent = String(count);
+      badge.setAttribute("aria-label", `${count} documents`);
+      button.append(badge);
+    }
     button.setAttribute("aria-pressed", String(lab === doc.lab));
     return button;
   }), propose);
@@ -3984,6 +4002,9 @@ function renderRunProvenance() {
   }));
 }
 
+/* The under-analysis notes a reader has put away, by document, for this visit. */
+const dismissedAnalysisNotes = new Set();
+
 function updatePanelMeta(panel, doc) {
   const tracking = highlightsActive();
   panel.querySelector(".rail-legend").hidden = !tracking;
@@ -4001,6 +4022,34 @@ function updatePanelMeta(panel, doc) {
     if (cell.withheld) withheld = true;
     else published += cell.passages.length;
   });
+  /* A version the publication carries for reading only: its text is here, and
+   * no panel has read it against a behaviour yet. Said once at the top of the
+   * document, whatever is ticked, and a reader who has read it can put it away
+   * for the rest of the visit. */
+  if (doc.judged === false) {
+    if (!dismissedAnalysisNotes.has(doc.id)) {
+      const note = document.createElement("div");
+      note.className = "analysis-note";
+      note.setAttribute("role", "note");
+      const words = document.createElement("span");
+      const lead = document.createElement("strong");
+      lead.textContent = "Under analysis. ";
+      words.append(lead, "This version has been added to the reader and has not yet been "
+        + "read against any behaviour, so it shows no passages and no depth.");
+      const dismiss = document.createElement("button");
+      dismiss.type = "button";
+      dismiss.className = "analysis-dismiss";
+      dismiss.textContent = "×";
+      dismiss.setAttribute("aria-label", "Dismiss this note");
+      dismiss.addEventListener("click", () => {
+        dismissedAnalysisNotes.add(doc.id);
+        note.remove();
+      });
+      note.append(words, dismiss);
+      panel.querySelector(".document-body").prepend(note);
+    }
+    return;
+  }
   if (tracking && published === 0) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
