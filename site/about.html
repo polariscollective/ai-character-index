@@ -418,11 +418,12 @@
     <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
     <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
     <span class="brand-divider" aria-hidden="true"></span>
-    <a class="wordmark" href="/spec-reader/">AI Constitutions Index</a>
+    <a class="wordmark" href="/doc-reader/">AI Constitutions Index</a>
   </span>
   <nav aria-label="Primary navigation">
     <a href="/">Overview</a>
-    <a href="/spec-reader/">Doc reader</a>
+    <a href="/index" data-index-menu>Index</a>
+    <a href="/doc-reader/">Doc reader</a>
     <a class="active" href="/about" aria-current="page">About</a>
     <a href="/mcp">MCP</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
@@ -465,15 +466,17 @@
          openingDocument falls back to the newest Anthropic document if this
          version ages out, so the sentence stays true either way. -->
     <p>Say you want everything Claude&rsquo;s Constitution says about avoiding a concentration of power.
-    The <a href="/spec-reader/?behavior=avoiding-illegitimate-concentration-of-power&amp;spec=anthropic--constitution@2026-01-20">doc
+    The <a href="/doc-reader/?behavior=avoiding-illegitimate-concentration-of-power&amp;spec=anthropic--constitution@2026-01-20">doc
     reader</a> shows those passages together and can set them beside what another company&rsquo;s
     document says.</p>
-    <p>The <a href="/">overview</a> is meant to hold four views of these documents, and two of
-    them are online. The first, <a href="/">what the constitutions say</a>, scores each
+    <p>The <a href="/index">index</a> is meant to hold four views of these documents, and two of
+    them are online. The first, <a href="/index">what the constitutions say</a>, scores each
     constitution as a document and behaviour by behaviour. The second,
-    <a href="/?view=governance">how constitutions are governed</a>, scores nine companies on how
+    <a href="/index?view=governance">how constitutions are governed</a>, scores nine companies on how
     open they are about their constitution and how far it is made to bind their models. The two
     still in preparation are <a href="#ambition">described below</a>.</p>
+    <p>Polaris Collective maintains the index and renews it as the documents change. Its scoring
+    method is open to challenge, and we want to hear where you think it is wrong.</p>
   </section>
   <!-- Why the index exists, for a reader who has not seen how these models are
        made. The asterisk beside the first "should" on the site points here. -->
@@ -619,7 +622,7 @@
     <p>As of September 2026 the index groups the behaviours it asks about in four categories: autonomy,
     oversight and authority; harm and safety; helpfulness and judgement; honesty and
     epistemics.</p>
-    <p>In the <a href="/spec-reader/">doc reader</a>, tick a behaviour and every passage that bears
+    <p>In the <a href="/doc-reader/">doc reader</a>, tick a behaviour and every passage that bears
     on it is highlighted in the document you are reading, or in two documents side by side. All
     three bands are shown by default, with related passages drawn softer, and each band can be
     switched off. Clicking a passage shows why it was cited and how strongly. The <b>i</b> beside
@@ -1132,10 +1135,10 @@ if (citeText) {
       citeText.textContent = draft
         ? `Draft publication ${publication.id}, built ${published}. Not published, `
           + "and not citable as the AI Constitutions Index: it is a build nobody has "
-          + `released.\n${location.origin}/spec-reader/?publication=${publication.id}`
+          + `released.\n${location.origin}/doc-reader/?publication=${publication.id}`
         : `${authors} (${published.slice(0, 4)}). AI Constitutions Index [Data set]. `
           + `Publication ${publication.id}, published ${published}. `
-          + `${location.origin}/spec-reader/?publication=${publication.id}`
+          + `${location.origin}/doc-reader/?publication=${publication.id}`
           + (method ? `\nMethod: ${method}, ${credit.method.work}` : "");
     })
     .catch(() => {
@@ -1145,7 +1148,7 @@ if (citeText) {
          be read, so it is left out rather than guessed. */
       citeText.textContent =
         "Polaris Collective (2026). AI Constitutions Index [Data set]. "
-        + location.origin + "/spec-reader/"
+        + location.origin + "/doc-reader/"
         + "\nMethod: Andrés Cotton, Matt Stults, https://github.com/AndresCotton/ai-character-index";
     });
 }
@@ -1195,7 +1198,7 @@ if (behavioursDialog && behavioursOpen) {
           const text = document.createElement("p");
           text.textContent = query;
           const open = document.createElement("a");
-          open.href = `/spec-reader/?behavior=${encodeURIComponent(slug)}`;
+          open.href = `/doc-reader/?behavior=${encodeURIComponent(slug)}`;
           open.textContent = "Open it in the doc reader";
           item.append(title, text, open);
           blocks.append(item);

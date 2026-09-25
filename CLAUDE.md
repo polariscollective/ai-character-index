@@ -1,3 +1,38 @@
+# Rules for the site's text
+
+**A company's text talks about that company alone.** A profile, the reading of
+a cell, a company's summary on the overview: each says what one company's
+document does or what one company publishes, in absolute terms. It never says
+where the company stands beside another, never names another company, and never
+ranks ("the best", "the lowest of the three", "level with", "unlike"). A
+comparison belongs only where the owner asks for one explicitly, or in a place
+whose title says it compares: the fold "How it stands beside the other
+constitutions" in a behaviour's popover, the relative mode of the overview's
+grid, and the takeaways, which are findings across companies.
+`tests/test_company_texts_are_absolute.py` fails when a per-company text names
+another company. It cannot catch a ranking word with no name in it, so read for
+those too. This was said more than once before it was written here.
+
+**Before a publication, check that the written texts agree with each other and
+with the figures.** A publication freezes three files people write,
+`site/overview.json`, `site/constitutions.json` and `site/governance.json`, beside
+the panel's payload. Only some of what the site shows is computed from one place:
+
+- The overview's figures are computed from the two boards, so they cannot drift.
+  Its words are not: `summaries` and `takeaways` are written by hand, and must say
+  the same as the boards' profiles, readings and findings, with the same standing
+  for every company.
+- `constitutions.json` carries its figures and its words by hand. Nothing ties a
+  behaviour's score there to the depth the doc reader shows for the same behaviour
+  and document, which comes from the panel's payload. They must agree, or the
+  difference must be one the file explains.
+- `governance.json` is scored by hand, and its readings, profiles and findings
+  must match its own scores (`tests/test_governance_tab.py` holds part of this).
+
+An agent building a publication reads all three files against each other and
+against the payload before it runs `publish.py`, and says what it checked. No
+test covers the first two points yet.
+
 # Divergence from the upstream project
 
 This fork is `polariscollective/ai-character-index`, from

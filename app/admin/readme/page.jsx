@@ -198,7 +198,7 @@ export default function Readme() {
               <td>Suggestions sent by visitors through the site&apos;s form.</td>
             </tr>
             <tr>
-              <td><a href="/spec-reader/">Reader</a></td>
+              <td><a href="/doc-reader/">Reader</a></td>
               <td>The public reader itself.</td>
             </tr>
           </tbody>

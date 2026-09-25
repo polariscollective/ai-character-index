@@ -22,6 +22,8 @@
  * claim. Everything here is built as nodes: a page gains one script tag.
  */
 
+import { isLocal, readsFiles, setReadsFiles } from "./publication-data.js";
+
 const STYLE = `
 .dev-tag {
   align-self: center;
@@ -101,6 +103,30 @@ const STYLE = `
 }
 .dev-note .dev-close:hover { background: #B7C94B; }
 
+/* On a developer's machine only: which source the boards are read from. Two
+   buttons in one pill, the pressed one filled. */
+.dev-source {
+  align-self: center;
+  display: inline-flex;
+  margin-left: 6px;
+  border: 1px solid #5C6B3C;
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.dev-source button {
+  padding: 2px 8px;
+  border: 0;
+  background: transparent;
+  color: #23281B;
+  font: inherit;
+  cursor: pointer;
+}
+.dev-source button[aria-pressed="true"] { background: #333D22; color: #F1EFE3; }
+.dev-source button:hover { background: #B7C94B; color: #23281B; }
+.dev-source button:focus-visible { outline: 2px solid #B7C94B; outline-offset: -2px; }
+
 /* On a phone.
  *
  * The tag is a button, and at 11px with two pixels of padding it stood 21px
@@ -131,6 +157,8 @@ const STYLE = `
 /* Said about the index rather than about this build: whoever reads it is being
  * told what a figure on this page is worth. */
 const LINES = [
+  "This index is confidential while it is being built. Please do not share it, "
+  + "or quote from it, publicly.",
   "What is published here may still change.",
   "The method comes from working papers, and every figure rests on published "
   + "documents that anyone can check.",
@@ -153,7 +181,7 @@ function build(brand) {
   const note = document.createElement("dialog");
   note.className = "dev-note";
   const title = document.createElement("h2");
-  title.textContent = "Work in progress";
+  title.textContent = "Confidential, work in progress";
   note.append(title, ...LINES.map(paragraph));
 
   const close = document.createElement("button");
@@ -172,7 +200,7 @@ function build(brand) {
   ask.className = "dev-ask";
   ask.setAttribute("aria-hidden", "true");
   ask.textContent = "?";
-  tag.append(document.createTextNode("Work in progress "), ask);
+  tag.append(document.createTextNode("Confidential - WIP "), ask);
   tag.title = "What this means";
   tag.addEventListener("click", () => note.showModal());
 
@@ -180,10 +208,38 @@ function build(brand) {
   document.body.append(note);
 }
 
+/* Publication or the files in the repository, for the two boards. Changing it
+ * reloads, because each board reads its data once, when the page opens. */
+function sourceSwitch(brand) {
+  const group = document.createElement("span");
+  group.className = "dev-source";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", "Read the boards from");
+  const files = readsFiles();
+  for (const [label, on, title] of [
+    ["Publication", false, "The boards as the publication being served froze them"],
+    ["Repository files", true, "site/constitutions.json and site/governance.json as they stand now"],
+  ]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.title = title;
+    button.setAttribute("aria-pressed", String(on === files));
+    button.addEventListener("click", () => {
+      if (on === files) return;
+      setReadsFiles(on);
+      location.reload();
+    });
+    group.append(button);
+  }
+  brand.append(group);
+}
+
 function start() {
   const brand = document.querySelector(".site-brand");
   if (!brand) return;
   build(brand);
+  if (isLocal()) sourceSwitch(brand);
 }
 
 start();

@@ -1,7 +1,7 @@
 """The governance view says the same numbers in its sentences as in its tables.
 
 site/governance.json holds every score and the text of the research note, and
-the overview's governance board is built from it. The board writes each
+the index page's governance board is built from it. The board writes each
 profile's opening line from the averages, but some sentences of the note quote
 numbers in words: the first finding quotes two averages, the finding on Meta
 quotes both group scores, and each profile's paragraphs on the best practices
@@ -26,7 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = json.loads((ROOT / "site" / "governance.json").read_text(encoding="utf-8"))
-PAGE = (ROOT / "site" / "overview.html").read_text(encoding="utf-8")
+PAGE = (ROOT / "site" / "boards.html").read_text(encoding="utf-8")
 
 # The board's order: companies are ranked on the final score, the sum of what is
 # published and what it engages. Until 24 September 2026 they were ranked on the
@@ -107,7 +107,7 @@ def rank(lab):
 
 
 class GovernancePanel(HTMLParser):
-    """Collects the text of the governance panel in site/overview.html."""
+    """Collects the text of the governance panel in site/boards.html."""
 
     # Tags with no end tag would otherwise count as opened and never closed.
     VOID = {"br", "hr", "img", "input", "meta", "link", "wbr", "source"}

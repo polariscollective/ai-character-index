@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Index, AI Constitutions Index</title>
+<!-- The site's own mark, the same declaration the other four pages carry: the
+     broken orbit knocked out in paper from an olive-deep rounded square. This
+     page was the only one without it, so it alone fell back to the browser's
+     blank default, and there is no favicon.ico to fall back on. Inline rather
+     than a file, as everywhere else here, so the page stays movable. -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/board.css">
+</head>
+<body>
+<!-- The reader's own header, the same markup in the same order, so that moving
+     between the two pages reads as moving inside one site rather than arriving
+     at another. The one piece deliberately left out is the reader's palette
+     switch: this page carries no second palette, and a control that does
+     nothing is worse than a control that is not there. -->
+<header class="site-header">
+  <span class="site-brand">
+    <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
+    <a class="collective" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer">Polaris Collective</a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <a class="wordmark" href="/doc-reader/">AI Constitutions Index</a>
+  </span>
+  <nav aria-label="Primary navigation">
+    <a href="/">Overview</a>
+    <a class="active" href="/index" aria-current="page" data-index-menu>Index</a>
+    <a href="/doc-reader/">Doc reader</a>
+    <a href="/about">About</a>
+    <a href="/mcp">MCP</a>
+  </nav>
+</header>
+
+<div class="shell">
+  <!-- Two views of the index, one on screen at a time. The first reads what the
+       documents say; the second asks how the companies govern them. Which one
+       is shown is the address's, ?view=governance, and a reader chooses it from
+       the Index menu in the header (brand.js), not from tabs on the page. -->
+  <section id="view-coverage">
+  <!-- Every word of this view comes from constitutions.json, which a
+       publication freezes: see page-content.js. The markup keeps only where each
+       part goes. -->
+  <h1 id="cov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="cov-lede" hidden data-needs-board></div>
+
+  <p class="grid-note" id="status" aria-live="polite">Loading.</p>
+
+  <div class="gov-toolbar" hidden data-needs-board>
+    <p class="gov-hint">
+      Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
+      Open a row to see the parts it is made of.
+    </p>
+    <button type="button" class="gov-button" id="expand-all" aria-pressed="false">Show every row</button>
+  </div>
+  <div class="matrix-wrap" id="cov-chart" data-menu="Scoring chart" hidden data-needs-board>
+    <table class="board" id="board">
+      <caption class="visually-hidden">Each company's final score, its document as a whole and
+        its behaviours by category, with each group's rows available to open</caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="legend" aria-hidden="true" hidden data-needs-board></div>
+  <!-- The two scales under the table rather than beside it: the board is read
+       across first, and a rail down the side took a fifth of the width from it.
+       They are written here once and never repeated inside a popover, so a
+       reader learns what a figure means in one place. -->
+  <section class="depth-key" id="cov-scale" aria-labelledby="behaviour-scale-title" hidden data-needs-board>
+    <h2 id="behaviour-scale-title"></h2>
+    <ol class="depth-key-list" id="behaviour-scale"></ol>
+  </section>
+  <p class="gov-foot" id="ties"></p>
+  <p class="gov-date" id="as-of"></p>
+
+  <!-- What the board shows, why it exists and where it goes next, in the order
+       Guidelight gives its own sections. The takeaways are written in
+       constitutions.json and drawn by constitutions.js. -->
+  <!-- The takeaways and the notes side by side, as on the governance view. -->
+  <div class="gov-after" hidden data-needs-board>
+    <section class="gov-findings" id="cov-takeaways" data-menu="Takeaways" aria-labelledby="cov-takeaways-title">
+      <h2 id="cov-takeaways-title">Takeaways</h2>
+      <div class="gov-findings-list" id="cov-findings"></div>
+    </section>
+    <!-- The numbered notes the board's rows point to, under the scale the third
+         one refers to, with a heading as the governance view gives its own. The
+         numbers are the ones constitutions.js writes beside the rows' names. -->
+    <aside class="gov-findings gov-notes-rail" id="cov-notes" data-menu="Notes" aria-labelledby="cov-notes-title">
+    <h2 id="cov-notes-title">Notes</h2>
+    <ol class="gov-notes" id="board-notes"></ol>
+    </aside>
+  </div>
+  <div id="cov-sections"></div>
+  <!-- The board this one replaced, in one line. It is built from the index's
+       own publication and every figure on it opens on the passages behind it,
+       which is what this board does not carry. -->
+
+  <!-- One popover for the whole board, filled with whatever was pressed and
+       placed beside it. The browser closes it on Escape or a press elsewhere.
+       The governance view has its own, a few hundred lines below: two boards on
+       one page cannot share a popover, because each places its own beside the
+       cell that was pressed in it. -->
+  <div class="gov-pop" id="grid-pop" popover role="dialog" aria-labelledby="grid-pop-title" tabindex="-1"></div>
+  </section>
+
+  <!-- The governance view, from the research note "Spec governance ranking: six
+       frontier labs" of 18 September 2026, rewritten for readers who are not
+       technical. What a reader meets is the board, the findings and one sentence
+       saying where the questions come from; the method and the sources are two
+       folded appendices under them. Every sentence of the note is one press away
+       in the panel beside the board. The numbers and the lab-by-lab text are in
+       governance.json, which governance.js reads;
+       tests/test_governance_tab.py holds the two to each other. -->
+  <section id="view-governance" hidden>
+  <!-- Every word of this view comes from governance.json, which a publication
+       freezes: see page-content.js. -->
+  <h1 id="gov-intro" data-menu="Intro" hidden data-needs-board></h1>
+  <div id="gov-lede" class="gov-lede" hidden data-needs-board></div>
+
+
+  <p class="grid-note" id="gov-status" aria-live="polite">Loading.</p>
+
+  <div class="gov-toolbar" hidden data-needs-board>
+    <p class="gov-hint">
+      Press a figure to see what it means, or a company or a row&rsquo;s name to read about it.
+      Open a question to see the checks it is made of.
+    </p>
+    <button type="button" class="gov-button" id="gov-expand-all" aria-pressed="false">Show every row</button>
+  </div>
+  <div class="matrix-wrap" id="gov-chart" data-menu="Scoring chart" hidden data-needs-board>
+    <table class="gov-heatmap board" id="gov-heatmap">
+      <caption class="visually-hidden">Each company's final score and the two figures it adds, what is published and what it engages, with the rows under each and every question's checks available to open</caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
+  <div class="gov-legend" id="gov-legend" aria-hidden="true" hidden data-needs-board></div>
+  <!-- Written by governance.js from the scores, so it cannot name a tie the
+       table does not have. -->
+  <p class="gov-foot" id="gov-ties"></p>
+  <p class="gov-date" id="gov-as-of"></p>
+
+  <!-- The findings and the notes side by side: the findings read straight down
+       in the wider column, and the numbered notes the board's rows point to sit
+       beside them, so neither pushes the other off the screen. On a phone they
+       stack, findings first. -->
+  <div class="gov-after" hidden data-needs-board>
+    <section class="gov-findings" id="gov-takeaways" data-menu="Takeaways" aria-labelledby="gov-findings-title">
+      <h2 id="gov-findings-title">Takeaways</h2>
+      <div class="gov-findings-list" id="gov-findings"></div>
+    </section>
+    <!-- The numbered notes, written by governance.js from governance.json: what
+         each figure means, where each row comes from, and what the numbers beside
+         a row's name or a company's flag refer to. -->
+    <aside class="gov-findings gov-notes-rail" id="gov-notes" data-menu="Notes" aria-labelledby="gov-notes-title">
+      <h2 id="gov-notes-title">Notes</h2>
+      <div id="gov-columns"></div>
+    </aside>
+  </div>
+
+  <!-- One popover for the whole board, filled with whatever was pressed and
+       placed beside it. The browser closes it on Escape or a press elsewhere. -->
+  <div class="gov-pop" id="gov-pop" popover role="dialog" aria-labelledby="gov-pop-title" tabindex="-1"></div>
+
+  <div id="gov-sections"></div>
+  </section>
+</div>
+
+<!-- The sections of the view on screen, down the left margin on a wide screen.
+     overview.js fills it from the data-menu marks of the visible view. -->
+<nav class="page-menu" id="page-menu" aria-label="Sections of this page"></nav>
+<script type="module" src="/boards.js"></script>
+<!-- The development mark beside the wordmark, which appears only where the
+     publication on screen has not been published. One file for every page:
+     copied into each, its wording would drift. -->
+<script type="module" src="/dev-tag.js"></script>
+<!-- The wordmark's note: which publication is on screen, the change log and
+     the words the index uses. One file for every page, like dev-tag.js. -->
+<script type="module" src="/brand.js"></script>
+<!-- The bubble at the bottom right: a screenshot of this page, annotated, with
+     a sentence. One file for every page, like dev-tag.js and brand.js. -->
+<script type="module" src="/page-feedback.js"></script>
+</body>
+</html>

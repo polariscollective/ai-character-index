@@ -15,7 +15,7 @@ database is separate work, and doing it first would have left these behind.
 WHAT GOES WHERE
 
     site/depths.json        -> aci_document_notes, kind 'depth'
-    site/overview.json      -> aci_document_notes, kind 'standing'
+    artefacts/standing.json -> aci_document_notes, kind 'standing'
     <run>/paragraphs.json   -> aci_passage_notes, under that run
 
 Each file carries the model and the prompt's digest once, at its head, and one
@@ -47,7 +47,7 @@ sys.path.insert(0, str(HERE.parent / "spec-cite"))
 from store import Store             # noqa: E402
 
 DEPTHS = ROOT / "site" / "depths.json"
-OVERVIEW = ROOT / "site" / "overview.json"
+OVERVIEW = ROOT / "artefacts" / "standing.json"
 PARAGRAPHS = str(ROOT / "artefacts" / "*" / "paragraphs.json")
 
 
@@ -59,7 +59,7 @@ def read(path):
 
 
 def document_rows(record, kind):
-    """One aci_document_notes row per cell of depths.json or overview.json.
+    """One aci_document_notes row per cell of depths.json or standing.json.
 
     The key of a cell is "<behaviour>\\n<document>", and each cell repeats both
     as fields; the fields are used, because a key is a convenience of the file

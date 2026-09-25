@@ -400,39 +400,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .readings.figures th:not(:nth-child(-n+2)), .readings td.numeric { text-align: right; }
 .readings td.numeric .mono, .readings td.rank-cell .mono { font-size: 13px; }
 
-/* The two views. The selected tab carries the chartreuse rule the header's menu
-   gives the page you are on, so the two levels of navigation speak one idiom.
-   One weight for both tabs: a selected tab that turned bold would widen and
-   push its neighbour along. */
-.views {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 22px;
-  margin: 18px 0 0;
-  border-bottom: 1px solid var(--line);
-}
-.view-tab {
-  padding: 10px 0 9px;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color .15s ease, background-color .15s ease;
-}
-.view-tab:hover { background: var(--energy); color: var(--ink); }
-.view-tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--energy); }
-.view-tab:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
-/* A view that does not exist yet: visible, quiet, and not pressable. The label
-   under it says why, in the faint ink every muted line on the page uses. */
-.view-tab-coming, .view-tab-coming:hover { color: var(--faint); font-weight: 400; background: none; cursor: default; }
-/* Its label sits under its name, small and unboxed, so a view still to come is
-   no wider than its name and the four fit on one line. */
-.view-tab-coming { padding-top: 4px; padding-bottom: 3px; line-height: 1.25; text-align: left; }
-.view-tab-coming .coming { display: block; font-size: 10px; white-space: nowrap; }
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -622,7 +589,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 [hidden] { display: none !important; }
 
 /* The sentence a publication that cannot be drawn gets, clear of the tabs. */
-#status, #gov-status { margin-top: 18px; }
+#status, #gov-status, #ovw-status { margin-top: 18px; }
 
 /* The small square beside each level of the behaviour scale, painted the colour
    a cell at that depth takes. */
@@ -934,6 +901,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   transition: background-color .15s ease;
 }
 .inline-button:hover { background: var(--energy); }
+/* The same, as a link to a figure on another page. */
+.inline-link {
+  color: var(--ink);
+  text-decoration: underline 1px var(--energy);
+  text-underline-offset: 3px;
+  transition: background-color .15s ease;
+}
+.inline-link:hover, .inline-link:focus-visible { background: var(--energy); }
+
 
 /* The reference text under the board, folded. */
 .gov-more { margin-top: 0; }
@@ -1083,14 +1059,6 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   .row-toggle { position: relative; }
   .row-toggle::after { content: ""; position: absolute; inset: -9px; }
 
-  /* Two tabs, side by side and each on half the width, wrapping inside itself.
-     One above the other they would read as a list of links; what says they are
-     tabs is the rule under the one you are on, and that rule has to be as wide
-     as the tab. */
-  .views { gap: 0 12px; }
-  .view-tab { flex: 1 1 0; min-width: 0; text-align: left; }
-  /* The two views still to come take a row of their own on a phone. */
-  .view-tab-coming { flex: 1 1 40%; }
   /* The pill above the board, at the height a thumb finds. Its 33 pixels are
      about right for a pointer and under what a finger reliably hits. */
   .gov-button { padding: 9px 16px; }
@@ -1188,6 +1156,73 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   .readings td.reason { margin-top: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .view-tab, .gov-button, .row-toggle::before,
+  .gov-button, .row-toggle::before,
   .gov-pop summary::before, .section-fold > summary::before { transition: none; }
+}
+
+/* ---------- the overview ----------
+ *
+ * Its grid is a board like the Index's, drawn by board.js with the same cells,
+ * so only what the overview adds is here: the pair of buttons that choose how
+ * the figures are shown, the words a cell carries in the relative mode, and the
+ * takeaways under it. */
+.ovw-mode { display: inline-flex; gap: 6px; }
+/* The note mark on a button takes the button's own ink, pressed or not. */
+.ovw-mode .row-mark { color: inherit; }
+
+
+/* A cell is the same size in both modes, whatever it carries: a figure on one
+   line or a tier over two. The heights are fixed rather than minimums, and a
+   tier's words are set small enough to fit two lines inside them. */
+.ovw-board tr[data-level="1"] .cell-button { height: 54px; min-height: 54px; }
+.ovw-board tr[data-level="2"] .cell-button { height: 44px; min-height: 44px; }
+/* Two lines of a tier inside a cell of the lower row: its padding gives way. */
+.ovw-board tr[data-level="2"] .cell-tier { padding-top: 4px; padding-bottom: 4px; }
+.board .cell-tier .cell-words {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ovw-board tr[data-level="2"] .cell-tier .cell-words { font-size: 11px; }
+@media (max-width: 560px) {
+  .board .cell-tier .cell-words { font-size: 11px; }
+}
+.ovw-pop-link { margin-top: 12px; }
+/* A caveat on a company's document: under everything else, set off by a rule,
+   in the popover's quiet subtitle ink. */
+.gov-pop .ovw-caveat { margin-top: 14px; padding-top: 10px; border-top: 1px solid rgb(92 107 60 / .2); }
+
+.ovw-takeaways { margin-top: 40px; }
+.ovw-takeaways h2 {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+}
+.ovw-takeaways h2::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-bottom: 12px;
+  background: var(--energy);
+}
+.ovw-takeaway-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 32px;
+  border-top: 1px solid rgb(92 107 60 / .2);
+}
+.ovw-takeaway { padding: 12px 0 14px; border-bottom: 1px solid rgb(92 107 60 / .2); }
+.ovw-takeaway h3 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.ovw-takeaway p { margin: 0; max-width: 66ch; font-size: 14px; line-height: 1.55; }
+@media (max-width: 880px) {
+  .ovw-takeaway-list { grid-template-columns: 1fr; }
 }

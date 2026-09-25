@@ -56,6 +56,7 @@ const server = createServer(async (request, response) => {
    * Without this line the walker answers 404 for the one address every menu
    * points at, which would be a check on the walker rather than on the page. */
   if (path === "/") path = "/overview.html";
+  if (path === "/index" || path === "/index/") path = "/boards.html";
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
   // not the file it happens to be stored in. Without it this server answers 404

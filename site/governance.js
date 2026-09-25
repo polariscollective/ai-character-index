@@ -131,6 +131,25 @@ export function totalsFor(data, labId) {
   return { byQuestion, byColumn, total };
 }
 
+/* What one of the two figures is made of, each part out of 10 and in the
+ * order its fold shows them: its questions, the practices that stand alone,
+ * then its groups of practices. The overview lists the same parts under the
+ * same cell. */
+export function partsOf(data, labId, columnId) {
+  const column = data.columns.find(one => one.id === columnId);
+  const { byQuestion } = totalsFor(data, labId);
+  const inGroup = id => (column.groups || []).some(group => group.practices.includes(id));
+  return [
+    ...column.questions.map(id => ({ kind: "question", id, row: id,
+      name: data.questions.find(one => one.id === id).name, value: onTen(byQuestion[id], SCALE) })),
+    ...column.practices.filter(id => !inGroup(id)).map(id => ({ kind: "practice", id, row: id,
+      name: practiceOf(data, id).short, value: onTen(practiceScoreOf(data, labId, id), PRACTICE) })),
+    ...(column.groups || []).map(group => ({ kind: "group", id: group.id,
+      row: `group-${group.id}`, name: group.name,
+      value: average(group.practices.map(id => onTen(practiceScoreOf(data, labId, id), PRACTICE))) })),
+  ];
+}
+
 /* The rank is the final score and nothing else, so companies level on it share
  * a place. */
 const ahead = (a, b) => !level(a.ranking, b.ranking) && a.ranking > b.ranking;
@@ -173,6 +192,20 @@ function meansAt(anchors, score) {
     || "This score sits between the two descriptions either side of it below.";
 }
 
+/* A label in a popover's list, pressable: it opens the cell it names, with the
+ * rows above it unfolded and the selection moved there. */
+function pressable(text, cell, open) {
+  const button = element("button", "inline-button", text);
+  button.type = "button";
+  button.addEventListener("click", () => view.follow(cell, open));
+  return button;
+}
+
+/* A practice's own popover, whichever list it belongs to. */
+const practiceContent = (lab, practice) => (onlyTheCompany(board.data, practice.id)
+  ? content => disclosedScore(content, lab, practice)
+  : content => practiceScore(content, lab, practice));
+
 function checksOf(lab, question) {
   const list = element("ul", "check-list");
   question.checks.forEach(check => {
@@ -180,7 +213,8 @@ function checksOf(lab, question) {
     const value = board.data.scores[lab.id][check.id];
     item.append(view.chip(onTen(value, SCALE), TEN, shown(onTen(value, SCALE))),
       element("span", "check-id", check.id),
-      element("span", "", `${check.label} (${value} of ${SCALE})`));
+      pressable(`${check.label} (${value} of ${SCALE})`, { lab: lab.id, row: check.id },
+        content => checkScore(content, lab, question, check)));
     list.append(item);
   });
   return list;
@@ -197,7 +231,9 @@ function practicesOf(lab, ids) {
       ? board.data.internal_evidence[lab.id][id].sentence : practice.label;
     const value = practiceScoreOf(board.data, lab.id, id);
     item.append(view.chip(onTen(value, PRACTICE), TEN, shown(onTen(value, PRACTICE))),
-      element("span", "check-id", id), element("span", "", `${said} (${value} of ${PRACTICE})`));
+      element("span", "check-id", id),
+      pressable(`${said} (${value} of ${PRACTICE})`, { lab: lab.id, row: id },
+        practiceContent(lab, practice)));
     list.append(item);
   });
   return list;
@@ -376,36 +412,33 @@ function profile(content, lab, open) {
   }
 }
 
+/* A part of a figure, pressable, which refills the popover in place. */
+function partItem(value, name, open, cell) {
+  const item = element("li");
+  const button = element("button", "inline-button", name);
+  button.type = "button";
+  button.setAttribute("aria-label", `${name}, ${shown(value)} out of ${TEN}`);
+  button.addEventListener("click", () => (cell ? view.follow(cell, open) : view.refill(open)));
+  item.append(view.chip(value, TEN, shown(value)), button);
+  return item;
+}
+
 function columnScore(content, lab, column) {
   view.titled(content, `${lab.name}: ${column.name.toLowerCase()}`, column.plain);
-  content.append(view.figure(shown(lab.byColumn[column.id]), ` out of ${column.out_of}`),
-    element("p", "subtitle", "The weighted average of the rows below, each counting for the "
-      + `share it says. It counts for ${weightLine(share(board.data.total.weights[column.id]),
-        "the final score")}.`));
+  content.append(view.figure(shown(lab.byColumn[column.id]), ` out of ${column.out_of}`));
+  // Why the company stands where it does, in the file's words; the overview
+  // shows the same reading for this cell.
+  const reading = board.data.column_readings?.[lab.id]?.[column.id];
+  if (reading) content.append(paragraphs(reading));
+  content.append(view.h3("What it is made of"));
   const list = element("ul", "check-list");
-  const rows = rowsOf(column);
-  column.questions.forEach(id => {
-    const item = element("li");
-    const value = onTen(lab.byQuestion[id], SCALE);
-    item.append(view.chip(value, TEN, shown(value)), element("span", "check-id", id),
-      element("span", "", `${questionOf(id).name}, `
-        + `${frac(questionOf(id).checks.length, rows)}`));
-    list.append(item);
-  });
-  const shownAlone = column.practices.filter(id => !groupOf(column, id));
-  shownAlone.forEach(id => {
-    const item = element("li");
-    const value = onTen(practiceScoreOf(board.data, lab.id, id), PRACTICE);
-    item.append(view.chip(value, TEN, shown(value)), element("span", "check-id", id),
-      element("span", "", `${practiceOf(board.data, id).short}, ${frac(1, rows)}`));
-    list.append(item);
-  });
-  (column.groups || []).forEach(group => {
-    const item = element("li");
-    const value = groupAverage(lab.id, group);
-    item.append(view.chip(value, TEN, shown(value)),
-      element("span", "", `${group.name}, ${frac(group.practices.length, rows)}`));
-    list.append(item);
+  partsOf(board.data, lab.id, column.id).forEach(part => {
+    const open = part.kind === "question"
+      ? rest => questionScore(rest, lab, questionOf(part.id))
+      : part.kind === "practice"
+        ? rest => practiceScore(rest, lab, practiceOf(board.data, part.id))
+        : rest => groupScore(rest, lab, column.groups.find(group => group.id === part.id));
+    list.append(partItem(part.value, part.name, open, { lab: lab.id, row: part.row }));
   });
   content.append(list, toProfile(lab, null));
 }
@@ -413,8 +446,6 @@ function columnScore(content, lab, column) {
 function questionScore(content, lab, question) {
   view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.plain);
   content.append(view.figure(shown(onTen(lab.byQuestion[question.id], SCALE)), ` out of ${TEN}`),
-    element("p", "subtitle", `The average of its ${question.checks.length} checks, each scored `
-      + `from 0 to ${SCALE} and counting the same.`),
     checksOf(lab, question));
   content.append(view.h3("What we found"),
     paragraphs(board.data.profiles[lab.id][question.id]), toProfile(lab, question.id));
@@ -516,18 +547,20 @@ function aboutColumn(content, column) {
 /* The final score for one company: the two figures it adds, and its place. */
 function totalScore(content, lab) {
   const total = board.data.total;
-  view.titled(content, `${lab.name}: ${total.name.toLowerCase()}`, total.plain);
+  view.titled(content, `${lab.name}: ${total.name.toLowerCase()}`);
   content.append(view.figure(shown(lab.total), ` out of ${total.out_of}`),
-    element("p", "subtitle", `${lab.name} is ranked ${lab.rank} of ${board.labs.length} on it.`));
-  const list = element("ul", "check-list");
+    element("p", "", `Ranked ${lab.rank} of ${board.labs.length}.`));
+  // The two figures, each with why it stands where it does: one press gives the
+  // whole picture, and each figure opens on its own parts.
   board.data.columns.forEach(column => {
-    const item = element("li");
-    item.append(view.chip(lab.byColumn[column.id], column.out_of, shown(lab.byColumn[column.id])),
-      element("span", "", `${column.name}, `
-        + `${weightLine(share(total.weights[column.id]), "the final score")}`));
-    list.append(item);
+    const list = element("ul", "check-list");
+    list.append(partItem(lab.byColumn[column.id], column.name,
+      rest => columnScore(rest, lab, column), { lab: lab.id, row: column.id }));
+    content.append(list);
+    const reading = board.data.column_readings?.[lab.id]?.[column.id];
+    if (reading) content.append(paragraphs(reading));
   });
-  content.append(list, element("p", "subtitle", total.about), toProfile(lab, null));
+  content.append(toProfile(lab, null));
 }
 
 /* The final score with no company in front of it. */
@@ -603,16 +636,15 @@ function aboutUnscoredPractice(content, practice) {
 function groupScore(content, lab, group) {
   const value = groupAverage(lab.id, group);
   view.titled(content, `${lab.name}: ${group.name.toLowerCase()}`, group.plain);
-  content.append(view.figure(shown(value), ` out of ${TEN}`),
-    element("p", "subtitle", "The average of its practices, each scored 0, 1 or 2 and counting "
-      + "the same."));
+  content.append(view.figure(shown(value), ` out of ${TEN}`));
   const list = element("ul", "check-list");
   group.practices.forEach(id => {
     const item = element("li");
     const score = practiceScoreOf(board.data, lab.id, id);
     item.append(view.chip(onTen(score, PRACTICE), TEN, shown(onTen(score, PRACTICE))),
       element("span", "check-id", id),
-      element("span", "", `${practiceOf(board.data, id).label} (${score} of ${PRACTICE})`));
+      pressable(`${practiceOf(board.data, id).label} (${score} of ${PRACTICE})`,
+        { lab: lab.id, row: id }, practiceContent(lab, practiceOf(board.data, id))));
     list.append(item);
   });
   content.append(list);
@@ -1026,6 +1058,10 @@ function renderScoring() {
   fill(board.nodes.disclosed, engages.practices.filter(id => onlyTheCompany(board.data, id)));
   fill(board.nodes.internal, engages.unscored || []);
 }
+
+/* Open one cell of this board as a press on it would, unfolding the rows above
+ * it. The Index opens a cell the address names this way. */
+export const openCell = (lab, row) => Boolean(view?.pressCell({ lab, row }));
 
 export async function initializeGovernance() {
   const byId = id => document.getElementById(id);
