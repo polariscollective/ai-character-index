@@ -95,7 +95,8 @@ export function markupPlain(text) {
 /* The runs of one line, drawn into `node`. A link that leaves the site opens in
  * its own tab, so a reader checking a source keeps their place; a link whose
  * words are a lone asterisk is the site's footnote mark, drawn as the pages
- * draw it. */
+ * draw it, and so is a link whose words are a lone digit, which points to a
+ * numbered note. */
 export function filled(node, runs) {
   runs.forEach(run => {
     if (run.bold) {
@@ -103,10 +104,12 @@ export function filled(node, runs) {
       return;
     }
     if (run.href) {
-      const link = element("a", run.text === "*" ? "asterisk" : null, run.text);
+      const mark = /^(\*|\d)$/.test(run.text);
+      const link = element("a", mark ? "asterisk" : null, run.text);
       link.href = run.href;
-      // A lone asterisk says nothing read aloud: it is named for what it opens.
+      // A lone mark says nothing read aloud: it is named for what it opens.
       if (run.text === "*") link.setAttribute("aria-label", "What this word means here");
+      else if (mark) link.setAttribute("aria-label", `Note ${run.text}`);
       if (/^https?:/.test(run.href)) {
         link.target = "_blank";
         link.rel = "noopener noreferrer";

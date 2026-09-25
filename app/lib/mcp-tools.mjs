@@ -793,9 +793,9 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + `made public, so name the one you read: publication ${publication.id}`
     + (published ? `, published ${published}` : "") + ".",
     site
-      ? `  ${site}/spec-reader/?publication=${publication.id}`
+      ? `  ${site}/doc-reader/?publication=${publication.id}`
       : "  The same publication is on the site that serves this endpoint, at "
-        + `/spec-reader/?publication=${publication.id}`,
+        + `/doc-reader/?publication=${publication.id}`,
     ...(publication.is_public === false ? ["",
       "This publication is not public: it is a draft nobody has released, served "
       + "by a development deployment. Do not cite it as the index's published "

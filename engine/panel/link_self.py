@@ -378,7 +378,7 @@ def main(argv=None):
 
     grid = sub.add_parser("overview",
                           help="write where each specification stands on each behaviour")
-    grid.add_argument("--out", default=str(ROOT / "site" / "overview.json"),
+    grid.add_argument("--out", default=str(ROOT / "artefacts" / "standing.json"),
                       help="where the grid's passages are written")
     grid.set_defaults(handler=overview)
 

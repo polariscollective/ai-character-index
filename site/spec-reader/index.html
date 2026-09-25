@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- The page's assets are relative, so it must be read at /doc-reader/ with
+       its slash: at /doc-reader they would resolve against the root. Next
+       cannot add the slash (it reads both as one path), so the page does. -->
+  <script>if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/" + location.search + location.hash);</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="The doc reader of the AI Constitutions Index, with passages scored for behaviour relevance by a panel of frontier models.">
   <title>Doc reader, AI Constitutions Index</title>
@@ -23,6 +27,7 @@
     </span>
     <nav aria-label="Primary navigation">
       <a href="/">Overview</a>
+      <a href="/index" data-index-menu>Index</a>
       <a class="active" href="./" aria-current="page">Doc reader</a>
       <a href="/about">About</a>
       <a href="/mcp">MCP</a>
@@ -113,6 +118,17 @@
            nothing visible when they are pressed. -->
       <p id="copy-status" class="visually-hidden" aria-live="polite"></p>
       <div id="document-reader" class="document-grid" tabindex="-1"></div>
+      <!-- Shown from the first paint, before any script has run, and again while
+           a document is fetched: a cold server can take a few seconds, and an
+           empty page in the meantime reads as a broken one. The ring of the mark
+           turns around its star; the ring stays open, as the mark requires. -->
+      <div id="reader-loader" class="reader-loader" role="status">
+        <svg class="loader-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path
+          class="loader-ring" d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z"
+          fill="currentColor"/></svg>
+        <span class="loader-text">Constitution loading</span>
+      </div>
     </section>
   </main>
 
@@ -311,16 +327,15 @@
           </div>
         </div>
       </header>
-      <!-- Under the header's rule rather than inside it: the caveat is about the
-           text below, not one more field of the document's identity. -->
-      <p class="document-translation" role="note" hidden><span class="translation-text"></span><button
-        type="button" class="translation-dismiss" aria-label="Dismiss translation notice"
-        title="Dismiss translation notice">×</button></p>
-      <!-- Beside the translation notice, and under it: what the document is
-           inside the company that published it, where its own text does not say.
-           It carries no ×, because it is a fact about the document rather than a
-           caveat about what the reader is rendering. -->
-      <p class="document-context" role="note" hidden></p>
+      <!-- Under the header's rule rather than inside it: the notice is about the
+           document below, not one more field of its identity. One band for
+           everything a reader should know before reading it: what the document
+           is inside the company that published it, where its own text does not
+           say, and whether it is a translation. One × closes it. -->
+      <p class="document-translation" role="note" hidden><span class="translation-text"><span
+        class="context-line"></span><span class="translation-line"></span></span><button
+        type="button" class="translation-dismiss" aria-label="Dismiss this notice"
+        title="Dismiss this notice">×</button></p>
       <!-- Under the header's rule and above the text it searches, so the count
            and the matches belong visibly to the same document. -->
       <div class="find-bar" hidden>
@@ -335,6 +350,14 @@
           aria-label="Close find" title="Close find">×</button>
       </div>
       <div class="document-scroll">
+        <!-- Back to the start of the document, held in the column's top right
+             corner while it scrolls, and shown only once the reader has left
+             the top. A holder of no height carries it, so it takes no room. -->
+        <div class="to-top-holder"><button type="button" class="to-top" hidden
+          aria-label="Back to the top of the document" title="Back to the top"><svg
+          viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 12.5V3.5M3.5 8 8 3.5 12.5 8"
+          fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+          stroke-linejoin="round"/></svg></button></div>
         <div class="passage-rail" role="navigation" aria-label="Highlighted passages in this document"></div>
         <div class="document-body"></div>
       </div>

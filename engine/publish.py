@@ -74,13 +74,16 @@ FORMATS = {
     # which is what the verifier recomputes.
     "constitutions": dict(indent=1, ensure_ascii=False),
     "governance": dict(indent=1, ensure_ascii=False),
+    "overview": dict(indent=1, ensure_ascii=False),
 }
-# The files the two boards are written in. A publication freezes both, so it is
-# the whole of what the site shows at one moment; whether their figures agree
-# with the judges' is the publisher's to check before publishing.
+# The files the two boards and the overview are written in. A publication
+# freezes all three, so it is the whole of what the site shows at one moment;
+# whether their figures agree with the judges' is the publisher's to check
+# before publishing.
 BOARD_FILES = {
     "constitutions": ROOT / "site" / "constitutions.json",
     "governance": ROOT / "site" / "governance.json",
+    "overview": ROOT / "site" / "overview.json",
 }
 BUILDERS = {
     "payload": (HERE / "panel" / "build_site_data.py",
@@ -410,8 +413,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
                                 link_runs=link_runs, note_prompts=note_prompts,
                                 comparisons=not out_of_ten)
 
-    # The two boards, frozen as they stand. `boards` maps a board to another
-    # file, for tests; every board is carried either way.
+    # The two boards and the overview, frozen as they stand. `boards` maps one
+    # to another file, for tests; every one is carried either way.
     frozen = {name: read_board(name, (boards or {}).get(name)) for name in BOARD_FILES}
 
     build_params = {"behaviours": sorted(behaviours),

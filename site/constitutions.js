@@ -107,6 +107,34 @@ const criterionPart = (company, criterion) =>
 
 const wholeTotal = company => number(company.whole?.total);
 
+/* The behaviours by category, in the order the file first names each one. */
+function categoriesOf(data) {
+  const byCategory = new Map();
+  data.behaviours.forEach(behaviour => {
+    const name = behaviour.category || "Behaviours";
+    if (!byCategory.has(name)) byCategory.set(name, []);
+    byCategory.get(name).push(behaviour);
+  });
+  return [...byCategory].map(([name, members], index) =>
+    ({ id: `category-${index}`, name, members }));
+}
+
+/* What one of the two halves is made of, each part out of 10: the five
+ * criteria of the document as a whole, or the categories of the behaviours.
+ * The overview lists the same parts under the same cell. */
+export function partsOf(data, company, figure) {
+  if (figure === "whole") {
+    return data.criteria
+      .map(criterion => ({ name: criterion.name, row: criterion.id,
+                           value: criterionPart(company, criterion) }))
+      .filter(part => part.value !== null);
+  }
+  return categoriesOf(data)
+    .map(category => ({ name: category.name, row: category.id,
+                        value: categoryFigure(company, category.members) }))
+    .filter(part => part.value !== null);
+}
+
 const behaviourEntry = (company, behaviour) => company.behaviours?.[behaviour.slug] || null;
 
 const depthOf = (company, behaviour) =>
@@ -119,14 +147,17 @@ const behavioursFigure = company => categoryFigure(company, state.data.behaviour
 
 /* The final score: the document as a whole and the behaviours, averaged with the
  * weights the file gives them. Worked out here rather than read from the file,
- * so it cannot disagree with the two figures it is made of. */
-const finalOf = (data, company) => {
+ * so it cannot disagree with the two figures it is made of. The overview reads
+ * the two halves from here too, so the front page and the board cannot differ. */
+export function figuresOf(data, company) {
   const whole = number(company.whole?.total) ?? 0;
   const behaviours = mean(data.behaviours
     .map(behaviour => number(company.behaviours?.[behaviour.slug]?.score))
     .filter(value => value !== null)) ?? 0;
-  return whole * data.weights.whole + behaviours * data.weights.behaviours;
-};
+  return { whole, behaviours,
+           final: whole * data.weights.whole + behaviours * data.weights.behaviours };
+}
+const finalOf = (data, company) => figuresOf(data, company).final;
 
 /* Companies by the score the board leads with. A rank is one more than the
  * number of companies ahead, so companies level on the final score share a place
@@ -170,12 +201,11 @@ const listed = names => (names.length < 3
 /* Only a company the board shows has a rank, so an earlier version of a
  * document, which has a column nowhere, is given no place in a ranking it is
  * not part of. */
+/* The place alone. A company's popover names no other company, so a shared
+ * place is not spelt out here; the board shows it. */
 function rankLine(company) {
   if (!company.rank) return "";
-  const all = state.companies;
-  const alongside = all.filter(other => other !== company && other.rank === company.rank);
-  return `Ranked ${company.rank} of ${all.length}`
-    + `${alongside.length ? `, level with ${listed(alongside.map(other => other.name))}` : ""}.`;
+  return `Ranked ${company.rank} of ${state.companies.length}.`;
 }
 
 /* ---- Small builders --------------------------------------------------------- */
@@ -221,14 +251,15 @@ function cellSentences(content, company, ...blocks) {
   if (!sentences(content, ...blocks)) sentences(content, company.profile);
 }
 
-/* A figure beside a name, pressable, which refills the popover in place rather
- * than sending the reader back to the table to find the cell. */
-function figureItem(value, max, name, label, open) {
+/* A figure beside a name, pressable. With the cell it names (`cell`, the
+ * cell's data attributes) it opens that cell, unfolding the rows above it and
+ * moving the selection there; without one it refills the popover in place. */
+function figureItem(value, max, name, label, open, cell) {
   const item = element("li");
   const button = element("button", "inline-button", name);
   button.type = "button";
   button.setAttribute("aria-label", label);
-  button.addEventListener("click", () => board.refill(open));
+  button.addEventListener("click", () => (cell ? board.follow(cell, open) : board.refill(open)));
   item.append(board.chip(value, max, shown(value)), button);
   return item;
 }
@@ -271,23 +302,27 @@ function finalScore(content, company) {
   board.titled(content, `${company.name}: final score`, documentLine(company));
   content.append(board.figure(shown(company.final), ` out of ${finalMax()}`));
   content.append(paragraph(rankLine(company)));
-  const parts = element("ul", "check-list");
-  const whole = wholeTotal(company);
-  const behaviours = behavioursFigure(company);
-  if (whole !== null) {
-    parts.append(figureItem(whole, wholeMax(),
-      `The document as a whole, counting for ${share(state.data.weights.whole)}`,
-      `The document as a whole, ${shown(whole)} out of ${wholeMax()}`,
-      rest => wholeScore(rest, company)));
-  }
-  if (behaviours !== null) {
-    const item = element("li");
-    item.append(board.chip(behaviours, depthMax(), shown(behaviours)),
-      element("span", "", `The behaviours, the mean of every behaviour on the board, counting `
-        + `for ${share(state.data.weights.behaviours)}`));
-    parts.append(item);
-  }
-  content.append(parts);
+  // A company with no document has one thing to say about both halves, its own
+  // line, so it is said once here rather than under each.
+  if (!company.document) sentences(content, company.profile);
+  // The two halves, each with why it stands where it does: one press gives the
+  // whole picture, and each half opens on its own parts.
+  const halves = [
+    { name: "The document as a whole", value: wholeTotal(company), max: wholeMax(),
+      reading: company.readings?.whole, open: rest => wholeScore(rest, company), row: "whole" },
+    { name: "The behaviours", value: behavioursFigure(company), max: depthMax(),
+      reading: company.readings?.behaviours, open: rest => behavioursScore(rest, company),
+      row: "behaviours" },
+  ];
+  halves.forEach(half => {
+    if (half.value === null) return;
+    const list = element("ul", "check-list");
+    list.append(figureItem(half.value, half.max, half.name,
+      `${half.name}, ${shown(half.value)} out of ${half.max}`, half.open,
+      { lab: company.id, row: half.row }));
+    content.append(list);
+    if (company.document) cellSentences(content, company, half.reading);
+  });
   content.append(board.popButton(`The whole profile of ${company.name}`,
     () => board.refill(rest => profile(rest, company))));
 }
@@ -309,10 +344,10 @@ function profile(content, company) {
     state.data.criteria.forEach(criterion => {
       const part = criterionPart(company, criterion);
       if (part === null) return;
-      const item = element("li");
-      item.append(board.chip(part, shownMax(), shown(part)),
-        element("span", "", `${criterion.name}, out of ${shownMax()}`));
-      list.append(item);
+      list.append(figureItem(part, shownMax(), criterion.name,
+        `${criterion.name}, ${shown(part)} out of ${shownMax()}`,
+        rest => criterionScore(rest, company, criterion),
+        company.current ? null : { lab: company.id, row: criterion.id }));
     });
     fold.append(summary, list);
     content.append(fold);
@@ -328,17 +363,26 @@ function profile(content, company) {
     members.forEach(behaviour => {
       const score = depthOf(company, behaviour);
       if (score === null) return;
-      const item = element("li");
-      item.append(board.chip(score, depthMax(), shown(score)),
-        element("span", "", behaviour.name));
-      list.append(item);
+      list.append(figureItem(score, depthMax(), behaviour.name,
+        `${behaviour.name}, ${shown(score)} out of ${depthMax()}`,
+        rest => behaviourCell(rest, company, behaviour),
+        company.current ? null : { lab: company.id, row: behaviour.slug }));
     });
     fold.append(summary, list);
     content.append(fold);
   });
+  if (company.document) {
+    // The document in the Doc reader, where every passage behind these figures
+    // can be read, and at its publisher.
+    const reader = element("p");
+    const toReader = element("a", null, `Read ${company.document.title} in the Doc reader`);
+    toReader.href = `/doc-reader/?spec=${encodeURIComponent(company.document.id)}`;
+    reader.append(toReader);
+    content.append(reader);
+  }
   if (company.document?.url) {
     const read = element("p");
-    read.append(link(company.document.url, `Read ${company.document.title}`));
+    read.append(link(company.document.url, `Read ${company.document.title} at its publisher`));
     content.append(read);
   }
   /* A company keeps one column, its newest document, so an earlier version of
@@ -378,13 +422,17 @@ function wholeScore(content, company) {
   const total = wholeTotal(company);
   board.titled(content, `${company.name}: the document as a whole`, documentLine(company));
   content.append(board.figure(shown(total), ` out of ${wholeMax()}`));
+  // Why the document stands where it does, in the file's words; the overview
+  // shows the same reading for this cell.
+  cellSentences(content, company, company.readings?.whole);
+  content.append(board.h3("What it is made of"));
   const list = element("ul", "check-list");
   state.data.criteria.forEach(criterion => {
     const part = criterionPart(company, criterion);
     if (part === null) return;
     list.append(figureItem(part, shownMax(), criterion.name,
       `${criterion.name}, ${shown(part)} out of ${shownMax()}`,
-      rest => criterionScore(rest, company, criterion)));
+      rest => criterionScore(rest, company, criterion), { lab: company.id, row: criterion.id }));
   });
   content.append(list);
   content.append(board.popButton(`The whole profile of ${company.name}`,
@@ -430,9 +478,9 @@ function behavioursScore(content, company) {
   const value = behavioursFigure(company);
   const every = state.data.behaviours.length;
   board.titled(content, `${company.name}: the behaviours`, documentLine(company));
-  content.append(board.figure(shown(value), ` out of ${depthMax()}`),
-    element("p", "subtitle", `The mean of all ${every} behaviours. Each category counts for as `
-      + "many behaviours as it holds."));
+  content.append(board.figure(shown(value), ` out of ${depthMax()}`));
+  cellSentences(content, company, company.readings?.behaviours);
+  content.append(board.h3("What it is made of"));
   const list = element("ul", "check-list");
   state.categories.forEach(category => {
     const figure = categoryFigure(company, category.members);
@@ -440,7 +488,7 @@ function behavioursScore(content, company) {
     list.append(figureItem(figure, depthMax(),
       `${category.name}, ${frac(category.members.length, every)}`,
       `${category.name}, ${shown(figure)} out of ${depthMax()}`,
-      rest => categoryScore(rest, company, category)));
+      rest => categoryScore(rest, company, category), { lab: company.id, row: category.id }));
   });
   content.append(list);
 }
@@ -460,15 +508,13 @@ function categoryScore(content, company, category) {
   const value = categoryFigure(company, members);
   board.titled(content, `${company.name}: ${lowerFirst(name)}`, documentLine(company));
   content.append(board.figure(shown(value), ` out of ${depthMax()}`));
-  content.append(element("p", "subtitle", `The mean of its ${members.length} `
-    + `${members.length === 1 ? "behaviour" : "behaviours"}.`));
   const list = element("ul", "check-list");
   members.forEach(behaviour => {
     const score = depthOf(company, behaviour);
     if (score === null) return;
     list.append(figureItem(score, depthMax(), behaviour.name,
       `${behaviour.name}, ${shown(score)} out of ${depthMax()}`,
-      rest => behaviourCell(rest, company, behaviour)));
+      rest => behaviourCell(rest, company, behaviour), { lab: company.id, row: behaviour.slug }));
   });
   content.append(list);
 }
@@ -510,6 +556,17 @@ function behaviourCell(content, company, behaviour) {
   }
   content.append(board.h3(ASKS_HEADING));
   sentences(content, entry.says, entry.why);
+  // The passages this reading rests on: the document in the Doc reader with this
+  // behaviour ticked, which opens where the document defines it.
+  if (company.document?.id) {
+    const line = element("p");
+    const toReader = element("a", null, `Read the passages on ${lowerFirst(behaviour.name)} `
+      + "in the Doc reader");
+    toReader.href = `/doc-reader/?${new URLSearchParams({
+      spec: company.document.id, behavior: behaviour.slug })}`;
+    line.append(toReader);
+    content.append(line);
+  }
   if (!(entry.same || entry.differs)) return;
   const fold = element("details");
   const summary = element("summary");
@@ -782,6 +839,10 @@ async function showPublishedAt(publication) {
 
 /* ---- Loading ---------------------------------------------------------------- */
 
+/* Open one cell of this board as a press on it would, unfolding the rows above
+ * it. The Index opens a cell the address names this way. */
+export const openCell = (lab, row) => Boolean(board?.pressCell({ lab, row }));
+
 export async function initializeConstitutions() {
   Object.assign(nodes, {
     status: byId("status"),
@@ -822,14 +883,7 @@ export async function initializeConstitutions() {
      * order decides which category leads. An id of its own for each group: a
      * category's name is a sentence, and the board addresses a group inside a CSS
      * selector. */
-    const byCategory = new Map();
-    data.behaviours.forEach(behaviour => {
-      const name = behaviour.category || "Behaviours";
-      if (!byCategory.has(name)) byCategory.set(name, []);
-      byCategory.get(name).push(behaviour);
-    });
-    state.categories = [...byCategory].map(([name, members], index) =>
-      ({ id: `category-${index}`, name, members }));
+    state.categories = categoriesOf(data);
 
     renderTable();
     // The behaviours open by default, each category shut: the categories are what

@@ -26,7 +26,7 @@ const SHOWN = {
 function readerLink(row) {
   const query = new URLSearchParams({ passage: row.locator });
   if (row.publication_id) query.set("publication", row.publication_id);
-  return `/spec-reader/?${query}`;
+  return `/doc-reader/?${query}`;
 }
 
 export default async function Feedback({ searchParams }) {

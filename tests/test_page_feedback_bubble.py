@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PAGES = ["site/overview.html", "site/coverage.html", "site/about.html", "site/mcp.html",
+PAGES = ["site/overview.html", "site/boards.html", "site/coverage.html", "site/about.html", "site/mcp.html",
          "site/spec-reader/index.html"]
 TAG = '<script type="module" src="/page-feedback.js"></script>'
 MODULE = ROOT / "site" / "page-feedback.js"

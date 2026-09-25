@@ -6,9 +6,9 @@
  * words the index uses, so it is written in one place and cannot drift.
  *
  * Beside the wordmark a small badge gives the date of the publication the page
- * is serving, highlighted. On a development deployment it says "(development)",
- * and on a publication older than the current one "(older version)", in the
- * framework's one warm colour. Pressing it says which publication it is, what
+ * is serving, highlighted. On a development deployment it says "(dev)" in the
+ * ordinary ink, and on a publication older than the current one "(older
+ * version)", in the framework's one warm colour. Pressing it says which publication it is, what
  * standing it has (published; on development, never published and so never
  * reviewed; or older), and leads to the change log, to the most recent version
  * when this is not it, and on development to the published index.
@@ -83,9 +83,9 @@ const STYLE = `
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
 /* The date of the publication, written beside the wordmark rather than set in a
-   pill: small, faint, with a thin underline that says it can be pressed. Only a
-   development build or an older version takes a colour, the framework's one
-   warm colour, with the aside in brackets. */
+   pill: small, faint, with a thin underline that says it can be pressed. An
+   older version alone takes a colour, the framework's one warm colour; a
+   development build says so in brackets in the same ink as production. */
 .pub-tag {
   align-self: center;
   margin-left: 4px;
@@ -108,6 +108,73 @@ const STYLE = `
 .pub-tag:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
 .brand-pop ul.brand-links { margin: 12px 0 0; padding: 0; list-style: none; }
 .brand-pop ul.brand-links li { margin: 0 0 6px; }
+
+/* ---------- the Index menu ----------
+ *
+ * The views of the index are chosen here rather than from tabs on the page:
+ * pointing at Index opens the list, pressing Index opens the first view, and
+ * the small button beside it opens the list for a keyboard or a finger. The
+ * list hangs from the link with no gap between them, so the pointer can travel
+ * down into it without the list closing on the way. */
+.index-menu { position: relative; display: inline-flex; align-items: center; gap: 2px; }
+.index-menu .index-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.index-menu .index-toggle svg { width: 10px; height: 10px; transition: transform 150ms; }
+.index-menu.is-open .index-toggle svg { transform: rotate(180deg); }
+.index-menu .index-toggle:hover { background: #B7C94B; color: #23281B; }
+.index-menu .index-toggle:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
+.index-list {
+  position: absolute;
+  top: 100%;
+  left: -12px;
+  z-index: 60;
+  display: none;
+  min-width: 300px;
+  margin: 0;
+  padding: 10px 0 0;
+  list-style: none;
+}
+.index-list-inner {
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  border: 1px solid #5C6B3C;
+  border-radius: 4px;
+  background: #F1EFE3;
+}
+.index-menu.is-open .index-list { display: block; }
+@media (hover: hover) {
+  .index-menu:hover .index-list { display: block; }
+}
+.index-list li { margin: 0; }
+.index-list a, .index-list .index-coming {
+  display: block;
+  padding: 7px 14px;
+  color: #23281B;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.index-list a:hover, .index-list a:focus-visible { background: #B7C94B; color: #23281B; }
+.index-list a[aria-current="page"] { box-shadow: inset 3px 0 0 #B7C94B; font-weight: 600; }
+.index-list .index-coming { color: #676C58; cursor: default; }
+.index-list .index-coming small { display: block; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) {
+  .index-menu .index-toggle svg { transition: none; }
+}
 
 /* ---------- the header on a narrow screen ----------
  *
@@ -289,7 +356,7 @@ function openAbout(event, trigger, build) {
 
 /* The site's own pages, the ones a pin travels between. The API, the admin
  * portal and files are left alone. */
-const SITE_PAGE = /^\/(overview\/?|spec-reader\/.*|about\/?|how-it-works\/?|mcp\/?)?$/;
+const SITE_PAGE = /^\/(overview\/?|index\/?|coverage\/?|spec-reader\/.*|doc-reader\/.*|about\/?|how-it-works\/?|mcp\/?)?$/;
 
 /* Before a link is followed, it takes the pin with it: set on the link itself as
  * it is pressed, so a link a script built after the page loaded is covered too,
@@ -328,7 +395,10 @@ function publicationBadge(brand, wordmark) {
     const aside = standing.older ? "older version"
       : standing.development ? "dev" : null;
     badge.textContent = aside ? `${date} [${aside}]` : date;
-    badge.classList.toggle("is-aside", Boolean(aside));
+    // The warm colour is kept for an older version, which a reader must not
+    // mistake for the current index. "dev" is said in the ordinary ink: on a
+    // development deployment it is the normal state, not a warning.
+    badge.classList.toggle("is-aside", Boolean(standing.older));
     badge.setAttribute("aria-label", `Publication of ${date}${aside ? `, ${aside}` : ""}: `
       + "what it is");
     badge.hidden = false;
@@ -423,9 +493,87 @@ function followHeight(header) {
   wrapped.addEventListener("change", write);
 }
 
+/* The views of the index, in the order the About page names them. The two the
+ * index is still building are listed so a reader sees where it is going, and
+ * cannot be chosen. */
+const VIEWS = [
+  { title: "What the constitutions say", view: null },
+  { title: "How constitutions are governed", view: "governance" },
+  { title: "How constitutions are regulated", coming: true },
+  { title: "Adherence of models to constitutions", coming: true },
+];
+
+function indexMenu() {
+  const link = document.querySelector(".site-header nav a[data-index-menu]");
+  if (!link) return;
+  const wrap = node("span", "index-menu");
+  link.replaceWith(wrap);
+
+  const toggle = node("button", "index-toggle");
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", "index-list");
+  toggle.setAttribute("aria-label", "The views of the index");
+  const SVG = "http://www.w3.org/2000/svg";
+  const chevron = document.createElementNS(SVG, "svg");
+  chevron.setAttribute("viewBox", "0 0 10 10");
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.setAttribute("focusable", "false");
+  const stroke = document.createElementNS(SVG, "path");
+  for (const [name, value] of Object.entries({
+    d: "M1.5 3.5 5 7l3.5-3.5", fill: "none", stroke: "currentColor",
+    "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round",
+  })) stroke.setAttribute(name, value);
+  chevron.append(stroke);
+  toggle.append(chevron);
+
+  const onIndex = /^\/index\/?$/.test(location.pathname);
+  const shown = new URLSearchParams(location.search).get("view");
+  const outer = node("div", "index-list");
+  outer.id = "index-list";
+  const list = node("ul", "index-list-inner");
+  for (const { title, view, coming } of VIEWS) {
+    const item = node("li");
+    if (coming) {
+      const label = node("span", "index-coming", title);
+      label.setAttribute("aria-disabled", "true");
+      label.append(node("small", "", "In preparation"));
+      item.append(label);
+    } else {
+      const choice = node("a", "", title);
+      choice.href = view ? `/index?view=${view}` : "/index";
+      if (onIndex && (shown === view || (!view && shown !== "governance"))) {
+        choice.setAttribute("aria-current", "page");
+      }
+      item.append(choice);
+    }
+    list.append(item);
+  }
+  outer.append(list);
+  wrap.append(link, toggle, outer);
+
+  const set = open => {
+    wrap.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => set(!wrap.classList.contains("is-open")));
+  wrap.addEventListener("focusout", event => {
+    if (!wrap.contains(event.relatedTarget)) set(false);
+  });
+  wrap.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || !wrap.classList.contains("is-open")) return;
+    set(false);
+    toggle.focus();
+  });
+  document.addEventListener("click", event => {
+    if (!wrap.contains(event.target)) set(false);
+  });
+}
+
 function start() {
   document.addEventListener("click", carryPin, true);
   document.addEventListener("auxclick", carryPin, true);
+  indexMenu();
   const wordmark = document.querySelector(".site-header .wordmark");
   if (!wordmark) return;
   const style = document.createElement("style");
