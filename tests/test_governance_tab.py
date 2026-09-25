@@ -35,9 +35,12 @@ PAGE = (ROOT / "site" / "boards.html").read_text(encoding="utf-8")
 # and Mistral AI. A second audit then took Meta's practice on change approval to
 # 0, because the clause the board quoted puts the approval it names on model
 # deployment rather than on a change to the framework, and that dropped Meta from
-# fourth place to sixth.
-ORDER = ["anthropic", "openai", "google", "alibaba", "xai", "meta", "moonshot",
-         "mistral", "deepseek"]
+# fourth place to sixth. The audit of 25 September 2026 corrected twenty-six
+# scores across seven companies: OpenAI moved into first place, xAI from fifth
+# to fourth, Alibaba from fourth to fifth, and Moonshot AI from seventh to
+# eighth, below Mistral AI.
+ORDER = ["openai", "anthropic", "google", "xai", "alibaba", "meta", "mistral",
+         "moonshot", "deepseek"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
 
@@ -291,18 +294,15 @@ class TheTwoFigures(unittest.TestCase):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["5.6", "5.5", "2.0", "1.8", "1.5", "1.5", "1.1", "0.9", "0.5"])
+                         ["6.2", "5.6", "3.0", "2.8", "2.2", "1.6", "0.9", "0.8", "0.7"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
-                         ["6.1", "5.9", "2.0", "2.3", "1.1", "0.5", "0.9", "1.8", "0.5"])
-        # Alibaba and Moonshot AI land on exactly 1.25, which the board prints
-        # as 1.3: toFixed takes a half upwards, where Python's own round() would
-        # take it to the even digit and print 1.2.
+                         ["6.8", "6.1", "3.0", "3.2", "2.5", "0.7", "1.8", "0.9", "0.7"])
+        # Moonshot AI and DeepSeek land on exactly 0.625, which the board
+        # prints as 0.6, the digit after the half being a 2.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.0", "5.0", "1.9", "1.3", "1.9", "2.5", "1.3", "0.0", "0.6"])
+                         ["5.6", "5.0", "3.1", "2.5", "1.9", "2.5", "0.0", "0.6", "0.6"])
         # No two companies are level on the final score, so every place is
-        # taken once. xAI and Meta both print 1.5 and are three hundredths
-        # apart, which is why the rank is taken from the figure and not from
-        # the print.
+        # taken once.
         self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 7, 8, 9])
 
     def test_the_labs_marked_open_weights_are_the_notes(self):
@@ -523,10 +523,12 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         _, columns = totals("meta")
         self.assertIn(f"{shown(columns['published'])} out of 10 on what is published", text)
         self.assertIn(f"{shown(columns['engages'])} out of 10 on what it engages", text)
-        # Meta is third on the figure it names, and level with DeepSeek at the
-        # bottom of the other, with nothing below the two of them.
+        # Meta is fourth on the figure it names, level with xAI, and level with
+        # DeepSeek at the bottom of the other, with nothing below the two of them.
         engages = sorted((totals(lab)[1]["engages"] for lab in ORDER), reverse=True)
-        self.assertEqual(engages.index(columns["engages"]), 2)
+        self.assertEqual(engages.index(columns["engages"]), 3)
+        self.assertEqual(columns["engages"], totals("xai")[1]["engages"])
+        self.assertIn("fourth of the nine and level with xAI", text)
         self.assertEqual(columns["published"], totals("deepseek")[1]["published"])
         below = [lab for lab in ORDER if totals(lab)[1]["published"] < columns["published"]]
         self.assertEqual(below, [])
@@ -541,8 +543,8 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         for lab, label in (("mistral", "Mistral AI's"), ("moonshot", "Moonshot AI's"),
                            ("deepseek", "DeepSeek's")):
             self.assertIn(f"{label} {shown(published(lab))}", text, lab)
-        self.assertIn(f"third on what is published with {shown(published('alibaba'))}", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 2)
+        self.assertIn(f"fifth on what is published with {shown(published('alibaba'))}", text)
+        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 4)
         # The three it names are three of the five lowest on that figure, and
         # the last three on the final score.
         lowest = set(sorted(ORDER, key=published)[:5])
@@ -552,23 +554,25 @@ class TheProseAgreesWithTheData(unittest.TestCase):
 
     def test_the_findings_on_whole_columns_hold(self):
         # "On the check that asks for a comment window, only OpenAI and Anthropic
-        # score anything at all, 2.5 out of 10 each."
+        # score anything at all: OpenAI 5.0 out of 10 ... and Anthropic 2.5."
         window = {lab: DATA["scores"][lab]["4.2"] for lab in ORDER}
         self.assertEqual({lab for lab, score in window.items() if score},
                          {"openai", "anthropic"})
-        self.assertEqual(set(window.values()), {0, 1})
+        self.assertEqual(window["openai"], 2)
+        self.assertEqual(window["anthropic"], 1)
         notice = next(f["text"] for f in DATA["findings"] if "comment window" in f["text"])
-        self.assertIn(f"{shown(on_ten(1))} out of 10 each", notice)
-        # On special deployments, "Anthropic scores 5.0 out of 10, OpenAI 2.5,
-        # and the other seven nothing at all."
+        self.assertIn(f"OpenAI {shown(on_ten(2))} out of 10", notice)
+        self.assertIn(f"and Anthropic {shown(on_ten(1))}.", notice)
+        # On special deployments, "Anthropic and OpenAI score 5.0 out of 10
+        # each, and the other seven nothing at all."
         special = {lab: DATA["scores"][lab]["1.3"] for lab in ORDER}
         self.assertEqual(special["anthropic"], 2)
-        self.assertEqual(special["openai"], 1)
+        self.assertEqual(special["openai"], 2)
         self.assertEqual({lab for lab, score in special.items() if score},
                          {"openai", "anthropic"})
         gap = next(f["text"] for f in DATA["findings"] if "armed forces" in f["title"])
-        self.assertIn(f"Anthropic scores {shown(on_ten(2))} out of 10, OpenAI "
-                      f"{shown(on_ten(1))}", gap)
+        self.assertIn(f"Anthropic and OpenAI score {shown(on_ten(2))} out of 10 each, "
+                      f"and the other seven nothing at all", gap)
 
     def test_there_are_eight_findings(self):
         self.assertEqual(len(DATA["findings"]), 8)
