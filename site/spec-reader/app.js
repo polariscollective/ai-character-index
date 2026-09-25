@@ -1933,6 +1933,34 @@ function toggleBehaviour(slug, checked) {
   }
 }
 
+/* What scrolls a panel's text. On a wide screen the text scrolls inside its
+ * own column; below 900px the column grows to its full height and the page
+ * scrolls instead, and a column that never moves would say every reader is at
+ * the top. So it is whichever of the two can actually scroll. */
+function scrollerOf(panel) {
+  const column = panel?.querySelector(".document-scroll");
+  if (!column) return null;
+  if (column.scrollHeight > column.clientHeight + 1) return column;
+  for (let node = column.parentElement; node; node = node.parentElement) {
+    // The body's overflow passes to the window when the root declares none, so
+    // a body that says auto is scrolled by the page itself.
+    if (node === document.body || node === document.documentElement) break;
+    if (node.scrollHeight > node.clientHeight + 1
+        && /(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+/* The visible top and bottom of a scroller, in window coordinates. The page's
+ * own scroller moves with what it scrolls, so its view is the window. */
+function viewOf(scroller) {
+  if (scroller === document.scrollingElement || scroller === document.documentElement) {
+    return { top: 0, bottom: window.innerHeight };
+  }
+  const box = scroller.getBoundingClientRect();
+  return { top: Math.max(0, box.top), bottom: Math.min(window.innerHeight, box.bottom) };
+}
+
 /* Whether a document on screen is still at its very top, with no jump already
  * on its way in it.
  *
@@ -1943,7 +1971,7 @@ function toggleBehaviour(slug, checked) {
  * keeps its own jump (panel._defJump), since comparing puts two on screen. */
 function atTopOfDocument(panel) {
   if (panel?._defJump) return false;
-  const scroller = panel?.querySelector(".document-scroll");
+  const scroller = scrollerOf(panel);
   return !scroller || scroller.scrollTop < 4;
 }
 function markJumping(panel) {
@@ -2014,7 +2042,7 @@ function goToDefining(slugs, panel = panels()[0]) {
   }
   aimAt(panel, target);
   // The jump is over when the column comes to rest, however long the way was.
-  const scroller = panel.querySelector(".document-scroll");
+  const scroller = scrollerOf(panel);
   if (panel._defJump && scroller) {
     let settle = null;
     const rest = () => { clearTimeout(settle); settle = setTimeout(() => {
@@ -3353,10 +3381,10 @@ function refreshSectionPassages(panel, keep = null) {
  * without passages, and folding the one being read would take the paragraph
  * away from under the reader's eye, so these stay as they are. */
 function sectionsOnScreen(panel) {
-  const scroller = panel.querySelector(".document-scroll");
+  const scroller = scrollerOf(panel);
   const kept = new Set();
   if (!scroller || scroller.scrollTop <= 4) return kept;
-  const box = scroller.getBoundingClientRect();
+  const box = viewOf(scroller);
   [...panel.querySelector(".document-body").children].forEach(child => {
     if (child.hidden) return;
     const at = child.getBoundingClientRect();
@@ -4011,15 +4039,18 @@ function updatePanelMeta(panel, doc) {
 /* The button that takes a panel back to the top of its document. It shows once
  * the reader is a screen's height down, and goes when they are back. */
 function wireBackToTop(panel) {
-  const scroller = panel.querySelector(".document-scroll");
   const button = panel.querySelector(".to-top");
-  if (!scroller || !button) return;
-  const update = () => { button.hidden = scroller.scrollTop < scroller.clientHeight * 0.8; };
-  scroller.addEventListener("scroll", update, { passive: true });
+  if (!button) return;
+  // Whichever element scrolls the text (scrollerOf), which changes with the
+  // width of the window, so every scroll on the page is listened to.
+  const update = () => {
+    const scroller = scrollerOf(panel);
+    button.hidden = !scroller || scroller.scrollTop < window.innerHeight * 0.8;
+  };
+  document.addEventListener("scroll", update, { passive: true, capture: true });
   button.addEventListener("click", () => {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scroller.scrollTo({ top: 0, behavior: still ? "instant" : "smooth" });
-    scroller.focus?.({ preventScroll: true });
+    scrollerOf(panel)?.scrollTo({ top: 0, behavior: still ? "instant" : "smooth" });
   });
   update();
 }
@@ -4030,14 +4061,14 @@ function wireBackToTop(panel) {
  * where the eye left it. */
 const PLACE_BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, pre, blockquote, table, .passage";
 function placeIn(panel) {
-  const scroller = panel.querySelector(".document-scroll");
+  const scroller = scrollerOf(panel);
   if (!scroller) return null;
-  const top = scroller.getBoundingClientRect().top;
+  const { top } = viewOf(scroller);
   const blocks = panel.querySelectorAll(`.document-body :is(${PLACE_BLOCKS})`);
   for (const block of blocks) {
     if (!block.offsetParent) continue;
     const box = block.getBoundingClientRect();
-    if (box.bottom > top) return { scroller, block, offset: box.top - top };
+    if (box.bottom > top) return { panel, scroller, block, offset: box.top - top };
   }
   return null;
 }
@@ -4049,11 +4080,11 @@ function restorePlace(place) {
   if (!place) return;
   let block = place.block;
   if (!block.offsetParent) {
-    const blocks = [...place.scroller.querySelectorAll(`.document-body :is(${PLACE_BLOCKS})`)];
+    const blocks = [...place.panel.querySelectorAll(`.document-body :is(${PLACE_BLOCKS})`)];
     block = blocks.slice(blocks.indexOf(place.block) + 1).find(one => one.offsetParent);
     if (!block) return;
   }
-  const top = place.scroller.getBoundingClientRect().top;
+  const { top } = viewOf(place.scroller);
   const moved = block.getBoundingClientRect().top - top - place.offset;
   if (Math.abs(moved) < 1) return;
   place.scroller.scrollTo({ top: place.scroller.scrollTop + moved, behavior: "instant" });
@@ -4067,7 +4098,7 @@ function applyHighlights() {
   // While a jump is on its way the reader's place is where the jump is taking
   // them, not where the column happens to be, so nothing is held.
   const places = panels().map(panel => (!panel._defJump
-    && panel.querySelector(".document-scroll")?.scrollTop > 4 ? placeIn(panel) : null));
+    && scrollerOf(panel)?.scrollTop > 4 ? placeIn(panel) : null));
   const kept = new Map(panels().map(panel => [panel, sectionsOnScreen(panel)]));
   // One remembered passage per panel: the two documents hold their places
   // independently, and a change of selection must not shuffle one because the
@@ -5682,8 +5713,17 @@ async function initialize() {
     // A link that names a behaviour, and no passage or heading, opens where the
     // document defines it, as a tick at the top of the document would.
     if (requested.length && !linked && !location.hash) {
-      requestAnimationFrame(() => requestAnimationFrame(() =>
-        panels().forEach(panel => goToDefining(requested, panel))));
+      // Marked as a jump, so what still moves the page while it settles (the
+      // menu above the text on a phone, the fonts arriving) re-aims it.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        panels().forEach(panel => { markJumping(panel); goToDefining(requested, panel); });
+        // Once more when the page has settled, at the same passage, whether or
+        // not the first scroll has already come to rest.
+        setTimeout(() => panels().forEach(panel => {
+          const target = [...panel.querySelectorAll(".linked-block")][0];
+          if (target) aimAt(panel, target);
+        }), 700);
+      }));
     }
     // Two frames: after the one in which applyHighlights collects the passages.
     if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
