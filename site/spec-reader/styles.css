@@ -1797,20 +1797,10 @@ body.sidebar-collapsed .sidebar-resizer {
   font-weight: 600;
 }
 .document-body .raw-table { overflow: auto; font-family: var(--mono); font-size: 11px; white-space: pre; }
-/* A version carried for reading only: a quiet note at the top of the document,
-   put away with its cross. */
-.analysis-note {
-  display: flex; align-items: flex-start; gap: 12px;
-  margin: 0 0 18px; padding: 10px 12px;
-  border: 1px solid var(--line); border-radius: 4px; background: var(--accent-soft);
-  color: var(--ink); font-size: 14px; line-height: 1.5;
-}
-.analysis-note span { flex: 1; }
-.analysis-dismiss {
-  flex: none; padding: 0 6px; border: 0; border-radius: 4px; background: none;
-  color: var(--faint); font-size: 18px; line-height: 1.2; cursor: pointer;
-}
-.analysis-dismiss:hover, .analysis-dismiss:focus-visible { background: var(--energy); color: var(--ink); }
+/* The band over a version no panel has read yet: the translation's band, with the
+   framework's green for its rule and a green wash for its ground. */
+.analysis-band { border-left-color: var(--energy); background: var(--accent-soft); }
+
 /* Every document on screen under analysis: the behaviours are listed, not offered. */
 .behaviour-list.under-analysis .behaviour-option { opacity: .55; cursor: default; }
 /* How many documents a publisher has, small beside its name in the tab. */

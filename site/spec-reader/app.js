@@ -3611,6 +3611,27 @@ function showTranslationNotice(panel) {
   if (flag) flag.hidden = !(translated && dismissed);
 }
 
+/* The band over a version no panel has read yet, as the translation's band is
+ * drawn and put away: once closed, it stays closed for that document. */
+const analysisDismissedKey = documentId => `aci-analysis-dismissed:${documentId}`;
+function showAnalysisNotice(panel, doc) {
+  const band = panel.querySelector(".analysis-band");
+  if (!band) return;
+  band.hidden = doc.judged !== false || savedFlag(analysisDismissedKey(doc.id));
+}
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".analysis-dismiss");
+  if (!button) return;
+  event.stopImmediatePropagation();
+  const panel = button.closest(".document-panel");
+  const id = panel?.dataset.documentId;
+  if (!id) return;
+  saveFlag(analysisDismissedKey(id), true);
+  panels().filter(item => item.dataset.documentId === id).forEach(item =>
+    item.querySelector(".analysis-band")?.setAttribute("hidden", ""));
+  requestAnimationFrame(updateRails);
+}, true);
+
 /* The × closes the notice at once: every panel showing this document, since an
  * identical pair shows it twice, and no other. The band sits above the text's
  * scroll box, so the reader's place in the text is untouched; focus goes to the
@@ -3884,6 +3905,7 @@ function renderDocument(doc, side = 0) {
     context && note ? ` ${note}` : note;
   if (note) panel.querySelector(".translation-flag").title = note;
   showTranslationNotice(panel);
+  showAnalysisNotice(panel, doc);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
   wireBackToTop(panel);
   attachLocators(panel, doc);
@@ -4002,9 +4024,6 @@ function renderRunProvenance() {
   }));
 }
 
-/* The under-analysis notes a reader has put away, by document, for this visit. */
-const dismissedAnalysisNotes = new Set();
-
 function updatePanelMeta(panel, doc) {
   const tracking = highlightsActive();
   panel.querySelector(".rail-legend").hidden = !tracking;
@@ -4022,34 +4041,9 @@ function updatePanelMeta(panel, doc) {
     if (cell.withheld) withheld = true;
     else published += cell.passages.length;
   });
-  /* A version the publication carries for reading only: its text is here, and
-   * no panel has read it against a behaviour yet. Said once at the top of the
-   * document, whatever is ticked, and a reader who has read it can put it away
-   * for the rest of the visit. */
-  if (doc.judged === false) {
-    if (!dismissedAnalysisNotes.has(doc.id)) {
-      const note = document.createElement("div");
-      note.className = "analysis-note";
-      note.setAttribute("role", "note");
-      const words = document.createElement("span");
-      const lead = document.createElement("strong");
-      lead.textContent = "Under analysis. ";
-      words.append(lead, "This version has been added to the reader and has not yet been "
-        + "read against any behaviour, so it shows no passages and no depth.");
-      const dismiss = document.createElement("button");
-      dismiss.type = "button";
-      dismiss.className = "analysis-dismiss";
-      dismiss.textContent = "×";
-      dismiss.setAttribute("aria-label", "Dismiss this note");
-      dismiss.addEventListener("click", () => {
-        dismissedAnalysisNotes.add(doc.id);
-        note.remove();
-      });
-      note.append(words, dismiss);
-      panel.querySelector(".document-body").prepend(note);
-    }
-    return;
-  }
+  /* A version the publication carries for reading only says so in the band
+   * above its text (showAnalysisNotice), and has nothing else to say here. */
+  if (doc.judged === false) return;
   if (tracking && published === 0) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
