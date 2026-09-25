@@ -26,6 +26,9 @@ import { isLocal, readsFiles, setReadsFiles } from "./publication-data.js";
 import { keepPosted } from "./keep-posted.js";
 
 const STYLE = `
+/* Before the menu, it takes the free width on its left, so it sits against the
+   menu rather than in the middle of the header. */
+.dev-tag.beside-menu { margin-left: auto; margin-right: 18px; }
 .dev-tag {
   align-self: center;
   margin-left: 2px;
@@ -211,7 +214,16 @@ function build(brand) {
   tag.title = "What this means";
   tag.addEventListener("click", () => note.showModal());
 
-  brand.append(tag);
+  // At the right of the header, just before the menu, rather than beside the
+  // name: the name and the publication's date read as one block, and the tag is
+  // about the whole site. Beside the name still where a page has no menu.
+  const nav = brand.closest(".site-header")?.querySelector("nav");
+  if (nav) {
+    tag.classList.add("beside-menu");
+    nav.before(tag);
+  } else {
+    brand.append(tag);
+  }
   document.body.append(note);
 }
 
