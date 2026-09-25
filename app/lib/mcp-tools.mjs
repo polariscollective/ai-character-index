@@ -603,7 +603,10 @@ constitutions_board names it. A pair with no depth answers null.
 
 Where one judge of the panel could not answer a pair at all, another model judged
 it in that seat, and the pair carries substitutions: the seat, the substitute and
-the reason. A pair without that field was judged by the panel as configured.
+the reason. A depth that a declared substitute gave on its own, because the
+seat's model replied off the scale, is marked on that judge's entry of the depth
+with the model and the reason; the pair then carries no substitutions field,
+since its passages are the panel's own.
 
 Every answer names the publication it was read from. A publication whose
 is_public is false is a build nobody has published, served by a development
@@ -680,6 +683,30 @@ function substitutionsByModel(behaviours) {
   });
 }
 
+/**
+ * Depths a declared substitute gave in a seat whose model replied off the
+ * scale. The payload marks them on the judge's entry of the depth (`model`),
+ * not on the pair, so they are read there and grouped the way
+ * substitutionsByModel groups pair substitutions. A seat the pair's own
+ * substitutions already name is left to that list.
+ */
+function depthSubstitutionsByModel(behaviours) {
+  const groups = new Map();
+  for (const behaviour of behaviours) {
+    for (const [id, cell] of Object.entries(behaviour.coverage || {})) {
+      const seated = new Set((substitutionsOf(behaviour, id) || []).map(each => each.seat));
+      for (const [seat, given] of Object.entries(cell?.depth?.judges || {})) {
+        if (!given?.model || given.model === seat || seated.has(seat)) continue;
+        const key = `${given.model}\u0000${seat}`;
+        if (!groups.has(key)) groups.set(key, { seat, substitute: given.model, pairs: [] });
+        groups.get(key).pairs.push(`${behaviour.slug} on ${id}`);
+      }
+    }
+  }
+  return [...groups.values()].map(({ seat, substitute, pairs }) =>
+    ({ seat, substitute, count: pairs.length, cells: pairs }));
+}
+
 /** "1 behaviour", "13 behaviours". A count in prose still has to read. */
 const count = (total, noun) => `${total} ${noun}${total === 1 ? "" : "s"}`;
 
@@ -732,6 +759,7 @@ export function about({ publication, payload, documents, notes }, { site = null 
   const scale = depthScaleOf(payload);
   const levels = levelsOf(scale);
   const substitutions = substitutionsByModel(behaviours);
+  const depthSubstitutions = depthSubstitutionsByModel(behaviours);
 
   // The panel as the payload recorded it, skipping what it did not record.
   const judged = [
@@ -806,6 +834,15 @@ export function about({ publication, payload, documents, notes }, { site = null 
         + each.cells.join("; ")),
       "Every answer naming such a pair carries the seat, the substitute and the "
       + "reason."] : []),
+    ...(depthSubstitutions.length ? ["",
+      `In ${count(depthSubstitutions.reduce((total, each) => total + each.count, 0), "pair")} `
+      + "the depth was given in one seat by a declared substitute, because the "
+      + "seat's model replied off the scale. The passages in that seat are the "
+      + "seat's own, so the substitute is named on that judge's entry of the "
+      + "depth rather than in the pair's substitutions:",
+      ...depthSubstitutions.map(each => `  ${each.substitute} in the seat of ${each.seat}, `
+        + `on ${each.count === 1 ? "one pair" : `${each.count} pairs`}: `
+        + each.cells.join("; "))] : []),
     "",
     "Quoting. Every passage comes back with its quote and a locator naming the "
     + "document, its version, the section and the sentences."

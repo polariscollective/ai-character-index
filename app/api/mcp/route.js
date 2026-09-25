@@ -114,7 +114,9 @@ const handler = createMcpHandler(
         + "on earlier publications); a pair with no depth answers null. Where a judge "
         + "could not answer a pair at all, another model judged it in that seat, "
         + "and the pair carries substitutions naming the seat, the substitute and "
-        + "the reason; that seat's verdicts and depth are then the substitute's.",
+        + "the reason; that seat's verdicts and depth are then the substitute's. "
+        + "A depth a substitute gave on its own is marked on that judge's entry of "
+        + "the depth, with the model and the reason.",
       inputSchema: z.object({
         behaviours: z.array(z.string()).min(1).describe(
           "Behaviour slugs, from list_behaviours. Required: it is what bounds "
@@ -206,11 +208,11 @@ const handler = createMcpHandler(
         + "change to the text.\n\n"
         + "Every row comes back with its figure, the wording that figure was "
         + "given against, and the passage or address it rests on. The answer "
-        + "also carries a written paragraph on each company and the reason the "
-        + "two figures are not added.\n\n"
+        + "also carries a written paragraph on each company and why both figures "
+        + "stay on the board beside the final score.\n\n"
         + "These were scored by hand by Polaris Collective from public "
-        + "documents, on a date the answer names. The board belongs to no "
-        + "publication of the index. A nought means nothing public was found, "
+        + "documents, on a date the answer names. The board is the one the "
+        + "publication froze. A nought means nothing public was found, "
         + "not that the company does not do the thing.\n\n"
         + "Pass company to narrow to one. All nine come to about 90,000 "
         + "characters; one company to about 30,000.",

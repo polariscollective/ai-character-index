@@ -279,7 +279,7 @@
     <div class="m-title">MCP</div>
     <p class="m-sub">Plug the index into an AI assistant, and it answers your questions about
     these documents by quoting them, rather than from memory. This page has the whole setup, from
-    a settings menu or from a command line. Seven tools, read only, no account and no key.</p>
+    a settings menu or from a command line. Eight tools, read only, no account and no key.</p>
   </div>
 
   <!-- Shown only where the page is not serving the published index: a
@@ -326,8 +326,8 @@ If you cannot add it yourself, give me the exact steps for this app.</code></pre
     <pre><code data-origin>/api/mcp</code></pre>
     <p>There is nothing to sign in to and no key to obtain. The index only reads: it can be asked
     what the documents say, and it cannot be asked to change anything. Everything it serves is the
-    published index, the same data the doc reader is built from, so a call reads what the site
-    shows and nothing else.</p>
+    publication the site is serving, the same data the doc reader is built from, so a call reads
+    what the site shows and nothing else.</p>
   </section>
 
   <section class="m" id="settings-menu">
@@ -408,19 +408,19 @@ If you cannot add it yourself, give me the exact steps for this app.</code></pre
 
   <section class="m" id="tools">
     <h2>Tools</h2>
-    <p>Seven, and all of them read. Five words recur below. A <b>constitution</b> is a document an
+    <p>Eight, and all of them read. Five words recur below. A <b>constitution</b> is a document an
     AI company publishes saying how its models should behave. A <b>behaviour</b> is one thing a
     constitution might commit a model to, such as deferring to a user&rsquo;s own decisions. A
     <b>locator</b> is the address of a quote inside a document, naming the document, its version,
     the section and the sentences, as in
     <code>openai--model-spec@2026-08-18 &gt; #scope_of_autonomy &gt; &para;14</code>. The
-    <b>panel</b> is the three frontier models that read every document for every behaviour and
-    marked the passages. A <b>depth</b> is the score those judges give a constitution for a
+    <b>panel</b> is the three frontier models that read every analysed document for every behaviour
+    and marked the passages. A <b>depth</b> is the score those judges give a constitution for a
     behaviour, from 0, where it says nothing about it, to the top of the scale, where it sets
     rules and shows them applied. It says how much the document gives an evaluation to work with,
     and nothing about how much the company behind it cares. Every depth comes back with the scale
     it was given on.</p>
-    <p><b>about.</b> What the index is, what it does not report, and what the other six tools
+    <p><b>about.</b> What the index is, what it does not report, and what the other seven tools
     return, in one answer meant to be read before anything else is asked. No arguments. It names
     the documents, the behaviours and the sections they sit in, the panel that judged and the
     publication being served, each read from that publication when you ask rather than written
@@ -465,24 +465,32 @@ If you cannot add it yourself, give me the exact steps for this app.</code></pre
     <p>Where a judge could not answer a pair at all and a model declared for its seat judged in
     its place, the pair carries <code>substitutions</code>, naming the seat, the substitute and the
     reason, in both <code>list_behaviours</code> and <code>retrieve_passages</code>. That
-    seat&rsquo;s verdicts and depth are then the substitute&rsquo;s.</p>
+    seat&rsquo;s verdicts and depth are then the substitute&rsquo;s. A depth a declared substitute
+    gave on its own, because the seat&rsquo;s model replied off the scale, is marked on that
+    judge&rsquo;s entry of the depth, with the model and the reason.</p>
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
     <p><b>constitutions_board.</b> Every figure on the overview&rsquo;s first board, each with the
-    scale it is on: the score out of 20, the document as a whole out of 10 with its five criteria,
-    and how far each constitution goes on every behaviour. It carries what each criterion asked
+    scale it is on: the final score out of 10, which is the average of the document as a whole and
+    the behaviours, the document as a whole out of 10 with its five criteria, and how far each
+    constitution goes on every behaviour. It carries what each criterion asked
     and what each level of the depth scale asks for, so a figure can be read without a second
     call. One argument, <b>company</b>, optional, which narrows it to one company.</p>
-    <p><b>governance_board.</b> The overview&rsquo;s second board: nine companies scored out of 16
-    on four questions about how they govern the rules their models follow, each question split
-    into checks scored 0 to 4, with the descriptions the scores were given against and the
-    paragraph we wrote on what we found. The best practices are there too, shown beside the score
-    and never counted in it. One argument, <b>company</b>, optional. These figures were given by
-    hand from public documents rather than judged by the panel, and this board belongs to no
-    publication and carries its own as-of date.</p>
+    <p><b>governance_board.</b> The overview&rsquo;s second board: nine companies scored on how
+    they govern the rules their models follow, in two figures out of 10 averaged into a final
+    score. What is published reads ten checks, each scored 0 to 4, and the licence. What it
+    engages reads eight practices, each scored 0, 1 or 2. Every row comes with the description it
+    was scored against and the paragraph we wrote on what we found. One argument,
+    <b>company</b>, optional. These figures were given by hand from public documents rather than
+    judged by the panel. The board is the one the publication froze, and carries its own as-of
+    date.</p>
+    <p><b>overview_board.</b> The grid the site opens on: for each company, the figures that sum
+    up the two boards, each out of 10 and placed in a tier against the best score on the same row,
+    with the overview&rsquo;s takeaways and a short written summary of each company. One argument,
+    <b>company</b>, optional.</p>
     <p><b>compare_documents.</b> Everything one run found between two constitutions on one
     behaviour: the passages each of them carries, every pair of passages the judges linked with
-    what each judge said, the verdict where two judges disagreed and a third settled it, the
+    what each judge said, the verdict where two judges disagreed and an arbiter settled it, the
     passages one document has nothing facing, and a paragraph written from all of it. It takes one
     <b>behaviour</b> and exactly two <b>model_spec_ids</b>. The answer is long, hundreds of
     thousands of characters where both documents cover the behaviour fully, so pass <b>detail</b>

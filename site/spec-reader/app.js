@@ -1215,7 +1215,11 @@ function openDepthNote(trigger, note) {
         list.className = "depth-note-judges";
         cell.judges.forEach(given => {
           const item = document.createElement("li");
-          item.append(span("depth-note-judge", given.judge), " ",
+          // A depth a declared substitute gave in the seat names it, as the
+          // pair's substitutions are named above.
+          const judge = given.model && given.model !== given.judge
+            ? `${given.model} in place of ${given.judge}` : given.judge;
+          item.append(span("depth-note-judge", judge), " ",
                       span("depth-note-score", String(given.depth)), " ",
                       span("depth-note-rationale", given.rationale));
           list.append(item);
@@ -1606,7 +1610,10 @@ function depthCellNote(behaviour, doc) {
         `${substitute} judged in place of ${seat}: ${endedSentence(reason)}`),
     judges: depth
       ? Object.entries(depth.judges || {}).map(([judge, given]) => ({
-          judge, depth: given.depth, rationale: given.rationale || "" }))
+          judge, ...(given.model ? { model: given.model } : {}), depth: given.depth,
+          rationale: given.substitution_reason
+            ? `${given.rationale || ""} (${given.model} gave this depth: ${given.substitution_reason}.)`.trim()
+            : given.rationale || "" }))
       : [],
   };
 }
