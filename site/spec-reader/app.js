@@ -1346,26 +1346,29 @@ function renderBehaviourList() {
   }
 
   const selected = new Set(state.selectedSlugs);
-  elements.behaviourList.innerHTML = groups.map(group => `
+  /* The depth column's scale, said once over the whole list rather than beside
+   * every category, so a category's name keeps the width of the row. Each
+   * figure's spoken form carries it for a screen reader. It is also the way into
+   * the rubric the figures are scored on: a reader who wants to know what a 1
+   * means asks the scale, in place, rather than leaving for the methodology page. */
+  const depthHead = `
+    <div class="behaviour-list-head">
+      <button
+        type="button"
+        class="depth-head"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      >Depth, out of ${depthScale()}</button>
+    </div>`;
+  elements.behaviourList.innerHTML = depthHead + groups.map(group => `
     <section class="behaviour-group texture-${group.texture}${foldedGroups.has(group.name) ? " folded" : ""}"
       data-group="${escapeHTML(group.name)}">
-      <!-- The depth column's scale, said once at its top rather than beside every
-           figure; each figure's spoken form carries it for a screen reader. It is
-           also the way into the rubric the figures are scored on: a reader who
-           wants to know what a 1 means asks the scale, in place, rather than
-           leaving for the methodology page. -->
       <div class="behaviour-group-head">
         <h2><button
           type="button"
           class="group-fold"
           aria-expanded="${String(!foldedGroups.has(group.name))}"
         >${escapeHTML(group.name)}</button></h2>
-        <button
-          type="button"
-          class="depth-head"
-          aria-haspopup="dialog"
-          aria-expanded="false"
-        >Depth, out of ${depthScale()}</button>
       </div>
       <ul>
         ${group.behaviours.map(behaviour => {
