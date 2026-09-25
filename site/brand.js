@@ -100,9 +100,14 @@ const STYLE = `
   line-height: 1.2; color: #4F5344; letter-spacing: 0; text-transform: none;
 }
 .site-header .site-brand .brand-stack:hover .brand-name { background: #B7C94B; color: #23281B; }
-/* A phone keeps its header to the index's name, as it always has. */
+/* The publication's date sits level with the collective's line, the lower of
+   the two, so the block reads as a name and, under it, who and when. */
+.site-header .site-brand .brand-stack + .pub-tag { position: relative; top: 7px; }
+/* A phone keeps its header to the index's name, as it always has, and the date
+   centred beside it. */
 @media (max-width: 900px) {
   .site-header .site-brand .brand-stack .collective { display: none; }
+  .site-header .site-brand .brand-stack + .pub-tag { top: 0; }
 }
 /* The mark a little larger, now that it stands beside two lines of name. */
 .site-header .site-brand .polaris-mark { width: 26px; height: 26px; }
