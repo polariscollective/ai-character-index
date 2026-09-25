@@ -293,7 +293,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
 
 
 def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
-          note_prompts=None, depth_prompt=None, assessment_run=None, comparisons=True):
+          note_prompts=None, depth_prompt=None, assessment_run=None, comparisons=True,
+          unanalysed=None):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -317,6 +318,8 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
         cells_file.write_text(json.dumps(cells))
         out = Path(scratch) / f"{name}.json"
         extra = [f"--run-date={run_date}"] if run_date and name == "payload" else []
+        if name == "documents" and unanalysed:
+            extra.append("--unanalysed=" + ",".join(sorted(unanalysed)))
         if name == "payload":
             extra.append("--behaviours=" + ",".join(sorted(behaviours)))
             if panel_name:
@@ -403,7 +406,7 @@ def document_note_prompts(store, out_of_ten=False):
 
 def publish(store, behaviours, document_ids, rubric, published_by, notes="",
             run_date=None, config=None, link_runs=(), depth_prompt=None,
-            assessment_run=None, boards=None):
+            assessment_run=None, boards=None, unanalysed_documents=()):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
@@ -440,7 +443,17 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name,
                                     depth_prompt=depth_prompt, assessment_run=assessment_run)
-    documents, documents_sha256 = build("documents", cells, behaviours)
+    # Versions carried for reading only: in the reader's text, in no cell, and
+    # marked as not yet judged. Checked to exist like the others, and refused if a
+    # judged document is named twice.
+    unanalysed = [v["id"] for v in document_versions(store, unanalysed_documents)] \
+        if unanalysed_documents else []
+    judged_ids = {cell["spec_version_id"] for cell in cells}
+    both = sorted(judged_ids & set(unanalysed))
+    if both:
+        raise SystemExit(f"publish: versions both judged and unanalysed: {both}")
+    documents, documents_sha256 = build(
+        "documents", cells, behaviours, **({"unanalysed": unanalysed} if unanalysed else {}))
     links, links_sha256 = build("links", cells, behaviours,
                                 link_runs=link_runs, note_prompts=note_prompts,
                                 comparisons=not out_of_ten)
@@ -466,6 +479,10 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         build_params["assessment_run_id"] = assessment_run
     if out_of_ten:
         build_params["comparisons"] = False
+    # Recorded only when given, so a rebuild of an earlier publication is the call
+    # it was built with.
+    if unanalysed:
+        build_params["unanalysed_documents"] = sorted(unanalysed)
 
     publication = {
         "published_by": published_by,
@@ -515,6 +532,9 @@ def main(argv=None):
     parser.add_argument("--assessment-run", default=None,
                         help="the aci_assessment_runs id the depths out of ten were given "
                              "with, and whose assessment of each document is carried")
+    parser.add_argument("--unanalysed-documents", default="",
+                        help="comma-separated aci_spec_versions ids the reader carries "
+                             "for reading only, with no analysis yet")
     args = parser.parse_args(argv)
     if args.assessment_run is not None:
         # Before the store is opened: an id that is not one is refused by name.
@@ -527,6 +547,9 @@ def main(argv=None):
     scale = {name: value for name, value in (("depth_prompt", args.depth_prompt),
                                              ("assessment_run", args.assessment_run))
              if value is not None}
+    unanalysed = [s for s in args.unanalysed_documents.split(",") if s]
+    if unanalysed:
+        scale["unanalysed_documents"] = unanalysed
     row, cells = publish(
         store,
         [s for s in args.behaviours.split(",") if s],

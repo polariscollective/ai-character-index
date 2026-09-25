@@ -1797,6 +1797,22 @@ body.sidebar-collapsed .sidebar-resizer {
   font-weight: 600;
 }
 .document-body .raw-table { overflow: auto; font-family: var(--mono); font-size: 11px; white-space: pre; }
+/* The band over a version no panel has read yet: the translation's band, ground
+   and all, with only its left rule in the framework's olive green. Olive rather
+   than chartreuse because a rule is a mark and needs 3:1 on the band's ground:
+   chartreuse on --chrome-deep is well under it, olive clears it. */
+.document-translation.analysis-band { border-left-color: var(--muted); }
+
+/* Every document on screen under analysis: the behaviours are listed, not offered. */
+.behaviour-list.under-analysis .behaviour-option { opacity: .55; cursor: default; }
+/* How many documents a publisher has, small beside its name in the tab. */
+.provider-count {
+  display: inline-block; margin-left: 5px; padding: 0 5px; border-radius: 999px;
+  background: var(--chrome-deep); color: var(--faint);
+  font-family: var(--mono); font-size: 11px; font-weight: 400; line-height: 1.5;
+  vertical-align: 2px;
+}
+
 .zero-coverage {
   margin: 0 0 36px;
   padding: 16px 18px;

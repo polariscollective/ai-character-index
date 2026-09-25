@@ -33,12 +33,25 @@ sys.path.insert(0, str(ROOT / "engine"))
 sys.path.insert(0, str(ROOT / "engine" / "spec-cite"))
 
 
-def documents_payload(store, cells=None):
+def documents_payload(store, cells=None, unanalysed=None):
     """The reader's documents payload: the text of every version a publication
     carries. The frozen coverage ledger this used to carry beside it is not read by
-    the reader, and a publication describes coverage through its judges."""
+    the reader, and a publication describes coverage through its judges.
+
+    `unanalysed` names versions a publication carries for reading only: their text
+    is in the payload and no cell is. Given, every document carries `judged`,
+    true for the versions its cells name and false for these, and the reader says
+    of a false one that it is under analysis. Not given, nothing is said, which is
+    what every publication before it was built with."""
     import index_store            # noqa: E402
     index_store.install_registry(store)
+    if unanalysed:
+        judged = index_store.published_spec_version_ids(store, cells=cells)
+        return {
+            "generatedFrom": ["supabase: aci_spec_versions"],
+            "documents": index_store.documents(
+                store, sorted(set(judged) | set(unanalysed)), judged_version_ids=set(judged)),
+        }
     return {
         "generatedFrom": ["supabase: aci_spec_versions"],
         # No judged_version_ids, so no document here carries a `judged` flag.
@@ -56,18 +69,22 @@ def documents_payload(store, cells=None):
 def main(argv=None) -> None:
     out = OUTPUT
     cells = None
+    unanalysed = None
     for arg in (sys.argv[1:] if argv is None else argv):
         if arg.startswith("--out="):
             out = Path(arg.split("=", 1)[1])
         elif arg.startswith("--cells="):
             cells = json.loads(Path(arg.split("=", 1)[1]).read_text())
+        elif arg.startswith("--unanalysed="):
+            unanalysed = [v for v in arg.split("=", 1)[1].split(",") if v]
         else:
             raise SystemExit(
-                f"unknown argument {arg!r} (supported: --out=PATH --cells=PATH)"
+                f"unknown argument {arg!r} "
+                "(supported: --out=PATH --cells=PATH --unanalysed=IDS)"
             )
 
     from store import Store       # noqa: E402
-    payload = documents_payload(Store.from_env(), cells)
+    payload = documents_payload(Store.from_env(), cells, unanalysed)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
     print(f"Wrote {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")

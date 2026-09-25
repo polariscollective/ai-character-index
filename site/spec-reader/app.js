@@ -1676,6 +1676,14 @@ function updateBehaviourDepths() {
    * wrong, and a stale note is worse: it reads as the answer to the question
    * just asked. */
   closeDepthNote();
+  /* Nothing to tick when every document on screen is still under analysis: no
+   * behaviour has passages or a depth there, so the boxes are shown and not
+   * offered. A document beside a judged one keeps them, for the judged one. */
+  const underAnalysis = shown.length > 0 && shown.every(doc => doc.judged === false);
+  elements.behaviourList.classList?.toggle("under-analysis", underAnalysis);
+  elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
+    input.disabled = underAnalysis;
+  });
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(cell => {
     const behaviour = payloadBehaviours().find(b => b.slug === cell.dataset.behaviourDepth);
     const depths = shown.map(doc => panelDepth(behaviour, doc.id));
@@ -3603,6 +3611,27 @@ function showTranslationNotice(panel) {
   if (flag) flag.hidden = !(translated && dismissed);
 }
 
+/* The band over a version no panel has read yet, as the translation's band is
+ * drawn and put away: once closed, it stays closed for that document. */
+const analysisDismissedKey = documentId => `aci-analysis-dismissed:${documentId}`;
+function showAnalysisNotice(panel, doc) {
+  const band = panel.querySelector(".analysis-band");
+  if (!band) return;
+  band.hidden = doc.judged !== false || savedFlag(analysisDismissedKey(doc.id));
+}
+elements.documentReader.addEventListener("click", event => {
+  const button = event.target.closest?.(".analysis-dismiss");
+  if (!button) return;
+  event.stopImmediatePropagation();
+  const panel = button.closest(".document-panel");
+  const id = panel?.dataset.documentId;
+  if (!id) return;
+  saveFlag(analysisDismissedKey(id), true);
+  panels().filter(item => item.dataset.documentId === id).forEach(item =>
+    item.querySelector(".analysis-band")?.setAttribute("hidden", ""));
+  requestAnimationFrame(updateRails);
+}, true);
+
 /* The × closes the notice at once: every panel showing this document, since an
  * identical pair shows it twice, and no other. The band sits above the text's
  * scroll box, so the reader's place in the text is untouched; focus goes to the
@@ -3784,12 +3813,22 @@ function renderProviderTabs(panel, doc, side = 0) {
   propose.className = "provider-propose";
   propose.href = "/about?propose&kind=specification#propose";
   propose.textContent = "Propose a constitution";
+  const documents = state.payload?.documents || [];
   group.replaceChildren(...labsOf().map(lab => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "provider-tab";
     button.dataset.lab = lab;
     button.textContent = lab;
+    // How many documents the publisher has here, small beside its name.
+    const count = documents.filter(one => one.lab === lab).length;
+    if (count > 1) {
+      const badge = document.createElement("span");
+      badge.className = "provider-count";
+      badge.textContent = String(count);
+      badge.setAttribute("aria-label", `${count} documents`);
+      button.append(badge);
+    }
     button.setAttribute("aria-pressed", String(lab === doc.lab));
     return button;
   }), propose);
@@ -3866,6 +3905,7 @@ function renderDocument(doc, side = 0) {
     context && note ? ` ${note}` : note;
   if (note) panel.querySelector(".translation-flag").title = note;
   showTranslationNotice(panel);
+  showAnalysisNotice(panel, doc);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
   wireBackToTop(panel);
   attachLocators(panel, doc);
@@ -4001,6 +4041,9 @@ function updatePanelMeta(panel, doc) {
     if (cell.withheld) withheld = true;
     else published += cell.passages.length;
   });
+  /* A version the publication carries for reading only says so in the band
+   * above its text (showAnalysisNotice), and has nothing else to say here. */
+  if (doc.judged === false) return;
   if (tracking && published === 0) {
     const several = selectedBehaviours().length > 1;
     const filtered = selectedBehaviours()
