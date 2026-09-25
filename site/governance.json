@@ -3952,12 +3952,12 @@
    "engages": "Just over half marks. It says how its public text relates to the one it trains on and that models are monitored in use, and it published one set of adherence tests that has not been kept current. Its outside evaluators test other risks, and no threshold decides whether a model is released."
   },
   "anthropic": {
-   "published": "Its constitution is published under an open licence, says which models it covers and lists its hard constraints in full. It falls short on the change log: past versions are hard to find and changes are not explained.",
+   "published": "Its constitution is published under an open licence, says which models it covers and lists its hard constraints in full. It falls short on the change log: it keeps no change log and no version number, only its current text.",
    "engages": "Half marks. It says it trains its models on the constitution, uses the same text inside and monitors models in use. It publishes no threshold a model must pass before release and names no outside testers."
   },
   "alibaba": {
    "published": "It publishes a constitution and names its hard constraints, though some are set by policy documents it does not publish, and it says the text is open source without naming a licence. It says nothing about which models the document covers and keeps no change log.",
-   "engages": "Low. There is some sign that models are trained on the document and that the same text is used inside, and its AAIG lab has published scores against the document for two Qwen models that stop before the current line. Nothing is published on monitoring."
+   "engages": "Low. There is some sign that models are trained on the document, and it says the public text matches its internal behaviour standards, and its AAIG lab has published scores against the document for two Qwen models that stop before the current line. Nothing is published on monitoring."
   },
   "google": {
    "published": "No single constitution: its rules for the Gemini app are spread across several documents with different owners, and the model cards tie its safety policies to named models. It describes the guardrails it offers developers in detail and announces some changes to its guardrails, with no register.",
