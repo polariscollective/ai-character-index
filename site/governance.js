@@ -939,7 +939,7 @@ function renderLegend() {
     element("span", "", "none (0)"));
   legend.append(view.swatches([0, 2.5, 5, 7.5, 10], TEN), element("span", "", "all (10)"));
   const na = element("span", "legend-na");
-  na.append(view.naChip(), document.createTextNode(" not assessed, needs an internal audit"));
+  na.append(view.naChip(), document.createTextNode(" not assessed"));
   legend.append(na);
   board.nodes.legend.replaceChildren(legend);
 }
