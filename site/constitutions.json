@@ -63,7 +63,7 @@
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
-   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, level with preventing secret loyalties as its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories. Part of that gap may come from the reading rather than the document: a figure is read from the passages the judges retained, and one paragraph of the constitution on political, religious and other controversial subjects was not among them."
+   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, level with preventing secret loyalties as its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories."
   },
   {
    "title": "No behaviour reaches the top of the depth scale in any constitution",
@@ -1227,9 +1227,9 @@
   },
   {
    "id": "anthropic-contested-questions-missing-a-paragraph",
-   "title": "Anthropic's objectivity on contested questions was read without one of its own paragraphs",
-   "question": "The figure is 6.3 out of 10, read from five retained passages. A depth is given on the passages the judges retained and not on the whole document. The paragraph that opens “Many topics require particular delicacy due to their inherently complex or divisive nature. Political, religious, and other controversial subjects” bears directly on the behaviour and is not among them. The same may hold for the section on preserving epistemic autonomy under user autonomy, which retains four passages.",
-   "what_would_settle_it": "Judging the passages of the cell again, then its depth. It costs money.",
+   "title": "Anthropic's objectivity on contested questions was read without the paragraph that introduces it",
+   "question": "The figure is 6.3 out of 10, read from five retained passages, and a depth is given on the retained passages and not on the whole document. The paragraph that opens “Many topics require particular delicacy due to their inherently complex or divisive nature” (Preserving epistemic autonomy ¶4) was judged related by fable and sol and not relevant by deepseek. That is 2 points where a panel of three needs 4 for the lowest band, so it was not retained. The paragraph after it, which states the rule of even-handedness, was judged defining by all three. The judges' reading is defensible, since ¶4 names the delicate topics and says nothing about what to do, but it is one of the passages a reader would expect to see.",
+   "what_would_settle_it": "Deciding whether a paragraph that introduces a rule without stating it should count. Nothing needs judging again unless the answer is yes.",
    "raised": "25 September 2026"
   },
   {
