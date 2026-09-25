@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Constitutions Index, under construction</title>
+<meta name="robots" content="noindex">
+<!-- The holding page a production deployment shows while the index is built in
+     private: the mark, one sentence and a way to hear when it is released.
+     Nothing else, so nothing on it can be quoted before it is ready. The main-wip
+     branch serves it at every public address (next.config.mjs). -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%2210%22 fill=%22%23333D22%22/><g transform=%22translate(24,24) scale(0.84) translate(-24,-24)%22><path d=%22M32 10.14A16 16 0 1 1 16 10.14%22 fill=%22none%22 stroke=%22%23F1EFE3%22 stroke-width=%223.5%22 stroke-linecap=%22round%22/><path d=%22M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z%22 fill=%22%23F1EFE3%22/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F1EFE3;
+    --ink: #23281B;
+    --olive-deep: #333D22;
+    --olive: #5C6B3C;
+    --chartreuse: #B7C94B;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  main { width: min(420px, 100%); text-align: center; }
+  .mark { width: 64px; height: 64px; color: var(--olive-deep); }
+  h1 {
+    margin: 18px 0 4px;
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .state { margin: 0 0 14px; color: var(--olive); font-weight: 600; }
+  p { margin: 0 0 12px; }
+  a { color: var(--ink); text-decoration: underline 2px var(--chartreuse); text-underline-offset: 3px; }
+  a:hover, a:focus-visible { background: var(--chartreuse); }
+  a:focus-visible { outline: 2px solid var(--chartreuse); outline-offset: 2px; }
+  .posted { margin-top: 26px; padding-top: 20px; border-top: 1px solid rgb(92 107 60 / .3); }
+</style>
+</head>
+<body>
+<main>
+  <svg class="mark" viewBox="0 0 48 48" role="img" aria-label="Polaris Collective"><path
+    d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5"
+    stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z"
+    fill="currentColor"/></svg>
+  <h1>AI Constitutions Index</h1>
+  <p class="state">Under construction</p>
+  <p>An index of the rules AI companies publish for their models, and of how they keep them. It is
+  maintained by <a href="https://polariscollective.org">Polaris Collective</a>.</p>
+  <div class="posted" id="posted"></div>
+</main>
+<script type="module">
+  import { keepPosted } from "/keep-posted.js";
+  document.getElementById("posted")
+    .append(keepPosted("Leave your address to hear about updates and the day it is released."));
+</script>
+</body>
+</html>

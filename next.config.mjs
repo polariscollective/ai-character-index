@@ -16,7 +16,19 @@ const nextConfig = {
      so it redirects rather than disappears. A redirect keeps the query string,
      which is how ?propose and ?publication= survive it. */
   async redirects() {
+    /* main-wip: the index is built in private, so a production deployment of
+       this branch shows a holding page (site/wip.html) at every public address.
+       Every page of the site is sent to it, the files behind them included.
+       The portal and the routes stay, since the holding page's form uses one. */
+    const holding = ["/overview", "/index", "/doc-reader", "/spec-reader", "/about", "/mcp",
+      "/coverage", "/how-it-works", "/propose"].flatMap(page => [
+      { source: page, destination: "/", permanent: false },
+      { source: `${page}/:path*`, destination: "/", permanent: false },
+    ]);
     return [
+      ...holding,
+      { source: "/:page(overview|boards|about|mcp|coverage|propose).html", destination: "/",
+        permanent: false },
       { source: "/how-it-works", destination: "/about", permanent: true },
       { source: "/how-it-works/", destination: "/about", permanent: true },
       /* The Doc reader was at /spec-reader/ until 25 September 2026, and links
@@ -26,15 +38,6 @@ const nextConfig = {
       { source: "/spec-reader", destination: "/doc-reader/", permanent: true },
       { source: "/spec-reader/", destination: "/doc-reader/", permanent: true },
       { source: "/spec-reader/index.html", destination: "/doc-reader/", permanent: true },
-      /* The two boards were the front page, behind tabs, until 24 September
-         2026, and a link to the second one was /?view=governance. The front
-         page is the overview now and the boards are at /index, so a link that
-         names a view is sent there; the query string, the view with it, goes
-         along. Not permanent, because /overview could one day take a parameter
-         of that name for a purpose of its own. */
-      { source: "/", has: [{ type: "query", key: "view" }], destination: "/index", permanent: false },
-      { source: "/overview", has: [{ type: "query", key: "view" }], destination: "/index", permanent: false },
-      { source: "/overview/", has: [{ type: "query", key: "view" }], destination: "/index", permanent: false },
     ];
   },
   async rewrites() {
@@ -52,7 +55,8 @@ const nextConfig = {
          replaces claimed Next serves public/index.html "at /index.html but not
          at /", which was wrong -- it serves it at both, and the rewrite beneath
          it had been redundant all along. */
-      { source: "/", destination: "/overview.html" },
+      // main-wip: the front page is the holding page.
+      { source: "/", destination: "/wip.html" },
       /* The Doc reader's address is /doc-reader/ since 25 September 2026, the
          name every page gives it. Its files stay in site/spec-reader/, which is
          a name the code and the tests use and nobody reads, so the address is
