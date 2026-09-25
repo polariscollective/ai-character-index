@@ -448,9 +448,9 @@ body.resizing-columns {
    once here rather than beside every figure. The right padding lines the label up
    with the figures' right edge: the list's 10px, the note button's 18px and 8px
    margin, and the label's own 12px. */
-/* The depth scale's label, once, at the top right of the list, over the column
-   the figures stand in. */
-.behaviour-list-head { display: flex; justify-content: flex-end; padding: 12px 48px 0 25px; }
+/* The depth scale's label, once, at the top right of the list, over the figures
+   and the i beside them, so it runs to the list's right edge. */
+.behaviour-list-head { display: flex; justify-content: flex-end; padding: 12px 14px 0 25px; }
 .behaviour-group-head {
   display: flex;
   align-items: baseline;
