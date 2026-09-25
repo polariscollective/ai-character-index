@@ -13,49 +13,19 @@
  * loader, because the layout applies only while the mark is inside.
  */
 
-/* No backticks inside this block: it is a template literal. */
-const STYLE = `
-.site-loading:has(> .site-loader-mark) {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  /* Centred across the whole of what is loading: the elements that carry a
-     loader keep a reading measure of their own, which would centre it on a
-     column of text instead. */
-  width: 100%;
-  max-width: none;
-  min-height: 140px;
-  margin-left: 0;
-  margin-right: 0;
-  color: #333D22;
-  text-align: center;
-}
-.site-loader-mark { flex: none; width: 26px; height: 26px; overflow: visible; }
-.site-loader-ring {
-  transform-box: view-box;
-  transform-origin: 24px 24px;
-  animation: site-loader-turn 2.4s linear infinite;
-}
-@keyframes site-loader-turn { to { transform: rotate(360deg); } }
-.site-loader-text {
-  line-height: 1;
-  color: #23281B;
-  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-}
-@media (prefers-reduced-motion: reduce) { .site-loader-ring { animation: none; } }
-`;
+/* The style is site/loader.css, linked in the head of every page so it applies
+ * from the first paint. A page that lacks the link, or a loader built before it
+ * arrives, gets it here, once. */
 
 let styled = false;
 export function styleLoaders() {
   if (styled || typeof document === "undefined") return;
   styled = true;
-  const node = document.createElement("style");
-  node.textContent = STYLE;
-  document.head.append(node);
+  if (document.querySelector('link[href="/loader.css"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/loader.css";
+  document.head.append(link);
 }
 
 /* The mark and the line, as markup, for a page that writes its contents as a
