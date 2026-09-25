@@ -61,7 +61,7 @@ const STRENGTH =
   "The weakest band to return, meaning that band and stronger. defining is the "
   + "document's fullest statement of the behaviour, core establishes it there, "
   + "related bears on it without establishing it. Defaults to related, so every "
-  + "band comes back, which is what the spec reader shows before any toggle is "
+  + "band comes back, which is what the doc reader shows before any toggle is "
   + "touched. Every passage carries its strength, so pass core or defining to "
   + "narrow the answer. A judge's own verdict of adjacent is the band named "
   + "related here.";
@@ -78,9 +78,9 @@ const handler = createMcpHandler(
     }, () => answer(snapshot => about(snapshot, { site: site() })));
 
     server.registerTool("list_model_specs", {
-      title: "List model specifications",
+      title: "List constitutions",
       description:
-        "Every model specification the current publication carries: laboratory, "
+        "Every constitution (model specification) the current publication carries: laboratory, "
         + "title, version, source URL, how many behaviours were judged against "
         + "it and how many passages it holds. Takes no arguments. Does not "
         + "return the specification text, which runs to hundreds of kilobytes; "
@@ -105,7 +105,7 @@ const handler = createMcpHandler(
     server.registerTool("retrieve_passages", {
       title: "Retrieve passages",
       description:
-        "The passages of one or more model specifications that bear on one or "
+        "The passages of one or more constitutions (model specifications) that bear on one or "
         + "more behaviours, quoted verbatim with a locator, the band the panel "
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
@@ -243,7 +243,7 @@ const handler = createMcpHandler(
     server.registerTool("compare_documents", {
       title: "Compare two documents on one behaviour",
       description:
-        "Everything one run found between two model specifications on one "
+        "Everything one run found between two constitutions (model specifications) on one "
         + "behaviour: each document's passages quoted with the band the panel "
         + "put them in, every pair of passages the judges linked with the "
         + "relation each judge gave, who may lift each rule and the judge's own "
@@ -278,7 +278,7 @@ const handler = createMcpHandler(
       args)));
   },
   {
-    serverInfo: { name: "ai-character-index", version: "1.0.0" },
+    serverInfo: { name: "ai-constitutions-index", version: "1.0.0" },
     instructions: INSTRUCTIONS,
   },
 );
