@@ -1680,7 +1680,7 @@ function updateBehaviourDepths() {
    * behaviour has passages or a depth there, so the boxes are shown and not
    * offered. A document beside a judged one keeps them, for the judged one. */
   const underAnalysis = shown.length > 0 && shown.every(doc => doc.judged === false);
-  elements.behaviourList.classList.toggle("under-analysis", underAnalysis);
+  elements.behaviourList.classList?.toggle("under-analysis", underAnalysis);
   elements.behaviourList.querySelectorAll(".behaviour-check").forEach(input => {
     input.disabled = underAnalysis;
   });
