@@ -84,6 +84,18 @@ const STYLE = `
 }
 .brand-pop .brand-close:hover { background: #B7C94B; color: #23281B; }
 .site-header .wordmark[aria-expanded="true"] { box-shadow: inset 0 -2px 0 #B7C94B; }
+/* The index's name over the collective's, as one block centred on the mark,
+   in the height the header already has. */
+.site-header .site-brand .brand-stack {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  line-height: 1.15;
+}
+.site-header .site-brand .brand-stack .wordmark { line-height: 1.15; }
+.site-header .site-brand .brand-stack .collective {
+  margin: 0; padding: 0; font-size: 11px; font-weight: 400; line-height: 1.2;
+  color: #676C58; letter-spacing: 0; text-transform: none;
+}
+.site-header .site-brand .brand-stack .collective:hover { color: #23281B; }
 /* The date of the publication, written beside the wordmark rather than set in a
    pill: small, faint, with a thin underline that says it can be pressed. An
    older version alone takes a colour, the framework's one warm colour; a
@@ -390,7 +402,7 @@ function publicationBadge(brand, wordmark) {
   badge.setAttribute("aria-haspopup", "dialog");
   badge.setAttribute("aria-expanded", "false");
   badge.setAttribute("aria-controls", "brand-pop");
-  wordmark.after(badge);
+  (wordmark.closest(".brand-stack") || wordmark).after(badge);
   readStanding().then(standing => {
     if (!standing) return;
     const date = WHEN.format(new Date(standing.shown.published_at));
