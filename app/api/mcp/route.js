@@ -18,7 +18,7 @@ import { linkEvidence } from "../../lib/links.mjs";
 import { about, listModelSpecs, listBehaviours, retrievePassages,
          compareDocuments, INSTRUCTIONS, ToolError }
   from "../../lib/mcp-tools.mjs";
-import { constitutionsBoard, governanceBoard } from "../../lib/board-tools.mjs";
+import { constitutionsBoard, governanceBoard, overviewBoard } from "../../lib/board-tools.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -219,6 +219,26 @@ const handler = createMcpHandler(
           + "default."),
       }),
     }, args => answer(snapshot => governanceBoard(snapshot, args)));
+
+    server.registerTool("overview_board", {
+      title: "The overview",
+      description:
+        "The grid the index's site opens on: for each of nine AI companies, "
+        + "the few figures that sum up the two boards, what its constitution "
+        + "says (the document as a whole, the behaviours it covers, and their "
+        + "final score) and how it governs it (what it publishes, what it "
+        + "engages, and their final score), each out of 10 and placed in a tier "
+        + "against the best score on the same row. With them come the "
+        + "overview's takeaways and a short written summary of each company.\n\n"
+        + "Every figure is the one constitutions_board or governance_board gives, "
+        + "read from the same publication, so call those for what a figure rests "
+        + "on. Pass company to narrow to one, such as Anthropic.",
+      inputSchema: z.object({
+        company: z.string().optional().describe(
+          "One company's name, or part of it, such as Anthropic. Every company by "
+          + "default."),
+      }),
+    }, args => answer(snapshot => overviewBoard(snapshot, args)));
 
     server.registerTool("compare_documents", {
       title: "Compare two documents on one behaviour",

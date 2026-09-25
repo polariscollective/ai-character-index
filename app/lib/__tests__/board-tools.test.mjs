@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { constitutionsBoard, governanceBoard, INCOMPATIBLE } from "../board-tools.mjs";
+import { constitutionsBoard, governanceBoard, overviewBoard, INCOMPATIBLE } from "../board-tools.mjs";
 import { ToolError } from "../mcp-tools.mjs";
 
 /* A publication as the MCP server reads it, carrying both boards as they are
@@ -118,4 +118,25 @@ test("the route registers both", async () => {
   const route = await readFile(new URL("../../api/mcp/route.js", import.meta.url), "utf8");
   assert.match(route, /registerTool\("constitutions_board"/);
   assert.match(route, /registerTool\("governance_board"/);
+});
+
+test("the overview answers each company's figures from the two boards, with its tier", async () => {
+  const overview = JSON.parse(await readFile(
+    new URL("../../../site/overview.json", import.meta.url), "utf8"));
+  const answer = overviewBoard({ ...snapshot(), overview });
+  const constitutionsAnswer = constitutionsBoard(snapshot());
+  assert.ok(answer.measures.rows.length >= 4);
+  assert.equal(answer.companies.length, governance.labs.length);
+  for (const company of answer.companies) {
+    const final = company.figures.find(one => one.row === "What the constitutions say, final score");
+    const fromBoard = constitutionsAnswer.companies.find(one => one.id === company.id);
+    if (final && fromBoard) assert.equal(final.figure, fromBoard.final_score, company.name);
+    for (const figure of company.figures) {
+      assert.equal(figure.max, 10);
+      if (figure.figure) assert.ok(figure.tier, `${company.name} ${figure.row}`);
+    }
+  }
+  assert.deepEqual(answer.takeaways, overview.takeaways);
+  assert.throws(() => overviewBoard({ ...snapshot(), overview: null }),
+                error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });

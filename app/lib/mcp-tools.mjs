@@ -783,8 +783,11 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "them compare.",
     "  governance_board: nine companies scored on four questions about how they "
     + "govern the rules their models follow. Those figures were given by hand "
-    + "from public documents rather than judged by the panel. It belongs to no "
-    + "publication and carries its own as-of date.",
+    + "from public documents rather than judged by the panel. The board is the "
+    + "one the publication froze, and carries its own as-of date.",
+    "  overview_board: the grid the site opens on, the summary figures of both "
+    + "boards for each company with its tier against the best on each row, the "
+    + "overview's takeaways and a written summary of each company.",
     "  compare_documents: everything one run found between two documents on one "
     + "behaviour, passage by passage. Its full answer runs to hundreds of "
     + "thousands of characters, so pass detail counts first.",

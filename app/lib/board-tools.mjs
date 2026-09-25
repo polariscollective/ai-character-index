@@ -311,3 +311,72 @@ export function governanceBoard(snapshot, args = {}) {
     })),
   };
 }
+
+/**
+ * The overview: the grid the site opens on, from the publication's frozen
+ * overview (site/overview.json as it stood when the publication was built).
+ *
+ * Each row of the grid names a figure of one of the two boards, and each figure
+ * here is read from the same answer constitutions_board and governance_board
+ * give, so the three tools cannot disagree. Beside each figure is its tier as
+ * the page shows it by default: the company against the best score on the same
+ * row, with the thresholds the file gives.
+ */
+export function overviewBoard(snapshot, args = {}) {
+  const overview = snapshot?.overview;
+  if (!overview?.grid?.groups?.length || !Array.isArray(overview.grid.tiers)) {
+    throw new ToolError(INCOMPATIBLE);
+  }
+  const boards = {
+    constitutions: constitutionsBoard(snapshot).companies,
+    governance: governanceBoard(snapshot).companies,
+  };
+  // One figure of one company on one board, by the name the grid gives it.
+  const figureOf = (board, figure, id) => {
+    const company = boards[board]?.find(one => one.id === id);
+    if (!company) return null;
+    if (board === "constitutions") {
+      return { final: company.final_score, whole: company.whole_document?.figure,
+               behaviours: company.behaviours?.figure }[figure] ?? null;
+    }
+    if (figure === "total") return company.final_score ?? null;
+    return company.figures?.find(one => one.id === figure)?.figure ?? null;
+  };
+  const tiers = [...overview.grid.tiers].sort((a, b) => b.from - a.from);
+  const tierOf = (value, best) => (!value || !best ? null
+    : tiers.find(tier => value / best >= tier.from - 1e-9)?.name ?? null);
+  const rows = overview.grid.groups.flatMap(group => [
+    ...group.rows.map(row => ({ group: group.name, ...row })),
+    ...(group.final ? [{ group: group.name, name: `${group.name}, final score`,
+                         ...group.final }] : []),
+  ]);
+  const ids = (snapshot.governance?.labs || []).map(lab => ({ id: lab.id, name: lab.name }));
+  const best = rows.map(row => Math.max(0, ...ids.map(({ id }) =>
+    figureOf(row.board, row.figure, id) ?? 0)));
+  const chosen = ids.filter(company => matches(company.name, args.company));
+  if (!chosen.length) {
+    throw new ToolError(`no company called ${args.company}. This overview carries: `
+      + `${ids.map(company => company.name).join(", ")}`);
+  }
+  return {
+    publication: snapshot.publication,
+    introduction: overview.page?.intro ?? null,
+    measures: {
+      rows: rows.map(({ group, name, plain, board, figure }) =>
+        ({ group, name, means: plain, from_board: board, figure, max: 10 })),
+      tiers: tiers.map(({ name, from }) => ({ name, from_share_of_best: from })),
+      tiers_mean: overview.grid.relative_note ?? null,
+    },
+    takeaways: overview.takeaways ?? [],
+    companies: chosen.map(({ id, name }) => ({
+      id,
+      name,
+      summary: overview.summaries?.[id] ?? null,
+      figures: rows.map((row, index) => {
+        const value = figureOf(row.board, row.figure, id);
+        return { row: row.name, figure: value, max: 10, tier: tierOf(value, best[index]) };
+      }),
+    })),
+    notes: overview.grid.notes ?? [],
+  };
+}
