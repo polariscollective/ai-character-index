@@ -2098,8 +2098,13 @@ summary:focus-visible, dialog:focus-visible {
 @media (max-width: 900px) {
   body { overflow: auto; }
   .site-header nav a:not(.active) { display: none; }
-  .app-shell { height: auto; min-height: calc(100vh - 54px); grid-template-columns: 1fr; }
-  .behaviour-sidebar { border-bottom: 1px solid var(--line); }
+  /* minmax(0, 1fr), not 1fr: a 1fr column never shrinks below its content's
+     minimum, and the menu sets its groups side by side at 220px each, so the
+     column grew to about 964px and a phone showed the whole reader zoomed out.
+     At zero the column fits the screen and the menu scrolls sideways inside it,
+     as it was always meant to. */
+  .app-shell { height: auto; min-height: calc(100vh - 54px); grid-template-columns: minmax(0, 1fr); }
+  .behaviour-sidebar { min-width: 0; border-bottom: 1px solid var(--line); }
   .column-resizer { display: none; }
   .sidebar-intro { padding: 14px 20px; }
   .behaviour-list { display: flex; overflow-x: auto; padding: 8px; }
