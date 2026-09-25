@@ -450,7 +450,9 @@ body.resizing-columns {
    margin, and the label's own 12px. */
 /* The depth scale's label, once, at the top right of the list, over the figures
    and the i beside them, so it runs to the list's right edge. */
-.behaviour-list-head { display: flex; justify-content: flex-end; padding: 12px 14px 0 25px; }
+.behaviour-list-head { display: flex; justify-content: flex-end; padding: 6px 14px 0 25px; }
+/* The first category sits close under it: the label is its heading's partner. */
+.behaviour-list-head + .behaviour-group .behaviour-group-head { padding-top: 2px; }
 .behaviour-group-head {
   display: flex;
   align-items: baseline;
