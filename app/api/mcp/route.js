@@ -110,7 +110,8 @@ const handler = createMcpHandler(
         + "put them in and each judge's verdict. Answers in whole behaviour and "
         + "specification pairs, strongest passage first, never splitting a pair "
         + "across pages. Where a pair carries a depth, it is the mean the index's "
-        + "panel gave it, 0 to 4; a pair with no depth answers null. Where a judge "
+        + "panel gave it, on the scale the publication names (0 to 10, or 0 to 4 "
+        + "on earlier publications); a pair with no depth answers null. Where a judge "
         + "could not answer a pair at all, another model judged it in that seat, "
         + "and the pair carries substitutions naming the seat, the substitute and "
         + "the reason; that seat's verdicts and depth are then the substitute's.",

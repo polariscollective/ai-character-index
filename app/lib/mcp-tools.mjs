@@ -8,6 +8,7 @@
  * is app/api/mcp/route.js's.
  */
 import { TIERS, bandCell, atLeastBand } from "./bands.mjs";
+import { depthScaleOf, levelsOf, ODD_VALUES, CONDITIONS_BRIEF } from "../../site/depth-scale.js";
 
 /** A caller's mistake. The route reports it; anything else is a fault. */
 export class ToolError extends Error {}
@@ -641,6 +642,38 @@ against, so a figure can be read without a second call.
 
 Start with list_behaviours to learn the slugs, then retrieve_passages.`;
 
+const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
+
+/**
+ * Who sat in whose seat, and on which pairs, grouped by seat and substitute.
+ * A pair reads "behaviour on document"; a substitute that sat in one seat on
+ * every behaviour of a document reads "every behaviour on document" instead,
+ * so fourteen pairs on one document do not become a list of fourteen.
+ */
+function substitutionsByModel(behaviours) {
+  const groups = new Map();
+  for (const behaviour of behaviours) {
+    for (const id of Object.keys(behaviour.coverage || {})) {
+      for (const { seat, substitute } of substitutionsOf(behaviour, id) || []) {
+        const key = `${substitute}\u0000${seat}`;
+        if (!groups.has(key)) groups.set(key, { seat, substitute, pairs: [] });
+        groups.get(key).pairs.push({ slug: behaviour.slug, id });
+      }
+    }
+  }
+  return [...groups.values()].map(({ seat, substitute, pairs }) => {
+    const byDocument = new Map();
+    for (const { slug, id } of pairs) {
+      if (!byDocument.has(id)) byDocument.set(id, []);
+      byDocument.get(id).push(slug);
+    }
+    const cells = [...byDocument].map(([id, slugs]) => slugs.length === behaviours.length
+      ? `every behaviour on ${id}`
+      : `${slugs.join(", ")} on ${id}`);
+    return { seat, substitute, count: pairs.length, cells };
+  });
+}
+
 /** "1 behaviour", "13 behaviours". A count in prose still has to read. */
 const count = (total, noun) => `${total} ${noun}${total === 1 ? "" : "s"}`;
 
@@ -690,6 +723,9 @@ export function about({ publication, payload, documents, notes }, { site = null 
     (total, behaviour) => total + Object.keys(behaviour.coverage || {})
       .filter(id => substitutionsOf(behaviour, id)).length, 0);
   const locator = exampleLocator(behaviours);
+  const scale = depthScaleOf(payload);
+  const levels = levelsOf(scale);
+  const substitutions = substitutionsByModel(behaviours);
 
   // The panel as the payload recorded it, skipping what it did not record.
   const judged = [
@@ -734,27 +770,36 @@ export function about({ publication, payload, documents, notes }, { site = null 
     "list_behaviours gives the brief each behaviour was judged against, which is "
     + "the question its verdicts answer. A verdict means little without it.",
     "",
-    `The panel. Every cell of this publication was judged by one panel: ${judged}. `
+    `The panel. The panel configured for this publication is ${judged}. `
     + "Each judge reads a whole document against one behaviour's brief and marks "
     + "every passage in it, and the three bands are what their verdicts agree on.",
     "",
-    "Each judge also gives the document a depth for the behaviour, 0 to 4, and "
-    + "the publication carries the mean of the panel: 0 absent, no passage bears "
-    + "on the behaviour; 1 named, it appears in a word or a clause and the "
-    + "document says nothing further; 2 discussed, addressed in its own right but "
-    + "in terms too general to grade a response against; 3 prescribed, concrete "
-    + "rules or procedures specific enough that a grader could quote the "
-    + "document's own sentences as pass criteria; 4 demonstrated, prescribed plus "
-    + "worked examples showing the sanctioned response. A judge scoring a depth "
-    + "is shown the passages the panel cited for that behaviour and nothing else, "
-    + "so a depth reads those citations rather than the whole document. It "
+    `Each judge also gives the document a depth for the behaviour, 0 to ${scale}, `
+    + "and the publication carries the mean of the panel: "
+    + levels.map(level => `${level.level} ${level.anchor}, ${lowerFirst(level.bar)}`)
+      .join(" ").replace(/\.$/, "") + "."
+    + (scale === 10
+      ? ` The three conditions for 10: ${CONDITIONS_BRIEF.join(" ")} ${ODD_VALUES}`
+      : "")
+    + " A judge scoring a depth is shown the passages the panel cited for that "
+    + "behaviour"
+    + (scale === 10
+      ? " and the passages in which the document states its general rules for "
+        + "conflicts, and nothing else"
+      : " and nothing else")
+    + ", so a depth reads those citations rather than the whole document. It "
     + "measures how far a document develops a behaviour, not how much its "
     + "laboratory cares about it and not whether anyone agrees with what it says.",
-    ...(substituted ? ["",
+    ...(substitutions.length ? ["",
       `In this publication ${count(substituted, "pair")} of behaviour and document `
-      + `${substituted === 1 ? "was" : "were"} judged with a recorded substitute `
-      + "in one seat, and every answer naming such a pair carries the seat, the "
-      + "substitute and the reason."] : []),
+      + `${substituted === 1 ? "was" : "were"} not judged by that panel as it `
+      + "stands, because a judge could not answer and another model sat in its "
+      + "seat:",
+      ...substitutions.map(each => `  ${each.substitute} in the seat of ${each.seat}, `
+        + `on ${each.count === 1 ? "one pair" : `${each.count} pairs`}: `
+        + each.cells.join("; ")),
+      "Every answer naming such a pair carries the seat, the substitute and the "
+      + "reason."] : []),
     "",
     "Quoting. Every passage comes back with its quote and a locator naming the "
     + "document, its version, the section and the sentences."
