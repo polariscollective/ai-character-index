@@ -14,6 +14,6 @@ export async function GET(request) {
     // Registry state, not publication state: it changes when someone edits a
     // behaviour rather than when someone publishes, so it is revalidated often
     // and cached briefly.
-    headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=300" },
+    headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=86400" },
   });
 }

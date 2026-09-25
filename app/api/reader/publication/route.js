@@ -63,6 +63,11 @@ export async function GET(request) {
        * newer build turns this one into an earlier publication without touching
        * it. A year of that answer would be a year of a page saying a figure is
        * current when it has moved. */
-      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+      /* Fresh for a minute, and served stale for a day while Vercel refreshes
+       * it behind the visitor's back. The index has few visitors, so five
+       * minutes of staleness left most of them waiting on a cold function;
+       * a day means nobody waits, and after a publication goes public the
+       * first visitor may still see the one before. */
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400" },
     });
 }

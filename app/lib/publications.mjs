@@ -199,7 +199,7 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
      * request went back to Supabase. */
     cacheControl: pin
       ? "public, max-age=31536000, s-maxage=31536000, immutable"
-      : "public, s-maxage=60, stale-while-revalidate=300",
+      : "public, s-maxage=60, stale-while-revalidate=86400",
   };
 }
 
