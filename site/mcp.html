@@ -113,6 +113,10 @@
   /* The copy button, added by the script to every block. It sits beside the pre
      rather than inside it, so it stays put while a long line scrolls under it,
      and its top centres it on the first line. */
+  .dev-warning { max-width: 66ch; margin: 0 0 28px; padding: 14px 18px; border: 1px solid var(--gap);
+                 border-left-width: 3px; border-radius: 4px; }
+  .dev-warning p { margin: 0 0 8px; }
+  .dev-warning p:last-child { margin-bottom: 0; }
   .copy-block { position: relative; max-width: 66ch; margin: 16px 0; }
   .copy-block pre { margin: 0; padding-right: 56px; }
   /* A long line scrolls under the button, so the strip the button sits on is
@@ -248,7 +252,7 @@
 <header class="site-header">
   <span class="site-brand">
     <a class="mark-link" href="https://polariscollective.org" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><svg class="polaris-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M32 10.14A16 16 0 1 1 16 10.14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M24 4Q24 23 30.5 23Q24 23 24 32Q24 23 17.5 23Q24 23 24 4Z" fill="currentColor"/></svg></a>
-    <a class="wordmark brand-stack" href="/doc-reader/"><span class="brand-name">AI Constitutions Index</span><span class="collective">by Polaris Collective</span></a>
+    <a class="wordmark brand-stack" href="/"><span class="brand-name">AI Constitutions Index</span><span class="collective">by Polaris Collective</span></a>
   </span>
   <nav aria-label="Primary navigation">
     <a href="/">Overview</a>
@@ -277,6 +281,35 @@
     these documents by quoting them, rather than from memory. This page has the whole setup, from
     a settings menu or from a command line. Seven tools, read only, no account and no key.</p>
   </div>
+
+  <!-- Shown only where the page is not serving the published index: a
+       development deployment, or a publication nobody has published. The
+       address below would then connect an assistant to a version meant for
+       preparing changes, which will need a key once the index is released.
+       The one bordered callout the framework allows on a view. -->
+  <aside class="dev-warning" id="dev-warning" role="note" hidden>
+    <p><b>You are on the development version of the index.</b> The address on this page
+    belongs to the version we use to prepare changes. It can answer with figures nobody has
+    published yet, and its answers can change without notice.</p>
+    <p>For now it is open to anyone, while the index is prepared for release. Once the index is
+    released, this development version will ask for a key, and an assistant connected to it will
+    stop answering. You will then need to connect your assistant again, to the address of the
+    <a id="dev-warning-link" href="https://ai-constitutions-index.polariscollective.org/mcp">published
+    index</a>.</p>
+  </aside>
+
+  <!-- One prompt to paste into any agent that can install an MCP server: it
+       names the address, the transport and a first call, and the agent does
+       the rest in its own configuration. The address is filled in by the
+       script below, from the page's own origin. -->
+  <section class="m" id="tldr">
+    <h2>TL;DR</h2>
+    <p>Paste this into your AI agent, and it installs the index and checks that it works.</p>
+    <pre><code data-origin>Install the AI Constitutions Index as an MCP server. It is a remote server over
+streamable HTTP at /api/mcp, read only, with no key and no sign in.
+Add it to your MCP configuration under the name ai-constitutions-index, then call
+its about tool to check that it answers, and tell me which publication it serves.</code></pre>
+  </section>
 
   <section class="m" id="what-this-does">
     <h2>What this does</h2>
@@ -332,21 +365,21 @@
     own documentation as of September 2026.</p>
 
     <h3>Claude Code</h3>
-    <pre><code data-origin>claude mcp add --transport http ai-character-index /api/mcp</code></pre>
+    <pre><code data-origin>claude mcp add --transport http ai-constitutions-index /api/mcp</code></pre>
     <p>Add <code>--scope user</code> to have it in every project rather than only this one. Type
     <code>/mcp</code> inside Claude Code to see that it connected.</p>
 
     <h3>Codex CLI</h3>
-    <pre><code data-origin>codex mcp add ai-character-index --url /api/mcp</code></pre>
+    <pre><code data-origin>codex mcp add ai-constitutions-index --url /api/mcp</code></pre>
     <p><code>codex mcp list</code> shows what is configured.</p>
 
     <h3>Gemini CLI</h3>
-    <pre><code data-origin>gemini mcp add --transport http ai-character-index /api/mcp</code></pre>
+    <pre><code data-origin>gemini mcp add --transport http ai-constitutions-index /api/mcp</code></pre>
 
     <h3>A client that takes a configuration file</h3>
     <pre><code data-origin>{
   "mcpServers": {
-    "ai-character-index": {
+    "ai-constitutions-index": {
       "type": "http",
       "url": "/api/mcp"
     }
@@ -365,8 +398,8 @@
       autonomy?</li>
       <li>What changed between the two versions of the OpenAI Model Spec on human oversight?</li>
     </ul>
-    <p>The index carries thirteen behaviours as of September 2026, and the assistant will name the
-    ones it used and quote from the documents it read.</p>
+    <p>The assistant will name the behaviours it used, from those the current publication carries,
+    and quote from the documents it read.</p>
   </section>
 
   <section class="m" id="tools">
@@ -500,6 +533,18 @@ setPalette(qp || "daylight");
    JavaScript still sees something true, and absolute here so the blocks above
    can be copied straight into a client. Taken from location.origin rather than
    hard-coded, so a preview deployment documents itself. */
+/* The warning above, where this page is not serving the published index: a
+ * development deployment says so of itself, and a publication that is not the
+ * one published says so by its standing. */
+fetch("/api/reader/publication")
+  .then(response => (response.ok ? response.json() : null))
+  .then(row => {
+    if (row && (row.development === true || row.standing !== "published")) {
+      document.getElementById("dev-warning").hidden = false;
+    }
+  })
+  .catch(() => {});
+
 document.querySelectorAll("[data-origin]").forEach(node => {
   node.textContent = node.textContent.replaceAll("/api/mcp", `${location.origin}/api/mcp`);
 });
