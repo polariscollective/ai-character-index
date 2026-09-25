@@ -1067,7 +1067,8 @@ body.resizing-columns {
   justify-content: center;
   gap: 14px;
   background: rgb(241 239 227 / .86);
-  color: var(--accent, #333D22);
+  /* The same quiet grey as every other loader of the site (loader.css). */
+  color: #676C58;
 }
 .reader-loader[hidden] { display: none; }
 .loader-mark { width: 56px; height: 56px; overflow: visible; }
@@ -1079,7 +1080,7 @@ body.resizing-columns {
   animation: loader-turn 2.4s linear infinite;
 }
 @keyframes loader-turn { to { transform: rotate(360deg); } }
-.loader-text { color: var(--ink); font-size: 14px; font-weight: 600; }
+.loader-text { color: inherit; font-size: 14px; font-weight: 400; }
 @media (prefers-reduced-motion: reduce) {
   .loader-ring { animation: none; }
 }
