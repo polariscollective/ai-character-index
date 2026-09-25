@@ -106,3 +106,15 @@ test("atLeastBand reads the floor as this band and stronger", () => {
   assert.equal(atLeastBand("related", "related"), true);
   assert.equal(atLeastBand(null, "related"), false);
 });
+
+test("the owner's correction is the band, whatever the judges' score", () => {
+  const [lifted, dropped, added] = bandCell([
+    { verdicts: { sol: 1, fable: 1, deepseek: 0 }, manual: { band: "defining", note: "." } },
+    { verdicts: { sol: 3, fable: 3, deepseek: 3 }, manual: { band: null, note: "." } },
+    { verdicts: {}, manual: { band: "related", note: "." } },
+  ]);
+  assert.equal(lifted.band, "defining");
+  assert.equal(lifted.score, 2);
+  assert.equal(dropped.band, null);
+  assert.equal(added.band, "related");
+});

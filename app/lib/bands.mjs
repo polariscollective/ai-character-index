@@ -50,7 +50,10 @@ export function bandCell(passages, related = 1) {
 
   return passages.map(passage => {
     const verdicts = Object.values(passage.verdicts || {});
-    if (!verdicts.length) return { ...passage, band: null };
+    // The owner's correction is the whole answer for the band: the judges' score
+    // is still worked out, for anyone who wants to see what it was.
+    const manual = passage.manual ? { band: passage.manual.band ?? null } : {};
+    if (!verdicts.length) return { ...passage, band: null, ...manual };
 
     const score = verdicts.reduce(
       (total, verdict) => total + (verdict >= 2 ? verdict : verdict === 1 ? related : 0), 0);
@@ -60,6 +63,7 @@ export function bandCell(passages, related = 1) {
       score,
       maxScore,
       band: tierBand(score, Math.max(1, verdicts.length), maxScore, related),
+      ...manual,
     };
   });
 }

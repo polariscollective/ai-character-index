@@ -33,8 +33,12 @@ function passagesOf(behaviour, modelSpecId) {
  */
 function panelDepth(behaviour, modelSpecId) {
   const depth = behaviour?.coverage?.[modelSpecId]?.depth;
-  return depth !== null && typeof depth === "object" && Number.isFinite(depth.mean)
-    ? depth : null;
+  if (depth === null || typeof depth !== "object" || !Number.isFinite(depth.mean)) return null;
+  // A depth the owner corrected by hand: `mean` is the correction, and the
+  // judges' mean and figures stay beside it.
+  if (!depth.manual) return depth;
+  const { manual, ...rest } = depth;
+  return { ...rest, manual_review: manual };
 }
 
 /**
@@ -160,6 +164,8 @@ function shapePassage(passage) {
     quote: passage.quote,
     strength: passage.band,
     judges,
+    ...(passage.manual ? { manual_review: {
+      strength: passage.manual.band ?? null, note: passage.manual.note } } : {}),
   };
 }
 

@@ -1583,6 +1583,11 @@ function depthCellNote(behaviour, doc) {
     figure: depth ? depth.mean.toFixed(1) : null,
     summary: depth
       ? `${depth.mean.toFixed(1)} out of ${depthScale()}, ${depthWords(depth.mean, depthScale())}.`
+        + (depth.manual
+          ? ` Corrected by hand${Number.isFinite(depth.judgesMean)
+              ? ` from ${depth.judgesMean.toFixed(1)}, the judges' mean` : ""}: `
+            + endedSentence(depth.manual.rationale)
+          : "")
       : "No depth given: this behaviour was not judged on this document.",
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
@@ -4986,7 +4991,10 @@ function applyPanelThreshold(payload) {
        * unanimous 4/4 and rendered as "Related · (score 4/4)": no verdict combination
        * could have done better. Each passage is banded on its own scale instead. */
       const passageJudges = p => Math.max(1, Object.keys(p.verdicts || {}).length);
-      const band = p => tierBand(p.score, passageJudges(p), p.maxScore || maxCell, related);
+      // The owner's correction is the whole answer for a passage's band.
+      const band = p => p.manual
+        ? (p.manual.band ?? null)
+        : tierBand(p.score, passageJudges(p), p.maxScore || maxCell, related);
       const shownBands = state.bands ?? new Set(DEFAULT_BANDS);
       const before = cov.passages.length;
       // Per-band tallies and reachability, taken BEFORE the toggle filter so the
