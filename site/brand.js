@@ -96,6 +96,11 @@ const STYLE = `
   color: #676C58; letter-spacing: 0; text-transform: none;
 }
 .site-header .site-brand .brand-stack .collective:hover { color: #23281B; }
+/* The index's name in the framework's olive green, the collective's in grey:
+   chartreuse never writes, and olive reads on the paper ground. */
+.site-header .site-brand .brand-stack .wordmark { color: #5C6B3C; }
+/* The mark a little larger, now that it stands beside two lines of name. */
+.site-header .site-brand .polaris-mark { width: 26px; height: 26px; }
 /* The date of the publication, written beside the wordmark rather than set in a
    pill: small, faint, with a thin underline that says it can be pressed. An
    older version alone takes a colour, the framework's one warm colour; a
@@ -334,7 +339,22 @@ function closeButton() {
   return close;
 }
 
-/* Why the index has its name, which is all the wordmark opens. */
+/* Who runs the index, said under why it has its name. */
+const COLLECTIVE = "https://polariscollective.org";
+function aboutTheCollective() {
+  const part = document.createDocumentFragment();
+  const line = node("p", "", "Polaris Collective runs and maintains the index. It gives the "
+    + "scores on the boards, and wrote part of the method behind them. ");
+  const link = node("a", "", "polariscollective.org");
+  link.href = COLLECTIVE;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  line.append(link);
+  part.append(node("h3", "", "Polaris Collective"), line);
+  return part;
+}
+
+/* Why the index has its name, and who runs it: what the wordmark opens. */
 async function whyTheNameNote(content) {
   const title = node("h2", "", "Why this name");
   title.id = "brand-pop-title";
@@ -343,6 +363,7 @@ async function whyTheNameNote(content) {
   content.replaceChildren(closeButton(), title);
   content.append(why || node("p", "",
     "The explanation could not be loaded. It is on the About page."));
+  content.append(aboutTheCollective());
 }
 
 /* Open the header's popover under `trigger`, filled by `build`, or close it if
