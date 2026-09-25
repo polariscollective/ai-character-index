@@ -310,6 +310,45 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     return out
 
 
+def manual_reviews(store, cells, assessment_run_id=None, depth_prompt=None):
+    """The owner's corrections to the cells a publication carries.
+
+    {(behaviour_slug, spec_version_id): {"passages": {locator: {"verdict", "note"}},
+    "depth": {"depth", "rationale"} or None}}, for a cell whose run holds a
+    manual call (manual_review.MANUAL), done, and nothing for any other. Only the
+    run the cell is taken from counts, as for the judges.
+
+    A manual depth is read on the scale of ten only, against the same
+    assessment run and prompt digest as the judges' depths of the cell
+    (cell_depths): a correction given against another reading of the document
+    is not this publication's. With no assessment run, no depth is read.
+    """
+    wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
+    calls = [c for c in _rows(store, "aci_judge_calls", {"model": f"eq.{manual_review.MANUAL}"})
+             if manual_review.is_manual(c) and c["status"] == "done"
+             and (c["run_id"], c["behaviour_slug"], c["spec_version_id"]) in wanted]
+    if not calls:
+        return {}
+    ids = "in.(" + ",".join(f'"{c["id"]}"' for c in calls) + ")"
+    by_call = {c["id"]: (c["behaviour_slug"], c["spec_version_id"]) for c in calls}
+    out = {key: {"passages": {}, "depth": None} for key in by_call.values()}
+    for row in _rows(store, "aci_judgements", {"call_id": ids}):
+        key = by_call.get(row["call_id"])
+        if key is not None:
+            out[key]["passages"][row["locator"]] = {"verdict": row["verdict"],
+                                                    "note": row.get("note") or ""}
+    if assessment_run_id is not None:
+        given_with = criteria_run_id(store, assessment_run_id)
+        for row in _rows(store, "aci_depths_out_of_ten", {"call_id": ids}):
+            key = by_call.get(row["call_id"])
+            if (key is not None and row.get("status") == "done"
+                    and row.get("assessment_run_id") == given_with
+                    and row.get("prompt_sha256") == depth_prompt):
+                out[key]["depth"] = {"depth": row["depth"],
+                                     "rationale": row.get("rationale") or ""}
+    return out
+
+
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 

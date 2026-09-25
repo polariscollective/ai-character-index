@@ -500,3 +500,63 @@ class ReaderFixtureOfTenTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ManualReviewTest(unittest.TestCase):
+    """The owner's corrections win over the judges, and a build given none writes
+    what it always wrote."""
+    LOW = f"{OLD} > #x > ¶2"
+    TEXT = {**TEXT, f"{OLD} > #x > ¶2": "Introduced.", f"{OLD} > #x > ¶3": "Unscored."}
+    VOTES = {**VOTES, ("b", f"{OLD} > #x > ¶2"): {"sol": 1, "fable": 1, "deepseek": 0}}
+    DEPTHS = {("b", OLD): {"mean": 5.3, "judges": {"sol": {"depth": 5, "rationale": "."}}}}
+
+    def build(self, manual):
+        [row] = bs.build_behaviours(BRAVO, self.VOTES, self.TEXT, [OLD, NEW], self.DEPTHS,
+                                    PANEL, DISPLAY, None, manual)
+        return row["coverage"][OLD]
+
+    def passage(self, cell, locator):
+        return next(p for p in cell["passages"] if p["locator"] == locator)
+
+    def test_no_correction_writes_what_it_always_wrote(self):
+        serialise = lambda built: json.dumps(built, indent=1, ensure_ascii=False)  # noqa: E731
+        before = bs.build_behaviours(BRAVO, self.VOTES, self.TEXT, [OLD, NEW], self.DEPTHS,
+                                     PANEL, DISPLAY)
+        after = bs.build_behaviours(BRAVO, self.VOTES, self.TEXT, [OLD, NEW], self.DEPTHS,
+                                    PANEL, DISPLAY, None, {})
+        self.assertEqual(serialise(after), serialise(before))
+
+    def test_a_passage_the_judges_scored_low_is_carried_as_the_owner_banded_it(self):
+        cell = self.build({("b", OLD): {"passages": {self.LOW: {"verdict": 3, "note": "It is."}},
+                                        "depth": None}})
+        passage = self.passage(cell, self.LOW)
+        self.assertEqual(passage["manual"], {"band": "defining", "note": "It is."})
+        self.assertEqual(passage["verdicts"], {"deepseek": 0, "fable": 1, "sol": 1})
+        self.assertTrue(passage["role"].startswith("Manual review: defining. It is.\n"))
+
+    def test_a_paragraph_no_judge_scored_is_carried_on_the_correction_alone(self):
+        unscored = f"{OLD} > #x > ¶3"
+        cell = self.build({("b", OLD): {"passages": {unscored: {"verdict": 1, "note": "N."}},
+                                        "depth": None}})
+        passage = self.passage(cell, unscored)
+        self.assertEqual(passage["manual"]["band"], "related")
+        self.assertEqual(passage["verdicts"], {})
+
+    def test_a_manual_zero_takes_a_retained_passage_off(self):
+        kept = f"{OLD} > #x > ¶1"
+        cell = self.build({("b", OLD): {"passages": {kept: {"verdict": 0, "note": "No."}},
+                                        "depth": None}})
+        self.assertIsNone(self.passage(cell, kept)["manual"]["band"])
+
+    def test_a_paragraph_the_document_does_not_have_is_refused(self):
+        with self.assertRaises(SystemExit):
+            self.build({("b", OLD): {"passages": {f"{OLD} > #nope > ¶9":
+                                                  {"verdict": 3, "note": "?"}}, "depth": None}})
+
+    def test_a_manual_depth_replaces_the_mean_and_keeps_the_judges(self):
+        cell = self.build({("b", OLD): {"passages": {},
+                                        "depth": {"depth": 3, "rationale": "One facet."}}})
+        self.assertEqual(cell["depth"]["mean"], 3.0)
+        self.assertEqual(cell["depth"]["judgesMean"], 5.3)
+        self.assertEqual(cell["depth"]["manual"], {"depth": 3, "rationale": "One facet."})
+        self.assertIn("sol", cell["depth"]["judges"])

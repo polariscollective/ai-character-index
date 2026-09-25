@@ -296,7 +296,7 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
 
 def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
           note_prompts=None, depth_prompt=None, assessment_run=None, comparisons=True,
-          unanalysed=None):
+          unanalysed=None, manual_review=False):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -330,6 +330,8 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
                 extra.append(f"--depth-prompt={depth_prompt}")
             if assessment_run is not None:
                 extra.append(f"--assessment-run={assessment_run}")
+            if manual_review:
+                extra.append("--manual-review")
         if name == "links":
             extra.append("--link-runs=" + ",".join(sorted(link_runs)))
             if note_prompts is not None:
@@ -408,7 +410,7 @@ def document_note_prompts(store, out_of_ten=False):
 
 def publish(store, behaviours, document_ids, rubric, published_by, notes="",
             run_date=None, config=None, link_runs=(), depth_prompt=None,
-            assessment_run=None, boards=None, unanalysed_documents=()):
+            assessment_run=None, boards=None, unanalysed_documents=(), manual_review=False):
     """The publication row and its cells, written in that order.
 
     The row first because the cells reference it. Nothing is public: a reader
@@ -444,7 +446,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     note_prompts = document_note_prompts(store, out_of_ten)
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name,
-                                    depth_prompt=depth_prompt, assessment_run=assessment_run)
+                                    depth_prompt=depth_prompt, assessment_run=assessment_run,
+                                    **({"manual_review": True} if manual_review else {}))
     # Versions carried for reading only: in the reader's text, in no cell, and
     # marked as not yet judged. Checked to exist like the others, and refused if a
     # judged document is named twice.
@@ -485,6 +488,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     # it was built with.
     if unanalysed:
         build_params["unanalysed_documents"] = sorted(unanalysed)
+    if manual_review:
+        build_params["manual_review"] = True
 
     publication = {
         "published_by": published_by,
@@ -534,6 +539,9 @@ def main(argv=None):
     parser.add_argument("--assessment-run", default=None,
                         help="the aci_assessment_runs id the depths out of ten were given "
                              "with, and whose assessment of each document is carried")
+    parser.add_argument("--manual-review", action="store_true",
+                        help="the owner's corrections (engine/manual_review.py) win over "
+                             "the judges' bands and depths")
     parser.add_argument("--unanalysed-documents", default="",
                         help="comma-separated aci_spec_versions ids the reader carries "
                              "for reading only, with no analysis yet")
@@ -552,6 +560,8 @@ def main(argv=None):
     unanalysed = [s for s in args.unanalysed_documents.split(",") if s]
     if unanalysed:
         scale["unanalysed_documents"] = unanalysed
+    if args.manual_review:
+        scale["manual_review"] = True
     row, cells = publish(
         store,
         [s for s in args.behaviours.split(",") if s],

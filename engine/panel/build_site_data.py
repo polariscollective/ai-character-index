@@ -78,6 +78,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "engine"))
 import seat_substitutions         # noqa: E402
+import manual_review              # noqa: E402
 
 MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
                "gpt-mini": "GPT-5 mini", "haiku": "Claude Haiku 4.5", "qwen-small": "Qwen3-32B"}
@@ -216,19 +217,30 @@ def display_behaviours(keep, registry):
 
 
 def build_behaviours(behaviours, votes, text, document_ids, depths, panel, display,
-                     substitutions=None):
+                     substitutions=None, manual=None):
     """The payload's behaviours.
 
     `votes` is {(slug, locator): {model: verdict}}, `text` {locator: passage text},
     `depths` {(slug, document id): depth}, `substitutions` {(slug, document id):
     [{seat, substitute, reason}]}. A passage belongs to the document whose id heads
-    its locator."""
+    its locator.
+
+    `manual` is {(slug, document id): {"passages": {locator: {"verdict", "note"}},
+    "depth": {"depth", "rationale"} or None}}, the owner's corrections
+    (index_store.manual_reviews), given only for a build asked for them. A
+    corrected passage is carried whatever the judges' score, with `manual`:
+    {"band", "note"}, the band None where the correction takes it off; its
+    verdicts stay the judges'. A corrected depth's `mean` is the manual figure,
+    with the judges' mean as `judgesMean` and the correction as `manual`. A
+    build given no corrections writes what it always wrote."""
     sym = {3: "✓✓", 2: "✓", 1: "~", 0: "✗"}
     word = {3: "defining", 2: "core", 1: "related", 0: "not relevant"}
     out = []
     for b in behaviours:
         cov = {}
         for document_id in document_ids:
+            review = (manual or {}).get((b["slug"], document_id)) or {}
+            corrected = review.get("passages") or {}
             cell = []
             for (slug, locator), mv in votes.items():
                 if slug != b["slug"] or locator.split(" > ", 1)[0] != document_id:
@@ -238,24 +250,45 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
                 if "kimi" in mv and "kimi-k2" in mv:
                     mv = {m: v for m, v in mv.items() if m != "kimi-k2"}   # k2.6 is kimi's stand-in; k3 wins when present
                 cell.append((locator, mv))
+            # A corrected paragraph no judge scored is carried on the correction alone.
+            scored = {locator for locator, _ in cell}
+            cell.extend((locator, {}) for locator in sorted(corrected) if locator not in scored)
             max_verdict = max([2] + [v for _, mv in cell for v in mv.values()])
             cits = []
             for locator, mv in cell:
                 score = sum(mv.values())
-                if not keeps_citation(score, len(mv), len(panel), display["threshold"]):
+                correction = corrected.get(locator)
+                if correction is None and not keeps_citation(
+                        score, len(mv), len(panel), display["threshold"]):
                     continue
+                if correction is not None and locator not in text:
+                    sys.exit(f"a manual review names {locator}, which "
+                             f"{document_id} does not have")
                 decisions = "\n".join(f"{sym[v]} {MODEL_LABEL.get(m, m)} — {word[v]}"
                                       for m, v in sorted(mv.items(), key=lambda x: -x[1]))
                 quote, is_example = citation_quote(text.get(locator, ""))
-                cits.append({
+                role = f"Model determined relevance (score {score}/{max_verdict * len(mv)}):\n{decisions}"
+                citation = {
                     "id": f"{document_id}-{b['slug']}-panel-{len(cits) + 1}",
                     "locator": locator, "quote": quote, "exampleBlock": is_example,
-                    "role": f"Model determined relevance (score {score}/{max_verdict * len(mv)}):\n{decisions}",
+                    "role": role,
                     "adjacent": score < display["solid_threshold"],
                     "verdicts": dict(sorted(mv.items())), "score": score,
-                })
+                }
+                if correction is not None:
+                    band = manual_review.band_of(correction["verdict"])
+                    citation["role"] = (f"Manual review: {band or 'not shown'}. "
+                                        f"{correction['note']}\n{role}")
+                    citation["manual"] = {"band": band, "note": correction["note"]}
+                cits.append(citation)
             cits.sort(key=lambda c: (-c["score"], c["locator"]))
-            cov[document_id] = {"depth": depths.get((b["slug"], document_id)), "passages": cits}
+            depth = depths.get((b["slug"], document_id))
+            if review.get("depth") is not None:
+                given = review["depth"]
+                depth = {**(depth or {}), "mean": float(given["depth"]),
+                         "judgesMean": (depth or {}).get("mean"),
+                         "manual": {"depth": given["depth"], "rationale": given["rationale"]}}
+            cov[document_id] = {"depth": depth, "passages": cits}
             # Only where there is one: an absent key keeps every other cell's bytes.
             seated = (substitutions or {}).get((b["slug"], document_id))
             if seated:
@@ -401,6 +434,7 @@ def main(argv=None):
     run_date = str(date.today())
     depth_prompt = None       # the prompt of four unless named
     assessment_run_id = None  # none: the scale of four, and no assessment
+    with_manual = False       # the owner's corrections, read only when asked
     for a in argv:
         if a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
@@ -437,12 +471,15 @@ def main(argv=None):
             depth_prompt = a.split("=", 1)[1]
         elif a.startswith("--assessment-run="):  # depths out of ten, and each document assessed
             assessment_run_id = a.split("=", 1)[1]
+        elif a == "--manual-review":            # the owner's corrections win over the judges
+            with_manual = True
         else:
             # Unknown args were ignored, so `--help` ran a full build and wrote a
             # payload + manifest. Asking for help must not mutate the repo.
             sys.exit(f"unknown argument {a!r} -- valid: --rubric= --panel= "
                      "--behaviours= --run-date= --out= --cells= "
-                     "--threshold= --solid-threshold= --depth-prompt= --assessment-run=")
+                     "--threshold= --solid-threshold= --depth-prompt= --assessment-run= "
+                     "--manual-review")
     if out_name is None:
         sys.exit("--out=PATH is required: this writes the payload where it is told")
     panel = resolve_panel(config, DISPLAY["panel"])
@@ -501,9 +538,16 @@ def main(argv=None):
               in index_store.cell_depths(store, cells, assessment_run_id,
                                          depth_prompt=depth_prompt).items()}
 
+    manual = None
+    if with_manual:
+        manual = {(slug, f"{versions[version_id]['spec_id']}@{versions[version_id]['version']}"): review
+                  for (slug, version_id), review
+                  in index_store.manual_reviews(store, cells, assessment_run_id,
+                                                depth_prompt=depth_prompt).items()}
+
     behaviours = display_behaviours(DISPLAY["behaviours"], registry)
     out_behaviours = build_behaviours(behaviours, votes, text, document_ids, depths,
-                                      panel, DISPLAY, substitutions)
+                                      panel, DISPLAY, substitutions, manual)
     seats = sorted({m for b_ in out_behaviours for cov in b_["coverage"].values()
                     for p in cov["passages"] for m in p.get("verdicts", {})})
     # The substitution note records WHY a provider failed on a given cell -- something

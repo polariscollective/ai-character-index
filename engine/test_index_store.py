@@ -910,3 +910,25 @@ class ManualCallIsNotAJudgeTest(unittest.TestCase):
     def test_a_manual_depth_is_not_averaged_in(self):
         got = index_store.cell_depths(self.store(manual_depth=0), [self.CELL])
         self.assertEqual(got[("helpfulness", "row-1")]["mean"], 3.0)
+
+
+class ManualReviewsTest(unittest.TestCase):
+    CELL = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+
+    def test_the_corrections_of_the_cells_own_run_are_read(self):
+        calls = [{"id": "m-1", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "manual", "status": "done"},
+                 {"id": "m-2", "run_id": "run-2", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "manual", "status": "done"},
+                 {"id": "j-1", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": "sol", "status": "done"}]
+        judgements = [{"call_id": "m-1", "locator": "a > ¶1", "verdict": 3, "note": "Yes."},
+                      {"call_id": "m-2", "locator": "a > ¶2", "verdict": 3, "note": "Other run."},
+                      {"call_id": "j-1", "locator": "a > ¶3", "verdict": 3, "note": None}]
+        got = index_store.manual_reviews(
+            FakeStore({"aci_judge_calls": calls, "aci_judgements": judgements}), [self.CELL])
+        self.assertEqual(got, {("helpfulness", "row-1"): {
+            "passages": {"a > ¶1": {"verdict": 3, "note": "Yes."}}, "depth": None}})
+
+    def test_no_manual_call_reads_nothing(self):
+        self.assertEqual(index_store.manual_reviews(FakeStore({}), [self.CELL]), {})

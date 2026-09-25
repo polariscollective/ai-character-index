@@ -138,7 +138,8 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
                 (("depth_prompt_sha256", "depth_prompt"),
                  ("assessment_run_id", "assessment_run"),
                  ("comparisons", "comparisons"),
-                 ("unanalysed_documents", "unanalysed"))
+                 ("unanalysed_documents", "unanalysed"),
+                 ("manual_review", "manual_review"))
                 if key in params}
     built = {}
     for name in ("payload", "documents", "links"):
