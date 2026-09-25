@@ -1801,7 +1801,7 @@ body.sidebar-collapsed .sidebar-resizer {
    and all, with only its left rule in the framework's olive green. Olive rather
    than chartreuse because a rule is a mark and needs 3:1 on the band's ground:
    chartreuse on --chrome-deep is well under it, olive clears it. */
-.analysis-band { border-left-color: var(--muted); }
+.document-translation.analysis-band { border-left-color: var(--muted); }
 
 /* Every document on screen under analysis: the behaviours are listed, not offered. */
 .behaviour-list.under-analysis .behaviour-option { opacity: .55; cursor: default; }
