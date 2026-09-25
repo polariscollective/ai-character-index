@@ -133,6 +133,7 @@ eval(extractFn("function endedSentence(reason) {"));
 eval(extractFn("function depthJudgeCount(behaviours) {"));
 eval(extractFn("function depthScaleLede(behaviours) {"));
 eval(extractFn("function depthScaleNote(behaviours) {"));
+eval(extractFn("function cellNote(behaviour, documentId, kind) {"));
 eval(extractFn("function depthCellNote(behaviour, doc) {"));
 eval(extractFn("function depthFigureNote(behaviour, documents) {"));
 eval(extractFn("function releaseDepthTrigger() {"));
@@ -546,6 +547,21 @@ check("a legacy comparison about another behaviour is not offered under this one
       () => withComparison("no-sycophancy",
                            "WHAT BOTH REQUIRE:\n- Both say **plainly** no.",
                            { legacy: true }), null);
+
+/* A publication that carries its notes in its cells is read from the cell, and
+ * the note in the links is only the fallback for one built before. */
+depthRows = { cells: { "helpfulness\nanthropic": { text: "From the links." } } };
+check("a note carried in the cell is read before the one in the links",
+  () => depthCellNote({ slug: "helpfulness", coverage: { anthropic: {
+    depth: { mean: 3, judges: {} }, notes: { depth: "From the cell." } } } },
+    { id: "anthropic", title: "T", version: "v" }).written,
+  "From the cell.");
+check("without a note in the cell, the links still give it",
+  () => depthCellNote({ slug: "helpfulness", coverage: { anthropic: {
+    depth: { mean: 3, judges: {} } } } },
+    { id: "anthropic", title: "T", version: "v" }).written,
+  "From the links.");
+depthRows = null;
 
 console.log(`\n${checks} checks, ${failures} failures`);
 process.exit(failures ? 1 : 0);

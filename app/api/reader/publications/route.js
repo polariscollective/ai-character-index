@@ -17,6 +17,6 @@ export async function GET() {
     "select=id,published_at,notes,is_public&order=published_at.desc"
     + (development ? "" : "&is_public=is.true"));
   return Response.json({ development, publications: rows }, {
-    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400" },
   });
 }

@@ -19,6 +19,7 @@
  * this version of the site: one sentence for every cause, shared with the front
  * page's boards. */
 import { INCOMPATIBLE } from "/publication-data.js";
+import { loaderMarkup } from "/loader.js";
 /* The depth scale a publication is on, its levels and what a figure on it is
  * called: one file for the whole site, so the reader and the boards cannot say
  * two different things about the same figure. */
@@ -1327,11 +1328,8 @@ function renderBehaviourList() {
    * page loads told a reader arriving on a cold server that it had nothing to
    * show. */
   if (empty && !state.payload) {
-    elements.behaviourList.innerHTML = `
-      <div class="behaviour-empty" aria-live="polite">
-        <strong>Loading the behaviours.</strong>
-        <p>The first visit after a quiet spell can take a few seconds.</p>
-      </div>`;
+    elements.behaviourList.innerHTML =
+      `<div class="site-loading" aria-live="polite">${loaderMarkup("Behaviours loading")}</div>`;
     updateExportControl();
     return;
   }
@@ -1479,9 +1477,20 @@ function renderBehaviourList() {
       openDepthNote(button, depthScaleNote(payloadBehaviours())));
   });
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(button => {
-    button.addEventListener("click", () => {
-      const behaviour = payloadBehaviours().find(b => b.slug === button.dataset.behaviourDepth);
-      openDepthNote(button, depthFigureNote(behaviour, visibleDocuments().filter(Boolean)));
+    button.addEventListener("click", async () => {
+      const slug = button.dataset.behaviourDepth;
+      const documents = visibleDocuments().filter(Boolean);
+      let behaviour = payloadBehaviours().find(b => b.slug === slug);
+      // A publication built before its cells carried their notes has them only
+      // in the links, which a single document does not ask for: for that one,
+      // this behaviour's links are fetched first. A newer one has them here.
+      const inCells = documents.every(doc => behaviour?.coverage?.[doc.id]?.notes
+        || !behaviour?.coverage?.[doc.id]);
+      if (!inCells && !payloadCarriesCellNotes()) {
+        await ensureBehaviours([slug], { links: true, paragraphs: false }).catch(() => {});
+        behaviour = payloadBehaviours().find(b => b.slug === slug);
+      }
+      openDepthNote(button, depthFigureNote(behaviour, documents));
     });
   });
   updateBehaviourCount();
@@ -1575,11 +1584,15 @@ function depthCellNote(behaviour, doc) {
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
      * the judges as it always did rather than an empty heading. */
-    written: depthRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
+    // In the cell itself since the payload carries its notes (cell_notes);
+    // from the links for a publication built before that.
+    written: cellNote(behaviour, doc.id, "depth")
+      || depthRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
     /* How this document reads beside the others on this behaviour: the grid's
      * own passage for this cell. Unlike the pair comparison it is about one
      * document, so it is here whether or not anything is being compared. */
-    stands: overviewRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
+    stands: cellNote(behaviour, doc.id, "standing")
+      || overviewRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
     substitutions: (Array.isArray(recorded) ? recorded : [])
       .map(({ seat, substitute, reason }) =>
         `${substitute} judged in place of ${seat}: ${endedSentence(reason)}`),
@@ -1588,6 +1601,20 @@ function depthCellNote(behaviour, doc) {
           judge, depth: given.depth, rationale: given.rationale || "" }))
       : [],
   };
+}
+
+/* A written note carried in the payload's own cell, or "" where the
+ * publication carries it only in its links. */
+function cellNote(behaviour, documentId, kind) {
+  return behaviour?.coverage?.[documentId]?.notes?.[kind] || "";
+}
+
+/* Whether the publication on screen carries its notes in its cells at all. A
+ * cell with no note is then a cell nobody wrote one for, and the links would
+ * have nothing more to say about it. */
+function payloadCarriesCellNotes() {
+  return (state.rawBehaviours || []).some(behaviour =>
+    Object.values(behaviour.coverage || {}).some(cell => cell?.notes));
 }
 
 /* What one figure opens. Comparing, the figure is a pair and so is the note:
@@ -5099,14 +5126,17 @@ async function ensureShownDocuments() {
   await Promise.all(shownDocuments().map(id => ensureDocument(id).catch(() => {})));
 }
 
-async function ensureBehaviours(slugs) {
+/* `links` are the comparison bubbles and the written notes on the depths. They
+ * are the heaviest thing the reader asks for, so they are asked for only while
+ * two documents are compared, or for one behaviour when its depth note opens. */
+async function ensureBehaviours(slugs, { links: withLinks = state.comparing, paragraphs = true } = {}) {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   /* The documents on screen, read live rather than from the arrival URL: this
    * runs again when a document is chosen and when comparison opens, which is
    * the whole reason the links have to be asked for a second time. */
   const shown = shownDocuments();
-  const missing = slugs.filter(slug => !inFlight.has(slug));
-  const missingLinks = slugs.filter(slug => !linksCover(slug, shown));
+  const missing = paragraphs ? slugs.filter(slug => !inFlight.has(slug)) : [];
+  const missingLinks = withLinks ? slugs.filter(slug => !linksCover(slug, shown)) : [];
   if (!missing.length && !missingLinks.length) {
     return Promise.all(slugs.map(slug => inFlight.get(slug)).filter(Boolean));
   }

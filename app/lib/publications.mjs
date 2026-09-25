@@ -193,9 +193,13 @@ export async function readerResponse(column, searchParams, fetchImpl = fetch) {
   return {
     status: 200,
     body,
+    /* A pinned publication never changes, so it is kept for a year by the
+     * browser and by Vercel's edge alike: s-maxage is what the edge reads, and
+     * max-age alone was cached by browsers only, so every visitor's first
+     * request went back to Supabase. */
     cacheControl: pin
-      ? "public, max-age=31536000, immutable"
-      : "public, s-maxage=60, stale-while-revalidate=300",
+      ? "public, max-age=31536000, s-maxage=31536000, immutable"
+      : "public, s-maxage=60, stale-while-revalidate=86400",
   };
 }
 

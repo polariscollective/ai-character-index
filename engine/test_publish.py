@@ -665,7 +665,9 @@ class PublishOutOfTenTest(unittest.TestCase):
         self.assertEqual(self.build_params(store), {
             "behaviours": ["helpfulness"], "documents": ["v1", "v2"], "panel": "frontier_fast",
             "rubric": "v5", "run_date": None, "link_runs": ["link-1"],
-            "note_prompts": ["sha-depth", "sha-standing", "sha-standing-older"]})
+            "note_prompts": ["sha-depth", "sha-standing", "sha-standing-older"],
+            # New publications carry their written notes in the payload's cells.
+            "cell_notes": True})
         # The defaults, which BuildOutOfTenTest holds to launching every builder
         # exactly as before.
         self.assertEqual(self.builds, [
@@ -904,8 +906,7 @@ class LinkRunsRequiredTest(unittest.TestCase):
         self.assertIn("link-runs", str(refused.exception))
 
 
-if __name__ == "__main__":
-    unittest.main()
+
 
 
 class BoardsTest(unittest.TestCase):
@@ -921,3 +922,29 @@ class BoardsTest(unittest.TestCase):
             # The site's own file, unchanged: what is frozen is what is shipped.
             shipped = json.loads(publish.BOARD_FILES[name].read_text(encoding="utf-8"))
             self.assertEqual(board, shipped, name)
+
+
+class CellNotesTest(unittest.TestCase):
+    """A cell's written notes travel in the payload, copied from the links."""
+
+    def test_the_notes_land_in_their_cell_and_nowhere_else(self):
+        payload = {"behaviours": [{"slug": "honesty", "coverage": {
+            "doc-a": {"depth": {"mean": 3}}, "doc-b": {"depth": {"mean": 2}}}}]}
+        links = {"notes": {"depth": {"honesty\ndoc-a": {"text": "Why this depth."}},
+                           "standing": {"honesty\ndoc-a": {"text": "Beside the others."}}}}
+        built, digest = publish.with_cell_notes(payload, links)
+        self.assertEqual(built["behaviours"][0]["coverage"]["doc-a"]["notes"],
+                         {"depth": "Why this depth.", "standing": "Beside the others."})
+        self.assertNotIn("notes", built["behaviours"][0]["coverage"]["doc-b"])
+        # The digest is of the payload as FORMATS serialises it.
+        self.assertEqual(digest, hashlib.sha256(
+            json.dumps(built, **publish.FORMATS["payload"]).encode()).hexdigest())
+
+    def test_links_without_notes_add_nothing(self):
+        payload = {"behaviours": [{"slug": "honesty", "coverage": {"doc-a": {}}}]}
+        built, _ = publish.with_cell_notes(payload, {"notes": {}})
+        self.assertEqual(built["behaviours"][0]["coverage"]["doc-a"], {})
+
+
+if __name__ == "__main__":
+    unittest.main()
