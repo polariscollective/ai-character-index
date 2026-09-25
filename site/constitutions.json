@@ -63,7 +63,7 @@
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
-   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, level with preventing secret loyalties as its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories."
+   "text": "Honesty and non-deception carries the highest figure on the board, 9.3 out of 10 for Anthropic. The two behaviours beside it in its category are where Claude's Constitution is thinnest: 5.3 out of 10 on no sycophancy, level with preventing secret loyalties as its lowest behaviour, and 6.3 on objectivity on contested questions, where OpenAI and Alibaba both score 8.7. The two model specs give sycophancy a rule of its own. Anthropic reaches it through care for wellbeing and through honesty, and does not ask that a factual answer stay the same when the user states a view. On contested questions it makes balance a default an operator may switch off, with too few illustrations to grade a borderline answer against. Anthropic's figure for the honesty and epistemics category is 7.0, its lowest of the four categories. Part of that gap may come from the reading rather than the document: a figure is read from the passages the judges retained, and one paragraph of the constitution on political, religious and other controversial subjects was not among them (see the open questions)."
   },
   {
    "title": "No behaviour reaches the top of the depth scale in any constitution",
@@ -1224,6 +1224,27 @@
    "question": "The figure is 2.3 out of 10, which is between named and discussed. The cell now says the document gives the behaviour a root rule of its own, naming four forbidden goals, two of them the maker's interest set against the user's. What the rule lacks is a worked example, and it is one of only three of the forty-three rules without one.",
    "what_would_settle_it": "Judging the cell again, or a sentence in the depth rubric saying what a rule without a worked example can reach.",
    "raised": "24 September 2026"
+  },
+  {
+   "id": "anthropic-contested-questions-missing-a-paragraph",
+   "title": "Anthropic's objectivity on contested questions was read without one of its own paragraphs",
+   "question": "The figure is 6.3 out of 10, read from five retained passages. A depth is given on the passages the judges retained and not on the whole document. The paragraph that opens “Many topics require particular delicacy due to their inherently complex or divisive nature. Political, religious, and other controversial subjects” bears directly on the behaviour and is not among them. The same may hold for the section on preserving epistemic autonomy under user autonomy, which retains four passages.",
+   "what_would_settle_it": "Judging the passages of the cell again, then its depth. It costs money.",
+   "raised": "25 September 2026"
+  },
+  {
+   "id": "alibaba-concentration-of-power-on-one-passage",
+   "title": "Alibaba's avoiding illegitimate concentration of power reads high for one passage",
+   "question": "The figure is 5.3 out of 10, from depths of 6, 5 and 5, and the judges retained a single passage, the rule against political manipulation. A 5 says the document discusses the behaviour fully and prescribes part of it. The cell itself says the model is never asked to weigh how much power is at stake or how reversible its concentration would be, and one of the three judges wrote that surveillance, persecution of opponents, takeovers by fraud and escaping courts are all left unaddressed. One rule on one facet reads closer to named than to discussed.",
+   "what_would_settle_it": "Judging the depth again, or a sentence in the depth rubric saying what one rule covering one facet of a behaviour can reach.",
+   "raised": "25 September 2026"
+  },
+  {
+   "id": "openai-versions-retain-different-passages",
+   "title": "The two versions of OpenAI's Model Spec retain different passages from the same text",
+   "question": "On helpfulness the judges retained 24 passages in the version of December 2025 and 14 in the version of August 2026, and on how to approach trade-offs 35 and 19. At least 16 and 26 of the December passages stand word for word in the August version, and only 12 and 18 are retained in both. The depths agree, 8.0 against 7.7 and 8.7 on both, because near the top of the scale a depth hardly moves with the number of passages. What changes between the two readings is which text the judges retain, not the text.",
+   "what_would_settle_it": "Measuring how far one panel agrees with itself on identical text, by judging one version twice.",
+   "raised": "25 September 2026"
   },
   {
    "id": "the-fourteenth-behaviour-was-restored-by-arithmetic",
