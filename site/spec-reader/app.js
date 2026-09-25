@@ -1914,45 +1914,47 @@ function toggleBehaviour(slug, checked) {
    * where the document defines the behaviour. A reader anywhere else is reading
    * something, and is left there. A jump already on its way counts as having
    * left the top, so two quick ticks move the reader once. */
-  const jump = checked && atTopOfDocument();
-  if (jump) markJumping();
+  /* Each document on screen is its own reader: comparing, one may be at its
+   * top and the other halfway down, and only the one at its top moves. */
+  const jumpers = checked ? panels().filter(atTopOfDocument) : [];
+  jumpers.forEach(markJumping);
   const painted = setSelection([...next]);
   /* The highlights land first, and a fifth of a second later the reader moves,
    * so the eye sees the text change before it is carried off. Only the
    * behaviour just ticked, and only if it is still ticked by then. */
-  if (jump) {
+  if (jumpers.length) {
     painted.then(() => setTimeout(() => {
-      if (state.selectedSlugs.includes(slug)) goToDefining(slug);
+      if (!state.selectedSlugs.includes(slug)) {
+        jumpers.forEach(endJump);
+        return;
+      }
+      jumpers.forEach(panel => goToDefining([slug], panel));
     }, 200));
   }
 }
 
-/* Whether the reader is still at the very top of the first document on screen,
- * with no jump already on its way. */
-/* A jump lasts from the tick that decides it until the scroll it starts has
- * come to rest. Throughout, the reader is not at the top, so a second tick does
- * not jump again, and the place a change of selection holds is not held, because
- * holding it would stop the jump where it stands. */
-let jumping = false;
-let jumpTimer = null;
-let jumpTarget = null;
-function atTopOfDocument() {
-  if (jumping) return false;
-  const scroller = panels()[0]?.querySelector(".document-scroll");
+/* Whether a document on screen is still at its very top, with no jump already
+ * on its way in it.
+ *
+ * A jump lasts from the tick that decides it until the scroll it starts has
+ * come to rest. Throughout, that document is not at its top, so a second tick
+ * does not move it again, and the place a change of selection holds is not held
+ * in it, because holding it would stop the jump where it stands. Each document
+ * keeps its own jump (panel._defJump), since comparing puts two on screen. */
+function atTopOfDocument(panel) {
+  if (panel?._defJump) return false;
+  const scroller = panel?.querySelector(".document-scroll");
   return !scroller || scroller.scrollTop < 4;
 }
-function markJumping() {
-  jumping = true;
-  clearTimeout(jumpTimer);
+function markJumping(panel) {
+  clearTimeout(panel._defJump?.timer);
   // A ceiling, for a jump that never starts: the behaviour was unticked before
   // it could, or has no passage in this document.
-  jumpTimer = setTimeout(endJump, 4000);
+  panel._defJump = { target: null, timer: setTimeout(() => endJump(panel), 4000) };
 }
-function endJump() {
-  jumping = false;
-  jumpTarget = null;
-  clearTimeout(jumpTimer);
-  jumpTimer = null;
+function endJump(panel) {
+  clearTimeout(panel._defJump?.timer);
+  panel._defJump = null;
 }
 
 /* Open every section a passage sits in and scroll it to the middle of its
@@ -1973,14 +1975,15 @@ function aimAt(panel, target) {
  * changed height. The passage is found again by its id if the highlights were
  * redrawn around it. */
 function reaimJump() {
-  if (!jumping || !jumpTarget) return;
-  const { panel, passageId } = jumpTarget;
-  if (!panel.isConnected) return;
-  const target = jumpTarget.element?.isConnected ? jumpTarget.element
-    : panel.querySelector(`.passage[data-passage-id="${CSS.escape(passageId)}"]`);
-  if (!target) return;
-  jumpTarget.element = target;
-  aimAt(panel, target);
+  panels().forEach(panel => {
+    const jump = panel._defJump;
+    if (!jump?.target || !panel.isConnected) return;
+    const target = jump.target.element?.isConnected ? jump.target.element
+      : panel.querySelector(`.passage[data-passage-id="${CSS.escape(jump.target.passageId)}"]`);
+    if (!target) return;
+    jump.target.element = target;
+    aimAt(panel, target);
+  });
 }
 
 /* The first passage of the first document on screen that is the defining
@@ -1988,26 +1991,35 @@ function reaimJump() {
  * scrolled to and outlined for a moment, and the focus is left where it was, on
  * the box just ticked, so a reader ticking several in a row keeps their place in
  * the menu. */
-function goToDefining(slug) {
-  const panel = panels()[0];
+function goToDefining(slugs, panel = panels()[0]) {
   if (!panel) return;
-  const behaviour = (state.payload?.behaviours || []).find(one => one.slug === slug);
+  const wanted = new Set(slugs);
+  const names = new Set((state.payload?.behaviours || [])
+    .filter(one => wanted.has(one.slug)).map(one => one.name));
   const blocks = [...panel.querySelectorAll(".document-body .passage[data-passage-id]")];
-  const target = blocks.find(block => (block.dataset.defining || "").split(" ").includes(slug))
-    || (behaviour && blocks.find(block => (block.dataset.behaviours || "")
-      .split(" \u00b7 ").includes(behaviour.name)));
-  if (!target) return;
+  // The first passage, in the order the document runs, that defines any of the
+  // behaviours; failing one, the first that cites any of them.
+  const target = blocks.find(block => (block.dataset.defining || "").split(" ")
+      .some(slug => wanted.has(slug)))
+    || blocks.find(block => (block.dataset.behaviours || "").split(" \u00b7 ")
+      .some(name => names.has(name)));
+  if (!target) {
+    if (panel._defJump) endJump(panel);
+    return;
+  }
   // Remembered for the length of the jump: a change of selection meanwhile
   // folds and unfolds sections above it, and the scroll is aimed at it again.
-  if (jumping) jumpTarget = { panel, passageId: target.dataset.passageId, element: target };
+  if (panel._defJump) {
+    panel._defJump.target = { passageId: target.dataset.passageId, element: target };
+  }
   aimAt(panel, target);
   // The jump is over when the column comes to rest, however long the way was.
   const scroller = panel.querySelector(".document-scroll");
-  if (jumping && scroller) {
+  if (panel._defJump && scroller) {
     let settle = null;
     const rest = () => { clearTimeout(settle); settle = setTimeout(() => {
       scroller.removeEventListener("scroll", rest);
-      endJump();
+      endJump(panel);
     }, 150); };
     scroller.addEventListener("scroll", rest, { passive: true });
     rest();
@@ -4054,7 +4066,7 @@ function restorePlace(place) {
 function applyHighlights() {
   // While a jump is on its way the reader's place is where the jump is taking
   // them, not where the column happens to be, so nothing is held.
-  const places = panels().map(panel => (!jumping
+  const places = panels().map(panel => (!panel._defJump
     && panel.querySelector(".document-scroll")?.scrollTop > 4 ? placeIn(panel) : null));
   const kept = new Map(panels().map(panel => [panel, sectionsOnScreen(panel)]));
   // One remembered passage per panel: the two documents hold their places
@@ -5670,7 +5682,8 @@ async function initialize() {
     // A link that names a behaviour, and no passage or heading, opens where the
     // document defines it, as a tick at the top of the document would.
     if (requested.length && !linked && !location.hash) {
-      requestAnimationFrame(() => requestAnimationFrame(() => goToDefining(requested[0])));
+      requestAnimationFrame(() => requestAnimationFrame(() =>
+        panels().forEach(panel => goToDefining(requested, panel))));
     }
     // Two frames: after the one in which applyHighlights collects the passages.
     if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
