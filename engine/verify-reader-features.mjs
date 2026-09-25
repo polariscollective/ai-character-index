@@ -87,14 +87,16 @@ const server = createServer(async (req, res) => {
   // sent, picture included, for the page-feedback section below to read back.
   if (await servePageFeedbackRoute(req, res)) return;
   let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
-  /* The front page is the grid, as next.config.mjs rewrites it. That rewrite is
-   * also why site/index.html no longer exists: an array returned from rewrites()
-   * is applied after the filesystem, so a real file at / always won and the old
-   * redirect into the reader went on being served whatever the config said.
+  /* The front page is the overview and the boards are at /index, as
+   * next.config.mjs rewrites them. That rewrite is also why site/index.html no
+   * longer exists: an array returned from rewrites() is applied after the
+   * filesystem, so a real file at / always won and the old redirect into the
+   * reader went on being served whatever the config said.
    *
-   * Without this line the walker answers 404 for the one address every menu
+   * Without these lines the walker answers 404 for the addresses every menu
    * points at, which would be a check on the walker rather than on the page. */
   if (path === "/") path = "/overview.html";
+  if (path === "/index" || path === "/index/") path = "/boards.html";
   if (path.endsWith("/")) path += "index.html";
   // The same rewrite next.config.mjs carries: a prose page's address is a name,
   // not the file it happens to be stored in.
@@ -2043,15 +2045,16 @@ const inkReport = cells => {
 };
 
 // =============================================================================
-/* The overview's second view, how each company governs its rules: one table with
+/* The index's second view, how each company governs its rules: one table with
  * the companies across and two figures down, what is published and what it
  * engages, each question opening into its checks, and a popover beside whatever
  * was pressed. Its numbers and words are site/governance.json, and
  * tests/test_governance_tab.py holds the two together; what only a browser can
- * show is that the tabs, the address, the folds and the popover join them. */
-console.log("== Overview: the governance view ==");
+ * show is that the header's menu, the address, the folds and the popover join
+ * them. */
+console.log("== Index: the governance view ==");
 {
-  const root = new URL("/", base).href;
+  const root = new URL("/index", base).href;
   pageErrors = [];
   await page.goto(`${root}?view=governance`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => document.querySelectorAll("#gov-heatmap tbody tr").length > 0,
@@ -2059,7 +2062,7 @@ console.log("== Overview: the governance view ==");
   const seen = await page.evaluate(() => ({
     governanceShown: !document.querySelector("#view-governance").hidden,
     coverageHidden: document.querySelector("#view-coverage").hidden,
-    selected: document.querySelector('.view-tab[aria-selected="true"]')?.dataset.view,
+    selected: document.querySelector('.index-list a[aria-current="page"]')?.getAttribute("href"),
     companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
     total: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
       .map(b => b.textContent),
@@ -2081,7 +2084,7 @@ console.log("== Overview: the governance view ==");
     appendices: [...document.querySelectorAll("#gov-sections section > details > summary")]
       .map(node => node.textContent),
   }));
-  check(seen.governanceShown && seen.coverageHidden && seen.selected === "governance",
+  check(seen.governanceShown && seen.coverageHidden && seen.selected === "/index?view=governance",
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
   check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Alibaba, xAI, "
         + "Meta, Moonshot AI, Mistral AI, DeepSeek"
@@ -2298,26 +2301,46 @@ console.log("== Overview: the governance view ==");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(100);
 
-  await page.locator("#tab-coverage").click();
-  await page.waitForTimeout(150);
+  // The views are chosen from the Index menu in the header, which a pointer
+  // opens by resting on Index and a keyboard by the button beside it.
+  const listShown = () => page.evaluate(() =>
+    getComputedStyle(document.querySelector(".index-list")).display !== "none");
+  const closedAtRest = await listShown();
+  await page.locator(".index-menu > a").hover();
+  await page.waitForTimeout(100);
+  const openOnHover = await listShown();
+  const listed = await page.evaluate(() => ({
+    choices: [...document.querySelectorAll(".index-list a")].map(a => a.textContent),
+    coming: [...document.querySelectorAll(".index-list .index-coming")]
+      .map(node => node.firstChild.textContent),
+  }));
+  check(!closedAtRest && openOnHover
+      && listed.choices.join(" | ") === "What the constitutions say | How constitutions are governed"
+      && listed.coming.length === 2,
+    "resting on Index opens its views, the two to come listed and not choosable",
+    JSON.stringify({ closedAtRest, openOnHover, ...listed }));
+
+  await page.locator(".index-list a", { hasText: "What the constitutions say" }).click();
+  await page.waitForLoadState("networkidle");
   const back = await page.evaluate(() => ({
     coverageShown: !document.querySelector("#view-coverage").hidden,
     governanceHidden: document.querySelector("#view-governance").hidden,
     view: new URL(location.href).searchParams.get("view"),
   }));
   check(back.coverageShown && back.governanceHidden && back.view === null,
-    "the first tab returns to the grid and drops ?view= from the address", JSON.stringify(back));
+    "the menu's first view returns to the grid with no ?view= in the address", JSON.stringify(back));
 
-  // The tabs are one stop for the keyboard, and the arrows move between them.
-  await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(150);
-  const keyed = await page.evaluate(() => ({
-    focused: document.activeElement?.id,
-    view: new URL(location.href).searchParams.get("view"),
-    governanceShown: !document.querySelector("#view-governance").hidden,
-  }));
-  check(keyed.focused === "tab-governance" && keyed.view === "governance" && keyed.governanceShown,
-    "the right arrow on the first tab selects the second and writes its address",
+  await page.mouse.move(5, 700);
+  await page.locator(".index-toggle").focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(100);
+  const keyed = { open: await listShown(),
+    expanded: await page.locator(".index-toggle").getAttribute("aria-expanded") };
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+  keyed.closed = !(await listShown());
+  check(keyed.open && keyed.expanded === "true" && keyed.closed,
+    "the button beside Index opens the menu from the keyboard, and Escape closes it",
     JSON.stringify(keyed));
 
   check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
@@ -2356,9 +2379,9 @@ const rustIn = async png => page.evaluate(async encoded => {
  * strings typed here: the writers fill it in, and a board that agreed with a
  * copy of their words in this harness rather than with the file itself would
  * pass while showing something else. */
-console.log("== Overview: the constitutions board ==");
+console.log("== Index: the constitutions board ==");
 {
-  const root = new URL("/", base).href;
+  const root = new URL("/index", base).href;
   const file = JSON.parse(readFileSync(join(SITE, "constitutions.json"), "utf8"));
   const depthTop = file.scale.depth[file.scale.depth.length - 1].level;
   /* Each part of a document is shown out of 2, which is also the top of the
@@ -2887,7 +2910,7 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
   check(unbuilt.open && unbuilt.title === "Acme"
       && unbuilt.subtitle === "Translated document, 2026-03-01."
       && unbuilt.body.includes("This publication carries no figures for this document")
-      && unbuilt.links.some(href => href.includes("/spec-reader/")),
+      && unbuilt.links.some(href => href.includes("/doc-reader/")),
     "a column the payload knows nothing about says so from its head",
     JSON.stringify([unbuilt.title, unbuilt.subtitle]));
   await closePop();
@@ -2980,7 +3003,7 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
     sheet.body.slice(0, 300));
   const links = sheet.links.map(href => new URL(href, root));
   check(links.length === 4
-      && links.every(url => url.pathname === "/spec-reader/"
+      && links.every(url => url.pathname === "/doc-reader/"
         && url.searchParams.get("publication") === TEN_PUBLICATION)
       && links.map(url => url.searchParams.get("passage")).join(" | ")
         === [S2, B2, S1, S2].join(" | "),
@@ -3044,7 +3067,7 @@ console.log("== Every page: the feedback bubble ==");
 {
   const root = new URL("/", base).href;
   pageErrors = [];
-  await page.goto(`${root}overview.html`, { waitUntil: "networkidle" });
+  await page.goto(`${root}boards.html`, { waitUntil: "networkidle" });
   await page.waitForTimeout(250);
 
   /* The paragraph-note dialog ran earlier in this walker and left its address
@@ -3082,7 +3105,7 @@ console.log("== Every page: the feedback bubble ==");
     };
   });
   check(resting.there && resting.label === "Feedback" && resting.corner && resting.closed,
-    "the pill rests in the bottom right corner of the overview, dialog closed",
+    "the pill rests in the bottom right corner of the index page, dialog closed",
     JSON.stringify(resting));
 
   await page.locator("#pf-pill").click();
@@ -3369,7 +3392,7 @@ console.log("== Every page: the feedback bubble ==");
 
   check(sent?.comment === "The governance table runs off the right."
       && sent?.email === "reader@example.org"
-      && sent?.page_url.endsWith("/overview.html")
+      && sent?.page_url.endsWith("/boards.html")
       && /^\d+x\d+ @\d/.test(sent.viewport)
       && sent.user_agent.length > 0
       && sent.website === "",

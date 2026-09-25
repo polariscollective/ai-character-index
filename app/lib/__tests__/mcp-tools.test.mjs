@@ -622,7 +622,7 @@ test("the site address is given when the deployment has one, and never invented"
   assert.ok(!plain.includes("://"), "an address nobody gave it reached the answer");
   const sited = about(snapshot(), { site: "https://example.test" });
   assert.ok(sited.includes(
-    "https://example.test/spec-reader/?publication=3114dd65-c6f2-5cb3-bf98-af5b314381c3"),
+    "https://example.test/doc-reader/?publication=3114dd65-c6f2-5cb3-bf98-af5b314381c3"),
     "the citation names the publication on the site that served it");
 });
 

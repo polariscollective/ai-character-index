@@ -122,9 +122,13 @@ try {
 } catch (missing) {
   var panelDepth = () => { throw missing; };
 }
-eval(extractConstBlock("DEPTH_LEVELS"));
+/* The reader imports its scale from site/depth-scale.js. That file touches no
+ * page, so its exports are evaluated here as they stand, with the export
+ * keywords taken off. */
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "site", "depth-scale.js"), "utf8")
+  .replace(/^export /gm, ""));
+eval(extractConst("depthScale"));
 eval(extractConst("NUMBER_WORDS"));
-eval(extractConst("DEPTH_WORDS"));
 eval(extractFn("function endedSentence(reason) {"));
 eval(extractFn("function depthJudgeCount(behaviours) {"));
 eval(extractFn("function depthScaleLede(behaviours) {"));
@@ -377,7 +381,8 @@ check("the scale is the rubric's five levels, 0 to 4, under its own anchors",
       () => depthScaleNote([]).levels.map(level => `${level.level} ${level.anchor}`),
       ["0 absent", "1 named", "2 discussed", "3 prescribed", "4 demonstrated"]);
 check("the word said beside a mean is the anchor of the level it rounds to",
-      () => DEPTH_WORDS, ["absent", "named", "discussed", "prescribed", "demonstrated"]);
+      () => [0, 1, 2, 3, 4].map(mean => depthWords(mean, 4)),
+      ["absent", "named", "discussed", "prescribed", "demonstrated"]);
 check("level 0's bar is the rubric's sentence",
       () => depthScaleNote([]).levels[0].bar, "No passage bears on the behaviour.");
 check("level 3's bar keeps the rubric's grading test",

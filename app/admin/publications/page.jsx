@@ -67,7 +67,7 @@ export default async function Publications({ searchParams }) {
                     <br />{row.links_sha256 ? row.links_sha256.slice(0, 10) : "no links"}
                   </td>
                   <td>
-                    <a href={`/spec-reader/?publication=${row.id}`}>read</a>
+                    <a href={`/doc-reader/?publication=${row.id}`}>read</a>
                     <br />
                     <form method="post" action="/api/admin/publications">
                       <input type="hidden" name="verb"

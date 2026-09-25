@@ -34,7 +34,7 @@ export default async function AdminLayout({ children }) {
           {PAGES.map(([href, label]) => (
             <a key={href} href={href}>{label}</a>
           ))}
-          <a href="/spec-reader/">Reader</a>
+          <a href="/doc-reader/">Reader</a>
         </nav>
         <span className="who">
           {who.email}

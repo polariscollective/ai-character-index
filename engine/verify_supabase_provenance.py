@@ -104,7 +104,8 @@ def check_the_published_artefacts_still_carry_their_digests(publication):
                          ("documents", "documents_sha256"),
                          ("links", "links_sha256"),
                          ("constitutions", "constitutions_sha256"),
-                         ("governance", "governance_sha256")):
+                         ("governance", "governance_sha256"),
+                         ("overview", "overview_sha256")):
         if publication.get(name) is None:
             continue
         got = hashlib.sha256(

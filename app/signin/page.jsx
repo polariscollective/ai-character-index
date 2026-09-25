@@ -27,7 +27,7 @@ export default async function SignIn({ searchParams }) {
       <p>
         The operating surface of the index: the registry, the runs, and what the
         public reader shows. Reading the index needs none of this. The reader is
-        open at <a href="/spec-reader/">/spec-reader/</a>.
+        open at <a href="/doc-reader/">/doc-reader/</a>.
       </p>
 
       {missing && (

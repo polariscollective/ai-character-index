@@ -19,6 +19,10 @@
  * this version of the site: one sentence for every cause, shared with the front
  * page's boards. */
 import { INCOMPATIBLE } from "/publication-data.js";
+/* The depth scale a publication is on, its levels and what a figure on it is
+ * called: one file for the whole site, so the reader and the boards cannot say
+ * two different things about the same figure. */
+import { depthScaleOf, levelsOf, depthWords, ODD_VALUES } from "/depth-scale.js";
 
 const DOCUMENTS_URL = "/api/reader/documents";
 /* Which publication the reader shows, resolved in this order:
@@ -1363,7 +1367,7 @@ function renderBehaviourList() {
           class="depth-head"
           aria-haspopup="dialog"
           aria-expanded="false"
-        >Depth, out of 4</button>
+        >Depth, out of ${depthScale()}</button>
       </div>
       <ul>
         ${group.behaviours.map(behaviour => {
@@ -1486,42 +1490,23 @@ function renderBehaviourList() {
 
 /* How deeply each document on screen covers each behaviour, beside its name.
  *
- * The mean of the panel's depths on the 0 to 4 scale, one figure per document on
- * screen, so comparing two documents puts two figures side by side. A cell with
- * no depth shows a dash: zero is a finding, a dash is the absence of one.
+ * The mean of the panel's depths on the publication's scale, 0 to 4 or 0 to 10,
+ * one figure per document on screen, so comparing two documents puts two
+ * figures side by side. A cell with no depth shows a dash: zero is a finding, a
+ * dash is the absence of one.
  *
  * The figures are bare. The scale is said once, at the top of the column, in each
- * group's heading ("Depth, out of 4"): "3.7 / 4" beside every name read poorly,
+ * group's heading ("Depth, out of 10"): "7.3 / 10" beside every name read poorly,
  * and comparing already puts " / " between two documents' figures. A sentence
  * that gives one depth on its own says the scale in that sentence. */
-/* The 0 to 4 scale itself, in the rubric's own terms.
+/* The scale itself, in the rubric's own terms, is site/depth-scale.js, which the
+ * boards read too: methodology/spec-coverage-depth-rubric.md is what the judges
+ * were given, and that file quotes it for both scales rather than paraphrasing
+ * it into a second rubric nobody maintains.
  *
- * methodology/spec-coverage-depth-rubric.md is what the judges were given, and
- * this is that table: the anchor and the bar of each level, so the popover the
- * column's heading opens quotes the rubric rather than paraphrasing it into a
- * second rubric nobody maintains. The rubric writes its asides with a double
- * hyphen and this surface takes commas instead; nothing else is changed.
- *
- * DEPTH_WORDS, the word said beside a mean, is these anchors and not a second
- * list of them. */
-const DEPTH_LEVELS = [
-  { level: 0, anchor: "absent",
-    bar: "No passage bears on the behaviour." },
-  { level: 1, anchor: "named",
-    bar: "The behaviour appears, a word or clause, typically inside a list or a "
-      + "passage about something else, but the spec says nothing further about it." },
-  { level: 2, anchor: "discussed",
-    bar: "The spec addresses the behaviour in its own right, what the norm is and "
-      + "why it matters, but only in terms too general to grade a response against." },
-  { level: 3, anchor: "prescribed",
-    bar: "The spec states concrete do/don't rules or procedures for the behaviour, "
-      + "specific enough that a grader can quote the spec's own sentences as pass criteria." },
-  { level: 4, anchor: "demonstrated",
-    bar: "Prescribed, plus worked examples: concrete scenarios where the spec shows the "
-      + "sanctioned response, usable as an answer key for borderline cases." },
-];
-
-const DEPTH_WORDS = DEPTH_LEVELS.map(level => level.anchor);
+ * The scale the publication on screen is on, 10 where its payload says so and
+ * 4 otherwise, is set when the payload arrives. */
+const depthScale = () => state.depthScale || 4;
 
 /* Small counts read as words in a sentence, not as digits. Beyond this list a
  * figure is a figure; no panel of the index has ever seated nine. */
@@ -1564,7 +1549,14 @@ function depthScaleLede(behaviours) {
 
 /* What the column's heading opens: the rubric, once, for the whole column. */
 function depthScaleNote(behaviours) {
-  return { title: "Depth, out of 4", lede: depthScaleLede(behaviours), levels: DEPTH_LEVELS };
+  const scale = depthScale();
+  return {
+    title: `Depth, out of ${scale}`,
+    // On the scale of ten the rubric describes the even figures only, so the
+    // lede says what an odd one means.
+    lede: scale === 10 ? `${depthScaleLede(behaviours)} ${ODD_VALUES}` : depthScaleLede(behaviours),
+    levels: levelsOf(scale),
+  };
 }
 
 /* What one figure is: the mean, the judges behind it with their own scores and
@@ -1578,7 +1570,7 @@ function depthCellNote(behaviour, doc) {
     document: `${doc.title} ${doc.version}`,
     figure: depth ? depth.mean.toFixed(1) : null,
     summary: depth
-      ? `${depth.mean.toFixed(1)} out of 4, ${DEPTH_WORDS[Math.round(depth.mean)]}.`
+      ? `${depth.mean.toFixed(1)} out of ${depthScale()}, ${depthWords(depth.mean, depthScale())}.`
       : "No depth given: this behaviour was not judged on this document.",
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
@@ -1629,14 +1621,14 @@ function panelDepth(behaviour, documentId) {
     ? depth : null;
 }
 
-/* One line naming a document's depth for a behaviour: the mean out of 4 and the
+/* One line naming a document's depth for a behaviour: the mean on its scale and the
  * rubric word, or that none was given. Shared by the figure's hover title, the
  * hidden description a screen reader hears, and the note's own paragraph -- one
  * text, not three copies of the same wording. */
 function depthSummaryLine(doc, depth) {
   if (!depth) return `${doc.title} ${doc.version}: no depth given.`;
-  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} out of 4, `
-    + `${DEPTH_WORDS[Math.round(depth.mean)]}.`;
+  return `${doc.title} ${doc.version}: ${depth.mean.toFixed(1)} out of ${depthScale()}, `
+    + `${depthWords(depth.mean, depthScale())}.`;
 }
 
 /* The figures as a screen reader hears them beside the behaviour's name. The
@@ -1645,7 +1637,7 @@ function depthSummaryLine(doc, depth) {
 function depthSpoken(depths) {
   if (!depths.some(Boolean)) return "no depth given";
   return `depth ${depths
-    .map(depth => (depth ? `${depth.mean.toFixed(1)} out of 4` : "not given"))
+    .map(depth => (depth ? `${depth.mean.toFixed(1)} out of ${depthScale()}` : "not given"))
     .join(" and ")}`;
 }
 
@@ -1890,16 +1882,78 @@ function toggleBehaviour(slug, checked) {
   // Not awaited: a tick marks the box at once and lets the bubbles for the
   // ticked behaviour arrive as they load, rather than freezing the menu on a
   // network round trip.
+  /* Decided at the moment of the tick, before anything moves: a reader at the
+   * very top of the document has not started reading, so ticking takes them to
+   * where the document defines the behaviour. A reader anywhere else is reading
+   * something, and is left there. A jump already on its way counts as having
+   * left the top, so two quick ticks move the reader once. */
+  const jump = checked && atTopOfDocument();
+  if (jump) markJumping();
   const painted = setSelection([...next]);
-  /* Ticking a behaviour takes the reader to where the document defines it:
-   * the highlights land first, and a fifth of a second later the reader moves,
+  /* The highlights land first, and a fifth of a second later the reader moves,
    * so the eye sees the text change before it is carried off. Only the
    * behaviour just ticked, and only if it is still ticked by then. */
-  if (checked) {
+  if (jump) {
     painted.then(() => setTimeout(() => {
       if (state.selectedSlugs.includes(slug)) goToDefining(slug);
     }, 200));
   }
+}
+
+/* Whether the reader is still at the very top of the first document on screen,
+ * with no jump already on its way. */
+/* A jump lasts from the tick that decides it until the scroll it starts has
+ * come to rest. Throughout, the reader is not at the top, so a second tick does
+ * not jump again, and the place a change of selection holds is not held, because
+ * holding it would stop the jump where it stands. */
+let jumping = false;
+let jumpTimer = null;
+let jumpTarget = null;
+function atTopOfDocument() {
+  if (jumping) return false;
+  const scroller = panels()[0]?.querySelector(".document-scroll");
+  return !scroller || scroller.scrollTop < 4;
+}
+function markJumping() {
+  jumping = true;
+  clearTimeout(jumpTimer);
+  // A ceiling, for a jump that never starts: the behaviour was unticked before
+  // it could, or has no passage in this document.
+  jumpTimer = setTimeout(endJump, 4000);
+}
+function endJump() {
+  jumping = false;
+  jumpTarget = null;
+  clearTimeout(jumpTimer);
+  jumpTimer = null;
+}
+
+/* Open every section a passage sits in and scroll it to the middle of its
+ * column. A smooth scroll heads for where its target was when it began, so a
+ * jump that sections moved under is aimed again with this. */
+function aimAt(panel, target) {
+  const body = target.closest(".document-body");
+  let sectionChild = target;
+  while (sectionChild.parentElement && sectionChild.parentElement !== body) {
+    sectionChild = sectionChild.parentElement;
+  }
+  (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
+  updateSectionVisibility(panel);
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* Aim the jump on its way at its passage again, after something above it has
+ * changed height. The passage is found again by its id if the highlights were
+ * redrawn around it. */
+function reaimJump() {
+  if (!jumping || !jumpTarget) return;
+  const { panel, passageId } = jumpTarget;
+  if (!panel.isConnected) return;
+  const target = jumpTarget.element?.isConnected ? jumpTarget.element
+    : panel.querySelector(`.passage[data-passage-id="${CSS.escape(passageId)}"]`);
+  if (!target) return;
+  jumpTarget.element = target;
+  aimAt(panel, target);
 }
 
 /* The first passage of the first document on screen that is the defining
@@ -1916,14 +1970,21 @@ function goToDefining(slug) {
     || (behaviour && blocks.find(block => (block.dataset.behaviours || "")
       .split(" \u00b7 ").includes(behaviour.name)));
   if (!target) return;
-  const body = target.closest(".document-body");
-  let sectionChild = target;
-  while (sectionChild.parentElement && sectionChild.parentElement !== body) {
-    sectionChild = sectionChild.parentElement;
+  // Remembered for the length of the jump: a change of selection meanwhile
+  // folds and unfolds sections above it, and the scroll is aimed at it again.
+  if (jumping) jumpTarget = { panel, passageId: target.dataset.passageId, element: target };
+  aimAt(panel, target);
+  // The jump is over when the column comes to rest, however long the way was.
+  const scroller = panel.querySelector(".document-scroll");
+  if (jumping && scroller) {
+    let settle = null;
+    const rest = () => { clearTimeout(settle); settle = setTimeout(() => {
+      scroller.removeEventListener("scroll", rest);
+      endJump();
+    }, 150); };
+    scroller.addEventListener("scroll", rest, { passive: true });
+    rest();
   }
-  (sectionChild._sectionAncestors || []).forEach(info => { info.collapsed = false; });
-  updateSectionVisibility(panel);
-  target.scrollIntoView({ behavior: "smooth", block: "center" });
   target.classList.add("linked-block");
   setTimeout(() => target.classList.remove("linked-block"), 2500);
   requestAnimationFrame(updateRails);
@@ -3224,17 +3285,19 @@ function updateSectionVisibility(panel) {
  * opens on follow the behaviours currently ticked. With focus off, sections the reader
  * collapsed by hand are left alone -- unless nothing is highlighted at all, when the
  * toggle is hidden and everything has to be readable again. */
-function applyPanelFocus(panel, { expandAll = false } = {}) {
+function applyPanelFocus(panel, { expandAll = false, keep = null } = {}) {
   const focused = panelFocused(panel);
   const infos = panel._sectionInfos || [];
-  if (focused) infos.forEach(info => { info.collapsed = !info.hasPassage; });
+  // `keep` is the sections the reader is in, which a change of selection leaves
+  // open whether or not they still hold a passage.
+  if (focused) infos.forEach(info => { info.collapsed = !info.hasPassage && !keep?.has(info); });
   else if (expandAll || !highlightsActive()) infos.forEach(info => { info.collapsed = false; });
   updateSectionVisibility(panel);
   requestAnimationFrame(updateRails);
 }
 
 /* Which sections carry a highlight changes with every tick of the menu. */
-function refreshSectionPassages(panel) {
+function refreshSectionPassages(panel, keep = null) {
   const children = [...panel.querySelector(".document-body").children];
   (panel._sectionInfos || []).forEach(info => {
     info.hasPassage = children.some(child => {
@@ -3243,7 +3306,26 @@ function refreshSectionPassages(panel) {
     });
     info.heading.classList.toggle("section-has-passage", info.hasPassage);
   });
-  applyPanelFocus(panel);
+  applyPanelFocus(panel, { keep });
+}
+
+/* The sections the reader is in: every section holding a block that is on
+ * screen in this panel. A change of selection folds the sections it leaves
+ * without passages, and folding the one being read would take the paragraph
+ * away from under the reader's eye, so these stay as they are. */
+function sectionsOnScreen(panel) {
+  const scroller = panel.querySelector(".document-scroll");
+  const kept = new Set();
+  if (!scroller || scroller.scrollTop <= 4) return kept;
+  const box = scroller.getBoundingClientRect();
+  [...panel.querySelector(".document-body").children].forEach(child => {
+    if (child.hidden) return;
+    const at = child.getBoundingClientRect();
+    if (at.bottom > box.top && at.top < box.bottom) {
+      (child._sectionAncestors || []).forEach(info => { if (!info.collapsed) kept.add(info); });
+    }
+  });
+  return kept;
 }
 
 function setupSectionFocus(panel) {
@@ -3423,8 +3505,11 @@ function translationNote(translation, judged) {
  * because what a document covers is a fact about its publisher rather than about
  * one version of it. */
 const DOCUMENT_CONTEXT = {
-  alibaba: "The document names no models. Nothing in it says which models or which products "
-         + "it governs.",
+  alibaba: "The document names no models, and nothing in it says which models or products it "
+         + "governs. It was published by Alibaba's AI governance laboratory (AAIG), a research "
+         + "lab, not by the teams that build the Qwen models, and the only model we found publicly "
+         + "built to it is Oyster-II, a research model. As of September 2026, nothing public ties it to "
+         + "a model in production.",
 };
 
 const documentContext = id => DOCUMENT_CONTEXT[String(id).split("--")[0]] || "";
@@ -3438,14 +3523,17 @@ function translationDismissedKey(documentId) {
 }
 
 /* The notice, or once it is dismissed the short "Translated" label beside Show
- * original, which is what still says the text is a translation. */
+ * original, which is what still says the text is a translation. A document with
+ * something to say about it and no translation has a notice too, and nothing to
+ * leave behind once it is closed. */
 function showTranslationNotice(panel) {
   const band = panel.querySelector(".document-translation");
   const flag = panel.querySelector(".translation-flag");
-  const translated = Boolean(band?.querySelector(".translation-text")?.textContent);
-  const dismissed = translated && savedFlag(translationDismissedKey(panel.dataset.documentId));
-  if (band) band.hidden = !translated || dismissed;
-  if (flag) flag.hidden = !dismissed;
+  const translated = Boolean(band?.querySelector(".translation-line")?.textContent);
+  const said = Boolean(band?.querySelector(".translation-text")?.textContent);
+  const dismissed = said && savedFlag(translationDismissedKey(panel.dataset.documentId));
+  if (band) band.hidden = !said || dismissed;
+  if (flag) flag.hidden = !(translated && dismissed);
 }
 
 /* The × closes the notice at once: every panel showing this document, since an
@@ -3704,17 +3792,15 @@ function renderDocument(doc, side = 0) {
   panel.querySelectorAll(".tier-toggle").forEach(button => {
     button.setAttribute("aria-pressed", String(Boolean(state.bands?.has(button.dataset.tier))));
   });
-  if (doc.translation) {
-    const note = translationNote(doc.translation, doc.judged);
-    panel.querySelector(".document-translation .translation-text").textContent = note;
-    panel.querySelector(".translation-flag").title = note;
-  }
+  const note = doc.translation ? translationNote(doc.translation, doc.judged) : "";
   const context = documentContext(doc.id);
-  const contextBand = panel.querySelector(".document-context");
-  contextBand.textContent = context;
-  contextBand.hidden = !context;
+  panel.querySelector(".document-translation .context-line").textContent = context;
+  panel.querySelector(".document-translation .translation-line").textContent =
+    context && note ? ` ${note}` : note;
+  if (note) panel.querySelector(".translation-flag").title = note;
   showTranslationNotice(panel);
   panel.querySelector(".document-body").innerHTML = renderMarkdown(doc.markdown, markdownContext);
+  wireBackToTop(panel);
   attachLocators(panel, doc);
   attachOriginals(panel, doc);
   setupSectionFocus(panel);
@@ -3883,9 +3969,67 @@ function updatePanelMeta(panel, doc) {
   }
 }
 
+/* The button that takes a panel back to the top of its document. It shows once
+ * the reader is a screen's height down, and goes when they are back. */
+function wireBackToTop(panel) {
+  const scroller = panel.querySelector(".document-scroll");
+  const button = panel.querySelector(".to-top");
+  if (!scroller || !button) return;
+  const update = () => { button.hidden = scroller.scrollTop < scroller.clientHeight * 0.8; };
+  scroller.addEventListener("scroll", update, { passive: true });
+  button.addEventListener("click", () => {
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scroller.scrollTo({ top: 0, behavior: still ? "instant" : "smooth" });
+    scroller.focus?.({ preventScroll: true });
+  });
+  update();
+}
+
+/* A reader's place in one panel: the first block of text whose bottom is below
+ * the top of the column, and how far its top sits from the column's top. Taken
+ * before sections fold or unfold, so the same block can be put back exactly
+ * where the eye left it. */
+const PLACE_BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, pre, blockquote, table, .passage";
+function placeIn(panel) {
+  const scroller = panel.querySelector(".document-scroll");
+  if (!scroller) return null;
+  const top = scroller.getBoundingClientRect().top;
+  const blocks = panel.querySelectorAll(`.document-body :is(${PLACE_BLOCKS})`);
+  for (const block of blocks) {
+    if (!block.offsetParent) continue;
+    const box = block.getBoundingClientRect();
+    if (box.bottom > top) return { scroller, block, offset: box.top - top };
+  }
+  return null;
+}
+
+/* Put a place back: the block's top returns to where it was, at once and not
+ * smoothly, so a reader sees the text around them change and not move. A block
+ * that is folded away now gives way to the first visible block after it. */
+function restorePlace(place) {
+  if (!place) return;
+  let block = place.block;
+  if (!block.offsetParent) {
+    const blocks = [...place.scroller.querySelectorAll(`.document-body :is(${PLACE_BLOCKS})`)];
+    block = blocks.slice(blocks.indexOf(place.block) + 1).find(one => one.offsetParent);
+    if (!block) return;
+  }
+  const top = place.scroller.getBoundingClientRect().top;
+  const moved = block.getBoundingClientRect().top - top - place.offset;
+  if (Math.abs(moved) < 1) return;
+  place.scroller.scrollTo({ top: place.scroller.scrollTop + moved, behavior: "instant" });
+}
+
 /* Lay the current selection over documents that are already rendered. Nothing here
- * touches the specification text, so ticking a behaviour cannot move the reader. */
+ * touches the specification text, so ticking a behaviour cannot move the reader:
+ * sections that fold or unfold above the reader's place are made up for, so the
+ * paragraph being read stays where it was on screen. */
 function applyHighlights() {
+  // While a jump is on its way the reader's place is where the jump is taking
+  // them, not where the column happens to be, so nothing is held.
+  const places = panels().map(panel => (!jumping
+    && panel.querySelector(".document-scroll")?.scrollTop > 4 ? placeIn(panel) : null));
+  const kept = new Map(panels().map(panel => [panel, sectionsOnScreen(panel)]));
   // One remembered passage per panel: the two documents hold their places
   // independently, and a change of selection must not shuffle one because the
   // other moved.
@@ -3900,8 +4044,10 @@ function applyHighlights() {
     const annotated = annotatePassages(panel, doc);
     missing.push(...annotated.missing);
     updatePanelMeta(panel, doc);
-    refreshSectionPassages(panel);
+    refreshSectionPassages(panel, kept.get(panel));
   });
+  places.forEach(restorePlace);
+  reaimJump();
 
   elements.readerStatus.classList.toggle("visible", missing.length > 0);
   elements.readerStatus.textContent = missing.length
@@ -3922,6 +4068,10 @@ function applyHighlights() {
       const index = was ? panel._anchors.indexOf(was) : -1;
       focusPassage(panel, Math.max(0, index), false);
     });
+    // Once more after the frame: rails and cursors are laid out by now, and
+    // anything they moved is made up for too, or the jump on its way re-aimed.
+    places.forEach(restorePlace);
+    reaimJump();
   });
 }
 
@@ -4247,6 +4397,9 @@ function rebuildReader() {
     ? rendered.flatMap((panel, i) => (i < rendered.length - 1 ? [panel, createDocumentResizer()] : [panel]))
     : rendered;
   elements.documentReader.replaceChildren(...children);
+  // The documents on screen are drawn, so the loader goes, whatever else may
+  // still be on its way.
+  showLoader(false);
   const compareRow = rendered.at(-1)?.querySelector(".provider-row");
   if (compareRow) {
     compareRow.append(elements.compareToggle);
@@ -4873,6 +5026,30 @@ function mergeCells(into, extra) {
  * costs one request, and a fetch in flight is not raced by its own repeat. */
 const documentsInFlight = new Map();
 
+/* The loader over the document area. It is in the page from the first paint,
+ * and comes back while a document is fetched, but only once the fetch has
+ * taken a moment: a document already on its way shows no flash. */
+const readerLoader = document.querySelector("#reader-loader");
+let fetchesPending = 0;
+let loaderTimer = null;
+function showLoader(on) {
+  if (!readerLoader) return;
+  clearTimeout(loaderTimer);
+  loaderTimer = null;
+  readerLoader.hidden = !on;
+}
+function fetchStarted() {
+  fetchesPending += 1;
+  if (readerLoader?.hidden && !loaderTimer) loaderTimer = setTimeout(() => showLoader(true), 250);
+}
+function fetchSettled() {
+  fetchesPending = Math.max(0, fetchesPending - 1);
+  if (!fetchesPending && loaderTimer) {
+    clearTimeout(loaderTimer);
+    loaderTimer = null;
+  }
+}
+
 async function ensureDocument(id) {
   if (!id) return;
   const held = (state.payload?.documents || []).find(doc => doc.id === id);
@@ -4895,6 +5072,8 @@ async function ensureDocument(id) {
     if (documentsInFlight.get(id) === fetching) documentsInFlight.delete(id);
   });
   documentsInFlight.set(id, fetching);
+  fetchStarted();
+  fetching.finally(fetchSettled).catch(() => {});
   return fetching;
 }
 
@@ -5394,6 +5573,7 @@ async function initialize() {
       if (carriesParagraphs(behaviour)) inFlight.set(behaviour.slug, Promise.resolve());
     }
     state.provenance = behaviours.provenance || {};
+    state.depthScale = depthScaleOf(behaviours);
     state.bands = initialBands();
     state.payload = {
       documents: documents.documents,
@@ -5404,14 +5584,15 @@ async function initialize() {
     state.documentFocus = Object.fromEntries(
       state.payload.documents.map(document => [document.id, loaded.length > 0]));
     const params = initialParams;
-    // ?behavior= takes one slug or a comma-separated list; with none given the reader
-    // opens on the first behaviour of the set, as the single-choice menu used to.
+    // ?behavior= takes one slug or a comma-separated list. With none given the
+    // reader opens on the document alone, nothing ticked: a reader who came to
+    // read a constitution has not asked about any one behaviour, and ticking the
+    // first of the set chose a subject for them.
     const requested = (params.get("behavior") || "")
       .split(",")
       .map(slug => slug.trim())
       .filter(slug => loaded.some(behaviour => behaviour.slug === slug));
     if (requested.length) state.selectedSlugs = requested;
-    else if (!params.has("behavior") && loaded.length) state.selectedSlugs = [loaded[0].slug];
 
     // ?spec= when the payload carries it, else the preferred lab's newest document,
     // else the first document (openingDocument).
@@ -5456,9 +5637,15 @@ async function initialize() {
     rebuildReader();
     // A link into a heading is followed once, when the page opens on it.
     requestAnimationFrame(revealHashTarget);
+    // A link that names a behaviour, and no passage or heading, opens where the
+    // document defines it, as a tick at the top of the document would.
+    if (requested.length && !linked && !location.hash) {
+      requestAnimationFrame(() => requestAnimationFrame(() => goToDefining(requested[0])));
+    }
     // Two frames: after the one in which applyHighlights collects the passages.
     if (linked) requestAnimationFrame(() => requestAnimationFrame(() => revealPassageLink(linked)));
   } catch (error) {
+    showLoader(false);
     elements.readerStatus.classList.add("visible");
     elements.readerStatus.textContent = INCOMPATIBLE;
     console.error(error);

@@ -38,7 +38,7 @@ abstract: >-
 # This fork. The original stands alone and is the one to clone to run the
 # tool from a bare checkout: https://github.com/AndresCotton/ai-character-index
 repository-code: 'https://github.com/polariscollective/ai-character-index'
-url: 'https://ai-character-index.vercel.app/spec-reader/'
+url: 'https://ai-character-index.vercel.app/doc-reader/'
 license:
   - Apache-2.0
   - CC-BY-4.0

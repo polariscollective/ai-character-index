@@ -81,6 +81,9 @@ export function createBoard({ nodes, everyRow }) {
   const groups = new Map();
   const expanded = new Set();
   const pop = { trigger: null, closedTrigger: null, closedAt: 0 };
+  /* The row a group's fold sits on, which may itself sit under another group. */
+  const ownerOf = id => nodes.table.querySelector(`.row-toggle[data-question="${id}"]`)
+    ?.closest("tr");
 
   /* Beside what opened it, never over it: below if it fits, else above, else to
    * the right or the left, and held inside the window whichever it is. Fixed to
@@ -172,6 +175,50 @@ export function createBoard({ nodes, everyRow }) {
       content.scrollTop = 0;
       placePopover();
       node.focus({ preventScroll: true });
+    },
+
+    /* A figure named inside a popover opens as the cell it is: the cell that
+     * carries it in the table is found by its data attributes, every fold
+     * above it is opened, the selection moves to it and the popover is placed
+     * beside it. A figure with no cell of its own on this board, such as an
+     * earlier version of a document, refills the popover where it stands. */
+    follow(dataset, build) {
+      const selector = Object.entries(dataset)
+        .map(([key, value]) => `[data-${key}="${CSS.escape(String(value))}"]`).join("");
+      const target = nodes.table.querySelector(`button.cell-button${selector}`);
+      if (!target) {
+        board.refill(build);
+        return;
+      }
+      board.reveal(target);
+      if (nodes.pop.matches(":popover-open")) nodes.pop.hidePopover();
+      pop.closedTrigger = null;
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      board.openPopover(target, build);
+    },
+
+    /* Press a cell as a reader would, after opening every fold above it: the
+     * cell opens its own popover. Returns whether the cell was found. */
+    pressCell(dataset) {
+      const selector = Object.entries(dataset)
+        .map(([key, value]) => `[data-${key}="${CSS.escape(String(value))}"]`).join("");
+      const target = nodes.table.querySelector(`button.cell-button${selector}`);
+      if (!target) return false;
+      board.reveal(target);
+      target.scrollIntoView({ block: "center", inline: "center" });
+      target.click();
+      return true;
+    },
+
+    /* Open every fold a cell sits under, outermost first, so it is on screen. */
+    reveal(button) {
+      const chain = [];
+      let row = button.closest("tr");
+      while (row?.dataset.parent) {
+        chain.unshift(row.dataset.parent);
+        row = ownerOf(row.dataset.parent);
+      }
+      chain.forEach(groupId => { if (!expanded.has(groupId)) board.setExpanded(groupId, true); });
     },
 
     /* The same popover, same place, new contents: a score's popover leads on to
@@ -375,8 +422,6 @@ export function createBoard({ nodes, everyRow }) {
       /* A group can sit inside another, so a row is shown only when every group
        * above it is open: shutting the outer group hides what its inner groups
        * hold, and opening it again brings back only what was open inside. */
-      const ownerOf = id => nodes.table.querySelector(`.row-toggle[data-question="${id}"]`)
-        ?.closest("tr");
       const isShown = id => expanded.has(id)
         && (!ownerOf(id)?.dataset.parent || isShown(ownerOf(id).dataset.parent));
       nodes.table.querySelectorAll("tr[data-parent]")
@@ -387,6 +432,7 @@ export function createBoard({ nodes, everyRow }) {
       toggle.setAttribute("aria-label",
         `${open ? "Hide" : "Show"} the ${group.parts} of ${group.name}`);
       const all = expanded.size === groups.size;
+      if (!nodes.expandAll) return;
       nodes.expandAll.setAttribute("aria-pressed", String(all));
       nodes.expandAll.textContent = all ? everyRow.hide : everyRow.show;
     },

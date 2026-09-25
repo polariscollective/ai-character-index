@@ -1052,7 +1052,37 @@ body.resizing-columns {
     linear-gradient(rgb(var(--hue-1) / var(--tint-core)), rgb(var(--hue-1) / var(--tint-core)));
 }
 
-.workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.workspace { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+/* The loader over the document area. It veils what is behind it rather than
+   hiding it, so a document being replaced stays in place until the next one
+   arrives. The mark is olive-deep on paper, as the framework draws it. */
+.reader-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgb(241 239 227 / .86);
+  color: var(--accent, #333D22);
+}
+.reader-loader[hidden] { display: none; }
+.loader-mark { width: 56px; height: 56px; overflow: visible; }
+/* The one ambient animation on this page: the ring turns, slowly, around the
+   centre of the mark. */
+.loader-ring {
+  transform-box: view-box;
+  transform-origin: 24px 24px;
+  animation: loader-turn 2.4s linear infinite;
+}
+@keyframes loader-turn { to { transform: rotate(360deg); } }
+.loader-text { color: var(--ink); font-size: 14px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .loader-ring { animation: none; }
+}
 .compare-toggle {
   min-height: 34px;
   padding: 8px 14px;
@@ -1559,6 +1589,37 @@ body.sidebar-collapsed .sidebar-resizer {
 .tier-toggle.unreachable:hover { color: var(--faint); border-color: transparent; }
 .legend-mark.defining { width: 5px; }
 .document-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; scroll-behavior: smooth; }
+
+/* Back to the top: a small round button in the column's top right corner,
+   held there while the text scrolls under it. */
+.to-top-holder {
+  position: sticky;
+  top: 10px;
+  z-index: 4;
+  height: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 14px;
+  pointer-events: none;
+}
+.to-top {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: var(--paper, #F1EFE3);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.to-top[hidden] { display: none; }
+.to-top svg { width: 15px; height: 15px; }
+.to-top:hover { background: var(--energy); border-color: var(--energy); }
+.to-top:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 
 /* Half the window of text, a quarter of it either side.
  *
@@ -2222,19 +2283,6 @@ body.no-behaviours .sidebar-export { display: none; }
 }
 /* The display above would otherwise beat the hidden attribute. */
 .document-translation[hidden] { display: none; }
-/* The band beside it, in the same chrome and without the rust rule. The notice
-   above warns about the text a reader is looking at; this states two facts about
-   the document, so it is drawn quietly. */
-.document-context {
-  margin: 0;
-  padding: 6px 12px 6px 22px;
-  border-bottom: 1px solid var(--line-light);
-  background: var(--chrome-deep);
-  color: var(--ink);
-  font-size: 11px;
-  line-height: 1.4;
-  text-align: left;
-}
 .translation-text { flex: 1; min-width: 0; }
 /* The notice's close control: a plain ×, in the band's own ink, centred at its
    right end. The negative margins keep the band no taller for it. */

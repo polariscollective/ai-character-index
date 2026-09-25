@@ -16,6 +16,9 @@ These hold for every page, not only where they were raised.
   criterion readings and behaviour readings talk about that document alone. The
   one place a comparison belongs is the fold "How it stands beside the other
   constitutions" inside a behaviour's popover, which says so in its title.
+  Broken again in the overview's first readings and fixed: the rule now opens
+  the repository's `CLAUDE.md`, and `tests/test_company_texts_are_absolute.py`
+  fails when a company's text names another company.
 - **Every figure on a board is out of 10.** A score given on a scale of its own
   is shown as its share of that scale, and the popover says the score as given.
 - **A row above others is their weighted average**, and each row says under its

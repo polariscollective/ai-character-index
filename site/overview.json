@@ -1,0 +1,183 @@
+{
+ "format": 2,
+ "page": {
+  "title": "Overview",
+  "intro": "Some AI companies write down how their models should behave, in a document we call a **constitution**. It is the nearest thing to a **rulebook** the public can see. For it to mean anything, it has to be **published** and **clear** enough for an independent organisation to test a model against it, and the company has to show that it trains its models on these rules and that they actually follow them. We think **every company** that builds these models should publish one, answer for what it says, and govern it properly. [More on why it matters](/about#why).\n\nYou can read every published constitution in full in the [doc reader](/doc-reader/), passage by passage, with the parts that bear on each behaviour marked. [What the constitutions say](/index) looks at **the document**: how clearly it settles conflicts between its own rules, and how deeply it covers the behaviours a model should show, a list that is not exhaustive and that we are still adding to. [How constitutions are governed](/index?view=governance) looks at **the company**: what it publishes about its constitution, and how far it holds its models to it.[1](#ovw-note-1) The method comes from working papers and Polaris Collective runs it.",
+  "sections": []
+ },
+ "grid": {
+  "caption": "Four figures of the index for nine companies, each shown against the other companies or as a score out of 10",
+  "groups": [
+   {
+    "name": "What the constitutions say",
+    "href": "/index#cov-chart",
+    "rows": [
+     {
+      "board": "constitutions",
+      "figure": "whole",
+      "name": "Document as a whole",
+      "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, and whether it contradicts itself.",
+      "zero": "None"
+     },
+     {
+      "board": "constitutions",
+      "figure": "behaviours",
+      "name": "Behaviours covered",
+      "plain": "How deeply the constitution addresses fourteen behaviours a model should show.",
+      "zero": "None"
+     }
+    ],
+    "final": {
+     "board": "constitutions",
+     "figure": "final",
+     "plain": "The document as a whole and the behaviours it covers, together.",
+     "zero": "None"
+    }
+   },
+   {
+    "name": "How constitutions are governed",
+    "href": "/index?view=governance#gov-chart",
+    "rows": [
+     {
+      "board": "governance",
+      "figure": "published",
+      "name": "What is published",
+      "plain": "Whether the company publishes a constitution for its models, a log of its changes, and its guardrails and hard constraints.",
+      "zero": "None"
+     },
+     {
+      "board": "governance",
+      "figure": "engages",
+      "name": "What it engages",
+      "plain": "What the company says about training its models on the constitution, testing them against it and controlling its changes.",
+      "zero": "None"
+     }
+    ],
+    "final": {
+     "board": "governance",
+     "figure": "total",
+     "plain": "What the company publishes about its constitution and how far it binds its models to it, together.",
+     "zero": "None"
+    }
+   }
+  ],
+  "tiers": [
+   {
+    "name": "Best in class",
+    "from": 0.85
+   },
+   {
+    "name": "Middle tier",
+    "from": 0.5
+   },
+   {
+    "name": "Behind",
+    "from": 0
+   }
+  ],
+  "relative_note": "Each company against the best score on the same row. Best in class is within 15% of that score, middle tier within half of it, and behind is further off.",
+  "hint": "Press a cell to see the score behind it.",
+  "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
+  "notes": [
+   {
+    "title": "Our ambition",
+    "text": "We are working on two more views. How constitutions are regulated will follow how far laws and regulators refer to these documents and ask companies to keep them. Adherence of models to constitutions will carry the results of independent organisations testing whether a model actually behaves as its constitution says."
+   }
+  ]
+ },
+ "takeaways": [
+  {
+   "title": "Three of nine companies publish a constitution",
+   "text": "OpenAI, Anthropic and Alibaba publish one. Google DeepMind, Meta, xAI, Mistral AI, Moonshot AI and DeepSeek do not, so their models answer to no written rules that anyone outside can read. A document of this kind may exist inside a company without being released."
+  },
+  {
+   "title": "Almost every company is weak on change",
+   "text": "In our reading, no company's public change log says in full what it covers and how soon a change is recorded, and even the best falls well short of it. We found no company that commits to warn the public before weakening one of the things its model must never do, and every weakening we found went out without notice."
+  },
+  {
+   "title": "No company says which rules apply to governments and armed forces",
+   "text": "We found no company that publishes the rules its models follow once they are deployed for governments or defence. Anthropic writes that some models built for specialised uses do not fully fit its constitution, and a spokesperson has said its military models may not be trained on it. Meta opened its models to NATO while its own policy still forbids military uses, and Mistral AI's usage policy does not apply to models run on a customer's own infrastructure."
+  },
+  {
+   "title": "Two companies have agreed to write this document for a regulator, and not for the public",
+   "text": "Google and Mistral AI have signed all of the EU's General-Purpose AI Code of Practice. For any model that carries systemic risk, it asks the provider to give the EU AI Office a report setting out the principles the model is meant to follow, how it ranks principles and instructions, the topics it refuses and its system prompt. The report itself is not public: the Code asks only for summaries to be published where needed, and sets no date. These asks belong in regulation as well as in voluntary commitments."
+  },
+  {
+   "title": "OpenAI and Anthropic stand out, and still fall short on governance",
+   "text": "OpenAI is best in class on every figure and Anthropic on all but one. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba's constitution is well built, but it says nothing about which models it governs."
+  },
+  {
+   "title": "The scores measure clarity and openness, not how good a model is",
+   "text": "They reward a document that states its rules explicitly and a company that shows its work. Anthropic's lower standing on the document as a whole reflects a choice to apply its ranked values with judgement rather than strictly, and a clearer document is not proof of a better model. There is no agreed standard yet for a good constitution. This index is a first attempt at one, and we want to hear where it is wrong."
+  }
+ ],
+ "summaries": {
+  "openai": {
+   "profile": "OpenAI publishes a constitution, the Model Spec, that is explicit throughout: it ranks every instruction by who gave it and says how firm most of its rules are. It is openly licensed and keeps its past versions. The rest of its governance is thinner, with a change log that explains changes only in part and almost nothing published on testing models against the document.",
+   "constitutions": "A strong document on both counts. It settles conflicts by rank, leaves no contradiction unsettled and covers the behaviours in depth, above all helpfulness and honesty. Its thinnest area is autonomy and oversight, including concentrations of power and secret loyalties.",
+   "whole": "Close to full marks on every criterion. Conflicts are settled by rank, each rule's force is stated, every situation checked has rules of its own and no contradiction stands. Reasons are the one gap: they run through the safety rules and stop at the formatting rules.",
+   "behaviours": "Deep on helpfulness and judgement and on honesty, with rules and worked examples, and well covered on harm and safety. Autonomy and oversight is its weakest category, with little on concentrations of power and secret loyalties.",
+   "governance": "About half marks. The constitution itself is public, openly licensed and versioned, and the company says the published text is the one its models are trained on and used with. What is missing is testing: few adherence tests are published and no outside testers are named.",
+   "published": "The Model Spec is public under an open licence, at a dated address with its past versions, and says what it covers. The change log, the guardrails and the hard constraints are documented only in part, and special deployments such as government use are barely addressed.",
+   "engages": "Strong on training and use: the published text is the one used inside the company, and models are monitored in use. Change control is partial, and testing is almost absent, with few published adherence tests and no outside testers or release threshold."
+  },
+  "anthropic": {
+   "profile": "Anthropic publishes Claude's Constitution, a long document that explains its reasons and covers the behaviours in depth, while applying the order of its core values holistically rather than strictly, by design. It is openly licensed, names the models it covers, and the company says its models are trained on it. Its record of changes is weak, and little is published on testing.",
+   "constitutions": "Deep on the behaviours and less explicit as a document. It covers harm, helpfulness and oversight in depth, but it applies the order of its values holistically by design, so it rarely says in advance how a given conflict resolves.",
+   "whole": "Its strength is reasons: nearly every rule says why it exists. It is weaker on which rule wins, on how firm each rule is and on the situations it covers, and one contradiction stays unsettled, partly because it is written to leave room for judgement.",
+   "behaviours": "Deep on helpfulness and judgement and on harm and safety, and solid on autonomy and oversight. Honesty is covered less evenly, with little on sycophancy and on secret loyalties.",
+   "governance": "About half marks. The constitution is public, openly licensed and says which models it covers, and the company says its models are trained on it and that the same text is used inside. The change log is weak, nothing is published on change control, and testing is barely documented.",
+   "published": "The constitution is public under an open licence, names the models it covers and lists its hard constraints in full. The change log is the weak point: past versions are hard to find and changes are not explained.",
+   "engages": "Strong on training and use: models are trained on the constitution, the same text is used inside and models are monitored in use. Nothing is published on change control, and little on testing against the document.",
+   "notes": {
+    "whole": "This row rewards a document that says plainly which rule wins when two of its rules conflict. Claude's Constitution chooses instead to rank its values and leave their application to the model's judgement, and that choice is what holds this figure back. We prefer clarity, because it is what lets anyone test a model against what its constitution says. That preference is ours, and it is open to challenge."
+   }
+  },
+  "alibaba": {
+   "profile": "Alibaba's Model Spec is a well-built rulebook that settles conflicts explicitly, but it comes from a research lab and names no model it governs. Almost nothing is published about how it is maintained or applied, so the document is strong and its governance weak.",
+   "constitutions": "A strong document. It is explicit about which rule wins, its rules are firm and no contradiction is left unsettled, and it covers helpfulness and honesty well. Its gaps are reasons, which few rules give, and autonomy and oversight, especially secret loyalties.",
+   "whole": "Clear about which rule wins and how firm each rule is, with rules for nearly every situation checked and no unsettled contradiction. Reasons are its weak point: mostly only the strictest rules say why they exist.",
+   "behaviours": "Deep on helpfulness and judgement and on honesty, and good on harm and safety. Autonomy and oversight is its weakest category, with very little on secret loyalties.",
+   "governance": "Low. The document is public and lists its hard constraints, but it names no model it covers, has no change log and carries no open licence. There is little sign of it being trained on, tested against or controlled.",
+   "published": "The constitution is public and lists its hard constraints. It names no model it covers, keeps no change log and carries no open licence, and its guardrails are only partly described.",
+   "engages": "Only a little on training: some sign that models are trained on the document and that the same text is used inside. Nothing on testing or change control.",
+   "caveat": "It was published by Alibaba's AI governance laboratory (AAIG), a research lab, and not by the teams that build the Qwen models. The only model we found publicly built to it is Oyster-II, a research model, and as of September 2026 nothing public ties it to a model in production."
+  },
+  "google": {
+   "profile": "Google DeepMind publishes no constitution. Its rules are spread across several documents with different owners, and it describes the guardrails it offers developers in detail. There is little on how its rules change or how its models are held to them.",
+   "governance": "Low. There is no single constitution, a detailed account of developer guardrails and almost no record of changes, with some outside testing and training against internal policies that no published document ties together.",
+   "published": "No single constitution: its rules are spread across several documents. The guardrails it offers developers are described in detail, while hard constraints and changes are barely documented.",
+   "engages": "Some outside testing, and some training and monitoring against internal policies. Nothing on change control."
+  },
+  "mistral": {
+   "profile": "Mistral AI publishes no constitution. What it documents is the guardrails it offers developers, with some record of how they change, and nothing on how its models are trained, tested or held to written rules.",
+   "governance": "Very low. Its points come from the guardrails it offers developers and some record of their changes. Nothing is published on training, testing or change control.",
+   "published": "No constitution. The guardrails it offers developers are well described, with some record of their changes, and there is almost nothing on hard constraints.",
+   "engages": "Nothing found on training, testing or change control."
+  },
+  "meta": {
+   "profile": "Meta publishes no constitution, but has committed in writing to publish one. It says more about testing and training its models than about any written rules.",
+   "governance": "Low. Almost nothing is published about its rules, but it describes some adherence testing, outside testers and training against internal policies.",
+   "published": "Almost nothing: no constitution, no list of hard constraints and only a short record of versions.",
+   "engages": "Some published adherence testing and outside testers, and training and monitoring against internal policies. Nothing on change control."
+  },
+  "xai": {
+   "profile": "xAI publishes no constitution. Its policies govern users rather than the model, and what it describes of its guardrails and testing is partial.",
+   "governance": "Low. Partial accounts of its guardrails and of its change log, with some outside testing and training against internal policies.",
+   "published": "No constitution and no list of hard constraints, with a partial account of its guardrails and of what its change log covers.",
+   "engages": "Some outside testing, and some training and monitoring against internal policies. Nothing on change control."
+  },
+  "moonshot": {
+   "profile": "Moonshot AI publishes no constitution: the nearest thing is a default system prompt in its developer guide. Little is published about its rules, how they change or how its models are held to them.",
+   "governance": "Low. A default system prompt, a partial record of changes and some published adherence testing.",
+   "published": "No constitution beyond a default system prompt, with a partial record of changes and little on guardrails.",
+   "engages": "Some published adherence testing and some training against internal policies. Nothing on change control."
+  },
+  "deepseek": {
+   "profile": "DeepSeek publishes no constitution. Its only relevant document is the disclosure its regulator requires, and almost nothing is published on how its models are governed.",
+   "governance": "Very low: only the disclosure its regulator requires and a description of training against an internal policy.",
+   "published": "No constitution. There is only the disclosure its regulator requires and a little on guardrails.",
+   "engages": "Only a description of training against an internal policy."
+  }
+ }
+}

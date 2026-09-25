@@ -48,7 +48,7 @@ from store import Store             # noqa: E402
 h = link_call.h
 
 PROMPT = HERE / "prompts" / "overview-v1.txt"
-DEFAULT_OUT = ROOT / "site" / "overview.json"
+DEFAULT_OUT = ROOT / "artefacts" / "standing.json"
 CHARS_PER_TOKEN = 4
 OUTPUT_TOKENS = 420          # 250 words, with room to breathe
 SEAT = "opus-5"              # the seat the pairwise comparisons were written by

@@ -191,7 +191,7 @@ function rankLine(column) {
 /* Every address out of this page carries the pin, or the reader would open on
  * the publication the site happens to serve rather than the one on screen. */
 const readerLink = params =>
-  `/spec-reader/?${new URLSearchParams({ ...params, ...(PIN ? { publication: PIN } : {}) })}`;
+  `/doc-reader/?${new URLSearchParams({ ...params, ...(PIN ? { publication: PIN } : {}) })}`;
 
 /* "OpenAI: harm and safety", keeping a leading acronym as it is. */
 const lowerFirst = text =>
