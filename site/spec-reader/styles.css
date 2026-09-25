@@ -1150,6 +1150,7 @@ body.sidebar-collapsed .chevron { transform: scaleX(-1); }
 body.sidebar-collapsed .eyebrow,
 body.sidebar-collapsed .behaviour-toolbar,
 body.sidebar-collapsed .behaviour-list,
+body.sidebar-collapsed .behaviour-propose,
 body.sidebar-collapsed .sidebar-export,
 body.sidebar-collapsed .sidebar-key,
 body.sidebar-collapsed .sidebar-run {
