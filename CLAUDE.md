@@ -1665,6 +1665,32 @@ The MCP server reads the same columns. `constitutions_board` and
 one `/coverage` rebuilds from the payload. A publication without boards answers
 that it is not compatible, as the page does.
 
+### The owner can correct a band or a depth by hand
+
+Since 25 September 2026 a correction is one more judge, called `manual`. It is
+a call of `aci_judge_calls` in the run that holds the cell, with a verdict in
+`aci_judgements` for each paragraph corrected (3 defining, 2 core, 1 related, 0
+taken off) and its reason in the new `note` column, and a depth in
+`aci_depths_out_of_ten` with its reason in `rationale`. `engine/manual_review.py`
+writes them; the owner asks and the assistant runs it.
+
+The manual call is not a seat. Choosing cells, a cell's depths, the depth pass
+and the publication trigger all leave it out
+(`20260925120000_aci_a_manual_review_is_one_more_judge.sql`, `polaris-supabase`
+#58), and only a build given `--manual-review` reads its rows, recorded as
+`build_params.manual_review`. Every publication built before it rebuilds byte for
+byte whatever corrections exist.
+
+Where a correction exists it is the whole answer: the passage takes the manual
+band and is carried even where the judges' score would have dropped it, and the
+cell's depth is the manual figure with the judges' mean beside it as
+`judgesMean`. The judges' verdicts stay in the payload, the reader opens a
+corrected passage's votes on "Manual review: <band>. <note>", a corrected depth
+says it was corrected by hand from the judges' mean and why, and the MCP answers
+`manual_review` on both. A correction belongs to its run: a cell taken from a
+newer run does not carry it. The design is
+`docs/superpowers/specs/2026-09-25-manual-review-design.md`.
+
 ## Where the fork is heading
 
 Away from git as the gate, and it has arrived. The artifacts are in Supabase,
