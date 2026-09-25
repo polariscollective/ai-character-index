@@ -1481,11 +1481,18 @@ function renderBehaviourList() {
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(button => {
     button.addEventListener("click", async () => {
       const slug = button.dataset.behaviourDepth;
-      // The written reading of a depth rides with the links, which a single
-      // document does not ask for: this one behaviour's are fetched first.
-      await ensureBehaviours([slug], { links: true, paragraphs: false }).catch(() => {});
-      const behaviour = payloadBehaviours().find(b => b.slug === slug);
-      openDepthNote(button, depthFigureNote(behaviour, visibleDocuments().filter(Boolean)));
+      const documents = visibleDocuments().filter(Boolean);
+      let behaviour = payloadBehaviours().find(b => b.slug === slug);
+      // A publication built before its cells carried their notes has them only
+      // in the links, which a single document does not ask for: for that one,
+      // this behaviour's links are fetched first. A newer one has them here.
+      const inCells = documents.every(doc => behaviour?.coverage?.[doc.id]?.notes
+        || !behaviour?.coverage?.[doc.id]);
+      if (!inCells && !payloadCarriesCellNotes()) {
+        await ensureBehaviours([slug], { links: true, paragraphs: false }).catch(() => {});
+        behaviour = payloadBehaviours().find(b => b.slug === slug);
+      }
+      openDepthNote(button, depthFigureNote(behaviour, documents));
     });
   });
   updateBehaviourCount();
@@ -1579,11 +1586,15 @@ function depthCellNote(behaviour, doc) {
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
      * the judges as it always did rather than an empty heading. */
-    written: depthRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
+    // In the cell itself since the payload carries its notes (cell_notes);
+    // from the links for a publication built before that.
+    written: cellNote(behaviour, doc.id, "depth")
+      || depthRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
     /* How this document reads beside the others on this behaviour: the grid's
      * own passage for this cell. Unlike the pair comparison it is about one
      * document, so it is here whether or not anything is being compared. */
-    stands: overviewRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
+    stands: cellNote(behaviour, doc.id, "standing")
+      || overviewRows?.cells?.[`${behaviour?.slug}\n${doc.id}`]?.text || "",
     substitutions: (Array.isArray(recorded) ? recorded : [])
       .map(({ seat, substitute, reason }) =>
         `${substitute} judged in place of ${seat}: ${endedSentence(reason)}`),
@@ -1592,6 +1603,20 @@ function depthCellNote(behaviour, doc) {
           judge, depth: given.depth, rationale: given.rationale || "" }))
       : [],
   };
+}
+
+/* A written note carried in the payload's own cell, or "" where the
+ * publication carries it only in its links. */
+function cellNote(behaviour, documentId, kind) {
+  return behaviour?.coverage?.[documentId]?.notes?.[kind] || "";
+}
+
+/* Whether the publication on screen carries its notes in its cells at all. A
+ * cell with no note is then a cell nobody wrote one for, and the links would
+ * have nothing more to say about it. */
+function payloadCarriesCellNotes() {
+  return (state.rawBehaviours || []).some(behaviour =>
+    Object.values(behaviour.coverage || {}).some(cell => cell?.notes));
 }
 
 /* What one figure opens. Comparing, the figure is a pair and so is the note:

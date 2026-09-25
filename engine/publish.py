@@ -342,6 +342,38 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
     return json.loads(raw), hashlib.sha256(raw).hexdigest()
 
 
+def with_cell_notes(payload, links):
+    """The payload with each cell's written notes in the cell itself.
+
+    A note on a depth ("why this depth") and a note on how a document stands
+    beside the others are about one behaviour on one document, which is what a
+    cell of the payload is. They were only ever carried by the links, because
+    the links builder is what reads them, so a reader who did not compare had to
+    fetch every link to read one note. Copied from the links as that builder
+    wrote them, not read a second way: a second copy of the notes' assembly is
+    the kind of duplicate that has already published wrong figures here.
+
+    Returns the payload and its digest, serialised as FORMATS says, which is
+    what the verifier recomputes. Only a publication that records
+    `cell_notes` is built this way, so every publication before it rebuilds
+    to its bytes. The links keep their notes as well, for a reader of an older
+    publication.
+    """
+    notes = (links or {}).get("notes") or {}
+    for behaviour in payload.get("behaviours") or []:
+        for document_id, cell in (behaviour.get("coverage") or {}).items():
+            if not isinstance(cell, dict):
+                continue
+            key = f"{behaviour.get('slug')}\n{document_id}"
+            carried = {kind: (notes.get(kind) or {}).get(key, {}).get("text")
+                       for kind in ("depth", "standing")}
+            carried = {kind: text for kind, text in carried.items() if text}
+            if carried:
+                cell["notes"] = carried
+    raw = json.dumps(payload, **FORMATS["payload"]).encode()
+    return payload, hashlib.sha256(raw).hexdigest()
+
+
 def document_note_prompts(store, out_of_ten=False):
     """The prompt digests of the document notes a publication pins.
 
@@ -412,6 +444,7 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     links, links_sha256 = build("links", cells, behaviours,
                                 link_runs=link_runs, note_prompts=note_prompts,
                                 comparisons=not out_of_ten)
+    payload, payload_sha256 = with_cell_notes(payload, links)
 
     # The two boards and the overview, frozen as they stand. `boards` maps one
     # to another file, for tests; every one is carried either way.
@@ -422,7 +455,9 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
                     "panel": panel_name, "rubric": rubric,
                     "run_date": run_date,
                     "link_runs": sorted(link_runs),
-                    "note_prompts": note_prompts}
+                    "note_prompts": note_prompts,
+                    # The written notes are in the payload's cells (with_cell_notes).
+                    "cell_notes": True}
     # Recorded only when given, so a publication that named none of them records
     # what every publication before them recorded, and is rebuilt the same way.
     if depth_prompt is not None:

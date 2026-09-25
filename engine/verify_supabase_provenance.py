@@ -139,19 +139,25 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
                  ("assessment_run_id", "assessment_run"),
                  ("comparisons", "comparisons"))
                 if key in params}
+    built = {}
     for name in ("payload", "documents", "links"):
         if publication.get(name) is None:
             continue
         label = f"the {name} rebuilds from the publication's cells to its stored digest"
         try:
-            _built, got = publish.build(name, cells, params.get("behaviours") or [],
+            built[name] = publish.build(name, cells, params.get("behaviours") or [],
                                         run_date, panel_name,
                                         link_runs=params.get("link_runs") or (),
                                         note_prompts=params.get("note_prompts"),
                                         **recorded)
         except SystemExit as refused:
             report(False, label, (str(refused).strip().splitlines() or ["no output"])[-1])
-            continue
+    # A publication that records cell_notes carries the written notes in its
+    # payload's cells, copied from its links as publish.py copies them.
+    if params.get("cell_notes") and "payload" in built and "links" in built:
+        built["payload"] = publish.with_cell_notes(built["payload"][0], built["links"][0])
+    for name, (_built, got) in built.items():
+        label = f"the {name} rebuilds from the publication's cells to its stored digest"
         want = publication[f"{name}_sha256"]
         report(got == want, label,
                "unchanged" if got == want else f"{got[:16]} against {want[:16]}")
