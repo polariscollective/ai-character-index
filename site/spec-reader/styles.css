@@ -1797,9 +1797,11 @@ body.sidebar-collapsed .sidebar-resizer {
   font-weight: 600;
 }
 .document-body .raw-table { overflow: auto; font-family: var(--mono); font-size: 11px; white-space: pre; }
-/* The band over a version no panel has read yet: the translation's band, with the
-   framework's green for its rule and a green wash for its ground. */
-.analysis-band { border-left-color: var(--energy); background: var(--accent-soft); }
+/* The band over a version no panel has read yet: the translation's band, ground
+   and all, with only its left rule in the framework's olive green. Olive rather
+   than chartreuse because a rule is a mark and needs 3:1 on the band's ground:
+   chartreuse on --chrome-deep is well under it, olive clears it. */
+.analysis-band { border-left-color: var(--muted); }
 
 /* Every document on screen under analysis: the behaviours are listed, not offered. */
 .behaviour-list.under-analysis .behaviour-option { opacity: .55; cursor: default; }
