@@ -23,6 +23,7 @@
  */
 
 import { isLocal, readsFiles, setReadsFiles } from "./publication-data.js";
+import { keepPosted } from "./keep-posted.js";
 
 const STYLE = `
 .dev-tag {
@@ -91,6 +92,7 @@ const STYLE = `
 .dev-note p:last-of-type { margin-bottom: 14px; }
 .dev-note a { color: #23281B; text-decoration: underline 2px #B7C94B; text-underline-offset: 3px; }
 .dev-note a:hover { background: #B7C94B; }
+.dev-note .dev-keep { margin: 4px 0 16px; padding-top: 12px; border-top: 1px solid rgb(92 107 60 / .25); }
 .dev-note .dev-close {
   padding: 6px 14px;
   border: 1px solid #5C6B3C;
@@ -183,6 +185,11 @@ function build(brand) {
   const title = document.createElement("h2");
   title.textContent = "Confidential, work in progress";
   note.append(title, ...LINES.map(paragraph));
+  // A reader who wants to know when the index is released leaves an address
+  // here, filed as a note (keep-posted.js).
+  const posted = keepPosted("Hear about updates and the official release.");
+  posted.classList.add("dev-keep");
+  note.append(posted);
 
   const close = document.createElement("button");
   close.type = "button";
