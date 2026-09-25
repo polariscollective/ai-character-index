@@ -1,0 +1,40 @@
+/* The loader: the Polaris mark with its ring turning, and a line beside it
+   saying what is loading, centred across whatever is loading.
+
+   A stylesheet of its own, linked in the head of every page, so a loader
+   written into a page's markup is drawn centred from the first paint. Injected
+   by a script instead, it waited for that script, and a page whose modules
+   arrived in another order showed its loader unstyled, at the top left, for as
+   long as they took. site/loader.js writes the markup this styles. */
+.site-loading:has(> .site-loader-mark) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* Centred across the whole of what is loading: the elements that carry a
+     loader keep a reading measure of their own, which would centre it on a
+     column of text instead. */
+  width: 100%;
+  max-width: none;
+  min-height: 140px;
+  margin-left: 0;
+  margin-right: 0;
+  color: #333D22;
+  text-align: center;
+}
+.site-loader-mark { flex: none; width: 26px; height: 26px; overflow: visible; }
+.site-loader-ring {
+  transform-box: view-box;
+  transform-origin: 24px 24px;
+  animation: site-loader-turn 2.4s linear infinite;
+}
+@keyframes site-loader-turn { to { transform: rotate(360deg); } }
+.site-loader-text {
+  line-height: 1;
+  color: #23281B;
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) { .site-loader-ring { animation: none; } }
