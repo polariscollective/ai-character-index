@@ -28,7 +28,14 @@ import { keepPosted } from "./keep-posted.js";
 const STYLE = `
 /* Before the menu, it takes the free width on its left, so it sits against the
    menu rather than in the middle of the header. */
-.dev-tag.beside-menu { margin-left: auto; margin-right: 18px; }
+.dev-tag.beside-menu {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;
+}
+/* Where the header is too narrow for the name, the tag and the menu side by
+   side, the tag goes back into the flow, just before the menu. */
+@media (max-width: 900px) {
+  .dev-tag.beside-menu { position: static; transform: none; margin-left: auto; margin-right: 12px; }
+}
 .dev-tag {
   align-self: center;
   margin-left: 2px;
@@ -214,11 +221,14 @@ function build(brand) {
   tag.title = "What this means";
   tag.addEventListener("click", () => note.showModal());
 
-  // At the right of the header, just before the menu, rather than beside the
-  // name: the name and the publication's date read as one block, and the tag is
-  // about the whole site. Beside the name still where a page has no menu.
-  const nav = brand.closest(".site-header")?.querySelector("nav");
+  // In the middle of the whole header rather than beside the name: the name and
+  // the publication's date read as one block, and the tag is about the whole
+  // site. Centred on the header's width, not on the space the name and the menu
+  // leave. Beside the name still where a page has no menu.
+  const header = brand.closest(".site-header");
+  const nav = header?.querySelector("nav");
   if (nav) {
+    if (getComputedStyle(header).position === "static") header.style.position = "relative";
     tag.classList.add("beside-menu");
     nav.before(tag);
   } else {
