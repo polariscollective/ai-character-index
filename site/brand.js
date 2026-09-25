@@ -21,6 +21,8 @@
  * keeps its own stylesheet, so this builds its own nodes and its own style.
  */
 
+import { styleLoaders, loaderNode } from "./loader.js";
+
 const ABOUT = "/about";
 /* Where the published index lives, for a reader on the development version. */
 const PUBLISHED = "https://ai-constitutions-index.polariscollective.org";
@@ -324,7 +326,7 @@ function closeButton() {
 async function whyTheNameNote(content) {
   const title = node("h2", "", "Why this name");
   title.id = "brand-pop-title";
-  content.append(title, node("p", "", "Loading."));
+  content.append(title, loaderNode("Publication loading", "p"));
   const why = await whyTheName();
   content.replaceChildren(closeButton(), title);
   content.append(why || node("p", "",
@@ -571,6 +573,8 @@ function indexMenu() {
 }
 
 function start() {
+  // The loaders written into every page's markup take their style from here.
+  styleLoaders();
   document.addEventListener("click", carryPin, true);
   document.addEventListener("auxclick", carryPin, true);
   indexMenu();

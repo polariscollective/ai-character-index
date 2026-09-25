@@ -19,6 +19,7 @@
  * this version of the site: one sentence for every cause, shared with the front
  * page's boards. */
 import { INCOMPATIBLE } from "/publication-data.js";
+import { loaderMarkup } from "/loader.js";
 /* The depth scale a publication is on, its levels and what a figure on it is
  * called: one file for the whole site, so the reader and the boards cannot say
  * two different things about the same figure. */
@@ -1327,11 +1328,8 @@ function renderBehaviourList() {
    * page loads told a reader arriving on a cold server that it had nothing to
    * show. */
   if (empty && !state.payload) {
-    elements.behaviourList.innerHTML = `
-      <div class="behaviour-empty" aria-live="polite">
-        <strong>Loading the behaviours.</strong>
-        <p>The first visit after a quiet spell can take a few seconds.</p>
-      </div>`;
+    elements.behaviourList.innerHTML =
+      `<div class="site-loading" aria-live="polite">${loaderMarkup("Behaviours loading")}</div>`;
     updateExportControl();
     return;
   }
