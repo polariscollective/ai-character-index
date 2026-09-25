@@ -118,6 +118,10 @@ const STYLE = `
 }
 /* The mark a little larger, now that it stands beside two lines of name. */
 .site-header .site-brand .polaris-mark { width: 26px; height: 26px; }
+/* The ring's ink starts about 4px inside the mark's box, so the name sits that
+   much further from the left edge than the menu's last word from the right.
+   The menu takes the same 4px back, so both ends look the same distance in. */
+@media (min-width: 901px) { .site-header nav { padding-right: 4px; } }
 /* The date of the publication, written beside the wordmark rather than set in a
    pill: small, faint, with a thin underline that says it can be pressed. An
    older version alone takes a colour, the framework's one warm colour; a
