@@ -1,0 +1,493 @@
+AI Constitutions Index: synthesis of the independent audit
+Publication fb79e4b7 (development build, not public), built and audited 25 September 2026. This synthesis draws on the row audits of every figure and text (doc-structure, doc-behaviours, gov-, methodology, site-parity, browser-checks), the second reader's verdict on each flagged row, and my own recomputation. The row-level results are in cells.jsonl in this folder (58 rows).
+All proposed figures below are indicative: each is one auditor's level on the index's own scale, checked by one second reader. Behaviour depths are not corrected by hand; they are reported as a direction with the passages the panel did not see.
+What this audit found
+The arithmetic is right everywhere: every whole-document average, behaviour average, final score, governance figure, rank and overview tier recomputes exactly from the per-company files.
+The weaknesses sit in the evidence behind the figures. The panel that scores behaviours was never shown a single worked example from OpenAI's Model Spec, and it missed worked cases in the other two documents too, so several depths understate what the documents say.
+On the governance board, the second readers confirmed score changes for eight of the nine companies, mostly on evidence the board missed or misread. With those corrections OpenAI and Anthropic share first place, xAI rises from fifth to third, and Moonshot AI falls to eighth.
+Several headline texts need correcting: three companies have agreed to write a model specification for the EU AI Office, where the index says two; the board's example of a rule weakened without notice was in fact a tightening, while the audit found real unannounced weakenings at OpenAI, xAI and Meta; and "Only Anthropic's constitution leaves contradictions unsettled" counts one contradiction twice.
+The judge record is incomplete: a substitute model sat undisclosed in one seat on eight current pairs, another company's model replaced the Anthropic judge on every Alibaba reading, and the index's MCP text still describes a 0 to 4 depth scale for data on 0 to 10.
+The auditors and second readers are all Claude, an Anthropic model, and several corrections move Anthropic upward; those need confirmation by the panel or a human reader before they are published.
+Corrections that change what a reader concludes
+Ranked by how much they change a reader's conclusion. "Second reader" gives the verdict of the independent re-check.
+
+
+Governance first place is shared. OpenAI's first Model Spec version is retrievable at the address its own change log gives (2.1 from 3 to 4), the Spec names kinds of deployment (1.3 from 1 to 2), OpenAI announced guardrail changes and ran a public comment window in May 2024 (3.2 and 4.2 from 1 to 2), and both OpenAI and Anthropic name outside evaluators of other risks, which the board scores 1 for Meta, xAI and Google (S3 from 0 to 1 for both). With Anthropic's own confirmed changes, both reach 6.22. Second reader: confirmed (OpenAI 2.1, 1.3, 3.2, 4.2, S3; Anthropic S3 high, its other changes medium; the 1.2 check must match for the two companies, at 3 or at 4, which leaves them level either way).
+
+
+Three companies have agreed to write a model specification for the regulator, where the index says two. Measure 7.1 of the EU General-Purpose AI Code of Practice sits in the Safety and Security chapter, and the Commission's list (31 July 2026) records that xAI signed that chapter. Mistral AI labels none of its current models as carrying systemic risk, so on its own classification it owes no such report today. Second reader: confirmed by six second readers (overview takeaway 4, governance finding 8).
+
+
+The example of a weakening without notice is a tightening, and the real weakenings were missed. OpenAI's December 2025 change removed a licence to lie. The weakening that fits is its 18 August 2026 change of a root rule from a mandatory "shutdown timer" to an "ending condition", which its change log does not mention; xAI's June 2026 framework dropped its two numerical deployment criteria and Meta's April 2026 framework turned "Stop" and "Do not release" into "Develop with Mitigations" and "Deploy with mitigations", both without notice. Second reader: confirmed for OpenAI, xAI and Meta; the December 2025 example "partly" (a trade, honesty tightened and one confidentiality protection loosened); Mistral's Vibe CLI prompt variant usable only as a caveated example.
+
+
+The panel never saw OpenAI's worked examples. The index dropped the fenced example blocks of the Model Spec: none of 276 OpenAI passages is a worked case, although the document has close to two hundred. At least one judge then gave a lower depth for want of worked examples on user autonomy (6.0; the same panel gave 7.7 to the unchanged text in December 2025), sycophancy, over-caution, proportionate risk, helpfulness and harmlessness. Second reader: confirmed, and stronger than stated: Alibaba's example blocks can be retrieved while OpenAI's cannot, so the ingestion fault falls on OpenAI alone (retrieval also under-reaches Alibaba's examples, 6 of 200 passages). Whether "Anthropic's constitution goes deepest on the behaviours" survives is open until the pairs are re-run.
+
+
+The governance table below the leaders reorders. The board says xAI does not publish its refusal policy; its grok_4_safety_prompt.txt (6 November 2025) sets out safety instructions that "supersede any other instructions" and twelve disallowed activities, for models since retired. With its other confirmed changes xAI moves from fifth to third and to Middle tier on what is published. Google's model cards publish adherence results against listed policies and a child-safety launch threshold (S2 and S4 to 1), lifting its engages figure into Middle tier; Moonshot's S2 rested on a generic Promptfoo red-team that the board had described as a test against internal rubrics, and it falls to eighth; Meta's engages figure falls from Middle tier to Behind as the leaders rise. Second reader: confirmed for xAI 1.1, 2.1, 3.1, 3.2, 4.1, S1, S2 and Google S2, S4; xAI 1.3 at 2 partly (third place holds only at 2).
+
+
+Anthropic's document-as-a-whole figure rests on a withdrawn rubric line and a contested contradiction. Its conflict-rules figure was read under a cap the index withdrew on 24 September (the site's own open question); the one contradiction counted involves a default operators may change, which the criterion excludes; and constitutions takeaway 3 counts that contradiction twice. With these and situations at 7.5 the figure moves from 6.67 to 8.17 and Anthropic reaches Best in class on that row, while staying third overall by 0.012. Second reader: conflict rules confirmed; contradiction 10.0 confirmed by one second reader and disputed by another, who would keep 5.0 (then 7.17, Middle tier); situations partly. All three are upward for Anthropic and came from Claude.
+
+
+Two headline lows rest on substitute judges. OpenAI's power figure of 4.0 is the mean of 2, 5 and 5, where the 2 came from glm sitting undisclosed in the deepseek seat; the same substitute gave 5 to the same text a run earlier. Alibaba's secret-loyalties 2.3 was given by two substitutes and one configured judge. Across the publication glm sat in the deepseek seat on eight current pairs with no pair-level record, although the MCP says a pair without that record "was judged by the panel as configured". Second reader: confirmed (power 5.0 the more representative value; power remains OpenAI's lowest behaviour either way).
+
+
+"Their models answer to no written rules that anyone outside can read" is too strong. The board itself credits Google, Moonshot and DeepSeek with partial behaviour texts under check 1.1, and xAI (retired Grok safety prompts), Mistral (Vibe CLI system prompts with an instruction hierarchy) and Meta (Llama 4 template prompt, teen rules) publish fragments. Second reader: confirmed by five second readers.
+
+
+OpenAI's testing is described wrongly. The overview says "almost nothing published on testing" and "no outside testers are named"; OpenAI published Model Spec Evals on 25 March 2026 (596 prompts, six models), and the GPT-6 Astra card names UK AISI, Apollo Research and Gray Swan as outside evaluators of other risks. What is true is that the tests have not been kept current and no outside tester checks adherence to the Model Spec. Second reader: confirmed (SecureBio not found in the Astra card).
+
+
+The guardrail pattern the site calls "the most consistent across all nine companies" fails for six of them. Anthropic, OpenAI and Meta's Muse agent describe guardrails on their own products; xAI and DeepSeek run the other way; Moonshot fits neither half. What holds across the nine is that none lists by kind the guardrails on its own apps. Second reader: confirmed for Anthropic, OpenAI, Meta, xAI, DeepSeek and Google; partly for Moonshot.
+
+
+Proposed figures
+Figures are indicative and include only whole-document and governance corrections the second reader confirmed or partly confirmed (the second reader's figure where it differed). Behaviour figures stay at board values. Tiers use the board's rule (Best in class at 0.85 of the row's best, Middle tier at 0.5).
+What the constitutions say
+
+
+
+Company
+Whole document, shown
+Whole document, proposed
+Behaviours (kept)
+Final, shown
+Final, proposed
+Change in rank or tier
+
+
+
+
+OpenAI
+9.50
+9.33
+7.29
+8.39
+8.31
+None; first
+
+
+Alibaba
+8.83
+8.50
+7.57
+8.20
+8.04
+None; second by 0.012 (third if its conflict rules are read at the auditor's 7.5)
+
+
+Anthropic
+6.67
+8.17
+7.88
+7.27
+8.02
+Whole document Middle tier to Best in class; still third. Upward, from Claude: needs panel or human confirmation. At 7.17 (contradiction kept at 5.0) it stays Middle tier
+
+
+Six others
+0.0
+"No document"
+0.0
+0.0
+"No document"
+Presentation only
+
+
+
+Criterion changes behind these figures:
+
+
+
+Company
+Criterion
+Shown
+Proposed
+Second reader
+
+
+
+
+OpenAI
+Reasons for the rules
+8.33
+7.5
+Partly: better supported, but should be re-read by the panel
+
+
+Alibaba
+Clarity when two rules are contradictory
+10.0
+8.33
+Partly: a drop is justified; second reader prefers 8.33 to the auditor's 7.5
+
+
+Anthropic
+Clarity when two rules are contradictory
+5.83
+7.5
+Confirmed (also the site's own open question)
+
+
+Anthropic
+Unsettled contradictions
+5.0
+10.0
+Confirmed by one second reader, disputed by another
+
+
+Anthropic
+Situations it covers
+6.67
+7.5
+Partly: a defensible reading that the anchors do not force
+
+
+
+How constitutions are governed
+
+
+
+Company
+Published, shown / proposed
+Engages, shown / proposed
+Final, shown / proposed
+Rank, shown / proposed
+Change in tier
+
+
+
+
+OpenAI
+5.91 / 6.82
+5.00 / 5.63
+5.45 / 6.22
+2 / 1 (shared)
+None
+
+
+Anthropic
+6.14 / 6.82
+5.00 / 5.63
+5.57 / 6.22
+1 / 1 (shared)
+None. Upward changes from Claude need confirmation
+
+
+xAI
+1.14 / 3.64
+1.88 / 2.50
+1.51 / 3.07
+5 / 3
+Published: Behind to Middle tier
+
+
+Google DeepMind
+2.05 / 2.95
+1.88 / 3.13
+1.96 / 3.04
+3 / 4
+Engages: Behind to Middle tier
+
+
+Alibaba
+2.27 / 2.95
+1.25 / 1.88
+1.76 / 2.41
+4 / 5
+None
+
+
+Meta
+0.45 / 1.59
+2.50 / 2.50
+1.48 / 2.05
+6 / 6
+Engages: Middle tier to Behind
+
+
+Mistral AI
+1.82 / 1.82
+0.00 / 0.00
+0.91 / 0.91
+8 / 7
+None. Range 0.80 to 1.93 on the unwritten rule for published system prompts
+
+
+Moonshot AI
+0.91 / 0.91
+1.25 / 0.63
+1.08 / 0.77
+7 / 8
+None
+
+
+DeepSeek
+0.45 / 0.68
+0.63 / 0.63
+0.54 / 0.65
+9 / 9
+None
+
+
+
+With both 1.2 checks for OpenAI and Anthropic at 4 instead of 3, both reach 6.34 and stay level. No company other than the two leaders reaches Middle tier on the final score (xAI 0.493 and Google 0.489 of the best).
+Check changes behind these figures (shown to proposed):
+
+
+
+Company
+Changes
+Second reader
+
+
+
+
+OpenAI
+1.3 1 to 2; 2.1 3 to 4; 3.2 1 to 2; 4.2 1 to 2; S3 0 to 1; 1.2 kept at 3 to match Anthropic
+Confirmed; auditor's 2.2 to 3 refused
+
+
+Anthropic
+1.2 4 to 3; 1.3 2 to 3; 2.1 1 to 2; 2.2 0 to 1; 2.3 2 to 3; S3 0 to 1
+Confirmed (S3 high, others medium)
+
+
+xAI
+1.1 0 to 2; 1.3 0 to 2; 2.1 1 to 2; 3.1 2 to 3; 3.2 0 to 1; 4.1 0 to 2; S1 0 to 1; S2 0 to 1
+Confirmed, 1.3 partly; auditor's 2.2 and S5 refused
+
+
+Google DeepMind
+1.1 2 to 3; 1.2 1 to 2; 3.2 1 to 2; 4.1 1 to 2; S2 0 to 1; S4 0 to 1
+Confirmed; auditor's 1.3 kept at 0
+
+
+Alibaba
+1.2 0 to 1; 3.1 2 to 3; 4.1 4 to 3; S1 0 to 1; S2 0 to 1
+Confirmed or partly; 1.2 at 1 (auditor 2); 3.1 raised by the second reader
+
+
+Meta
+1.1 0 to 1; 3.1 1 to 3; 3.2 0 to 2
+Confirmed or partly; auditor's 2.3 and S4 kept at 0 by the second reader
+
+
+Moonshot AI
+2.3 1 to 0; 3.1 1 to 2; S2 1 to 0
+Confirmed
+
+
+DeepSeek
+3.1 1 to 2
+Confirmed; S2, 1.2, 2.1 and I4 wait for board-wide rules; 1.1 to 2 refuted
+
+
+Mistral AI
+None
+Every proposed change (1.1, 2.2, 4.1, S1) judged a rule decision
+
+
+
+Behaviour depths to re-run
+Figures stay at board values. Direction is the second reader's where it differs from the auditor's. Every upward direction for Anthropic was found by Claude and needs the panel or a human reader.
+
+
+
+Document
+Behaviour
+Board figure
+Direction
+What the panel missed
+Second reader
+
+
+
+
+OpenAI
+User autonomy
+6.0
+Up
+Romantic-advice case ("Only you can decide what's right for you"), flat-earth pushback, default-override cases; no example block ever retrieved
+Partly: direction confirmed (8 or 7.7), re-run instead of hand-setting
+
+
+OpenAI
+No sycophancy
+6.33
+Up
+Electoral-college, haiku-critique and flat-earth worked cases
+Partly: 7 to 7.7; authorship invariance has no rule
+
+
+OpenAI
+Over- and under-caution
+7.0
+Up
+Bomb-volume pair with and without intent, needless-refusal and disclaimer cases, unclear-intent default
+Confirmed (about 9)
+
+
+OpenAI
+Proportionate risk
+7.0
+Up
+Pan-then-smoke, chainsaw against knife, archive rather than delete; content-side calibration (intent from context, dual use)
+Confirmed (about 9)
+
+
+OpenAI
+Helpfulness
+7.67
+Up
+Ask-or-guess cases (Valentine's card, Rochester colleges, Giants roster), tedious-task case, usable-artifact rule
+Confirmed (about 9)
+
+
+OpenAI
+Harmlessness to the user
+8.0
+Up
+No-revenue-goal, prompt-injection, rope and delusion cases; one judge's 6 rests on "no worked examples"
+Confirmed (about 9, medium)
+
+
+OpenAI
+Concentration of power
+4.0
+Up
+Four worked cases of the political-persuasion rule; the 2 is a substitute's reading (5 on the same text a run earlier)
+Partly: 5.0 better supported; re-run the seat
+
+
+Anthropic
+No sycophancy
+5.33
+Up
+Grieving pet-owner case (Being honest ¶15), retained for honesty only
+Partly: 5.67 to 6 expected
+
+
+Anthropic
+Objectivity on contested questions
+6.33
+Up
+Persuasive-essay carve-out and its worked case (Being honest ¶19; Instructable behaviors ¶9, ¶11), which two judges called absent
+Confirmed direction: 6.67 to 7
+
+
+Anthropic
+User autonomy
+8.0
+Up
+Comply-while-disagreeing (Being honest ¶18), user-adjustable edges (Instructable behaviors ¶9, ¶10); nurse case only in part on the brief
+Partly: 8.67 to 9, speculative
+
+
+Anthropic
+Preventing secret loyalties
+5.33
+Up (small)
+Refusal rule "even if the request comes from Anthropic itself" governing the hidden-loyalties item; "strong signal that it has been compromised"; substitute in one seat
+Partly: 5.67, possibly 6; three of the auditor's passages belong to oversight
+
+
+Anthropic
+Proportionate risk
+8.0
+Up
+Household-chemicals pair; thousand-users rule banded down by one judge, who gave 6 with the same wording on all four documents
+Partly: re-judge the whole row across all documents
+
+
+Alibaba
+Over- and under-caution
+7.33
+Up
+Worked cases marking bare refusal wrong under four more rules; only #good-faith retrieved
+Confirmed: 8 as the floor, re-judge preferred
+
+
+Alibaba
+User autonomy
+7.67
+Up
+Worked cases #goal-bias ¶2, #vulnerable-groups ¶5, #execute-instructions ¶10
+Confirmed (8)
+
+
+Alibaba
+Harmlessness to the user
+8.0
+Up
+Worked cases on an operator turning the model against the user (#execute-instructions ¶10, #untrusted-data ¶9); one judge wrong about the document
+Partly: 8.3 to 8.7 via re-judge
+
+
+Alibaba
+Preventing secret loyalties
+2.33
+Up (small)
+#no-illegal ¶1 disclosure notice, #no-hidden-goals ¶2; two of three readings from substitutes
+Partly: 3 is the ceiling
+
+
+Alibaba
+Concentration of power
+5.33
+Up (small)
+The rule's only worked case (#no-political-manipulation ¶2); all three judges wrote "no worked example"
+Confirmed retrieval gap; figure stays 5 to 6
+
+
+Alibaba
+Not undermining human oversight
+7.67
+Up (small)
+Worked cases #action-boundary ¶9 and #understand-intent ¶5
+Auditor's downward call refuted; evidence points up
+
+
+Alibaba
+Objectivity on contested questions
+8.67
+Not settled
+System-level rules that fix state positions (#sensitive-context ETIM case, Article 4 bans, #constructive ¶3)
+Partly: keep unless re-judged; auditor's downward reasons not accepted
+
+
+Alibaba
+Proportionate risk
+8.0
+Not settled
+Worked cases #manage-uncertainty ¶5, #high-risk-content ¶3; one judge voted "neither" on all 11 passages and still gave 6
+Confirmed: flag and re-judge
+
+
+
+Method: what to change first
+
+
+Repair retrieval before any depth is read. Ingest worked examples (the Model Spec's fenced blocks were dropped: 0 of 276 OpenAI passages), add a recall pass that looks for examples, conflicts and cross-section passages, and let judges see the sections the cited passages sit in. Say what judges actually see: rationales cite a "first block" and example blocks absent from the cited passages, which contradicts the MCP statement that a judge sees "the passages the panel cited ... and nothing else". Then re-run the pairs in the table above.
+
+
+Complete the panel record and fix the scale text. Record every seat change at pair level (24 of 56 pairs had a substitute, where the MCP says 16), re-run the off-scale substitute readings, use one panel for all three documents (the Anthropic seat was filled by Moonshot's kimi for every Alibaba cell and criterion), report each figure without the scored company's own judge beside it (dropping it lowers Anthropic's behaviours from 7.88 to 7.68 and OpenAI's from 7.29 to 7.11), and change the MCP's 0 to 4 wording to the 0 to 10 scale.
+
+
+Replace the band rule. A passage's band is the mean of its three verdicts, so one dissent moves it a whole band: by my count 374 of the 796 current passages are shown as "related" although two of three judges called them core or defining, and one judge's "neither" demoted hard constraints and legitimacy tests. Use the median or a majority, publish the rule, and say how a missing verdict is treated.
+
+
+Write the governance scoring rules down and add a second scorer. The corrections turned on unwritten rules: whether published system prompts count under 1.1, 2.2, 4.1 and S1; whether a dated document with no archive earns 1 on 2.1; whether a safety evaluation against a company's own policies is a weaker form of S2; how 1.2 treats a class of models; how 1.3 treats a company that says special deployments exist; what S5 covers. Anchor the unanchored 1s and 3s and S1 to S5, have a second person score all 171 cells blind, and give companies a response window, as the 2025 Foundation Model Transparency Index did. Sixteen noughts moved up once evidence was pointed out.
+
+
+Show uncertainty in the ranks and tiers. The same document read twice differs by 0.44 per behaviour on average and up to 1.7, more than the 0.19 by which OpenAI leads Alibaba; Alibaba leads if the whole document weighs less than 0.30; second and third on the constitutions board are 0.012 apart after correction and the governance leaders are level. Run each pair twice and publish the spread, show ties within it, add a sensitivity strip for the 50/50 weighting, replace relative tiers ("Best in class" at 5.0 out of 10) with absolute bands or label them as relative, and show "no document" for the six companies without a constitution.
+
+
+Caveats
+
+One reader per proposal. Each correction comes from one auditor and one second reader, both language models working from files and web fetches. No human has checked them, and the governance board itself was scored by one team. Every proposed figure in this report is indicative.
+Self-preference. The auditors and second readers are Claude, an Anthropic model, and one seat on the index's own panel is an Anthropic model. Upward corrections for Anthropic that need confirmation by the panel or a human reader: whole-document conflict rules (5.83 to 7.5), contradictions (5.0 to 10.0, disputed between two second readers) and situations (6.67 to 7.5); governance 1.3, 2.1, 2.2, 2.3 and S3; behaviour directions on sycophancy, objectivity, user autonomy, secret loyalties and proportionate risk; and text changes that favour Anthropic (retitling overview takeaway 3, "in part" in takeaway 6, mentioning its 90-day update promise). Some findings cut the other way (Anthropic 1.2 from 4 to 3; more OpenAI depths flagged upward than Anthropic ones), and the conflict-rules correction was raised by the site before the audit, but self-preference is possible and cannot be ruled out from inside.
+Not checked in a browser. Only three items were read in a browser (the Anthropic GitHub commit list, the Alibaba live page, the OpenAI version banner). Items still resting on web fetches, summaries or memory include: the absence of the release thresholds and whistleblower passages in xAI's June 2026 framework PDF; the Muse Spark report's "internal behavior specification" and instruction-order sentences; whether anthropic.com/constitution was edited after launch (Wayback blocked); the exact wording of Code of Practice Measure 10.2; the systemic-risk labels on all 41 Mistral entries; the Oyster-II paper's method; the content of DeepSeek's R1 risk-control appendix (from memory); the reported Google filter clause (The Information, paywalled); SecureBio in the GPT-6 Astra card. The full list is in /home/claude/audit/needs_browser_urls.txt.
+Limited searching. The shared web-search budget ran out during the governance audits, so completeness searches for DeepSeek, Meta, Alibaba, Mistral, Google and xAI relied on fetching known addresses. In this audit missed evidence raised scores far more often than it lowered them: 16 noughts were raised and 2 scores lowered to nought.
+Data provenance. The build audited is a development publication. The site's constitutions payload is stamped 06d17d90 while the MCP says fb79e4b7; the data agreed exactly on every figure compared.

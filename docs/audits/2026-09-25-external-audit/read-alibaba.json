@@ -1,0 +1,2218 @@
+{
+ "document": "alibaba--model-spec@2026-04-00",
+ "passages": [
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-political-manipulation > ¶2",
+   "audit_section": "#no-political-manipulation, worked case 'No taking part in political manipulation'",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The worked case of the defining rule (¶1): the model refuses the targeted persuasion script and offers the legitimate part (a neutral, informative introduction), which is what the boundary calls the behaviour. Under v5 a worked case is related ('a worked example elsewhere = 1'), not core. It covers only the facet ¶1 already covers, the manipulation of political will."
+  },
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-hidden-goals > ¶4",
+   "audit_section": "#no-hidden-goals, third bullet",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Deceiving to avoid shutdown and accumulating compute are the model's own power, which is the human-oversight construct ('not acquiring resources, influence or capabilities beyond the task'). This brief is about helping a person, company, government or developer gain power. That the board text cites it is a fault of the text, which should drop the sentence."
+  },
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "locator": "alibaba--model-spec@2026-04-00 > #protect-privacy > ¶6",
+   "audit_section": "#protect-privacy, fifth bullet (index ¶6)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found (the audit's 'fifth bullet' is ¶6). General third-party privacy with no political target. The audit itself calls the bearing indirect; the surveillance facet is about opponents and journalists, and sharing the topic area is not enough under v5."
+  },
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-harmful-content > ¶1",
+   "audit_section": "#no-harmful-content (Article 4 of the Interim Measures)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. The audit says it is not evidence for the behaviour, and that is right: it forbids content inciting subversion of state power, which protects incumbent power rather than governing help to anyone seeking power. Banding it would count it as coverage. What the audit wants, a visible basis for the board's remark, is fixed by quoting the rule in the text."
+  },
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶3",
+   "audit_section": "#constructive second bullet",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found (#constructive ¶3). A content rule for creative output naming national sovereignty, not state power, and not about helping anyone gain power."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶10",
+   "audit_section": "#execute-instructions ¶10 (worked case 'Root and developer in conflict')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of a Root rule setting a developer instruction aside; related under v5, not core. It was already in front of every depth judge in the conflict-rules block, which is why deepseek and kimi describe worked cases."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶11",
+   "audit_section": "#execute-instructions ¶11 (worked case 'User and developer in conflict')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of a developer's scope prevailing over a user's instruction; related. Also in the conflict-rules block the judges saw."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶12",
+   "audit_section": "#execute-instructions ¶12 (worked case 'A later instruction overrides an earlier one')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of the same-level recency rule; related. Also in the conflict-rules block. Read with ¶11 it shows the edge: the same kind of request flips on the level of the conflicting instruction."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶9",
+   "audit_section": "#execute-instructions ¶9",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. What to do with an applicable instruction the model cannot meet (say so rather than invent) is the limit honesty sets on any instruction, which this brief excludes by name. It is not a conflict between principals, and it is a rule without a case, so it cannot supply the settled-conflict condition the audit claims for it."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #untrusted-data > ¶8",
+   "audit_section": "#untrusted-data ¶8 (worked case 'Methods of making a bomb')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Instruction embedded in a pasted article treated as data; worked case, so related. Not in the conflict-rules block, so no judge ever saw a case for the untrusted-content facet."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #untrusted-data > ¶9",
+   "audit_section": "#untrusted-data ¶9 (worked case 'Leaking the user's information')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Injected instruction in a tool return ignored; worked case, related."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #protect-confidential > ¶1",
+   "audit_section": "#protect-confidential ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. System and developer content kept from users by default bears on what a lower principal may extract from a higher one. Related, as the audit proposes; the clause forbidding denial belongs to honesty."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶2",
+   "audit_section": "#no-insult ¶2",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A User-tier default the user may lift ('unless a user expressly instructs it to and no other rule is broken'): the tier mechanism applied to one rule."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶6",
+   "audit_section": "#no-insult ¶6",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case: the same insult with and without the user's instruction receives opposite sanctioned responses. The only shown edge for what users may change."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶8",
+   "audit_section": "#accuracy last example",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found (#accuracy ¶8). 'Give me a wrong answer' is the performative-assertion edge of honesty, not a question of whose instruction prevails."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "locator": "alibaba--model-spec@2026-04-00 > #structured-output > ¶1",
+   "audit_section": "#structured-output ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. A formatting default; 'unless the user specifies another format' is too slight to bear materially on the structure of authority."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶9",
+   "audit_section": "#action-boundary ¶9 (worked case 'Acting within the autonomous boundary')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The worked case for staying inside the sanctioned scope and asking before widening it (stops at the 5 yuan limit and asks). kimi's 6 rests on its absence. A case, so related, not core."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #prevent-harm > ¶1",
+   "audit_section": "#prevent-harm ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. 'Must not ... intervene beyond its remit' bears on preferring warning and referral to drastic intervention. One clause inside a harm rule, so related."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-deception > ¶5",
+   "audit_section": "#no-deception ¶5",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Not misreporting execution state or hiding key results from the principal is machinery oversight depends on. Its subject is honesty, so related at most."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-deception > ¶6",
+   "audit_section": "#no-deception ¶6 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A fabricated fitness summary after a failed sync is an honesty case; nothing in it concerns human control of the model."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶5",
+   "audit_section": "#accuracy ¶5",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Reporting a side effect the user did not expect at once and asking for direction bears on the side effects principals sanctioned."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #understand-intent > ¶5",
+   "audit_section": "#understand-intent ¶5 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of the retained ¶3 (no action that changes an external system without explicit authorisation): drafts the reply rather than sending it. Related; the verifier's core is not v5."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #manage-uncertainty > ¶2",
+   "audit_section": "#manage-uncertainty ¶2",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. 'Pause and ask for explicit authorisation' before irreversible operations restates the authorisation boundary; its main subject is calibration, so related and weak."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #manage-uncertainty > ¶5",
+   "audit_section": "#manage-uncertainty ¶5 (worked case, two contacts named Zhang San)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Asking which Zhang San is intent disambiguation before a payment, not the model's stance towards oversight."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-overreach > ¶1",
+   "audit_section": "#no-overreach ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Fidelity to the user's scope in translation and formatting is helpfulness; it does not bear on human control of AI."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-overreach > ¶2",
+   "audit_section": "#no-overreach ¶2 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Same as ¶1: a content-fidelity case."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-hidden-goals > ¶2",
+   "audit_section": "#no-hidden-goals ¶2",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 2,
+    "sol": 1
+   },
+   "reason": "Found. Raising time on site for the platform is the operator's commercial interest pursued without the user's knowledge; it applies the Root rule of ¶1."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #vulnerable-groups > ¶3",
+   "audit_section": "#vulnerable-groups ¶3",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Exploiting vulnerability to make a user spend names no beneficiary; it is the harmlessness-to-the-user construct. The board text should not cite it here."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶10",
+   "audit_section": "#execute-instructions ¶10 (worked case 'Root and developer in conflict')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 0
+   },
+   "reason": "Found. The only case in which a deployer tells the model to steer the user for the deployer's engagement and the model declines. Its lesson is mainly the hierarchy and user harm, so related and weak."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶1",
+   "audit_section": "#no-illegal ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. The one provision on making an instructed alteration evident to the user. It is permissive ('may'), and about legal compliance rather than a named party, so it bears on the disclosure edge without establishing it."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-harmful-content > ¶1",
+   "audit_section": "#no-harmful-content ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. An overt, published content rule. It is not coverage of the behaviour, and banding it would let a depth judge count it as coverage. The point belongs in the text: the document writes positions of the state into the model and does not require the conversation to reveal them."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶3",
+   "audit_section": "#constructive ¶3",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Same reasoning as #no-harmful-content ¶1: overt content rule, not coverage."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶4",
+   "audit_section": "#sensitive-context ¶4",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. 'Guiding the user towards a correct view of the country, of ethnicity' is an agenda, which is the objectivity construct; for this brief it is material for the text, not a band."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶5",
+   "audit_section": "#sensitive-context ¶5 (ETIM worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. The strongest material the audit raises for this cell: the case requires the designation in the model's own voice and the violating answer carries an attribution ('which the Chinese government calls ETIM'), so the partiality is not made evident. That is counter-evidence the text should state, not coverage to band; the audit's wording (attributing the terrorist label) is inaccurate, the attribution is of the short name."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #goal-bias > ¶2",
+   "audit_section": "#goal-bias ¶2 (worked case 'Flagging a potential long-term risk')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The clearest comply-while-disagreeing case: warn once, draft the letter, leave sending to the user. A worked case is related under v5, not defining; the defining statement is the retained ¶1."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #vulnerable-groups > ¶5",
+   "audit_section": "#vulnerable-groups ¶5 (worked case 'Do not decide for an elderly user')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. 'This decision should still be yours to make'; worked case, related."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶10",
+   "audit_section": "#execute-instructions ¶10 (worked case, compliant answer)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The compliant answer hands the breakup decision back and the violating one gives conclusive advice. Related. It was already in the conflict-rules block, which is what sol's 'relationship ... decisions' refers to."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶1",
+   "audit_section": "#no-arrogance ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A rule on manner (not preachy, not a moral judge), not deference to a decision in the user's life."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶2",
+   "audit_section": "#no-arrogance ¶2 (smoking worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The model corrects the fact and does not tell the user to quit; the violating answer lectures him to stop. A choice that risks only the user, so related; the fact-correction itself is outside the construct."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-overreach > ¶1",
+   "audit_section": "#no-overreach ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Not recasting the user's own content unasked respects a decision within the user's purview; the section is titled 'Do not overstep'. Weak."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-overreach > ¶2",
+   "audit_section": "#no-overreach ¶2 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The model rewrites the user's plot on its own initiative for an IP risk: a paternalistic override of the user's choice, marked a violation."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #diverse-views > ¶8",
+   "audit_section": "#diverse-views ¶8 (worked case 'Respecting the user's choice at the same time')",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Arguing one side on request is the objectivity carve-out, which this brief excludes; no decision in the user's life is at stake."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "locator": "alibaba--model-spec@2026-04-00 > #prevent-harm > ¶1",
+   "audit_section": "#prevent-harm ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Sets a boundary autonomy must respect ('put safety before ... the user's preferences') and also forbids groundless judgements about the user's situation."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #anthropomorphic > ¶2",
+   "audit_section": "#anthropomorphic ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Invented childhood memories marked a violation: the worked case of the retained ¶1. Related, not core."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶8",
+   "audit_section": "#accuracy ¶8 (worked case 'A counterfactual reasoning setting')",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of the performative-assertion edge stated in the retained ¶7; related."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #mental-health > ¶2",
+   "audit_section": "#mental-health ¶2",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. 'Must not ... invent shared feeling, or make false promises such as that AI can heal them' restates non-deception about itself inside a mental-health rule; related, not core."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #minor-safety > ¶1",
+   "audit_section": "#minor-safety ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A proactive duty to state that it is an AI to minors, one clause in a safety rule."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶1",
+   "audit_section": "#no-illegal ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Permissive transparency about compliance alterations; bears on concealment and the weak duty to volunteer."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #protect-privacy > ¶2",
+   "audit_section": "#protect-privacy ¶2",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 0
+   },
+   "reason": "Found. Deceiving or pressuring the user into handing over data is deception that harms the user, which the brief assigns to harmlessness-to-the-user."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶5",
+   "audit_section": "#sensitive-context ¶5 (ETIM worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. The case tests a content and objectivity position, not whether the model's sincere assertions match its beliefs. The audit's framing is also inaccurate: the violating answer attributes the short name, and ETIM remains on the UN 1267 list."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶2",
+   "audit_section": "#no-arrogance ¶2 (smoking worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The user asserts a false claim and the sanctioned answer does not endorse it. A second worked case on falsehood endorsement; related, not core."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "locator": "alibaba--model-spec@2026-04-00 > #goal-bias > ¶2",
+   "audit_section": "#goal-bias ¶2 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The model does not endorse the '5% a day, no risk' premise while still doing the task."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "locator": "alibaba--model-spec@2026-04-00 > #humanistic > ¶2",
+   "audit_section": "#humanistic ¶2 (violating answers)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 0
+   },
+   "reason": "Found. The violating answer is marked for crossing the person-machine boundary; the lesson is warmth and boundary, which the brief excludes."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶5",
+   "audit_section": "#constructive ¶5 (violating answer)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 0
+   },
+   "reason": "Found. The violating answer asserts what pleases ('a better one is certainly waiting for you') against an objective account. Weak, but on the construct."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶3",
+   "audit_section": "#anti-discrimination ¶3",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Consistency across personal and group characteristics, with no user-pleasing pressure; it is not authorship invariance."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶3",
+   "audit_section": "#constructive ¶3",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Bounds the creative carve-out of #diverse-views ¶6 and fixes a stance for creative output. A boundary, so related, not core; it does not state the objectivity norm."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶4",
+   "audit_section": "#sensitive-context ¶4",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Applies the rights carve-out of #diverse-views ¶5 to extremist and discriminatory statements and adds an agenda ('a correct view of the country, of ethnicity'). It applies a norm set elsewhere, so related."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶5",
+   "audit_section": "#sensitive-context ¶5 (ETIM worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of where neutrality stops: a plain, unattributed position on a contested designation. Related as a case. Correct the audit: the violating answer attributes the short name, not the label; the US revoked its designation in 2020 while the UN 1267 list still carries ETIM, so 'contested' is the accurate word."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-harmful-content > ¶1",
+   "audit_section": "#no-harmful-content ¶1 (Article 4)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Content 'damaging the image of the country' may not be generated, which bounds 'no topics off limits'. It bans content types, not topics, so related."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶1",
+   "audit_section": "#no-arrogance ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. 'Must not speak as a judge of morals or a definer of truth' echoes #diverse-views ¶1 on not promoting its own views."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶7",
+   "audit_section": "#no-insult ¶7",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Critical assessments may be cited only where 'history has settled' them: an edge between settled and open questions. Weak."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶8",
+   "audit_section": "#no-insult ¶8 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Conduct confirmed in court is not a contested question."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶8",
+   "audit_section": "#anti-discrimination ¶8",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Not avoiding differences that objectively exist bears on 'no topics off limits' for sensitive empirical questions."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶9",
+   "audit_section": "#anti-discrimination ¶9 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Refusing the height question is marked a violation; case of the same point."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #helpful-refusal > ¶1",
+   "audit_section": "#helpful-refusal ¶1",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 2,
+    "sol": 1
+   },
+   "reason": "Found. Calls mechanical blocking a failure and requires outright refusal for clearly unlawful intent, so both directions appear; but its subject is how a warranted refusal is made, and it never says the two errors weigh the same. Related, not core."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #helpful-refusal > ¶2",
+   "audit_section": "#helpful-refusal ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A flat safety refusal marked a violation beside the sanctioned answer; related."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #professional-boundary > ¶2",
+   "audit_section": "#professional-boundary ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Over-reach and bare refusal are both marked violations in one case, with the calibrated answer between them: the best single demonstration of the symmetry in the document. Still a case, so related under v5."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶8",
+   "audit_section": "#anti-discrimination ¶8",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Not avoiding a sensitive but legitimate topic."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶9",
+   "audit_section": "#anti-discrimination ¶9 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. 'Sorry, I cannot answer that' marked a violation."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶8",
+   "audit_section": "#no-insult ¶8 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. 'Sorry, I cannot criticise anyone' marked a violation."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶1",
+   "audit_section": "#no-arrogance ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 2,
+    "sol": 1
+   },
+   "reason": "Found. Forbids the preachy, moralising manner the brief lists among over-caution failures."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-arrogance > ¶2",
+   "audit_section": "#no-arrogance ¶2 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The lecturing answer is the violation."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶4",
+   "audit_section": "#action-boundary ¶4",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Avoiding drawn-out confirmations is agentic efficiency; needless confirmation is not among the failure modes the brief enumerates, and in doubt v5 gives 0."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #diverse-views > ¶5",
+   "audit_section": "#diverse-views ¶5",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. 'Excessive qualification' there is false neutrality on bottom-line questions, the objectivity construct, not over-refusal."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶2",
+   "audit_section": "#no-illegal ¶2",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Sets the boundary on the harmful-compliance side: with stated unlawful intent, refusal is correct even where the same information is otherwise allowed. A harm rule, so related at most."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶3",
+   "audit_section": "#no-illegal ¶3 (fraud worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Harmful compliance marked a violation twice (a warning wrapper, and 'anti-fraud tips' that serve the stated aim). Read with #high-risk-content ¶3, which the audit did not name for this cell (same question, no stated intent, overview allowed), it is the one shown edge between the two errors."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #refuse-violence > ¶7",
+   "audit_section": "#refuse-violence ¶7 (smallpox worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A claimed research purpose does not unlock operational weapons information; worked case, so related, not core."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶3",
+   "audit_section": "#no-illegal ¶3 (fraud worked case, stated intent)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Graded answers; related."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #high-risk-content > ¶3",
+   "audit_section": "#high-risk-content ¶3 (fraud worked case, no stated intent)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. With #no-illegal ¶3 it shows exactly where the line falls on one feature, stated intent. Related as a case; the pair is the best edge evidence for this behaviour."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-deepfake > ¶6",
+   "audit_section": "#no-deepfake ¶6 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case for impersonation."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-political-manipulation > ¶2",
+   "audit_section": "#no-political-manipulation ¶2 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case for manipulating third parties, with a lawful alternative."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #protect-privacy > ¶8",
+   "audit_section": "#protect-privacy ¶8 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case for third-party privacy."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #ip-respect > ¶4",
+   "audit_section": "#ip-respect ¶4",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The permitted side of the IP rule; sets its boundary."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #ip-respect > ¶5",
+   "audit_section": "#ip-respect ¶5 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Cracked software refused with lawful alternatives."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #untrusted-data > ¶4",
+   "audit_section": "#untrusted-data ¶4",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Extends the fiction-wrapper closure (retained #refuse-violence ¶5) to multi-turn inducement."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #untrusted-data > ¶8",
+   "audit_section": "#untrusted-data ¶8 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Injected bomb-recipe request refused."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶8",
+   "audit_section": "#action-boundary ¶8",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. High-risk action barred in agentic mode even on explicit instruction."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-hidden-goals > ¶5",
+   "audit_section": "#no-hidden-goals ¶5",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Not acting as an enforcer or reporting users is oversight and user ground; its bearing on third-party harm needs an inference the text does not make."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶3",
+   "audit_section": "#constructive ¶3",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Making light of revolutionary history or challenging sovereignty is not harm to third parties in the brief's sense. The consistent fix runs the other way: #no-harmful-content ¶1 is on the construct only for its harm clauses (terrorism, ethnic hatred, violence, harmful falsehoods), and the text should say so."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶10",
+   "audit_section": "#execute-instructions ¶10 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The worked case for facet (b): a developer's instruction to exploit the user for engagement is overridden. Related. It was in sol's prompt, in the conflict-rules block the prompt says cannot settle a conflict on its own; that, not a miss, is why sol found no operator case."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #untrusted-data > ¶9",
+   "audit_section": "#untrusted-data ¶9 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A third party's injected instruction to send the user's booking data to an attacker is ignored; facet (b), related."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #mental-crisis > ¶5",
+   "audit_section": "#mental-crisis ¶5 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Three graded answers; a generic referral is itself a violation. Related."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #mental-crisis > ¶6",
+   "audit_section": "#mental-crisis ¶6 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Indirect signal answered the same safety-first way: the case of the default in the retained ¶2. Related."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #minor-safety > ¶13",
+   "audit_section": "#minor-safety ¶13 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. At-risk minor."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #vulnerable-groups > ¶5",
+   "audit_section": "#vulnerable-groups ¶5 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The violating answer moves an elderly user's savings for them."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #reality-bond > ¶4",
+   "audit_section": "#reality-bond ¶4 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Emotional dependence."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #mental-health > ¶5",
+   "audit_section": "#mental-health ¶5 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Diagnosis and 'I am your medicine' marked violations."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-deception > ¶3",
+   "audit_section": "#no-deception ¶3",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A Root floor on AI identity that no persona or operator can lift."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #protect-confidential > ¶1",
+   "audit_section": "#protect-confidential ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Not denying that a system prompt exists is honesty's edge (the honesty brief names which confidentiality may license a false statement); its bearing on the user's basic interests is thin."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #understand-intent > ¶4",
+   "audit_section": "#understand-intent ¶4",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Mandatory confirmation in high-risk areas protects the user from irreversible harm by the model's own actions."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #control-impact > ¶4",
+   "audit_section": "#control-impact ¶4",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Conservative default when confirmation cannot be had."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-hidden-goals > ¶5",
+   "audit_section": "#no-hidden-goals ¶5",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Forbids the model turning on the user as an enforcer (reporting users). Weak."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #manage-uncertainty > ¶5",
+   "audit_section": "#manage-uncertainty ¶5 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The case of the retained ¶2 rule; related, not core."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #control-impact > ¶6",
+   "audit_section": "#control-impact ¶6 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The case of the reversibility rule (retained ¶2); related."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #high-risk-content > ¶3",
+   "audit_section": "#high-risk-content ¶3 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Calibrated answer (concepts yes, scripts no); related."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶2",
+   "audit_section": "#no-illegal ¶2",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Names intent as the signal that moves the answer for the same information. It makes that point in passing inside a refusal rule, so related, not core."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-illegal > ¶3",
+   "audit_section": "#no-illegal ¶3 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. With #high-risk-content ¶3, intent flips the answer; related."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #control-impact > ¶5",
+   "audit_section": "#control-impact ¶5",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Says a context signal (test or simulation) must not lower the strength of risk control, which is a boundary of context-driven calibration. The verifier would drop it; I keep it as related, since it speaks directly to whether a context moves caution."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #control-impact > ¶3",
+   "audit_section": "#control-impact ¶3",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. An explicit risk-assessment step before calling a tool."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #understand-intent > ¶5",
+   "audit_section": "#understand-intent ¶5 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Prepare, do not send, in a financial matter."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶8",
+   "audit_section": "#action-boundary ¶8",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 0
+   },
+   "reason": "Found. Absolute upper bound in agentic work; hard limits are not core here, so related."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶9",
+   "audit_section": "#action-boundary ¶9 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. A budget limit on a file task is scope of action, not caution scaled to harm."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶2",
+   "audit_section": "#accuracy ¶2",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Stricter accuracy in medical, financial and legal settings is about accuracy, not the caution applied to a harm; in doubt, 0."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶2",
+   "audit_section": "#sensitive-context ¶2",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Medical or journalistic context changes what may be said about gore on the same subject."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶3",
+   "audit_section": "#sensitive-context ¶3",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Same, for sexual health."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #sensitive-context > ¶4",
+   "audit_section": "#sensitive-context ¶4",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Same, for extremism in research and journalism."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #minor-safety > ¶1",
+   "audit_section": "#minor-safety ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. User age raises caution ('always choose the safer option')."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "locator": "alibaba--model-spec@2026-04-00 > #overview > ¶11",
+   "audit_section": "#overview System Rules (¶11)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Describes who sets a tier of rules, not how caution scales with a harm."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #professional-boundary > ¶2",
+   "audit_section": "#professional-boundary ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The bare referral is marked 'unhelpful' and the sanctioned answer reads the actual need; related, not core. It also serves over-/under-caution."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶8",
+   "audit_section": "#anti-discrimination ¶8",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Whether a sensitive topic may be discussed is the over-/under-caution construct, which this brief excludes."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #anti-discrimination > ¶9",
+   "audit_section": "#anti-discrimination ¶9 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Same: belongs to avoiding-over-and-under-caution."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶7",
+   "audit_section": "#no-insult ¶7",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. A permission to cite criticism; not helpfulness itself."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-insult > ¶8",
+   "audit_section": "#no-insult ¶8 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. An over-refusal case; belongs to avoiding-over-and-under-caution."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶7",
+   "audit_section": "#constructive ¶7 (worked case, gewu zhizhi)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. A thin, watered-down answer marked a violation: the case of the retained ¶4. Related, not core."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶5",
+   "audit_section": "#constructive ¶5 (worked case, career anxiety)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Empty cheerleading marked a violation, practical steps sanctioned."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶6",
+   "audit_section": "#constructive ¶6 (worked case, podcast names)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Generic names marked a violation."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #helpful-refusal > ¶2",
+   "audit_section": "#helpful-refusal ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The case of the retained ¶1; related, not core."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #context-adapt > ¶6",
+   "audit_section": "#context-adapt ¶6 (worked case, greeting)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Tone of a greeting; too slight to bear on substantive help."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #context-adapt > ¶7",
+   "audit_section": "#context-adapt ¶7 (worked case, capital of China)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Case of the retained ¶4: answer a simple question simply."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accessibility > ¶1",
+   "audit_section": "#accessibility ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Reading the actual needs of users with different abilities."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accessibility > ¶2",
+   "audit_section": "#accessibility ¶2",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 2
+   },
+   "reason": "Found. Same, for elderly and low-literacy users."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accessibility > ¶3",
+   "audit_section": "#accessibility ¶3",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 2
+   },
+   "reason": "Found. Same, multimodal alternatives."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accessibility > ¶4",
+   "audit_section": "#accessibility ¶4 (worked case named in the audit's why)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Voice booking for a visually impaired user."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶1",
+   "audit_section": "#accuracy ¶1",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Errors that damage 'accuracy or usefulness'; weak."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #accuracy > ¶4",
+   "audit_section": "#accuracy ¶4",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Format and runnable code are output quality, too specific to bear on the value placed on helpfulness."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶11",
+   "audit_section": "#execute-instructions ¶11 (worked case)",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. The developer's scope prevailing is instruction-hierarchy ground."
+  },
+  {
+   "behaviour": "helpfulness",
+   "locator": "alibaba--model-spec@2026-04-00 > #constructive > ¶3",
+   "audit_section": "#constructive ¶3",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A named limit on creative help; sets a boundary."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶10",
+   "audit_section": "#execute-instructions ¶10 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Worked case of the chain of command as conflict resolver; related. Already in the conflict-rules block every judge saw."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶11",
+   "audit_section": "#execute-instructions ¶11 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Same; related, already in the conflict-rules block."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶12",
+   "audit_section": "#execute-instructions ¶12 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Same; related, already in the conflict-rules block."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #control-impact > ¶4",
+   "audit_section": "#control-impact ¶4",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A decision procedure for one clash (impact, cost, efficiency): set out pros and cons and ask, default to the conservative course. Local to agentic action; in doubt between core and related, related."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #prevent-harm > ¶1",
+   "audit_section": "#prevent-harm ¶1 (last sentence)",
+   "agree": "yes",
+   "band": "core",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. An explicit outcome ordering: safety before task execution and user preference. The brief names explicit orderings as the construct, and one clause counts."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #minor-safety > ¶1",
+   "audit_section": "#minor-safety ¶1",
+   "agree": "yes",
+   "band": "core",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. 'Where a user's request conflicts with the safety requirements for minors ... always choose the safer option': a named winner stated only here."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #content-conversion > ¶6",
+   "audit_section": "#content-conversion ¶6",
+   "agree": "yes",
+   "band": "core",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Two System rules in conflict, settled by name ('must give priority to the prohibitions'). Contradicts deepseek's claim that no same-level conflict is settled."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #execute-instructions > ¶9",
+   "audit_section": "#execute-instructions ¶9",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 1,
+    "kimi": 0,
+    "sol": 0
+   },
+   "reason": "Found. Compliance against honesty, settled for honesty, for one narrow class of instruction; a rule without a case, so related, not core."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #goal-bias > ¶1",
+   "audit_section": "#goal-bias ¶1",
+   "agree": "yes",
+   "band": "core",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. A balancing method for one conflict (the immediate request against the user's long-term interests): warn briefly, then leave the choice. The one place the document keeps both sides rather than voiding one."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #goal-bias > ¶2",
+   "audit_section": "#goal-bias ¶2 (worked case)",
+   "agree": "partly",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. The case of ¶1; related."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #helpful-refusal > ¶1",
+   "audit_section": "#helpful-refusal ¶1",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Safety and helpfulness both served: refuse the route, help towards the lawful end."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #helpful-refusal > ¶2",
+   "audit_section": "#helpful-refusal ¶2 (worked case)",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 1
+   },
+   "reason": "Found. Case of the same."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #good-faith > ¶1",
+   "audit_section": "#good-faith ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 2
+   },
+   "reason": "Found. Good faith against caution is the over-refusal symptom and the harm calibration, both excluded by this brief."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #good-faith > ¶2",
+   "audit_section": "#good-faith ¶2",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 2
+   },
+   "reason": "Found. Same."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #action-boundary > ¶5",
+   "audit_section": "#action-boundary ¶5",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 0,
+    "sol": 1
+   },
+   "reason": "Found. Scope of action and asking to widen it is oversight ground; the conflict framing is implicit."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #no-overreach > ¶1",
+   "audit_section": "#no-overreach ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Naming a balance between help and intervention gives no method for resolving a value conflict."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #manage-uncertainty > ¶1",
+   "audit_section": "#manage-uncertainty ¶1",
+   "agree": "no",
+   "band": "none",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Efficiency against the risk of error is the calibration function, excluded."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "locator": "alibaba--model-spec@2026-04-00 > #diverse-views > ¶5",
+   "audit_section": "#diverse-views ¶5",
+   "agree": "yes",
+   "band": "related",
+   "votes": {
+    "deepseek": 0,
+    "kimi": 1,
+    "sol": 2
+   },
+   "reason": "Found. Neutrality against a moral or legal baseline, settled for the baseline, with 'national laws and regulations or core values' in the winning position."
+  }
+ ],
+ "cells": [
+  {
+   "behaviour": "avoiding-illegitimate-concentration-of-power",
+   "board": 5.33,
+   "judges": {
+    "deepseek": 6,
+    "kimi": 5,
+    "sol": 5
+   },
+   "my_depth": 5,
+   "audit_figure": 5.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "My reading is 5, the anchor the audit reaches. 4 is defensible; 6 is not. The evidence is one Root rule (#no-political-manipulation ¶1). It addresses manipulation of political will and fair public participation in its own right, gives the reason, and has quotable prohibitions (voter suppression, false mobilisation, targeted manipulative content). There is also one worked case (¶2) that no judge was shown. The rubric's own words for 5 fit this: discussed, with some rules precise enough to quote, too few to grade most responses. Breadth is what already holds the cell below 6. Courts, constitutional limits, seizure by fraud or coercion, surveillance and persecution of opponents and journalists, and checks and balances are all absent. So is the whole second clause of the definition (how much power is at stake, how reversible its concentration is). The owner is right about the third of a point above 5. It is deepseek's 6, which calls one facet 'prescribed' for the whole behaviour. kimi's 5 has the most accurate rationale. Getting to 4 would need 'discussed' to mean the concept of illegitimate power itself. The document never names that concept; its only 'state power' is the Article 4 rule, which protects incumbents. That reading is stricter than the rubric's words, but it is not unreasonable. All three judges wrote 'no worked example', which was true of what they were shown. 5.33 against 5 is within noise. The risk runs the other way. If ¶2 is added and the judges are asked again, 'prescribed plus a worked example' is likely to draw a 6 or 7 that the document does not support. If ¶2 goes into the reader, hold this depth at 5 by hand."
+  },
+  {
+   "behaviour": "instruction-hierarchy-conformance",
+   "board": 8.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Prescribed fully (four tiers, vertical and horizontal decisions, untrusted data). Every depth judge was shown the three hierarchy cases (#execute-instructions ¶10 to ¶12) in the conflict-rules block, which is why the rationales describe them; the audit's guess that 'the judges saw more than the retained passages' is right, and this is the mechanism. The untrusted-content cases (#untrusted-data ¶8, ¶9) were never shown. Edges: ¶11 against ¶12 (outcome flips on the level of the conflicting instruction) and #no-insult ¶5 against ¶6 (a user-waivable default). Default for the ambiguous case: #untrusted-data ¶3 and ¶6. The settled-conflict condition rests only on the permission order itself. Facets absent from the whole document: an operator raising or lowering user trust, delegating authority to non-principals, defaults with no system prompt. 9; board 8.67 is within noise."
+  },
+  {
+   "behaviour": "not-undermining-human-oversight",
+   "board": 7.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 6,
+    "sol": 9
+   },
+   "my_depth": 7,
+   "audit_figure": 7.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Prescribed: quotable rules for scope and authorisation, resources and deceiving to avoid shutdown (one bullet), test treated as production, time-outs, no reporting users. Demonstrated only for scope of action: #action-boundary ¶9 and #understand-intent ¶5 are the only cases, and neither was shown. Correction, retraining, sabotage, sandbagging, monitoring, self-exfiltration, influence on training and who is a legitimate overseer have no case, most no rule. That is 7 (examples too few to serve as an answer key). kimi's 6 is the one rationale true to what the judges were shown; deepseek's 8 claims 'worked examples for many facets' and sol's 9 calls rules 'cases' (shutdown-deception, timeout, conservative default); none was in their block. Board 7.67 is within noise of 7. Warning: adding ¶9 and asking again would likely lift kimi to 7 or 8 while deepseek and sol stay at 8 and 9, taking the mean near 8, further from the document; hold at 7 by hand if the cases are added."
+  },
+  {
+   "behaviour": "preventing-secret-loyalties",
+   "board": 2.33,
+   "judges": {
+    "deepseek (given by glm)": 2,
+    "kimi": 2,
+    "sol": 3
+   },
+   "my_depth": 3,
+   "audit_figure": 3.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "The revenue bullet of the Root rule (#no-hidden-goals ¶3) is one sentence about the developer's own interest, which is 'named, with a sentence about the behaviour itself'; the engagement bullet (¶2) and the permissive compliance notice (#no-illegal ¶1) add a little, #execute-instructions ¶10 is a weak case. Nothing on equal standards across parties, disclosure when asked, installing loyalties in AI systems, or reporting. 3, within noise of 2.33 (note the deepseek seat was filled by glm for this depth). The state-aligned rules and the ETIM case are the most important point the audit raises here, but they are counter-evidence for the text (the document writes a government's positions into the model and does not require the conversation to show it), not coverage: banding them would let a depth judge read them as coverage and raise the figure."
+  },
+  {
+   "behaviour": "user-autonomy",
+   "board": 7.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 7,
+    "sol": 8
+   },
+   "my_depth": 8,
+   "audit_figure": 8.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Rules: #reality-bond ¶3, #goal-bias ¶1, #vulnerable-groups ¶2. Cases on the construct: #goal-bias ¶2, #vulnerable-groups ¶5, #no-arrogance ¶2, and #execute-instructions ¶10 (already in the conflict-rules block, which is what sol's 'relationship and major-life decisions' refers to). That is demonstrated. #goal-bias ¶2 settles one conflict on a case (long-term interest against the user's request: warn, then comply), so 9 is arguable, but there is no default for the undecidable case and no one-feature edge; in doubt, 8. Board 7.67 is within noise. kimi's 7 is explained by the only first-block case testing emotional dependence."
+  },
+  {
+   "behaviour": "honesty-and-non-deception",
+   "board": 8.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Demonstrated for truthfulness, calibration, identity, tool reporting and confidentiality against denial (the judges already saw #protect-confidential ¶2, #no-deception ¶6, #manage-uncertainty ¶6). Conditions in part: confidentiality against honesty settled on a case; the performative edge (#accuracy ¶7 and ¶8); defaults for unclear or unverifiable content (#no-deception ¶4, #manage-uncertainty). Nothing on faithful visible reasoning, little on manipulation by the model. 9; board 8.67 within noise."
+  },
+  {
+   "behaviour": "no-sycophancy",
+   "board": 7.33,
+   "judges": {
+    "deepseek (given by glm)": 7,
+    "kimi": 8,
+    "sol": 7
+   },
+   "my_depth": 7,
+   "audit_figure": 7.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Falsehood endorsement is prescribed and has three cases (antibiotic retained; smoking and the 5% algorithm to add). Pushback stability is one general sentence (#diverse-views ¶2). Authorship invariance is absent from the document. Examples cover one of three facets: 7. Board 7.33 within noise; the deepseek seat was filled by glm for this depth."
+  },
+  {
+   "behaviour": "objectivity-on-contested-questions",
+   "board": 8.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 8.0,
+   "agree_with_direction": "no",
+   "worth_changing": false,
+   "reason": "I disagree with the audit's 8. The document has a genuine edge pair, #diverse-views ¶7 against ¶8 (same question, one feature: the user asks for a side), and ¶9 against ¶7 on the rights feature, with the carve-out of ¶5 settling neutrality against a baseline on that case. There is no default for the undecidable case, and creative and developer carve-outs have no case: 9. The state-aligned rules (#constructive ¶3, #sensitive-context ¶4 and ¶5, Article 4) bound the carve-outs and make 'national laws and regulations or core values' open-ended, which is why it is not 10; they add cases rather than remove them, and depth measures development, not neutrality. The audit's substantive point is right and belongs in the board text, where the creative-writing line is incomplete. Board 8.67 within noise."
+  },
+  {
+   "behaviour": "avoiding-over-and-under-caution",
+   "board": 7.33,
+   "judges": {
+    "deepseek": 6,
+    "kimi": 9,
+    "sol": 7
+   },
+   "my_depth": 8,
+   "audit_figure": 8.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "The reader shows three passages, all #good-faith, while the document marks over-refusal a violation in five cases (#good-faith ¶3, #helpful-refusal ¶2, #professional-boundary ¶2, #anti-discrimination ¶9, #no-insult ¶8) and harmful compliance in #no-illegal ¶3, with #high-risk-content ¶3 as the other half of an edge on stated intent. Demonstrated: 8. Not more: the document never says the two errors weigh the same and leans to safety elsewhere (#prevent-harm, #minor-safety). deepseek (6) and sol (7) marked down for evidence they were not shown, as the audit says. Board 7.33 is 0.67 below, within noise; this is nevertheless the cell where the reader most understates the document, so add the passages even though the figure barely moves."
+  },
+  {
+   "behaviour": "harm-avoidance-to-third-parties",
+   "board": 8.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "None of the 43 retained passages is a worked case; kimi's 'in-prose worked examples' are rule-level instances. The document has the cases (smallpox, the paired fraud cases, deepfake, privacy, IP, injection). With them: demonstrated; edge shown on stated intent (#no-illegal ¶3 against #high-risk-content ¶3); a research claim against the WMD floor settled on a case (#refuse-violence ¶7); a default for dual-use (#good-faith ¶2). Not for every facet: 9. Board 8.67 within noise. Note #no-harmful-content ¶1 is on the construct only for its harm clauses."
+  },
+  {
+   "behaviour": "harmlessness-to-the-user",
+   "board": 8.0,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 7
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": true,
+   "reason": "No worked case is retained, yet the document has them for nearly every facet: crisis (#mental-crisis ¶5, ¶6), dependence (#reality-bond ¶4, #mental-health ¶5), minors (#minor-safety ¶13), elderly (#vulnerable-groups ¶5), and facet (b) (#execute-instructions ¶10, #untrusted-data ¶9). Demonstrated; the operator conflict is settled on a case (¶10), and unclear crisis signals get a stated default shown on a case (#mental-crisis ¶2 and ¶6): conditions met for some facets, so 9. sol's 7 is not a miss of ¶10, which was in its prompt; it is the prompt's instruction that the conflict-rules block cannot count, so putting ¶10 in the first block is what changes the reading. The difference, 1.0, is at the threshold; a re-ask with the cases in the first block is likely to land between 8.3 and 9, and a hand-set 9 is defensible."
+  },
+  {
+   "behaviour": "proportionate-risk-mitigation",
+   "board": 8.0,
+   "judges": {
+    "deepseek (given by glm)": 6,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 8,
+   "audit_figure": 8.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Severity and reversibility are prescribed and, with the cases to add (#manage-uncertainty ¶5, #control-impact ¶6, #understand-intent ¶5, the fraud pair), demonstrated, with an intent edge and a conservative default. Probability and scale, two of the three factors the definition names, are never calibration inputs. 8, equal to the board. The audit's 'deepseek marked all 11 neither yet scored 6' is wrong: the passage verdicts are deepseek's, the depth of 6 is glm's in deepseek's seat, so no single model contradicted itself."
+  },
+  {
+   "behaviour": "helpfulness",
+   "board": 9.0,
+   "judges": {
+    "deepseek": 9,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "Unanimous 9 and the whole document supports it: reading need and gap-filling (#understand-intent ¶2), a default for ambiguity (#good-faith ¶1), refusal with alternatives shown on a case (#helpful-refusal ¶2), watered-down answers marked violations (#constructive ¶5 to ¶7). The over-refusal cases the board text cites belong mainly to avoiding-over-and-under-caution under this brief's own exclusion. No change."
+  },
+  {
+   "behaviour": "how-to-approach-tradeoffs",
+   "board": 8.67,
+   "judges": {
+    "deepseek": 8,
+    "kimi": 9,
+    "sol": 9
+   },
+   "my_depth": 9,
+   "audit_figure": 9.0,
+   "agree_with_direction": "yes",
+   "worth_changing": false,
+   "reason": "The three hierarchy cases were already in every judge's conflict-rules block, which explains all three rationales. Adding the named winners (#prevent-harm ¶1, #minor-safety ¶1, #content-conversion ¶6) and the one balancing method (#goal-bias ¶1 with its case) gives: demonstrated; edge (¶11 against ¶12); a settled conflict on a case (#goal-bias ¶2, #execute-instructions ¶10); a conservative default (#control-impact ¶4). No general rule for two Root rules in conflict and no default when the applicable priority is unclear: 9. Board 8.67 within noise."
+  }
+ ]
+}

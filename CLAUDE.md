@@ -179,6 +179,27 @@ after stripping any OpenRouter vendor prefix, so a native call and its mirror --
 `deepseek-ai/DeepSeek-V3.2` and `deepseek/deepseek-v3.2`, alike for fable and sol
 -- get the same settings.
 
+### No worked example can reach the depth judge
+
+**Found by an external audit on 25 September 2026. Not fixed.**
+
+The judging rubric (`engine/panel/prompts/v5.txt`) scores a worked example at
+most 1, "a worked example elsewhere in which the model corrects a user ... = 1",
+because an example applies a norm stated elsewhere. A passage is retained when
+its three verdicts sum to 4. So three judges who all call an example related
+give it 3, and it is never shown and never handed to the depth judge, whose
+level 8, demonstrated, asks for exactly those examples. In the publication's
+runs no example of the OpenAI Model Spec was retained in any of its 2,790
+behaviour readings, and 9 of 855 on the Alibaba Model Spec. The depth judges
+saw some cases only through the conflict-rules block of the assessment run.
+
+The same cut drops every passage all three judges call related: 162 such
+behaviour and passage pairs across the three documents. Lowering the cut to 3
+would add 609 passages, most of them one judge's core against two
+dissents, and would still miss most examples, which score 1, 1 and 0. Three
+readings of the passages the audit named are in
+`docs/audits/2026-09-25-external-audit/`, with the band each should carry.
+
 ## Changes of substance we made
 
 ### The reader's data attributes stay machine-readable, its prose does not
