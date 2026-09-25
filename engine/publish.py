@@ -56,6 +56,7 @@ sys.path.insert(0, str(HERE / "panel"))
 
 import index_store               # noqa: E402
 import seat_substitutions        # noqa: E402
+import manual_review             # noqa: E402
 import depth_call                # noqa: E402
 from store import Store          # noqa: E402
 
@@ -253,7 +254,8 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
 
     calls_by_key = {}
     for call in store.select("aci_judge_calls"):
-        if call["status"] != "done":
+        # The manual call is the owner's correction, not a seat of the panel.
+        if call["status"] != "done" or manual_review.is_manual(call):
             continue
         key = (call["run_id"], call["behaviour_slug"], call["spec_version_id"])
         calls_by_key.setdefault(key, []).append(call)

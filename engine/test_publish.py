@@ -69,6 +69,13 @@ def store(runs, judge_calls, versions=(V1, V2), substitutions=()):
 
 
 class ChooseCellsTest(unittest.TestCase):
+    def test_a_manual_call_beside_the_panel_is_not_a_seat(self):
+        s = store([{"id": "r1", "rubric": "v5", "created_at": "2026-09-01"}],
+                  calls("r1", "helpfulness", "v1", PANEL + ["manual"]))
+        cells = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cells, [{"behaviour_slug": "helpfulness",
+                                  "spec_version_id": "v1", "run_id": "r1"}])
+
     def test_a_cell_judged_by_exactly_the_panel_is_taken(self):
         s = store([{"id": "r1", "rubric": "v5", "created_at": "2026-09-01"}],
                   calls("r1", "helpfulness", "v1", PANEL))

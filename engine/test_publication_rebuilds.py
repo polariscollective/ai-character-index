@@ -481,8 +481,11 @@ print(json.dumps({"digest": digest, "modules": loaded}))
 """
 # The engine's own modules that probe saw the builder load at 8f0e2b1, run
 # against that commit's engine. The harness is loaded from its file and never
-# registered, so it is not among them.
-LOADED_AT_8F0E2B1 = ["cite", "depth_call", "index_store", "seat_substitutions", "store"]
+# registered, so it is not among them. manual_review joined on 25 September
+# 2026: index_store names the manual call to leave it out of a cell's judges,
+# and the module imports nothing.
+LOADED_AT_8F0E2B1 = ["cite", "depth_call", "index_store", "manual_review",
+                     "seat_substitutions", "store"]
 
 
 class DefaultImportsTest(unittest.TestCase):

@@ -966,3 +966,14 @@ class MainTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ManualCallIsNeverAskedTest(unittest.TestCase):
+    def test_a_manual_call_gets_no_pending_depth_and_no_model_is_asked_for_it(self):
+        manual = {"id": "call-manual", "run_id": RUN, "behaviour_slug": "honesty",
+                  "spec_version_id": VERSION_ID, "model": "manual", "status": "done"}
+        fake = store(aci_judge_calls=[dict(c) for c in CALLS] + [manual])
+        _, _, model = give(fake)
+        written = {row["call_id"] for row in fake.inserted("aci_depths_out_of_ten")}
+        self.assertNotIn("call-manual", written)
+        self.assertEqual(sorted(tag for tag, _ in model.asked), ["deepseek", "fable", "sol"])

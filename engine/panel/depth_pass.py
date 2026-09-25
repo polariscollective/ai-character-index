@@ -66,6 +66,7 @@ import batch_job                 # noqa: E402
 import depth_call                # noqa: E402
 import depth_ladder              # noqa: E402
 import index_store               # noqa: E402
+import manual_review             # noqa: E402
 import seat_call                 # noqa: E402
 from store import PATIENT_BACKOFF_SECONDS, Store  # noqa: E402
 
@@ -146,7 +147,9 @@ def ready_cells(store, run_ids):
     `run_ids` whose calls are all done. A cell is scoped to one run, as it
     already is for the scale of four: a publication reads one run's judges
     for a cell, never a mix."""
-    calls = [c for c in store.select("aci_judge_calls") if c["run_id"] in run_ids]
+    # The manual call is not a judge and is never asked for a depth.
+    calls = [c for c in store.select("aci_judge_calls")
+             if c["run_id"] in run_ids and not manual_review.is_manual(c)]
     cells = {}
     for call in calls:
         cells.setdefault((call["run_id"], call["behaviour_slug"], call["spec_version_id"]),
@@ -378,7 +381,8 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
     prompt = depth_call.prompt_sha256(10)
 
     done_calls = [c for c in store.select("aci_judge_calls")
-                  if c["run_id"] in run_ids and c["status"] == "done"]
+                  if c["run_id"] in run_ids and c["status"] == "done"
+                  and not manual_review.is_manual(c)]
     existing = {(d["call_id"], d["prompt_sha256"], d["assessment_run_id"])
                 for d in store.select("aci_depths_out_of_ten")}
     to_insert = [

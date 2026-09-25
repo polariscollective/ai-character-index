@@ -882,3 +882,31 @@ class PooledVersionsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ManualCallIsNotAJudgeTest(unittest.TestCase):
+    """A manual call sits in a cell beside the judges, and a cell's depth is
+    still the judges' own: without its own depth row the manual call does not
+    take the depth away, and with one it is not averaged in."""
+    CELL = {"run_id": "run-1", "behaviour_slug": "helpfulness", "spec_version_id": "row-1"}
+
+    def store(self, manual_depth=None):
+        calls = [{"id": f"call-{m}", "run_id": "run-1", "behaviour_slug": "helpfulness",
+                  "spec_version_id": "row-1", "model": m, "status": "done"}
+                 for m in ("sol", "fable", "deepseek", "manual")]
+        depths = [{"call_id": f"call-{m}", "status": "done", "depth": 3, "rationale": "."}
+                  for m in ("sol", "fable", "deepseek")]
+        if manual_depth is not None:
+            depths.append({"call_id": "call-manual", "status": "done",
+                           "depth": manual_depth, "rationale": "By hand."})
+        return FakeStore({"aci_judge_calls": calls, "aci_depths": depths})
+
+    def test_a_manual_call_with_no_depth_leaves_the_judges_depth(self):
+        got = index_store.cell_depths(self.store(), [self.CELL])
+        self.assertEqual(got[("helpfulness", "row-1")]["mean"], 3.0)
+        self.assertEqual(list(got[("helpfulness", "row-1")]["judges"]),
+                         ["deepseek", "fable", "sol"])
+
+    def test_a_manual_depth_is_not_averaged_in(self):
+        got = index_store.cell_depths(self.store(manual_depth=0), [self.CELL])
+        self.assertEqual(got[("helpfulness", "row-1")]["mean"], 3.0)

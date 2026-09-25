@@ -20,6 +20,9 @@ import cite  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent / "panel"))
 import depth_call  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import manual_review  # noqa: E402
+
 
 def _rows(store, table, params=None):
     return store.select(table, params)
@@ -266,9 +269,11 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     reads the depths given against that run (`criteria_run_id`).
     """
     wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
+    # The manual call is not a judge: its depth, where it gave one, is read by
+    # manual_reviews and only for a build that asks.
     calls = [c for c in _rows(store, "aci_judge_calls")
              if (c["run_id"], c["behaviour_slug"], c["spec_version_id"]) in wanted
-             and c["status"] == "done"]
+             and c["status"] == "done" and not manual_review.is_manual(c)]
 
     if assessment_run_id is None:
         depths = {d["call_id"]: d for d in _rows(store, "aci_depths")}
