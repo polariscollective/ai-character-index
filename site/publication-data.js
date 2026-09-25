@@ -46,9 +46,24 @@ export function setReadsFiles(on) {
   } catch { /* Storage refused: the page stays on the publication. */ }
 }
 
+/* The id of the publication being served, asked once per page. The answer is
+ * small and changes when a publication is made public, so it is cached for a
+ * minute; everything read after it names the publication by id, and a pinned
+ * publication is cached at the edge for good. A cold function then costs one
+ * small lookup rather than every board, and a page cannot mix two publications
+ * when a new one goes public in the middle of its loading. */
+let current = null;
+function currentPublication() {
+  current ??= fetch("/api/reader/publication")
+    .then(response => (response.ok ? response.json() : null))
+    .then(row => row?.id || null)
+    .catch(() => null);
+  return current;
+}
+
 /* One board of the publication being served, or null when it cannot be had. */
 export async function loadBoard(name) {
-  const pin = pinned();
+  const pin = readsFiles() ? null : (pinned() || await currentPublication());
   const query = readsFiles() ? "?source=files"
     : pin ? `?publication=${encodeURIComponent(pin)}` : "";
   try {

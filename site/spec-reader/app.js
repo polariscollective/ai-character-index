@@ -1479,8 +1479,12 @@ function renderBehaviourList() {
       openDepthNote(button, depthScaleNote(payloadBehaviours())));
   });
   elements.behaviourList.querySelectorAll("[data-behaviour-depth]").forEach(button => {
-    button.addEventListener("click", () => {
-      const behaviour = payloadBehaviours().find(b => b.slug === button.dataset.behaviourDepth);
+    button.addEventListener("click", async () => {
+      const slug = button.dataset.behaviourDepth;
+      // The written reading of a depth rides with the links, which a single
+      // document does not ask for: this one behaviour's are fetched first.
+      await ensureBehaviours([slug], { links: true, paragraphs: false }).catch(() => {});
+      const behaviour = payloadBehaviours().find(b => b.slug === slug);
       openDepthNote(button, depthFigureNote(behaviour, visibleDocuments().filter(Boolean)));
     });
   });
@@ -5099,14 +5103,17 @@ async function ensureShownDocuments() {
   await Promise.all(shownDocuments().map(id => ensureDocument(id).catch(() => {})));
 }
 
-async function ensureBehaviours(slugs) {
+/* `links` are the comparison bubbles and the written notes on the depths. They
+ * are the heaviest thing the reader asks for, so they are asked for only while
+ * two documents are compared, or for one behaviour when its depth note opens. */
+async function ensureBehaviours(slugs, { links: withLinks = state.comparing, paragraphs = true } = {}) {
   const pinned = state.payloadSource?.origin === "pin" ? state.payloadSource.name : null;
   /* The documents on screen, read live rather than from the arrival URL: this
    * runs again when a document is chosen and when comparison opens, which is
    * the whole reason the links have to be asked for a second time. */
   const shown = shownDocuments();
-  const missing = slugs.filter(slug => !inFlight.has(slug));
-  const missingLinks = slugs.filter(slug => !linksCover(slug, shown));
+  const missing = paragraphs ? slugs.filter(slug => !inFlight.has(slug)) : [];
+  const missingLinks = withLinks ? slugs.filter(slug => !linksCover(slug, shown)) : [];
   if (!missing.length && !missingLinks.length) {
     return Promise.all(slugs.map(slug => inFlight.get(slug)).filter(Boolean));
   }
