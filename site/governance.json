@@ -3927,7 +3927,7 @@
   {
    "id": "the-two-figures-are-added-without-anchors",
    "title": "The two figures are added, and the condition set for adding them was never met",
-   "question": "Adding what is published to what it engages was argued on the ground that the practices would be anchored as the checks are. No description of 0, 1 and 2 was written for S1 to S5. Twelve of the thirty non-zero cells of what it engages sit on a scale that never says what earns a 1, and they decide places: Google DeepMind is third, ahead of xAI by less than any one of its three 1s on testing adherence is worth.",
+   "question": "Adding what is published to what it engages was argued on the ground that the practices would be anchored as the checks are. No description of 0, 1 and 2 was written for S1 to S5. Twelve of the thirty non-zero cells of what it engages sit on a scale that never says what earns a 1, and they decide places: Google DeepMind is third, ahead of xAI by less than what any one of its three 1s on testing adherence is worth.",
    "what_would_settle_it": "Writing an anchor for each of S1 to S5, then rescoring those cells against it.",
    "raised": "24 September 2026"
   },
@@ -3980,7 +3980,7 @@
    "engages": "Almost nothing: a description of some training against internal policies. Its one published safety test, a red-team of a model since withdrawn, is tied to no behaviour document."
   },
   "deepseek": {
-   "published": "No constitution. Beyond the disclosure its regulator requires, its R1 paper of 2025 describes its safety training and gives its risk control system a subsection, and almost nothing else is published about its rules.",
+   "published": "No constitution. Beyond the disclosure its regulator requires, its R1 paper of 2025 describes its safety training and its risk control system, and almost nothing else is published about its rules.",
    "engages": "Almost nothing: only a description of training against an internal policy."
   }
  }
