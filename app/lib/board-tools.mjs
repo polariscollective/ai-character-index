@@ -12,6 +12,7 @@
  * and a fixture exercises both with no network.
  */
 import { ranked as rankedCompanies } from "../../site/governance.js";
+import { CITATION } from "../../site/markup.js";
 import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
@@ -188,6 +189,20 @@ const evidenceOf = (labId, id) => governance.internal_evidence[labId]?.[id]
  * their checks, then its practices. */
 const questionOf = id => governance.questions.find(question => question.id === id);
 
+/* The board's prose cites its sources after a sentence as `[^OA3]`, which the
+ * page draws as a superscript leading to the source. An answer carries each as
+ * `[OA3]` instead, and the registry as `sources`, so a client can resolve every
+ * code it reads. */
+function withPlainCitations(value) {
+  if (typeof value === "string") return value.replace(CITATION, "[$1]");
+  if (Array.isArray(value)) return value.map(withPlainCitations);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .map(([key, item]) => [key, withPlainCitations(item)]));
+  }
+  return value;
+}
+
 /**
  * The board of governance: nine companies on a final score and the two figures
  * it adds.
@@ -195,6 +210,10 @@ const questionOf = id => governance.questions.find(question => question.id === i
  * Read from the board the publication froze. Nothing in it was judged by a
  * panel: the scores were given by hand from public documents, as of the date
  * the data carries, and the answer says so in `as_of` and `scored_by`.
+ *
+ * `sources` is the board's registry of documents, narrowed to the companies
+ * answered and the documents on several companies: every `[OA3]` in a text and
+ * every `ref` beside a quoted passage names one of them.
  */
 export function governanceBoard(snapshot, args = {}) {
   if (!snapshot?.governance?.columns || !snapshot.governance.labs) {
@@ -207,7 +226,8 @@ export function governanceBoard(snapshot, args = {}) {
     throw new ToolError(`no company called ${args.company}. This board carries: `
       + `${governance.labs.map(lab => lab.name).join(", ")}`);
   }
-  return {
+  const answered = new Set(companies.map(company => company.id));
+  return withPlainCitations({
     publication: snapshot.publication,
     as_of: governance.as_of,
     researched: governance.researched,
@@ -312,7 +332,9 @@ export function governanceBoard(snapshot, args = {}) {
         not_assessed: governance.internal_note,
       })),
     })),
-  };
+    sources: (governance.sources || [])
+      .filter(entry => entry.company === "several" || answered.has(entry.company)),
+  });
 }
 
 /**

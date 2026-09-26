@@ -3,10 +3,10 @@
  * Every word the front page shows comes out of constitutions.json and
  * governance.json, which a publication freezes, so the files carry the page's
  * prose as well as its figures. They are written for a reader who is scanning,
- * so they carry five marks and no more: a blank line between paragraphs,
- * `**bold**` inside a sentence, `[words](address)` for a link, a line opening
- * `- ` as a bullet, and a line opening `### ` as a small heading. Anything else
- * is prose.
+ * so they carry six marks and no more: a blank line between paragraphs,
+ * `**bold**` inside a sentence, `[words](address)` for a link, `[^OA3]` after a
+ * sentence for the source it rests on, a line opening `- ` as a bullet, and a
+ * line opening `### ` as a small heading. Anything else is prose.
  *
  * The parser is kept apart from the drawing, and returns what to draw rather
  * than drawing it, so that it can be tested with no page and so that the walker
@@ -16,7 +16,12 @@
  * made here, and an address is only ever one of the kinds a link may take.
  */
 
-const RUN = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
+/* A citation first, so `[^OA3]` is never read as the start of a link. */
+const RUN = /\[\^([A-Z]{2}\d+)\]|\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
+
+/* A source's code: two capitals for the company it bears on, CO for several,
+ * and its number. The registry in governance.json says what each one is. */
+export const CITATION = /\[\^([A-Z]{2}\d+)\]/g;
 
 /* An address a link may carry: the site's own pages and anchors, and the web. */
 const ADDRESS = /^(\/|#|https?:\/\/|mailto:)/;
@@ -28,18 +33,20 @@ function element(tag, className, text) {
   return node;
 }
 
-/* A sentence cut at its bold spans and its links: each run is a string, and
- * whether it is bold or where it leads. An address of any other kind, and an
- * unpaired mark, are left where they are and read as text. */
+/* A sentence cut at its bold spans, its links and its citations: each run is a
+ * string, and whether it is bold, where it leads or which source it cites. A
+ * citation's run carries no text, so the plain words of a field are the words
+ * without their sources. An address of any other kind, and an unpaired mark,
+ * are left where they are and read as text. */
 function runsOf(text) {
   const runs = [];
   let at = 0;
   for (const match of text.matchAll(RUN)) {
-    if (match[2] !== undefined && !ADDRESS.test(match[3])) continue;
+    if (match[3] !== undefined && !ADDRESS.test(match[4])) continue;
     if (match.index > at) runs.push({ text: text.slice(at, match.index), bold: false });
-    runs.push(match[1] !== undefined
-      ? { text: match[1], bold: true }
-      : { text: match[2], bold: false, href: match[3] });
+    if (match[1] !== undefined) runs.push({ text: "", bold: false, cite: match[1] });
+    else if (match[2] !== undefined) runs.push({ text: match[2], bold: true });
+    else runs.push({ text: match[3], bold: false, href: match[4] });
     at = match.index + match[0].length;
   }
   if (at < text.length) runs.push({ text: text.slice(at), bold: false });
@@ -85,20 +92,46 @@ export function markupBlocks(text) {
 const plainOf = runs => runs.map(run => run.text).join("");
 
 /* One string per block the page draws, with a list given as its items, and the
- * marks gone. This is what a reader sees, and what the walker compares the
- * popover against. */
+ * marks gone, citations with them. This is what a reader reads, and what the
+ * walker compares the popover against. */
 export function markupPlain(text) {
   return markupBlocks(text).flatMap(block =>
     (block.kind === "list" ? block.items.map(plainOf) : [plainOf(block.runs)]));
+}
+
+/* The sources a sentence rests on, as one superscript: each code a link to its
+ * entry under "Sources reviewed", where the address of the document is. The
+ * page that holds the entries decides what pressing one does. */
+function citation(codes) {
+  const mark = element("sup", "cite");
+  codes.forEach((code, index) => {
+    // A space after the comma, so a long run of codes can wrap on a phone.
+    if (index) mark.append(document.createTextNode(", "));
+    const link = element("a", "", code);
+    link.href = `#src-${code}`;
+    link.setAttribute("aria-label", `Source ${code}`);
+    mark.append(link);
+  });
+  return mark;
 }
 
 /* The runs of one line, drawn into `node`. A link that leaves the site opens in
  * its own tab, so a reader checking a source keeps their place; a link whose
  * words are a lone asterisk is the site's footnote mark, drawn as the pages
  * draw it, and so is a link whose words are a lone digit, which points to a
- * numbered note. */
+ * numbered note. Citations written back to back share one superscript. */
 export function filled(node, runs) {
+  let codes = [];
+  const closeCitation = () => {
+    if (codes.length) node.append(citation(codes));
+    codes = [];
+  };
   runs.forEach(run => {
+    if (run.cite) {
+      codes.push(run.cite);
+      return;
+    }
+    closeCitation();
     if (run.bold) {
       node.append(element("strong", null, run.text));
       return;
@@ -119,6 +152,7 @@ export function filled(node, runs) {
     }
     node.append(document.createTextNode(run.text));
   });
+  closeCitation();
   return node;
 }
 

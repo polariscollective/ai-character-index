@@ -114,6 +114,35 @@ test("a company argument narrows the governance board too", () => {
                 error => error instanceof ToolError && /This board carries/.test(error.message));
 });
 
+test("the governance board answers its sources, and every code it cites resolves", () => {
+  const answer = governanceBoard(snapshot());
+  const text = JSON.stringify(answer);
+  // The page's marker is rewritten for a client, which reads [OA3] as a code.
+  assert.ok(!text.includes("[^"), "no marker is left as the page writes it");
+  const codes = new Set(answer.sources.map(entry => entry.id));
+  assert.equal(codes.size, governance.sources.length);
+  const cited = [...text.matchAll(/\[([A-Z]{2}\d+)\]/g)].map(match => match[1]);
+  assert.ok(cited.length > 0, "the texts cite their sources");
+  for (const code of cited) assert.ok(codes.has(code), code);
+  // Every quoted passage names the entry of its document.
+  for (const company of answer.companies) {
+    for (const figure of company.figures) {
+      const rows = [...figure.questions.flatMap(question => question.checks), ...figure.practices];
+      for (const row of rows) {
+        for (const source of row.evidence?.sources || []) assert.ok(codes.has(source.ref), source.url);
+      }
+    }
+  }
+  // One company answers its own documents and those on several companies.
+  const one = governanceBoard(snapshot(), { company: "anthropic" });
+  assert.deepEqual([...new Set(one.sources.map(entry => entry.company))].sort(),
+    ["anthropic", "several"]);
+  const own = new Set(one.sources.map(entry => entry.id));
+  for (const match of JSON.stringify(one.companies).matchAll(/\[([A-Z]{2}\d+)\]/g)) {
+    assert.ok(own.has(match[1]), match[1]);
+  }
+});
+
 test("the route registers both", async () => {
   const route = await readFile(new URL("../../api/mcp/route.js", import.meta.url), "utf8");
   assert.match(route, /registerTool\("constitutions_board"/);

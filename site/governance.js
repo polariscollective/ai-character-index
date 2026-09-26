@@ -45,6 +45,9 @@
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
 import { FORMAT, renderPage } from "./page-content.js";
+/* The file's prose carries its sources as `[^OA3]` after a sentence, which the
+ * light markup draws as a superscript leading to the source's entry. */
+import { renderInline, renderMarkup } from "./markup.js";
 import { createBoard, element, level, rankBy, place, ORDINALS } from "./board.js";
 /* The mark of each company, above its name. One module for both boards, and it
  * says where the drawings come from and which two companies have none. */
@@ -282,15 +285,32 @@ function scaleList(score, anchors = board.data.supporting_scale) {
   return fragment;
 }
 
+/* A line of the file's prose in one element, its sources drawn as
+ * superscripts. */
+function prose(tag, className, text) {
+  return renderInline(element(tag, className), text || "");
+}
+
+/* A source's code, in mono as every reference a reader matches across the page
+ * is, leading to its entry under "Sources reviewed". */
+function codeLink(code) {
+  const link = element("a", "source-code", code);
+  link.href = `#src-${code}`;
+  link.setAttribute("aria-label", `Source ${code} in the sources reviewed`);
+  return link;
+}
+
 /* One passage a company published, with a link to where it says it. Where the
  * row carries the day we read it, the line says that too: an address that
  * answers today may not answer next year, and the date is what a reader needs
- * to tell a page that changed from a page that was always this way. */
+ * to tell a page that changed from a page that was always this way. The code in
+ * front is the one the texts cite the document by. */
 function sourceQuote(source) {
   const block = element("blockquote", "paper-quote");
   block.append(element("p", "", source.quote));
   if (source.translation) block.append(element("p", "paper-where", `Our translation: ${source.translation}`));
   const where = element("p", "paper-where");
+  if (source.ref) where.append(codeLink(source.ref), document.createTextNode(" "));
   const link = element("a", "", source.title);
   link.href = source.url;
   link.target = "_blank";
@@ -314,9 +334,9 @@ function evidenceBlock(content, lab, rowId) {
   if (sources.length) {
     content.append(view.h3("What this rests on"));
     sources.forEach(source => content.append(sourceQuote(source)));
-    if (found.looked) content.append(element("p", "subtitle", found.looked));
+    if (found.looked) content.append(prose("p", "subtitle", found.looked));
   } else if (found.looked) {
-    content.append(view.h3("Where we looked"), element("p", "", found.looked));
+    content.append(view.h3("Where we looked"), prose("p", "", found.looked));
   }
 }
 
@@ -347,10 +367,11 @@ function paperFold(item) {
   return fold;
 }
 
-/* The note's text, one paragraph per blank line. */
+/* The note's text, one paragraph per blank line, its sources drawn as
+ * superscripts. */
 function paragraphs(text) {
   const fragment = document.createDocumentFragment();
-  String(text || "").split(/\n{2,}/).forEach(block => fragment.append(element("p", "", block)));
+  renderMarkup(fragment, String(text || ""));
   return fragment;
 }
 
@@ -406,7 +427,8 @@ function profile(content, lab, open) {
   if (text.aside) {
     const aside = element("div", "aside");
     const line = element("p");
-    line.append(element("strong", "", `${text.aside.title}. `), document.createTextNode(text.aside.text));
+    line.append(element("strong", "", `${text.aside.title}. `));
+    renderInline(line, text.aside.text);
     aside.append(line);
     content.append(aside);
   }
@@ -996,7 +1018,7 @@ function renderFindings() {
   const list = document.createDocumentFragment();
   (board.data.findings || []).forEach(finding => {
     const block = element("div", "finding");
-    block.append(element("h3", "", finding.title), element("p", "", finding.text));
+    block.append(element("h3", "", finding.title), prose("p", "", finding.text));
     list.append(block);
   });
   board.nodes.findings.replaceChildren(list);
@@ -1059,6 +1081,100 @@ function renderScoring() {
   fill(board.nodes.internal, engages.unscored || []);
 }
 
+/* ---- The sources ------------------------------------------------------------ */
+
+/* Every document the board cites, one entry each, under "Sources reviewed":
+ * its code, its title leading to the document, its date, the days we read it,
+ * and the passages we quote from it. The texts above cite an entry by its code,
+ * and pressing the code comes here. */
+const SEVERAL = { id: "several", name: "More than one company" };
+
+const sentenceCase = text => text.charAt(0).toUpperCase() + text.slice(1);
+
+function sourceEntry(entry) {
+  const item = element("li", "source-entry");
+  item.id = `src-${entry.id}`;
+  // Where a press on a code lands, so the reader's place moves with the page.
+  item.tabIndex = -1;
+  const head = element("p", "source-head");
+  head.append(element("span", "source-code", entry.id), document.createTextNode(" "));
+  if (entry.url) {
+    const link = element("a", "", entry.title);
+    link.href = entry.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    head.append(link);
+  } else {
+    head.append(document.createTextNode(entry.title));
+  }
+  item.append(head);
+  const dated = [entry.date ? `${sentenceCase(entry.date)}.` : "",
+    entry.read ? `Read ${entry.read}.` : ""].filter(Boolean).join(" ");
+  if (dated) item.append(element("p", "source-meta", dated));
+  (entry.quotes || []).forEach(quote => {
+    const block = element("blockquote", "paper-quote");
+    block.append(element("p", "", quote.text));
+    if (quote.translation) {
+      block.append(element("p", "paper-where", `Our translation: ${quote.translation}`));
+    }
+    const where = [quote.where, quote.date].filter(Boolean).join(", ");
+    if (where) block.append(element("p", "paper-where", sentenceCase(where)));
+    item.append(block);
+  });
+  return item;
+}
+
+function renderSources() {
+  const node = document.getElementById("gov-source-list");
+  if (!node) return;
+  const fragment = document.createDocumentFragment();
+  [...board.data.labs, SEVERAL].forEach(company => {
+    const entries = (board.data.sources || []).filter(entry => entry.company === company.id);
+    if (!entries.length) return;
+    const list = element("ul", "source-list");
+    entries.forEach(entry => list.append(sourceEntry(entry)));
+    fragment.append(element("h3", "", company.name), list);
+  });
+  node.replaceChildren(fragment);
+}
+
+/* How long an entry stays marked after a press brought the reader to it. */
+const MARKED_FOR = 1600;
+
+/* Bring the reader to one source's entry: close the popover the code was
+ * pressed in, open the section if it is folded, scroll to the entry and mark it
+ * for a moment. The mark is a colour and fades in 150ms, and neither the fade
+ * nor the scroll moves when the reader has asked for less motion. */
+function showSource(code) {
+  const entry = document.getElementById(`src-${code}`);
+  if (!entry) return false;
+  if (view?.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
+  const fold = entry.closest("details");
+  if (fold) fold.open = true;
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  entry.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+  entry.focus({ preventScroll: true });
+  entry.classList.remove("is-cited");
+  // Read once so the class, taken off and put back, marks the entry again.
+  void entry.offsetWidth;
+  entry.classList.add("is-cited");
+  clearTimeout(entry.citedTimer);
+  entry.citedTimer = setTimeout(() => entry.classList.remove("is-cited"), MARKED_FOR);
+  return true;
+}
+
+/* One listener for every code on the view, wherever it was drawn: in a
+ * sentence, in a popover or beside a quoted passage. */
+function wireSources() {
+  document.getElementById("view-governance")?.addEventListener("click", event => {
+    const link = event.target.closest?.('a[href^="#src-"]');
+    if (!link) return;
+    if (showSource(link.getAttribute("href").slice("#src-".length))) event.preventDefault();
+  });
+  // An address that names a source, from a code opened in its own tab.
+  if (location.hash.startsWith("#src-")) showSource(location.hash.slice("#src-".length));
+}
+
 /* Open one cell of this board as a press on it would, unfolding the rows above
  * it. The Index opens a cell the address names this way. */
 export const openCell = (lab, row) => Boolean(view?.pressCell({ lab, row }));
@@ -1104,6 +1220,7 @@ export async function initializeGovernance() {
     renderTies();
     renderFindings();
     renderScoring();
+    renderSources();
   } catch {
     view.nodes.table.tBodies[0].replaceChildren();
     view.nodes.table.tHead.replaceChildren();
@@ -1114,6 +1231,7 @@ export async function initializeGovernance() {
     return;
   }
   view.wirePopover();
+  wireSources();
   view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
   board.nodes.status.textContent = "";
 }

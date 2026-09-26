@@ -926,12 +926,47 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-more-body p, .gov-more-body li { max-width: 72ch; font-size: 15px; line-height: 1.6; }
 .gov-more-body p { margin: 0 0 12px; }
 .gov-more-body h3 { margin: 24px 0 8px; font-family: var(--display); font-size: 16px; font-weight: 600; }
-.gov-more a {
+.gov-more a, .page-prose a {
   color: var(--ink);
   text-decoration: underline 2px var(--energy);
   text-underline-offset: 3px;
 }
-.gov-more a:hover, .gov-more a:focus-visible { background: var(--energy); }
+.gov-more a:hover, .gov-more a:focus-visible,
+.page-prose a:hover, .page-prose a:focus-visible { background: var(--energy); }
+
+/* A source a sentence rests on: its code as a superscript after the sentence,
+   in the link style, and in mono because it is a reference a reader matches
+   against the list of sources at the foot of the page, as the numbered notes
+   are. Codes written back to back share one superscript, a comma between. */
+sup.cite {
+  margin-left: 1px; font-family: var(--mono); font-size: 10px; font-weight: 400;
+  line-height: 0; vertical-align: super; color: var(--ink);
+}
+sup.cite a, a.source-code {
+  color: var(--ink); text-decoration: underline 2px var(--energy); text-underline-offset: 2px;
+  transition: background-color .15s ease;
+}
+sup.cite a:hover, sup.cite a:focus-visible,
+a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
+.source-code { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+
+/* The sources reviewed: one entry per document, under its company. The entry a
+   press on a code brought the reader to is marked for a moment, the colour a
+   selected row takes, and nothing moves. */
+.source-list { margin: 0 0 16px; padding: 0; list-style: none; }
+.gov-more-body .source-entry {
+  max-width: 80ch; margin: 0 0 4px; padding: 8px 10px; border-radius: 3px;
+  transition: background-color .15s ease;
+}
+.source-entry:focus { outline: none; }
+.source-entry:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.source-entry.is-cited { background: rgb(183 201 75 / .25); }
+.source-entry .source-head { margin: 0; }
+.source-entry .source-head .source-code { margin-right: 4px; }
+.source-entry .source-meta { margin: 2px 0 6px; font-size: 13px; color: var(--faint); }
+.source-entry .paper-quote { margin: 6px 0 8px; }
+.source-entry .paper-quote p { margin: 0; font-size: 14px; }
+.source-entry .paper-quote .paper-where { margin-top: 3px; font-size: 12px; }
 .gov-bullets { margin: 0 0 16px; padding: 0; list-style: none; }
 .gov-bullets li { position: relative; margin-bottom: 8px; padding-left: 20px; }
 .gov-bullets li::before {
@@ -1157,7 +1192,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 }
 @media (prefers-reduced-motion: reduce) {
   .gov-button, .row-toggle::before,
-  .gov-pop summary::before, .section-fold > summary::before { transition: none; }
+  .gov-pop summary::before, .section-fold > summary::before,
+  sup.cite a, a.source-code, .source-entry { transition: none; }
 }
 
 /* ---------- the overview ----------

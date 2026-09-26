@@ -144,9 +144,19 @@ PANEL = GovernancePanel()
 PANEL.feed(PAGE)
 
 
+# A source a sentence rests on, written after it: [^OA3]. The registry in
+# governance.json's `sources` says what each code is.
+MARKER = re.compile(r"\[\^([A-Z]{2}\d+)\]")
+
+
+def bare(text):
+    """A text with its citation markers taken out, which is how it reads."""
+    return MARKER.sub("", text)
+
+
 def plain(markup):
     """A field of the file's light markup as a reader sees it: the marks gone."""
-    text = re.sub(r"\[([^\]]+)\]\([^)\s]+\)", r"\1", markup)
+    text = re.sub(r"\[([^\]]+)\]\([^)\s]+\)", r"\1", bare(markup))
     text = text.replace("**", "")
     return re.sub(r"(?m)^(### |- )", "", text)
 
@@ -494,7 +504,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
             for column in DATA["columns"]:
                 ids = [pid for pid in column["practices"]
                        if pid in DATA["supporting_scores"][lab]]
-                text = DATA["profiles"][lab][column["prose"]]
+                text = bare(DATA["profiles"][lab][column["prose"]])
                 stated = [int(n) for n in re.findall(r"\((\d)\)", text)]
                 scored = [DATA["supporting_scores"][lab][pid] for pid in ids]
                 where = f"{lab} {column['id']}"
@@ -506,7 +516,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         # change log. Anthropic ... scores 3.0 and 1.0."
         combined = {lab: totals(lab)[0]["1"] + totals(lab)[0]["2"] for lab in ORDER}
         self.assertEqual(max(combined.values()), combined["openai"])
-        first = DATA["findings"][0]["text"]
+        first = bare(DATA["findings"][0]["text"])
         openai, anthropic = totals("openai")[0], totals("anthropic")[0]
         self.assertIn(f"OpenAI has the best pair, {shown(on_ten(openai['1']))} on the "
                       f"constitution and {shown(on_ten(openai['2']))} on the change log", first)
@@ -523,7 +533,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
     def test_the_finding_on_meta_quotes_both_of_its_figures(self):
         # "It scores 0.5 out of 10 on what is published ... and 2.5 out of 10 on
         # what it engages, behind only OpenAI and Anthropic."
-        text = next(f["text"] for f in DATA["findings"] if "Muse Spark" in f["text"])
+        text = next(bare(f["text"]) for f in DATA["findings"] if "Muse Spark" in f["text"])
         _, columns = totals("meta")
         self.assertIn(f"{shown(columns['published'])} out of 10 on what is published", text)
         self.assertIn(f"{shown(columns['engages'])} out of 10 on what it engages", text)
@@ -544,7 +554,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         # "Moonshot AI's 0.9 and DeepSeek's 0.7 are the two lowest scores, and
         # Mistral AI's 3.4 is fourth", with Alibaba named as the one open-weight
         # company that is not near the bottom.
-        text = next(f["text"] for f in DATA["findings"] if "Moonshot AI's" in f["text"])
+        text = next(bare(f["text"]) for f in DATA["findings"] if "Moonshot AI's" in f["text"])
         for lab, label in (("mistral", "Mistral AI's"), ("moonshot", "Moonshot AI's"),
                            ("deepseek", "DeepSeek's")):
             self.assertIn(f"{label} {shown(published(lab))}", text, lab)
@@ -572,7 +582,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
                          {"openai", "anthropic"})
         self.assertEqual(window["openai"], 2)
         self.assertEqual(window["anthropic"], 1)
-        notice = next(f["text"] for f in DATA["findings"] if "comment window" in f["text"])
+        notice = next(bare(f["text"]) for f in DATA["findings"] if "comment window" in f["text"])
         self.assertIn(f"OpenAI {shown(on_ten(2))} out of 10", notice)
         self.assertIn(f"and Anthropic {shown(on_ten(1))}.", notice)
         # On special deployments, "Anthropic, OpenAI and xAI score 5.0 out of 10
@@ -583,7 +593,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(special["xai"], 2)
         self.assertEqual({lab for lab, score in special.items() if score},
                          {"openai", "anthropic", "xai"})
-        gap = next(f["text"] for f in DATA["findings"] if "armed forces" in f["title"])
+        gap = next(bare(f["text"]) for f in DATA["findings"] if "armed forces" in f["title"])
         self.assertIn(f"Anthropic, OpenAI and xAI score {shown(on_ten(2))} out of 10 each, "
                       f"and the other six nothing at all", gap)
 
@@ -591,6 +601,143 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         self.assertEqual(len(DATA["findings"]), 8)
         for finding in DATA["findings"]:
             self.assertTrue(finding["title"] and finding["text"], finding)
+
+
+def strings(value, where=""):
+    """Every string of a part of the file, with where it sits."""
+    if isinstance(value, str):
+        yield where, value
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            yield from strings(item, f"{where}.{key}" if where else key)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from strings(item, f"{where}[{index}]")
+
+
+def flat(text):
+    """A passage with its quotation marks and spacing made plain, to compare."""
+    text = text.replace("\u201c", '"').replace("\u201d", '"').replace("\u2019", "'")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+REGISTRY = {entry["id"]: entry for entry in DATA["sources"]}
+PREFIX = {"openai": "OA", "anthropic": "AN", "alibaba": "AL", "google": "GO",
+          "mistral": "MI", "meta": "ME", "xai": "XA", "moonshot": "MO",
+          "deepseek": "DS", "several": "CO"}
+# Every passage the board quotes from a company's document, with the row it
+# sits on: the ten checks and five practices anyone can check, and the four
+# practices only a company can show.
+QUOTED = [(lab, row, source) for lab in ORDER
+          for kind in ("evidence", "internal_evidence")
+          for row, found in DATA[kind][lab].items()
+          for source in found.get("sources", [])]
+# Every text that carries markers, and every marker in it. The registry itself
+# is left out: it is what the markers point to.
+TEXTS = [(where, text) for where, text in strings(
+    {key: value for key, value in DATA.items() if key != "sources"})]
+CITED = [(where, code) for where, text in TEXTS for code in MARKER.findall(text)]
+
+
+class EverySourceHasACode(unittest.TestCase):
+    """Since 26 September 2026 every document the board cites is one entry of a
+    registry, `sources`, coded by company: OA for OpenAI, CO for a document on
+    several companies. The texts cite an entry after the sentence that rests on
+    it, as [^OA3], and every quoted passage names its entry in `ref`. The
+    section "Sources reviewed" is the registry, drawn by governance.js."""
+
+    def test_the_codes_run_company_by_company(self):
+        self.assertEqual(len(REGISTRY), len(DATA["sources"]), "a code is used twice")
+        for company, prefix in PREFIX.items():
+            codes = [entry["id"] for entry in DATA["sources"] if entry["company"] == company]
+            self.assertTrue(codes, company)
+            self.assertEqual(codes, [f"{prefix}{n}" for n in range(1, len(codes) + 1)], company)
+        for entry in DATA["sources"]:
+            self.assertTrue(entry["title"].strip(), entry["id"])
+            if entry.get("paper"):
+                # The two working papers are unpublished, so they have no address.
+                self.assertIn(entry["paper"], DATA["papers"], entry["id"])
+                self.assertIsNone(entry["url"], entry["id"])
+            else:
+                self.assertTrue(entry["url"].startswith("https://"), entry["id"])
+        urls = [entry["url"] for entry in DATA["sources"] if entry["url"]]
+        self.assertEqual(len(urls), len(set(urls)), "one document, one entry")
+
+    def test_every_quoted_passage_names_its_entry(self):
+        for lab, row, source in QUOTED:
+            where = f"{lab} {row} {source['url']}"
+            self.assertIn(source.get("ref"), REGISTRY, where)
+            entry = REGISTRY[source["ref"]]
+            self.assertIn(entry["company"], (lab, "several"), where)
+            # The entry holds the passage, copied rather than typed.
+            self.assertTrue(any(flat(source["quote"]) in flat(quote["text"])
+                                for quote in entry["quotes"]), where)
+
+    def test_the_registry_quotes_only_what_the_board_quotes(self):
+        rows = (DATA["questions"] + [check for question in DATA["questions"]
+                                     for check in question["checks"]]
+                + DATA["supporting"] + DATA["internal"])
+        for entry in DATA["sources"]:
+            if entry.get("paper"):
+                held = [quote["text"] for row in rows for quote in row["quotes"]
+                        if quote["paper"] == entry["paper"]]
+            else:
+                held = [source["quote"] for _, _, source in QUOTED if source["ref"] == entry["id"]]
+            for quote in entry["quotes"]:
+                self.assertIn(flat(quote["text"]), [flat(text) for text in held], entry["id"])
+
+    def test_every_marker_names_an_entry(self):
+        self.assertTrue(CITED)
+        for where, code in CITED:
+            self.assertIn(code, REGISTRY, where)
+        # Nothing that looks like a marker and is not one.
+        for where, text in TEXTS:
+            self.assertEqual(text.count("[^"), len(MARKER.findall(text)), where)
+
+    # Two documents the hand-written list of sources named, and the registry
+    # keeps, that no sentence rests on. Google's guide to deploying Gemini for
+    # Government is named only where a note says we found nothing, and a
+    # sentence about an absence takes no code. NewsGuard's audit of Le Chat is
+    # mentioned by no text at all.
+    READ_NOT_CITED = {"GO27", "MI14"}
+
+    def test_every_entry_is_cited(self):
+        cited = {code for _, code in CITED} | {source["ref"] for _, _, source in QUOTED}
+        self.assertEqual(sorted(set(REGISTRY) - cited), sorted(self.READ_NOT_CITED))
+        for code in self.READ_NOT_CITED:
+            self.assertEqual(REGISTRY[code]["quotes"], [], code)
+
+    def test_a_marker_follows_a_sentence(self):
+        # After the sentence's own punctuation, never after a space and never
+        # inside a word: the reader meets the sentence whole, then its source.
+        for where, text in TEXTS:
+            for match in re.finditer(r"(?:\[\^[A-Z]{2}\d+\])+", text):
+                before = text[:match.start()]
+                self.assertRegex(before, r"[.?!\"\u201d\u2019')*]$", f"{where}: {before[-40:]}")
+
+    def test_a_company_text_cites_its_own_documents(self):
+        # A company's profile, the readings of its two figures and the notes on
+        # its rows cite its own documents and those on several companies.
+        for lab in ORDER:
+            texts = strings({"profiles": DATA["profiles"][lab],
+                             "column_readings": DATA["column_readings"][lab],
+                             "evidence": DATA["evidence"][lab],
+                             "internal_evidence": DATA["internal_evidence"][lab]})
+            for where, text in texts:
+                for code in MARKER.findall(text):
+                    self.assertIn(REGISTRY[code]["company"], (lab, "several"), f"{lab} {where}")
+
+    def test_the_sources_section_is_the_registry(self):
+        section = next(s for s in DATA["page"]["sections"] if s["id"] == "gov-sources")
+        slots = [block["slot"] for block in section["blocks"] if isinstance(block, dict)]
+        self.assertEqual(slots, ["gov-source-list"])
+        # The hand-written list it replaced is gone.
+        for block in section["blocks"]:
+            if isinstance(block, str):
+                self.assertNotIn("- [", block)
+        source = (ROOT / "site" / "governance.js").read_text(encoding="utf-8")
+        self.assertIn('getElementById("gov-source-list")', source)
+        self.assertIn("src-${entry.id}", source)
 
 
 class HouseRules(unittest.TestCase):

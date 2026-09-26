@@ -210,12 +210,19 @@ const handler = createMcpHandler(
         + "given against, and the passage or address it rests on. The answer "
         + "also carries a written paragraph on each company and why both figures "
         + "stay on the board beside the final score.\n\n"
+        + "Every document the board rests on has a code: two letters for the "
+        + "company (OA for OpenAI, CO for a document on several companies) and a "
+        + "number. The texts cite them after a sentence as [OA3], each quoted "
+        + "passage names its document in ref, and sources lists every document "
+        + "the answer can cite, with its address, its date and the passages "
+        + "quoted from it.\n\n"
         + "These were scored by hand by Polaris Collective from public "
         + "documents, on a date the answer names. The board is the one the "
         + "publication froze. A nought means nothing public was found, "
         + "not that the company does not do the thing.\n\n"
-        + "Pass company to narrow to one. All nine come to about 90,000 "
-        + "characters; one company to about 30,000.",
+        + "Pass company to narrow to one. All nine come to about 455,000 "
+        + "characters, sources included; one company to between 67,000 and "
+        + "104,000.",
       inputSchema: z.object({
         company: z.string().optional().describe(
           "One company's name, or part of it, such as Anthropic. All nine by "
