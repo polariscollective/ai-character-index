@@ -1083,13 +1083,29 @@ function renderScoring() {
 
 /* ---- The sources ------------------------------------------------------------ */
 
-/* Every document the board cites, one entry each, under "Sources reviewed":
- * its code, its title leading to the document, its date, the days we read it,
- * and the passages we quote from it. The texts above cite an entry by its code,
- * and pressing the code comes here. */
+/* Every document the board cites, one entry each, under "Sources reviewed".
+ * Each is one line, its code and its title leading to the document, with a
+ * quiet word at the end of the line that opens what lies behind it: the date,
+ * the days we read it, and the passages we quote from it. The texts above cite
+ * an entry by its code, and pressing the code comes here and opens it. */
 const SEVERAL = { id: "several", name: "More than one company" };
 
 const sentenceCase = text => text.charAt(0).toUpperCase() + text.slice(1);
+
+/* The word that opens an entry: how many passages it holds, or the date alone. */
+function toggleLabel(entry) {
+  const count = (entry.quotes || []).length;
+  if (count) return count === 1 ? "1 passage" : `${count} passages`;
+  return "date";
+}
+
+function setOpen(item, open) {
+  const toggle = item.querySelector(".source-toggle");
+  const body = item.querySelector(".source-body");
+  if (!toggle || !body) return;
+  body.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+}
 
 function sourceEntry(entry) {
   const item = element("li", "source-entry");
@@ -1107,10 +1123,11 @@ function sourceEntry(entry) {
   } else {
     head.append(document.createTextNode(entry.title));
   }
-  item.append(head);
+  const body = element("div", "source-body");
+  body.id = `src-body-${entry.id}`;
   const dated = [entry.date ? `${sentenceCase(entry.date)}.` : "",
     entry.read ? `Read ${entry.read}.` : ""].filter(Boolean).join(" ");
-  if (dated) item.append(element("p", "source-meta", dated));
+  if (dated) body.append(element("p", "source-meta", dated));
   (entry.quotes || []).forEach(quote => {
     const block = element("blockquote", "paper-quote");
     block.append(element("p", "", quote.text));
@@ -1119,8 +1136,19 @@ function sourceEntry(entry) {
     }
     const where = [quote.where, quote.date].filter(Boolean).join(", ");
     if (where) block.append(element("p", "paper-where", sentenceCase(where)));
-    item.append(block);
+    body.append(block);
   });
+  item.append(head);
+  if (body.childNodes.length) {
+    const toggle = element("button", "source-toggle", toggleLabel(entry));
+    toggle.type = "button";
+    toggle.setAttribute("aria-controls", body.id);
+    toggle.addEventListener("click", () =>
+      setOpen(item, toggle.getAttribute("aria-expanded") !== "true"));
+    head.append(document.createTextNode(" "), toggle);
+    item.append(body);
+    setOpen(item, false);
+  }
   return item;
 }
 
@@ -1151,6 +1179,7 @@ function showSource(code) {
   if (view?.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
   const fold = entry.closest("details");
   if (fold) fold.open = true;
+  setOpen(entry, true);
   const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   entry.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
   entry.focus({ preventScroll: true });

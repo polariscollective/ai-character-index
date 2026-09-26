@@ -964,6 +964,17 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .source-entry .source-head { margin: 0; }
 .source-entry .source-head .source-code { margin-right: 4px; }
 .source-entry .source-meta { margin: 2px 0 6px; font-size: 13px; color: var(--faint); }
+/* The word that opens an entry: small and faint at the end of its line, with no
+   arrow, and the link colour change on hover like every control here. */
+.source-entry .source-toggle {
+  margin: 0; padding: 0 2px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--faint);
+  transition: color 150ms, background-color 150ms;
+}
+.source-entry .source-toggle:hover { color: var(--ink); background: rgb(183 201 75 / .35); }
+.source-entry .source-toggle:focus-visible { outline: 2px solid var(--energy); outline-offset: 1px; }
+.source-entry .source-body { margin: 2px 0 8px; }
+.source-entry .source-body[hidden] { display: none; }
 .source-entry .paper-quote { margin: 6px 0 8px; }
 .source-entry .paper-quote p { margin: 0; font-size: 14px; }
 .source-entry .paper-quote .paper-where { margin-top: 3px; font-size: 12px; }
@@ -1193,7 +1204,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 @media (prefers-reduced-motion: reduce) {
   .gov-button, .row-toggle::before,
   .gov-pop summary::before, .section-fold > summary::before,
-  sup.cite a, a.source-code, .source-entry { transition: none; }
+  sup.cite a, a.source-code, .source-entry, .source-entry .source-toggle { transition: none; }
 }
 
 /* ---------- the overview ----------
