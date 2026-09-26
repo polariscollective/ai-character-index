@@ -297,7 +297,7 @@ def one_call(store, call, run_row, registry, passages_for, versions,
         report["done"] += 1
 
 
-def retained_passages(cell, judgements, passages_for, version):
+def retained_passages(cell, judgements, passages_for, version, manual=None):
     """The passages a reader shows by default for one cell, from its judges'
     parsed votes: every banded passage, related included, because that is what
     the reader opens on.
@@ -307,13 +307,23 @@ def retained_passages(cell, judgements, passages_for, version):
     cells their depths does not need to read the whole table again for each
     one. Shared by `pending_depths`, which gives depths on the scale of four
     as a run finishes, and `depth_pass.py`, which gives depths out of ten to
-    calls already done."""
+    calls already done.
+
+    `manual` is {locator: band or None}, the owner's corrections to this cell
+    (manual_review), passed only by a pass asked for them: a manual band shown
+    by default puts its passage among the retained ones whatever the judges'
+    votes, and a manual None takes it out."""
     model_of = {c["id"]: c["model"] for c in cell}
     votes = {}
     for row in judgements:
         if row["call_id"] in model_of and row.get("parsed", True):
             votes.setdefault(row["locator"], {})[model_of[row["call_id"]]] = row["verdict"]
     shown = set(bands.shown_by_default(votes))
+    for locator, band in (manual or {}).items():
+        if band in bands.DEFAULT_BANDS:
+            shown.add(locator)
+        else:
+            shown.discard(locator)
     return [p for p in passages_for(version["spec_id"], version["version"]) if p[0] in shown]
 
 

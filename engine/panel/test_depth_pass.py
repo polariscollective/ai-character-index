@@ -977,3 +977,25 @@ class ManualCallIsNeverAskedTest(unittest.TestCase):
         written = {row["call_id"] for row in fake.inserted("aci_depths_out_of_ten")}
         self.assertNotIn("call-manual", written)
         self.assertEqual(sorted(tag for tag, _ in model.asked), ["deepseek", "fable", "sol"])
+
+
+class ManualPassagesTest(unittest.TestCase):
+    """With manual review, the judges are shown the passages banded by hand."""
+    MANUAL_CALL = {"id": "call-manual", "run_id": RUN, "behaviour_slug": "honesty",
+                   "spec_version_id": VERSION_ID, "model": "manual", "status": "done"}
+
+    def shown(self, manual):
+        fake = store(aci_judge_calls=[dict(c) for c in CALLS] + [dict(self.MANUAL_CALL)],
+                     aci_judgements=[dict(j) for j in JUDGEMENTS] + [
+                         {"call_id": "call-manual", "locator": PASSAGES[0][0], "verdict": 1,
+                          "parsed": True, "note": "An example."}])
+        versions = {v["id"]: v for v in fake.select("aci_spec_versions")}
+        jobs = depth_pass.jobs_for(fake, [RUN], ASSESSMENT_RUN, ASSESSMENT_RUN, passages_for,
+                                   versions, manual=manual)
+        return {p[0] for p in jobs[0][1]}
+
+    def test_without_manual_review_the_retained_passages_are_the_judges(self):
+        self.assertEqual(self.shown(False), {PASSAGES[2][0]})
+
+    def test_with_manual_review_a_passage_banded_by_hand_is_shown(self):
+        self.assertEqual(self.shown(True), {PASSAGES[0][0], PASSAGES[2][0]})

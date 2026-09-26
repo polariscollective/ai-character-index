@@ -158,7 +158,8 @@ def ready_cells(store, run_ids):
             if cell and all(c["status"] == "done" for c in cell)}
 
 
-def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions):
+def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions,
+             manual=False):
     """[(call, retained passages, conflict rules, seated models)] ready to be
     given a depth out of ten: every call of a whole cell of `run_ids` that has
     no done row of `aci_depths_out_of_ten` for the current prompt of ten and
@@ -174,6 +175,10 @@ def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, ver
     depths, a substitute of an earlier done row included. `give_pass` adds to
     it the model that gives each depth in this pass, so `depth_ladder.give`
     refuses a second depth of one cell from any model.
+
+    With `manual`, the retained passages of a cell follow the owner's
+    corrections written in its run (manual_review): a passage banded by hand is
+    shown to the judges, one taken off by hand is not.
 
     Raises SystemExit, naming every gap, before reading or writing anything
     else, when the assessment run does not stand for a document of any done
@@ -191,12 +196,23 @@ def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, ver
     ready = ready_cells(store, run_ids)
 
     judgements = store.select("aci_judgements") if ready else []
+    corrections = {}
+    if manual and ready:
+        manual_calls = {c["id"]: (c["run_id"], c["behaviour_slug"], c["spec_version_id"])
+                        for c in store.select("aci_judge_calls")
+                        if c["run_id"] in run_ids and manual_review.is_manual(c)
+                        and c["status"] == "done"}
+        for row in judgements:
+            key = manual_calls.get(row["call_id"])
+            if key is not None:
+                corrections.setdefault(key, {})[row["locator"]] = manual_review.band_of(row["verdict"])
     rules_of = {}
     jobs = []
     for key, cell in sorted(ready.items()):
         _run_id, _slug, version_id = key
         version = versions[version_id]
-        retained = batch_job.retained_passages(cell, judgements, passages_for, version)
+        retained = batch_job.retained_passages(cell, judgements, passages_for, version,
+                                               corrections.get(key))
         if version_id not in rules_of:
             rules_of[version_id] = conflict_rules_for(assessed[version_id], version,
                                                        passages_for)
@@ -346,7 +362,7 @@ def give_one(store, call, retained, rules, registry, config, call_model, row, re
 
 
 def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_model=None,
-              go=False, registry=None):
+              go=False, registry=None, manual=False):
     """Price giving a depth out of ten to every eligible call of `run_ids`,
     and, with `go`, give them and write the rows.
 
@@ -360,7 +376,8 @@ def give_pass(store, config, run_ids, assessment_run_id, passages_for, call_mode
     without `go`)."""
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
     given_against = index_store.criteria_run_id(store, assessment_run_id)
-    jobs = jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions)
+    jobs = jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, versions,
+                    manual=manual)
     registry = registry if registry is not None else index_store.judging_registry(store)
 
     estimate, priced_count, worst_case, ceiling = price(jobs, registry, config)
@@ -427,6 +444,9 @@ def main(argv=None):
                              "depths against that run")
     parser.add_argument("--go", action="store_true",
                         help="spend and write; without it the pass is only priced")
+    parser.add_argument("--manual-review", action="store_true", dest="manual",
+                        help="show the judges the passages the owner banded by hand in each "
+                             "run (engine/manual_review.py), and not those taken off")
     args = parser.parse_args(argv)
     # Before the store is opened: an id that is not one is refused by name.
     assessment_run_id = index_store.assessment_run_id(args.assessment_run)
@@ -439,7 +459,7 @@ def main(argv=None):
         print(seat_call.ANTHROPIC_KEY_NOTE, file=sys.stderr)
     try:
         _estimate, report = give_pass(store, config, run_ids, assessment_run_id, h.passages,
-                                      go=args.go)
+                                      go=args.go, manual=args.manual)
     except seat_call.Unreachable as stopped:
         print(f"The depth pass stopped: {stopped}. The depth it was giving is written error "
               "with every attempt it had billed. Once the connection is back, run the same "
