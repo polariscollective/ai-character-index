@@ -7198,6 +7198,34 @@
    "question": "We score a special regime a company acknowledges without describing it at 2 of 4 on special deployments, as the description of a 2 says. xAI rose from 0 to 2: section 2.3 of its Frontier AI Framework says that \"the full functionality of our models may be available to only a limited set of trusted parties, partners, and government agencies\", and its post of December 2025 announces government-optimised models for classified work. Google DeepMind stays at 0. It confirmed an agreement letting the Pentagon use Gemini on classified networks and has not acknowledged that the rules there differ; that they differ was reported by the press, citing The Information. The rule gives a sentence about tiered access in a risk framework the same 2 as Anthropic's statement, in its constitution, that some of its models do not fully fit it, and it turns on what a company admits: a company that says nothing scores 0 whatever it deploys. xAI's third place rests on three of these rules together. Its 2 here, or its 2 on changes explained, would each have lifted it above Google DeepMind alone, and its 2 on guardrail changes logged would not.",
    "what_would_settle_it": "Deciding whether acknowledging a deployment is enough, or whether the company must say that the rules there differ, and writing that into the check's description of a 2.",
    "raised": "26 September 2026"
+  },
+  {
+   "id": "mistral-2-1-against-xai",
+   "title": "Mistral AI's versions kept stays at 1 while xAI's prompt history earns 2",
+   "question": "Rule 2 counts published system prompts as a partial constitution, and the git history of xAI's prompts gives it 2 on versions kept. Mistral AI's Vibe prompts sit in a git history too, and its 2.1 stays at 1, scored on its usage policy.",
+   "what_would_settle_it": "Deciding whether 2.1 reads the history of the prompts once they count as a partial constitution, and applying it to both.",
+   "raised": "26 September 2026"
+  },
+  {
+   "id": "sentences-with-no-source",
+   "title": "About sixty sentences carry no source code, or one for only half of what they say",
+   "question": "Among them: X belonging to xAI since 2025, the TIME spokesperson on Anthropic's military models, the quotes of Mistral AI's chief executive, xAI's testing agreement with CAISI, the Qwen3.8 model card. Two quotes rest on the auditor alone: the Mistral prompt variant of 26 August 2026 and the Axios report on xAI. The full list is in docs/audits/2026-09-25-external-audit/source-codes-applied.md.",
+   "what_would_settle_it": "Adding each source to the registry with a quote read at its address, or softening the sentence.",
+   "raised": "26 September 2026"
+  },
+  {
+   "id": "five-small-inconsistencies",
+   "title": "Five sentences the citation pass found doubtful, left as they were",
+   "question": "Google's 2.2 note: section 5.3 of the Frontier Safety Framework summarises only version 3.1. OpenAI's profile on question 2 says the change log gives no reasons, but the entry of 12 September 2025 gives one; its 3.1 and 3.2 notes disagree on whether the change log records guardrail changes. Mistral AI's profile on question 2 counts three safety entries in its changelog, which shows four. DeepSeek's profile on question 4 says its terms take effect as soon as published, which is not true of its developer agreement, which gives seven days.",
+   "what_would_settle_it": "Reading each against its source and correcting the sentence.",
+   "raised": "26 September 2026"
+  },
+  {
+   "id": "two-sources-cited-by-nothing",
+   "title": "Two sources are listed and cited by no text",
+   "question": "GO27, Google's Gemini for Government guide, is named only in a sentence saying nothing was found there. MI14, NewsGuard's audit of Le Chat, is named by no text.",
+   "what_would_settle_it": "Citing each where it supports a sentence, or dropping it from the registry.",
+   "raised": "26 September 2026"
   }
  ],
  "column_readings": {
