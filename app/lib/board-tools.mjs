@@ -149,6 +149,9 @@ export function constitutionsBoard(snapshot, args = {}) {
             behaviour: one.slug, name: one.name, category: one.category, figure,
             level: figure === null ? null : depthLevel(figure, scale),
             says: entry.says ?? null, why: entry.why ?? null,
+            // A figure set by hand carries the judges' own mean and the reason.
+            ...(entry.manual ? { manual_review: {
+              judges_mean: numeric(entry.manual.judges), note: entry.manual.note ?? null } } : {}),
           };
         }),
       },

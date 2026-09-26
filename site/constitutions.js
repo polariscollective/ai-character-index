@@ -548,6 +548,12 @@ function behaviourCell(content, company, behaviour) {
   const entry = behaviourEntry(company, behaviour) || {};
   board.titled(content, `${company.name}: ${lowerFirst(behaviour.name)}`, documentLine(company));
   content.append(board.figure(shown(entry.score), ` out of ${depthMax()}`));
+  // A figure we set by hand says so under it, with the judges' own mean and the
+  // reason, so the reader can tell our reading from the panel's.
+  if (entry.manual && typeof entry.manual.note === "string") {
+    sentences(content, `**Set by hand.** The judges' mean was ${shown(entry.manual.judges)} `
+      + `out of ${depthMax()}. ${entry.manual.note}`);
+  }
   /* A company that publishes no constitution carries a figure and no prose, and
    * has nothing to compare: its cell keeps the company's own line and no fold. */
   if (!(typeof entry.says === "string" && entry.says.trim())) {
