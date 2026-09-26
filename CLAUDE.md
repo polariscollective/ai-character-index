@@ -33,6 +33,130 @@ An agent building a publication reads all three files against each other and
 against the payload before it runs `publish.py`, and says what it checked. No
 test covers the first two points yet.
 
+# Start here: operating the index
+
+This section is for whoever picks the index up next. It says how it works as of
+26 September 2026 and where to act. The rest of the file is the history behind
+it. The whole site is still a confidential work in progress.
+
+## Where things live
+
+- **The database.** Every document, behaviour, judgement, depth and publication
+  lives in the `aci_` tables of the shared `evals` Supabase project
+  (`hkqzamibfpyvlowiqgpn`). `.env` carries `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY`. The judgement tables are insert-only by design:
+  nothing that was written can be updated or deleted by the service key.
+- **Three hand-written board files.** `site/constitutions.json` (what the
+  constitutions say), `site/governance.json` (how companies govern them) and
+  `site/overview.json` (the front page, whose figures are computed from the two
+  boards and whose words are written by hand). No panel produces them.
+- **The site.** A Next.js application on Vercel. `develop` deploys a development
+  site that serves the newest publication, public or not; `main` deploys
+  production, which serves the newest public one. `npm run dev` copies `site/`
+  into `public/` once, at start: after editing a file in `site/`, copy it again
+  (`rm -rf public && mkdir -p public && cp -R site/. public/`) or restart.
+
+## How a behaviour figure is made
+
+1. **Passages.** Three judges, the `frontier_fast` panel (`sol` from OpenAI,
+   `fable` from Anthropic, `deepseek` from DeepSeek), each read a whole document
+   against one behaviour's brief and give every paragraph 3 (defining), 2 (core),
+   1 (related) or 0. A paragraph is retained when the three verdicts sum to 4 or
+   more; its band follows from the sum. The rubric scores a worked example at most
+   1, so a worked example is never retained on the judges' votes alone (see "No
+   worked example can reach the depth judge" below).
+2. **Depth.** In a pass of its own (`engine/panel/depth_pass.py`), each judge
+   reads the retained passages and the document's general conflict rules and
+   gives a depth from 0 to 10 on `methodology/spec-coverage-depth-rubric.md`. The
+   figure shown is the mean of the three.
+3. **Substitutes.** Where a judge cannot answer, a model declared in
+   `panel-config.json` sits in its seat and the substitution is recorded (Kimi,
+   from Moonshot AI, sits in fable's seat on every Alibaba cell; glm gave eleven
+   depths in deepseek's seat). The reader and the MCP name them.
+4. **The document as a whole** is scored by the same panel on five criteria
+   (`engine/assess.py`, `methodology/document-assessment-rubric.md`).
+
+## Correcting a figure by hand
+
+A correction is one more judge, called `manual` (`engine/manual_review.py`):
+
+```
+python3 engine/manual_review.py --run=<run id> --behaviour=<slug> \
+    --document=<lab--document@version> \
+    --locator="<locator>" --band=defining|core|related|none --note="Why."
+python3 engine/manual_review.py --run=<run id> --behaviour=<slug> \
+    --document=<lab--document@version> \
+    --depth=<0-10> --reason="Why." --assessment-run=<assessment run id>
+```
+
+- It must be written in the run the publication takes the cell from
+  (`aci_publication_cells`), or the next publication will not see it.
+- It wins over the judges in a publication built with `--manual-review`, and
+  the judges' figures stay beside it. The reader and the MCP say it was set by
+  hand, from what, and why.
+- A row cannot be deleted. To withdraw every correction of one cell, set its
+  `manual` call's status to `cancelled` in `aci_judge_calls`.
+- The constitutions board carries its own figures by hand. A depth corrected in
+  the database is set to the same figure in `site/constitutions.json`, with a
+  `manual` field (`judges`, the judges' mean, and `note`), which the popover
+  shows under the figure.
+- As of 26 September 2026: 355 passages and 8 depths are corrected by hand in
+  runs `aef5e906`, `c2f1b34a`, `a2bdadba` and `9aa3c177`, for the OpenAI Model
+  Spec of August 2026, the Alibaba Model Spec and Claude's Constitution. The
+  December 2025 OpenAI version has none. The depths were set by hand, not judged
+  again; `site/constitutions.json` has an open question on how to settle them.
+- `engine/panel/depth_pass.py --manual-review` gives depths that show the judges
+  the passages added by hand. It has not been run.
+
+## Publishing, and seeing a change
+
+Editing a board file changes nothing anyone sees until a publication carries it.
+A publication freezes the behaviour payload, the documents, the links and the
+three board files, and the site reads them from the publication it serves.
+
+- **Locally**, the header shows a switch at `127.0.0.1` or `localhost` only:
+  **Publication** reads the boards from the publication, **Repository files**
+  reads `site/constitutions.json`, `site/governance.json` and
+  `site/overview.json` as they stand on disk. The choice is kept in the browser.
+- **To publish**, build from the command line. The portal's publish job passes
+  none of `--depth-prompt`, `--assessment-run` or `--manual-review`, so it can
+  only build on the old scale of four. The last development publication,
+  `fb79e4b7`, was built with its parameters recorded in
+  `aci_publications.build_params`; repeat them, adding `--manual-review`:
+
+```
+python3 engine/publish.py --behaviours=<14 slugs> --documents=<4 version ids> \
+    --link-runs=<8 link run ids> --depth-prompt=<sha256 of depth-v2.txt> \
+    --assessment-run=e2c00b2e-e57c-4518-8856-00e81fa037a1 \
+    --unanalysed-documents=<5 version ids> --manual-review --notes="..."
+```
+
+- A publication is built not public. The development site shows it at once;
+  production shows it only once `is_public` is set (the portal's Publications
+  page). Production still serves `1919ee6b`, which predates the board columns,
+  so its boards show the "not compatible" sentence until a newer publication is
+  made public.
+- Before publishing, read the three board files against each other and against
+  the payload (see "Rules for the site's text" above).
+
+## Changing the database
+
+The schema is in the `polaris-supabase` repository (`evals/supabase/migrations`),
+not here. A change needs access to that GitHub repository and to the Supabase
+project. Its CI fails on authentication, so a migration is merged first and then
+applied by hand from `evals/` on `main`, with `supabase db push`; never from a
+branch.
+
+## Where decisions are recorded
+
+- `docs/audits/2026-09-25-external-audit/`: the external audit of 25 September
+  2026, what was applied and what was held, file by file.
+- The governance page's "Detailed scoring" lists the nine scoring rules decided
+  on 26 September 2026, marked as our own choices.
+- `open_questions` in `site/constitutions.json` and `site/governance.json` is the
+  internal list of what is unsettled, with what would settle each point. The
+  site does not show it.
+
 # Divergence from the upstream project
 
 This fork is `polariscollective/ai-character-index`, from
@@ -1565,15 +1689,11 @@ confirmed by `fable` in `b4acc896`, and both listed and confirmed by `opus` in
 document. Nothing in these runs was arranged to avoid that, and nothing in the
 figures corrects for it.
 
-**None of it is published.** No publication names either flag, so none carries a
-depth out of ten or an assessment; the public publication is still `1919ee6b` on
-the scale of four, and the reader and the overview still say "Depth, out of 4".
-The depth notes and the comparison paragraphs quote a figure out of 4 and have
-not been written since 17 September 2026, so a publication on the new scale
-would carry neither. The display decisions were taken with the owner on 22
-September 2026 and a prototype exists on `feat/depth-to-ten-site`, but the scale
-read from the payload, the colour ramp, the legend, the row for the document as
-a whole, the MCP server and the copy are not written. The design is
+**Published on the development site, not in production.** The development
+publication `fb79e4b7` (25 September 2026) names both flags and carries depths
+out of ten and the assessment of each document; the reader, the boards and the
+MCP read the scale from the payload. Production still serves `1919ee6b`, on the
+scale of four. The design is
 `docs/superpowers/specs/2026-09-21-depth-out-of-ten-and-the-document-as-a-whole-design.md`;
 the migration is applied and its pull request, `polaris-supabase` #37, is open.
 
@@ -1581,10 +1701,10 @@ the migration is applied and its pull request, `polaris-supabase` #37, is open.
 
 The board the index leads with is built from `site/constitutions.json`, a file
 people write, the way the governance board is built from `site/governance.json`.
-It keeps the shape the publication board had: a final score out of 20, the
-document as a whole out of 10 opening into five criteria out of 2, and each
-behaviour category opening into its behaviours out of 10, with companies ranked
-by the final score. What it no longer keeps is the account of how any figure was
+Every figure on it is out of 10: the final score is the average of the document
+as a whole (five criteria, each given out of 4 and shown out of 10) and the
+behaviours (each category opening into its behaviours), with companies ranked by
+the final score. What it no longer keeps is the account of how any figure was
 arrived at. No judge, no panel, no rationale appears anywhere on it, and every
 word a popover shows is a sentence out of the file: what the constitution says on
 a behaviour, how that stands beside the others, and why the figure is what it is.
@@ -1605,10 +1725,9 @@ its file names. `site/overview.js` is now the tabs and nothing else;
 `site/coverage.js` is the file that used to be `overview.js`, and the `<style>`
 block both pages need is `site/board.css`.
 
-One entry of the file is not a column. `openai-2025-12` is the December 2025
-version of the same company's document, and two columns under one name would read
-as two companies, so a company's column is its newest document and the earlier
-version is reached from that column's profile, unranked.
+A company's column is its newest document. The December 2025 version of the
+OpenAI Model Spec is judged and has its depths in the doc reader, and is not on
+the board.
 
 **The companies carry their own marks.** Above each name, on both boards of the
 front page, one path filled with `currentColor` so the colour is the stylesheet's
@@ -1665,7 +1784,8 @@ it needs. Either one is a migration in `polaris-supabase` and a change to
 
 Since 24 September 2026 the front page reads neither board from a file. A
 publication freezes `site/constitutions.json` and `site/governance.json` as they
-stand when it is built, in the `constitutions` and `governance` columns of
+stand when it is built, and `site/overview.json` since the same week, in the
+`constitutions`, `governance` and `overview` columns of
 `aci_publications` with their digests (`20260924160000_aci_a_publication_carries_both_boards.sql`
 in `polaris-supabase`), and the page reads them from `/api/reader/constitutions`
 and `/api/reader/governance`, from the publication being served or the one
@@ -1720,9 +1840,9 @@ Vercel, and the index is operated from a portal rather than a terminal. Upstream
 keeps the property this fork gave up, which is running from a bare clone.
 
 `develop` was merged into `main` on 15 September 2026 (PR #1, `119fa63`), Vercel
-deployed it to production, and further releases followed on 16 September. The
-public publication is `1919ee6b`, thirteen behaviours over four documents, on
-https://ai-character-index.vercel.app.
+deployed it to production, and further releases followed. As of 26 September
+2026 the public publication is still `1919ee6b`, thirteen behaviours over four
+documents; the newest development publication is `fb79e4b7`.
 
 The cleanup migration `20260916090000_aci_cleanup_after_the_one_panel_redesign.sql`
 (`polaris-supabase` PR #30) was applied on 16 September 2026, once the code that
