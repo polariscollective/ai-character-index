@@ -1272,7 +1272,7 @@
    "id": "conflict-rules-under-the-old-ceiling",
    "title": "Anthropic's clarity when two rules are contradictory was read under a rule the index has withdrawn",
    "question": "The figure is 5.8 out of 10, from three readings of 2, 3 and 2. Two of the three gave 2 because the rubric said an order weighed as a whole is worth at most 2 however detailed. The rubric describes a level above that since 24 September 2026, for an order weighed as a whole beside constraints the document calls absolute and winners it names, which is what Claude's Constitution carries.",
-   "what_would_settle_it": "Judging the cell again under the prompt as it now reads. It costs money.",
+   "what_would_settle_it": "Set by hand to 7.5 on 26 September 2026 (see figures-set-by-hand); judging the cell again under the current prompt would settle it for good.",
    "raised": "24 September 2026"
   },
   {
@@ -1318,10 +1318,10 @@
    "raised": "24 September 2026"
   },
   {
-   "id": "eight-depths-set-by-hand",
-   "title": "Eight behaviour figures were set by hand from worked examples the judges were not shown",
-   "question": "On 26 September 2026 eight depths were set by hand: OpenAI's user autonomy (6.0 to 8), over- and under-caution (7.0 to 9), proportionate risk (7.0 to 9), helpfulness (7.7 to 9) and harmlessness to the user (8.0 to 9), Alibaba's harmlessness to the user (8.0 to 9), and Anthropic's user autonomy and proportionate risk (8.0 to 9 each). Each rests on worked examples the judging rubric scores at most related, so three judges could never retain them and the depth judges never saw them. The hand-set figure is ours, read from the document by one reader, a language model; for Anthropic that reader is Claude, an Anthropic model. The judges' own figures stay beside each one. OpenAI gains 0.6 on the behaviours and 0.3 on the final score, Anthropic and Alibaba less, and the order of the three is unchanged. The December 2025 version of the Model Spec keeps the judges' figures, so the two OpenAI versions are not scored on the same evidence.",
-   "what_would_settle_it": "Giving these depths again with the passages added by hand shown to the judges (engine/panel/depth_pass.py --manual-review) on a copy of the run, and doing the same for the December 2025 version.",
+   "id": "figures-set-by-hand",
+   "title": "Eleven behaviour figures and five criteria of the document as a whole were set by hand",
+   "question": "On 26 September 2026 eight depths were set by hand: OpenAI's user autonomy (6.0 to 8), over- and under-caution (7.0 to 9), proportionate risk (7.0 to 9), helpfulness (7.7 to 9) and harmlessness to the user (8.0 to 9), Alibaba's harmlessness to the user (8.0 to 9), and Anthropic's user autonomy and proportionate risk (8.0 to 9 each). Each rests on worked examples the judging rubric scores at most related, so three judges could never retain them and the depth judges never saw them. The hand-set figure is ours, read from the document by one reader, a language model; for Anthropic that reader is Claude, an Anthropic model. The judges' own figures stay beside each one. OpenAI gains 0.6 on the behaviours and 0.3 on the final score, Anthropic and Alibaba less, and the order of the three is unchanged. The December 2025 version of the Model Spec keeps the judges' figures, so the two OpenAI versions are not scored on the same evidence. The same day three Alibaba depths were lowered by hand, avoiding illegitimate concentration of power (5.3 to 5), not undermining human oversight (7.7 to 7) and no sycophancy (7.3 to 7), and five criteria of the document as a whole were set by hand after the audit: Alibaba's clarity when two rules conflict (10.0 to 8.3), OpenAI's reasons (8.3 to 7.5), and Anthropic's clarity when two rules conflict (5.8 to 7.5), situations (6.7 to 7.5) and unsettled contradictions (5.0 to 10.0). With them Anthropic is second on the final score, 0.07 ahead of Alibaba, a gap well inside what one reading can move. The criteria exist only in this file: the assessment rows in the database keep the judges' scores, and a publication's own assessment carries those.",
+   "what_would_settle_it": "Giving these depths again with the passages added by hand shown to the judges (engine/panel/depth_pass.py --manual-review) on a copy of the run, and assessing the five criteria again; doing the same for the December 2025 version of the Model Spec.",
    "raised": "26 September 2026"
   }
  ]
