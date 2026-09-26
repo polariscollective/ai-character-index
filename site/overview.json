@@ -64,7 +64,7 @@
   "tiers": [
    {
     "name": "Best in class",
-    "from": 0.85
+    "from": 0.8
    },
    {
     "name": "Middle tier",
@@ -75,7 +75,7 @@
     "from": 0
    }
   ],
-  "relative_note": "Each company against the best score on the same row. Best in class is within 15% of that score, middle tier within half of it, and behind is further off.",
+  "relative_note": "Each company against the best score on the same row. Best in class is within 20% of that score, middle tier within half of it, and behind is further off.",
   "hint": "Press a cell to see the score behind it.",
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
@@ -104,7 +104,7 @@
   },
   {
    "title": "OpenAI and Anthropic stand out, and still fall short on governance",
-   "text": "OpenAI is best in class on every figure. Anthropic is best in class on the behaviours its constitution covers and on all three governance figures, and in the middle tier on the document as a whole and on the final score of what the constitutions say. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on the three figures of what the constitutions say, second to OpenAI on the document as a whole, but its constitution names none of the models it governs and Alibaba is behind on all three governance figures."
+   "text": "OpenAI is best in class on every figure, and Anthropic on all but one, the document as a whole, where it is in the middle tier. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on the three figures of what the constitutions say, second to OpenAI on the document as a whole, but its constitution names none of the models it governs and Alibaba is behind on all three governance figures."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",
