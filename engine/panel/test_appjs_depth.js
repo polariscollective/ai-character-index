@@ -114,6 +114,9 @@ var linkRows = null;
 var depthRows = null;
 var overviewRows = null;
 var state = {};
+// The constitutions board a note opens on: none loaded here, so every note
+// opens on the judges as before, and one check below loads one.
+var constitutionsBoard = null;
 
 /* Without the guard every check that calls it fails by name, so the count this
  * harness prints is the same before and after the fix. */
@@ -134,6 +137,7 @@ eval(extractFn("function depthJudgeCount(behaviours) {"));
 eval(extractFn("function depthScaleLede(behaviours) {"));
 eval(extractFn("function depthScaleNote(behaviours) {"));
 eval(extractFn("function cellNote(behaviour, documentId, kind) {"));
+eval(extractFn("function boardEntry(slug, documentId) {"));
 eval(extractFn("function depthCellNote(behaviour, doc) {"));
 eval(extractFn("function depthFigureNote(behaviour, documents) {"));
 eval(extractFn("function releaseDepthTrigger() {"));
@@ -414,6 +418,7 @@ check("a judged cell gives the mean out of 4, the rubric word, and every judge w
       { document: "Claude’s Constitution 2026-01-20",
         figure: "2.7",
         summary: "2.7 out of 4, prescribed.",
+        says: "", why: "", same: "", differs: "", manual: "",
         // Empty with no file loaded, and asserted rather than omitted: the note
         // branches on whether these carry anything, so a cell that answered
         // undefined would read the same here and fold the judges differently.
@@ -435,7 +440,26 @@ check("a document a behaviour was not judged on says so plainly, and lists no ju
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[0]),
       { document: "Claude’s Constitution 2026-01-20", figure: null,
         summary: "No depth given: this behaviour was not judged on this document.",
+        says: "", why: "", same: "", differs: "", manual: "",
         written: "", stands: "", substitutions: [], judges: [] });
+check("a document the constitutions board has a column for opens on the board's words",
+      () => {
+        constitutionsBoard = { companies: [{ document: { id: JUDGED_DOCUMENTS[0].id },
+          behaviours: { [THREE_JUDGES.slug]: { says: "It asks this.", why: "Hence the figure.",
+                                                same: "Alike.", differs: "Apart." } } }] };
+        const cell = depthCellNote(THREE_JUDGES, JUDGED_DOCUMENTS[0]);
+        constitutionsBoard = null;
+        return [cell.says, cell.why, cell.same, cell.differs];
+      },
+      ["It asks this.", "Hence the figure.", "Alike.", "Apart."]);
+check("a figure set by hand says so with the judges' own mean, and not in the summary",
+      () => {
+        const manual = { ...THREE_JUDGES, coverage: { [JUDGED_DOCUMENTS[0].id]: {
+          depth: { mean: 9, judgesMean: 8, judges: {}, manual: { depth: 9, rationale: "Worked cases" } } } } };
+        const cell = depthCellNote(manual, JUDGED_DOCUMENTS[0]);
+        return [cell.summary.includes("hand"), cell.manual];
+      },
+      [false, "Set by hand at 9.0; the judges' mean was 8.0. Worked cases."]);
 check("a document the behaviour carries no entry for reads the same way",
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[1]).summary,
       "No depth given: this behaviour was not judged on this document.");

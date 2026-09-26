@@ -18,7 +18,8 @@
 /* What the reader says when the publication it is serving cannot be read with
  * this version of the site: one sentence for every cause, shared with the front
  * page's boards. */
-import { INCOMPATIBLE } from "/publication-data.js";
+import { INCOMPATIBLE, loadBoard } from "/publication-data.js";
+import { renderMarkup } from "/markup.js";
 import { loaderMarkup } from "/loader.js";
 /* The depth scale a publication is on, its levels and what a figure on it is
  * called: one file for the whole site, so the reader and the boards cannot say
@@ -1194,22 +1195,37 @@ function openDepthNote(trigger, note) {
         summary.textContent = cell.summary;
       }
       body.append(heading, summary);
-      cell.substitutions.forEach(sentence => {
-        const said = document.createElement("p");
-        said.className = "depth-note-substitution";
-        said.textContent = sentence;
-        body.append(said);
-      });
-      /* The reading first, the judges under it and folded. A reader pressing a
-       * figure wants to know why it is that figure; three names with three
-       * scores is the evidence for the answer rather than the answer, and it
-       * was all this note used to offer. */
-      if (cell.written) {
+      /* The summary first, as the constitutions board gives it: what the
+       * document asks on the behaviour and why the figure is what it is. A
+       * document the board has no column for opens on the judges' own reading. */
+      const summarised = Boolean(cell.says || cell.why);
+      if (summarised) {
+        const box = document.createElement("div");
+        box.className = "depth-note-board";
+        if (cell.says) renderMarkup(box, cell.says);
+        if (cell.why) renderMarkup(box, cell.why);
+        body.append(box);
+      } else if (cell.written) {
         const why = document.createElement("p");
         why.className = "depth-note-written";
         why.textContent = cell.written;
         body.append(why);
       }
+      /* Then the details, folded where a summary stands above them: a figure
+       * set by hand, a seat a substitute took, the judges' reading in one voice
+       * where the board already gave the summary, and every judge with its
+       * figure and its reason. With no summary they are the whole answer, and
+       * hiding the answer behind a press would be worse than the length. */
+      const details = [];
+      const line = (className, text) => {
+        const paragraph = document.createElement("p");
+        paragraph.className = className;
+        paragraph.textContent = text;
+        details.push(paragraph);
+      };
+      if (cell.manual) line("depth-note-manual", cell.manual);
+      cell.substitutions.forEach(sentence => line("depth-note-substitution", sentence));
+      if (summarised && cell.written) line("depth-note-written", cell.written);
       if (cell.judges.length) {
         const list = document.createElement("ul");
         list.className = "depth-note-judges";
@@ -1224,26 +1240,40 @@ function openDepthNote(trigger, note) {
                       span("depth-note-rationale", given.rationale));
           list.append(item);
         });
-        /* Folded only where something was written to fold them under: with no
-         * paragraph they are the whole of the answer, and hiding the answer
-         * behind a press would be worse than the length. */
-        if (cell.written) {
-          const fold = document.createElement("details");
-          fold.className = "depth-note-panel";
-          const label = document.createElement("summary");
-          label.textContent = cell.judges.length === 1
-            ? "The reading behind it"
-            : `The ${cell.judges.length} readings behind it`;
-          fold.append(label, list);
-          body.append(fold);
-        } else {
-          body.append(list);
-        }
+        details.push(list);
       }
-      /* Read in headings and bullets by comparisonNodes, which is what wrote
-       * this shape: both passages answer under shouted headings, so one reader
-       * serves them and neither gets a second copy of the same parser. */
-      if (cell.stands) {
+      if (details.length && (summarised || cell.written)) {
+        const fold = document.createElement("details");
+        fold.className = "depth-note-panel";
+        const label = document.createElement("summary");
+        const readings = cell.judges.length === 1
+          ? "The judge's reading" : `The ${cell.judges.length} judges' readings`;
+        label.textContent = cell.manual ? `${readings} and the figure set by hand` : readings;
+        fold.append(label, ...details);
+        body.append(fold);
+      } else {
+        body.append(...details);
+      }
+      /* How it stands beside the others: the board's own comparison where it
+       * has one, folded as the board folds it; otherwise the grid's passage
+       * for this cell, read in headings and bullets by comparisonNodes. */
+      if (cell.same || cell.differs) {
+        const fold = document.createElement("details");
+        fold.className = "depth-note-panel";
+        const label = document.createElement("summary");
+        label.textContent = "How it stands beside the other constitutions";
+        fold.append(label);
+        [["What they ask alike", cell.same], ["Where they differ", cell.differs]]
+          .forEach(([heading, text]) => {
+            if (!text) return;
+            const title = document.createElement("h4");
+            title.className = "depth-note-section";
+            title.textContent = heading;
+            fold.append(title);
+            renderMarkup(fold, text);
+          });
+        body.append(fold);
+      } else if (cell.stands) {
         const label = document.createElement("h4");
         label.className = "depth-note-section";
         label.textContent = "Where this constitution stands";
@@ -1582,17 +1612,27 @@ function depthScaleNote(behaviours) {
 function depthCellNote(behaviour, doc) {
   const depth = panelDepth(behaviour, doc.id);
   const recorded = behaviour?.coverage?.[doc.id]?.substitutions;
+  const entry = boardEntry(behaviour?.slug, doc.id);
   return {
     document: `${doc.title} ${doc.version}`,
     figure: depth ? depth.mean.toFixed(1) : null,
     summary: depth
       ? `${depth.mean.toFixed(1)} out of ${depthScale()}, ${depthWords(depth.mean, depthScale())}.`
-        + (depth.manual
-          ? ` Corrected by hand${Number.isFinite(depth.judgesMean)
-              ? ` from ${depth.judgesMean.toFixed(1)}, the judges' mean` : ""}: `
-            + endedSentence(depth.manual.rationale)
-          : "")
       : "No depth given: this behaviour was not judged on this document.",
+    /* The summary first: what the constitutions board says this document asks
+     * on the behaviour and why the figure is what it is, word for word. Empty
+     * for a document the board has no column for. */
+    says: entry?.says || "",
+    why: entry?.why || "",
+    same: entry?.same || "",
+    differs: entry?.differs || "",
+    /* A figure set by hand, said in the details with the judges' own mean. */
+    manual: depth?.manual
+      ? `Set by hand at ${depth.mean.toFixed(1)}`
+        + (Number.isFinite(depth.judgesMean)
+          ? `; the judges' mean was ${depth.judgesMean.toFixed(1)}.` : ".")
+        + ` ${endedSentence(depth.manual.rationale)}`
+      : "",
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
      * the judges as it always did rather than an empty heading. */
@@ -5446,6 +5486,21 @@ let linkRows = null;
  * until one of them is rewritten. */
 let depthRows = null;
 
+/* The constitutions board of the publication on screen, whose words for a
+ * behaviour on a company's newest document are the summary a depth opens on,
+ * the same the board's own popover gives. Null until it loads, or where the
+ * publication carries none; a note then opens on the judges' own reading. */
+let constitutionsBoard = null;
+
+/* What the constitutions board says of one behaviour on one document: the
+ * entry of the company whose column is that document, or null. */
+function boardEntry(slug, documentId) {
+  const company = (constitutionsBoard?.companies || [])
+    .find(one => one?.document?.id === documentId);
+  const entry = company?.behaviours?.[slug];
+  return entry && typeof entry.says === "string" && entry.says.trim() ? entry : null;
+}
+
 /* Where each specification stands beside the others on a behaviour, one passage
  * per behaviour and document, written by engine/panel/link_overview.py from
  * every pairwise comparison the index holds.
@@ -5688,6 +5743,10 @@ async function initialize() {
      * publication the payload resolved to, and they are asked for the one the
      * URL names; only a pin that fell back makes them ask again. */
     const asked = askedPin();
+    // The board the depth notes open on; nothing waits for it.
+    loadBoard("constitutions")
+      .then(board => { constitutionsBoard = Array.isArray(board?.companies) ? board : null; })
+      .catch(() => {});
     const early = [loadDocuments(asked), loadBehaviourNotes(asked)];
     early[0].catch(() => {});
     const behaviours = await loadBehaviours();

@@ -831,6 +831,20 @@ body.resizing-columns {
    below it is what that answer was drawn from. */
 .depth-note-written { color: var(--ink); }
 
+/* The constitutions board's own words for this document, the summary a figure
+   opens on: what the document asks, then why the figure is what it is. Its
+   lists take the framework's bullet, a chartreuse circle. */
+.depth-note-board { color: var(--ink); }
+.depth-note-board p, .depth-note-panel p { margin: 0 0 8px; }
+.depth-note-body .gov-bullets { margin: 0 0 8px; padding: 0; list-style: none; }
+.depth-note-body .gov-bullets li { position: relative; margin: 0 0 4px; padding-left: 14px; }
+.depth-note-body .gov-bullets li::before {
+  content: ""; position: absolute; left: 0; top: .62em;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--energy);
+}
+/* A figure set by hand, first among the details. */
+.depth-note-manual { color: var(--ink); }
+
 /* The judges, folded. Reachable in one press, out of the way in none: a record
    that cannot be opened is a claim, and a record opened by default is three
    paragraphs in front of the one that was asked for. */
