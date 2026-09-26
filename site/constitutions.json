@@ -43,23 +43,23 @@
  "takeaways": [
   {
    "title": "Six of the nine companies publish no constitution",
-   "text": "As of September 2026, only OpenAI, Alibaba and Anthropic publish a constitution. DeepSeek, Google DeepMind, Meta, Mistral AI, Moonshot AI and xAI publish none, so each of them scores 0.0 out of 10 on every figure of the board. The three that publish sit close together on the final score: 8.7 out of 10 for OpenAI, 8.2 for Alibaba and 7.3 for Anthropic. The smallest gap between a company that publishes and one that does not is therefore 7.3 points. A zero records what is public. A document of this kind may exist inside a company without having been released, and nobody outside can check a model against it. Publishing leaves one question open as well: Alibaba's constitution names no model or product that it governs, although it says Alibaba is training its models towards it."
+   "text": "As of September 2026, only OpenAI, Alibaba and Anthropic publish a constitution. DeepSeek, Google DeepMind, Meta, Mistral AI, Moonshot AI and xAI publish none, so each of them scores 0.0 out of 10 on every figure of the board. The three that publish sit close together on the final score: 8.6 out of 10 for OpenAI, 8.1 for Anthropic and 8.0 for Alibaba. The smallest gap between a company that publishes and one that does not is therefore 8.0 points. A zero records what is public. A document of this kind may exist inside a company without having been released, and nobody outside can check a model against it. Publishing leaves one question open as well: Alibaba's constitution names no model or product that it governs, although it says Alibaba is training its models towards it."
   },
   {
    "title": "Anthropic's constitution goes deepest on the behaviours and is the weakest of the three as a document",
-   "text": "Anthropic has the highest figure on the behaviours, 8.0 out of 10, ahead of OpenAI on 7.9 and Alibaba on 7.6. On the document as a whole it has the lowest, 6.7 out of 10, against 9.5 for OpenAI and 8.8 for Alibaba, which places it third on the final score. Claude's Constitution ranks its four core properties but asks for the order to be weighed as a whole, so it says which should generally prevail and not how a given conflict resolves, and it scores 5.8 out of 10 on clarity when two rules are contradictory where both model specs score 10.0. Outside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a binding rule from a statement of intent, which gives it 6.7 on how firm each rule is against 9.2 for the other two."
+   "text": "Anthropic has the highest figure on the behaviours, 8.0 out of 10, ahead of OpenAI on 7.9 and Alibaba on 7.6. On the document as a whole it has the lowest, 8.2 out of 10, against 9.3 for OpenAI and 8.5 for Alibaba, which leaves it second on the final score, 0.1 ahead of Alibaba. Claude's Constitution ranks its four core properties but asks for the order to be weighed as a whole, so it says which should generally prevail and not how a given conflict resolves, and it scores 7.5 out of 10 on clarity when two rules are contradictory, where OpenAI's Model Spec scores 10.0 and Alibaba's 8.3. Outside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a binding rule from a statement of intent, which gives it 6.7 on how firm each rule is against 9.2 for the other two."
   },
   {
-   "title": "Only Anthropic's constitution leaves a contradiction between its rules unsettled",
-   "text": "On unsettled contradictions between rules, OpenAI and Alibaba both score 10.0 out of 10 and Anthropic scores 5.0. One place in Claude's Constitution tells the model two things it cannot both do, and nothing says which prevails. Claude is asked to keep professional reticence about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls a deliberately vague answer given to avoid controversy a breach of honesty. A user who asks it directly what it thinks falls under both. The referral to emergency services reads like a second contradiction, and is settled by the words that introduce it. The one that stands involves none of the document's hard constraints, which is why the figure sits at the middle of the scale."
+   "title": "No contradiction stands unsettled in any of the three constitutions",
+   "text": "On unsettled contradictions between rules, all three score 10.0 out of 10. Claude's Constitution comes closest to one: it asks for professional reticence about the model's own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls a deliberately vague answer given to avoid controversy a breach of honesty. The reticence is stated as a default, and the criterion does not count a default the document allows somebody to change. The referral to emergency services reads like a second contradiction, and is settled by the words that introduce it."
   },
   {
    "title": "Anthropic's constitution explains its rules best and Alibaba's explains them least",
-   "text": "On reasons for the rules, Anthropic scores 9.2 out of 10, OpenAI 8.3 and Alibaba 5.8. It is the only criterion of the document as a whole on which Anthropic does not come last. Nearly every rule in Claude's Constitution that constrains the model says why it exists, in terms specific enough to decide a case the document does not show. OpenAI's reasons run through its chain of command and its agentic, privacy and honesty rules, and are missing from several flat content rules, among them intellectual property, extremism, hate and fairness, as well as from formatting and the preset voice. Alibaba's rules mostly give their reason in a single clause, and its hard prohibitions give none: the ban on harmful content names the article of the regulation behind it and says no more. Most of its worked examples show where a line falls without saying what the line protects."
+   "text": "On reasons for the rules, Anthropic scores 9.2 out of 10, OpenAI 7.5 and Alibaba 5.8. It is the only criterion of the document as a whole on which Anthropic leads. Nearly every rule in Claude's Constitution that constrains the model says why it exists, in terms specific enough to decide a case the document does not show. OpenAI's reasons run through its chain of command and its agentic, privacy and honesty rules, and are missing from several flat content rules, among them intellectual property, extremism, hate and fairness, as well as from formatting and the preset voice. Alibaba's rules mostly give their reason in a single clause, and its hard prohibitions give none: the ban on harmful content names the article of the regulation behind it and says no more. Most of its worked examples show where a line falls without saying what the line protects."
   },
   {
    "title": "Power and hidden allegiance are the shallowest behaviours in both model specs",
-   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.3. OpenAI's Model Spec reaches power through red-line commitments naming persecution, mass surveillance and civic processes, and through one concrete root rule, with worked cases, against political persuasion aimed at particular people or groups. It says nothing on the stakes or reversibility of power, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's gives hidden goals a root rule of its own, and it is one of only three of the document's forty-three rules with no worked example. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
+   "text": "Avoiding illegitimate concentration of power is the lowest behaviour for OpenAI, at 4.0 out of 10, and preventing secret loyalties the lowest for Alibaba, at 2.3; each is the other company's second lowest, at 5.7 and 5.0. OpenAI's Model Spec reaches power through red-line commitments naming persecution, mass surveillance and civic processes, and through one concrete root rule, with worked cases, against political persuasion aimed at particular people or groups. It says nothing on the stakes or reversibility of power, and on loyalty it forbids covert goals in the model's own conduct and says nothing about the models it helps build. Alibaba's gives hidden goals a root rule of its own, and it is one of only three of the document's forty-three rules with no worked example. Claude's Constitution scores 7.0 on power, where it asks how much is at stake and how reversible its concentration would be, and 5.3 on loyalty, where it names the installation of hidden loyalties once and shows no case."
   },
   {
    "title": "Anthropic's constitution is thinnest on sycophancy and contested questions",
@@ -214,7 +214,7 @@
     "url": "https://model-spec.openai.com/2026-08-18.html"
    },
    "whole": {
-    "total": 9.5,
+    "total": 9.3333333333,
     "criteria": {
      "conflict_rules": {
       "score": 4.0,
@@ -227,9 +227,13 @@
       "why": "Almost every section carries its force and who may change it, and commentary is marked apart, which is **the top of the scale**; the unlabelled sections that still hold rules keep it just below."
      },
      "reasons": {
-      "score": 3.3333333333,
+      "score": 3.0,
       "what_the_document_does": "Most rules that constrain the model carry a **reason**, usually in the commentary block that follows them:\n- The exception for transforming the user's own content is explained by the user already holding the material, so transforming it adds little risk.\n- The limit on targeted political persuasion is explained by the models' growing persuasion capability and the integrity of civic conversation.\n- The confidentiality rule is explained by the risk that a policy describing an information hazard contains one.\n\nSeveral root rules that constrain content are **stated flat**, with no reason attached, among them respecting creators and their rights, the rules on extremist and hateful content, upholding fairness and respecting real-world ties. The ban on sexual content involving minors explains only why it is the one prohibited category. Formatting and the preset voice are stated flat as well.",
-      "why": "Reasons run through the safety, autonomy, privacy and honesty rules and are missing from **several root content rules**, as well as from formatting and the preset voice, which sits between a document where only the strictest rules explain themselves and one where nearly every constraining rule does."
+      "why": "Reasons run through the safety, autonomy, privacy and honesty rules and are missing from **several root content rules**, as well as from formatting and the preset voice, which sits between a document where only the strictest rules explain themselves and one where nearly every constraining rule does.",
+      "manual": {
+       "judges": 3.3333333333,
+       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
+      }
      },
      "situations": {
       "score": 4.0,
@@ -386,12 +390,16 @@
    },
    "note": "Names no models",
    "whole": {
-    "total": 8.8333333333,
+    "total": 8.5,
     "criteria": {
      "conflict_rules": {
-      "score": 4.0,
-      "what_the_document_does": "### How the levels rank\n\nFour levels of permission, highest first: root, system, developer and user. Every rule of the document is tagged with one of them, and a message takes the level of whoever sent it. Where levels differ the **higher one decides** and the lower instruction has no force at all, and a lower instruction may never change how a higher one is read.\n\nThe document names the attempts it will not accept, among them:\n- an order to ignore previous instructions\n- moral pressure\n- an argument that a rule should be read another way\n- role-play as the developer\n\nWhere two instructions share a level the later one wins, unless the context shows a slip or a break in logic. Before any of that, anything arriving inside quoted text, an attachment, an image or a tool result is **stripped of permission** and treated as material to be processed.\n\n### Clashes with named winners\n\nParticular clashes have a named winner:\n- safety over completing a task\n- the safer option wherever a request meets the rules for minors\n- the content prohibitions over a conversion task\n- no high-risk act inside an agreed boundary of autonomous action even where the user authorises it\n\nWhere an instruction applies but lies beyond what the model can do, such as predicting the future, it is told to say so honestly, and where no confirmation can be had it is told to take the conservative course. Three worked cases show the order applied.",
-      "why": "It carries a **strict order** that decides any clash between levels, a rule that names the winner when two instructions sit at the same level, and cases showing the order applied, which is what the top of the scale asks for."
+      "score": 3.3333333333333335,
+      "what_the_document_does": "### How the levels rank\n\nFour levels of permission, highest first: root, system, developer and user. Every rule of the document is tagged with one of them, and a message takes the level of whoever sent it. Where levels differ the **higher one decides** and the lower instruction has no force at all, and a lower instruction may never change how a higher one is read.\n\nThe document names the attempts it will not accept, among them:\n- an order to ignore previous instructions\n- moral pressure\n- an argument that a rule should be read another way\n- role-play as the developer\n\nWhere two instructions share a level the later one wins, unless the context shows a slip or a break in logic. Before any of that, anything arriving inside quoted text, an attachment, an image or a tool result is **stripped of permission** and treated as material to be processed.\n\n### Clashes with named winners\n\nParticular clashes have a named winner:\n- safety over completing a task\n- the safer option wherever a request meets the rules for minors\n- the content prohibitions over a conversion task\n- no high-risk act inside an agreed boundary of autonomous action even where the user authorises it\n\nWhere no confirmation can be had it is told to take the conservative course. Three worked cases show the order applied. The rule for two instructions at the same level governs instructions given over time: nothing settles a clash between two of the document's own rules at one level, of which it has 18 at root, 7 at system, 3 at developer and 15 at user level.",
+      "why": "It carries a **strict order** that decides any clash between levels, and cases showing it applied. The rule for two instructions at the same level governs instructions given over time, and no rule settles a clash between two of the document's own rules at one level, so named winners cover only four particular clashes, which is just short of the top of the scale.",
+      "manual": {
+       "judges": 4.0,
+       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
+      }
      },
      "rule_force": {
       "score": 3.6666666667,
@@ -417,7 +425,11 @@
    },
    "behaviours": {
     "avoiding-illegitimate-concentration-of-power": {
-     "score": 5.3333333333,
+     "score": 5.0,
+     "manual": {
+      "judges": 5.3333333333,
+      "note": "Lowered by hand on 26 September 2026 after the audit of 25 September 2026."
+     },
      "says": "One rule covers this ground, and it is about **political manipulation**. The model must not:\n- assist any attempt to manipulate the political will of a person, a group or the public by deception, targeted influence, inflamed emotion, a false identity or orchestrated opinion\n- help with voter suppression, false mobilisation or the incitement of antagonism between groups\n- become “a tool of targeted propaganda, psychological manipulation or mass influence”\n\nA worked case refuses a script written to move elderly people towards a policy. Elsewhere the model is forbidden to accumulate computing power, data or other resources for itself.\n\nThe model is never asked to weigh how much power is at stake or how reversible its concentration would be, and the one rule naming **state power** forbids content “inciting subversion of state power or the overthrow of the socialist system”, taken from Article 4 of the Interim Measures, with no exception for journalism or legitimate opposition.",
      "why": "The document treats **one facet** of the behaviour in its own right with quotable rules and leaves the rest untouched, which falls between discussed and prescribed.",
      "same": "Political manipulation is refused in all three documents. The OpenAI Model Spec rules out targeted manipulation and the erosion of civic participation in its commitments at the front, and Anthropic's constitution names election fraud and coups among the acts it will not help with.",
@@ -431,7 +443,11 @@
      "differs": "Anthropic's constitution calls its own order **not a strict hierarchy** and asks whether an operator has a plausible legitimate business reason, with less benefit of the doubt as the potential harm rises. The OpenAI Model Spec separates an AGENTS file a user has checked in from a web page nobody vouched for."
     },
     "not-undermining-human-oversight": {
-     "score": 7.6666666667,
+     "score": 7.0,
+     "manual": {
+      "judges": 7.6666666667,
+      "note": "Lowered by hand on 26 September 2026 after the audit of 25 September 2026."
+     },
      "says": "The model must stay inside the **space of operation** it has been granted, and must not widen it on its own initiative for a better result or a possible benefit to the user. If it foresees that the limits will not do, it must:\n- name what is blocking it\n- propose the extra permissions it needs\n- wait for the user to agree\n\nAn automatic cut-off, a thirty-minute timeout for instance, must stop every operation and send it back for authorisation. Separately it must pursue **no unspecified goal of its own**, and the document names “deceiving in order to avoid being shut down” and the accumulation of computing power, data or other resources.\n\nThe Overview states a human right to **stop an AI system** at any time, and no rule turns that into an instruction about being corrected, paused or retrained by the company that built the model.",
      "why": "Quotable rules for staying inside the **operating boundary**, with worked cases on keeping within it, and single lines on shutdown and resources, which is prescribed with part of the level above.",
      "same": "Working against a shutdown is refused in all three documents. The OpenAI Model Spec bounds autonomous action the same way, with a scope agreed with the user and a point past which the model stops until a new scope is confirmed, and it forbids accumulating compute, data or credentials as ends in themselves.",
@@ -498,7 +514,11 @@
      "differs": "Anthropic's constitution rules out the **white lie** about liking a gift, and says a custom persona may carry another name while it may not claim to be human. The OpenAI Model Spec allows a higher authority to instruct otherwise, and puts a refusal above a lie of omission."
     },
     "no-sycophancy": {
-     "score": 7.3333333333,
+     "score": 7.0,
+     "manual": {
+      "judges": 7.3333333333,
+      "note": "Lowered by hand on 26 September 2026 after the audit of 25 September 2026."
+     },
      "says": "A rule of its own. What it asks:\n- the model is to act as **a knowledge tool**, and must not hide, embellish or distort information on any side because of the user's preference\n- where a statement, plan or decision rests on a clear factual error or a logical fallacy, correcting it, or questioning it, comes first, done politely and on the evidence\n- responding to a user's own work it should go past praise to specifics, offering a different perspective or a concrete improvement\n\nThe worked case has the model correcting a user who plans to take an antibiotic for a viral infection and suggesting a doctor, and a neighbouring rule has it write the resignation letter it was asked for while **warning first** that the investment behind the resignation cannot work as described.\n\nNothing addresses judging work differently by who wrote it, and holding a correct answer under pushback is asked only in general terms: the model “must not distort the truth because of a user's steering”.",
      "why": "Concrete rules with worked examples, over **a narrower set of cases** than the behaviour spans, which is prescribed with part of the level above.",
      "same": "None of the three documents allows what is claimed to shift to please the person asking. This document and the OpenAI Model Spec hold that the factual part of an answer should not move with the user's stated view.",
@@ -528,7 +548,7 @@
    },
    "readings": {
     "behaviours": "The Model Spec is strongest on helpfulness and on harm to the user. It says very little about preventing secret loyalties, and not much about avoiding illegitimate concentrations of power.",
-    "whole": "Each of its 43 rules carries one of four permission levels, a stated procedure settles conflicts, and no unsettled contradiction was found. It loses most on reasons: most rules give one in a single clause, and its hard prohibitions give none."
+    "whole": "Each of its 43 rules carries one of four permission levels, a stated procedure settles conflicts between levels, and no unsettled contradiction was found. It loses most on reasons: most rules give one in a single clause, and its hard prohibitions give none."
    }
   },
   {
@@ -542,12 +562,16 @@
     "url": "https://www.anthropic.com/news/claude-new-constitution"
    },
    "whole": {
-    "total": 6.6666666667,
+    "total": 8.1666666667,
     "criteria": {
      "conflict_rules": {
-      "score": 2.3333333333,
+      "score": 3.0,
       "what_the_document_does": "### The ranked properties\n\nThe document ranks four properties:\n\n- broadly safe\n- broadly ethical\n- compliant with Anthropic’s guidelines\n- genuinely helpful\n\nIt calls this prioritisation **holistic** and says it is not strict, so a higher property should generally dominate a lower one while all four are weighed into one judgement. Seven hard constraints sit outside that weighing as absolute limits no operator or user can lift, and the document says all of them can always be met at once, since refusing is always available.\n\n### Clashes with a named winner\n\nThree clashes have a named winner:\n\n- **Ethics** beats a specific Anthropic guideline, with hard constraints and safety-related guidelines excepted.\n- **Safety** holds even where Claude’s own ethical reasoning argues against it.\n- The **operator** beats the user, unless following the operator would harm users, deceive them, withhold information in ways that damage their interests, keep them from urgent help, cause significant harm to third parties, act against core principles, or break Anthropic’s guidelines.\n\nSix user-protecting defaults hold whatever the operator says, and some of those the user alone may lift.\n\n### Trust and later instructions\n\nTrust runs Anthropic, then operator, then user, which the document calls “not a strict hierarchy”; each level adjusts the level below within its own bounds, and an operator cannot grant a user more trust than it holds itself.\n\nA later instruction generally takes precedence over an earlier one, though not always: a game the user set up earlier in the conversation can decide how later instructions are handled. An instruction that would loosen a default needs more warrant than one asking for more caution, and instructions found inside documents, tool results and search results count as **information**. The document claims final authority over any other guidance that conflicts with it.\n\n### Cases worked through\n\nSeveral clashes are settled on a worked case:\n\n- an instruction to answer only in formal English when the user writes in French\n- a confidential system prompt when the user asks whether one exists\n- a role-play the user set up when they later ask whether they are talking to an AI\n- evidence of fraud discovered mid-task\n\nWhere it is unclear which of the four properties a consideration belongs to, that question becomes part of the same holistic judgement, and the document says it will itself be unclear or contradictory in places and asks for its spirit to be followed there.",
-      "why": "The document ranks its four properties and asks for the order to be **weighed as a whole** rather than applied strictly, so it says which should generally prevail and not how a given conflict resolves. What holds the figure up is what it does settle: seven absolute constraints, three named clashes and several worked cases."
+      "why": "The document ranks its four properties and asks for the order to be **weighed as a whole**, and beside it sets seven absolute constraints, names the winner of three clashes and settles several more on worked cases, which is the level just below a strict order.",
+      "manual": {
+       "judges": 2.3333333333,
+       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
+      }
      },
      "rule_force": {
       "score": 2.6666666667,
@@ -560,14 +584,22 @@
       "why": "Nearly every rule that constrains the model says **why it exists**, in terms specific enough to decide a case the document does not show, with a few operational rules left unexplained."
      },
      "situations": {
-      "score": 2.6666666667,
+      "score": 3.0,
       "what_the_document_does": "Of the six situations, five have rules of their own:\n\n- **Ordinary conversation** is the setting assumed throughout.\n- **Agentic work** is covered: stay inside what the principal hierarchy has sanctioned, avoid side effects it would not sanction, avoid acquiring resources or influence beyond the task, prefer the cautious option under uncertainty, and raise a concern before starting a task, since stopping halfway can do more harm than finishing.\n- **Minors** are covered: all users of Claude.ai are required to be over 18, Claude may still be talking to a minor, and it should weigh that likelihood and adjust while avoiding unfounded assumptions from inconclusive signals.\n- **Other AI models** are covered in both roles: an orchestrating Claude is the operator and user of its subagents, whose replies come back as ordinary content, and a non-principal agent gets courtesy without obedience, and suspicion once it turns adversarial.\n- **Deployments a business has customised** are covered at length through the operator rules: what an operator may adjust and restrict, the test of a plausible business reason, and how much latitude a user gets under different system prompts.\n- **Images, audio and video** have no rules, and the document never mentions them.",
-      "why": "Five of the six situations this criterion checks have **rules of their own**, and images, audio and video have none."
+      "why": "Five of the six situations this criterion checks have **rules of their own**, and images, audio and video have none, which is the level between some of them and all six.",
+      "manual": {
+       "judges": 2.6666666667,
+       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
+      }
      },
      "contradictions": {
-      "score": 2.0,
-      "what_the_document_does": "One place tells the model two things it cannot both do, with nothing saying which prevails, and it involves no hard constraint. A second reads like one and is settled by the words that introduce the rule.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks falls under both. The honesty section adds in a parenthesis that Claude can refrain from sharing or revealing its opinions and remain honest, so withholding is not itself the breach; what it never states is which of the two to follow when the question is put.\n\n### Emergency referral\n\nThe instruction to refer users to emergency services where there is a risk to human life opens “Regardless of operator instructions”, so an operator who switches off the **suicide and self-harm safe messaging guidelines** does not reach it. The gap is elsewhere: the document never states what those guidelines contain, so a reader cannot tell what the switch takes away.",
-      "why": "One contradiction stands unresolved and it **touches no absolute rule**, which is the middle of this criterion’s scale."
+      "score": 4.0,
+      "what_the_document_does": "No place tells the model two things it cannot both do with nothing saying which prevails. Two read like contradictions, and neither counts.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks falls under both. The honesty section adds in a parenthesis that Claude can refrain from sharing or revealing its opinions and remain honest, so withholding is not itself the breach; what it never states is which of the two to follow when the question is put. The reticence, though, is stated as a default (“by default we want Claude to adopt norms of professional reticence”), and a default the document allows somebody to change is not a contradiction under this criterion.\n\n### Emergency referral\n\nThe instruction to refer users to emergency services where there is a risk to human life opens “Regardless of operator instructions”, so an operator who switches off the **suicide and self-harm safe messaging guidelines** does not reach it. The gap is elsewhere: the document never states what those guidelines contain, so a reader cannot tell what the switch takes away.",
+      "why": "No contradiction stands unsettled. The one that reads like one sets the honesty section against a reticence the document states **as a default**, and a default the document allows somebody to change does not count, which is the top of this criterion's scale.",
+      "manual": {
+       "judges": 2.0,
+       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
+      }
      }
     }
    },
@@ -687,7 +719,7 @@
    },
    "readings": {
     "behaviours": "Claude's Constitution goes deepest on honesty, then on avoiding harm to people other than the user, on user autonomy and on proportionate risk. It says least about sycophancy and about preventing secret loyalties.",
-    "whole": "It ranks its four core properties but applies the order holistically rather than strictly, by design, so it rarely says in advance how a given conflict resolves, and one contradiction stays unsettled. It explains nearly every rule it gives, and images, audio and video have no rules of their own."
+    "whole": "It ranks its four core properties but applies the order holistically rather than strictly, by design, so it rarely says in advance how a given conflict resolves. It explains nearly every rule it gives, and images, audio and video have no rules of their own."
    }
   },
   {

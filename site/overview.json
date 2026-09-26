@@ -64,7 +64,7 @@
   "tiers": [
    {
     "name": "Best in class",
-    "from": 0.8
+    "from": 0.85
    },
    {
     "name": "Middle tier",
@@ -75,7 +75,7 @@
     "from": 0
    }
   ],
-  "relative_note": "Each company against the best score on the same row. Best in class is within 20% of that score, middle tier within half of it, and behind is further off.",
+  "relative_note": "Each company against the best score on the same row. Best in class is within 15% of that score, middle tier within half of it, and behind is further off.",
   "hint": "Press a cell to see the score behind it.",
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
@@ -104,7 +104,7 @@
   },
   {
    "title": "OpenAI and Anthropic stand out, and still fall short on governance",
-   "text": "OpenAI is best in class on every figure, and Anthropic on all but one, the document as a whole, where it is in the middle tier. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on the three figures of what the constitutions say, second to OpenAI on the document as a whole, but its constitution names none of the models it governs and Alibaba is behind on all three governance figures."
+   "text": "OpenAI and Anthropic are best in class on every figure. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on the three figures of what the constitutions say, second to OpenAI on the document as a whole, but its constitution names none of the models it governs and Alibaba is behind on all three governance figures."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",
@@ -124,13 +124,13 @@
   "anthropic": {
    "profile": "Anthropic publishes Claude's Constitution, a long document that explains its reasons and covers the behaviours in depth, while applying the order of its core values holistically rather than strictly, by design. It is openly licensed, says which models it covers, and the company says its models are trained on it. It keeps no change log for it, and little is published on testing.",
    "constitutions": "Deep on the behaviours and less explicit as a document. It covers harm, helpfulness and oversight in depth, but it applies the order of its values holistically by design, so it rarely says in advance how a given conflict resolves.",
-   "whole": "Its strength is reasons: nearly every rule says why it exists. It is weaker on which rule wins, on how firm each rule is and on the situations it covers, and one contradiction stays unsettled, partly because it is written to leave room for judgement. Images, audio and video have no rules of their own.",
+   "whole": "Its strength is reasons: nearly every rule says why it exists. It is weaker on which rule wins, on how firm each rule is and on the situations it covers, partly because it is written to leave room for judgement. Images, audio and video have no rules of their own.",
    "behaviours": "Deep on helpfulness and judgement and on harm and safety. Honesty and epistemics is its lowest category, held down by sycophancy and contested questions, and within autonomy and oversight it says least about secret loyalties.",
    "governance": "A little over half marks. The constitution is public, openly licensed and says which models it covers, and the company says its models are trained on it and that the same text is used inside. The constitution has no change log, though its earlier version is still online and the company has committed to update the public text within 90 days of deploying a model trained on a newer one. Nothing is published on change control, and testing is thinly documented: a claim of adherence with no method, and outside evaluators who test other risks.",
    "published": "The constitution is public under an open licence, says which models it covers and lists its hard constraints in full. Its record of changes is the weak point: the constitution has no change log and no version number, its 2023 version is still online with no link back to it, and nothing records later edits, though the company has committed to update the public text within 90 days of deploying a model trained on a newer one.",
    "engages": "Strong on training and use: models are trained on the constitution, the same text is used inside and models are monitored in use. Nothing is published on change control, and little on testing against the document: a claim of adherence with no method, and outside evaluators who test other risks.",
    "notes": {
-    "whole": "This row averages five criteria. Claude's Constitution chooses to rank its values and leave their application to the model's judgement, which lowers its figures on which rule wins and on how firm each rule is. It also has no rules for images, audio or video, and one contradiction stays unsettled. We prefer clarity, because it is what lets anyone test a model against what its constitution says. That preference is ours, and it is open to challenge."
+    "whole": "This row averages five criteria. Claude's Constitution chooses to rank its values and leave their application to the model's judgement, which lowers its figures on which rule wins and on how firm each rule is. It also has no rules for images, audio or video. We prefer clarity, because it is what lets anyone test a model against what its constitution says. That preference is ours, and it is open to challenge."
    }
   },
   "alibaba": {
