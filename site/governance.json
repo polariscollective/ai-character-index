@@ -3076,11 +3076,11 @@
       "read": "24 September 2026"
      },
      {
-      "quote": "Effective Date: December 30, 2025",
+      "quote": "Last updated: December 30, 2025",
       "title": "xAI Frontier Artificial Intelligence Framework, December 2025 version",
       "url": "https://data.x.ai/2025-12-31-xai-frontier-artificial-intelligence-framework.pdf",
       "date": "30 December 2025",
-      "read": "25 September 2026"
+      "read": "26 September 2026"
      },
      {
       "quote": "Last updated: August 20, 2025",
@@ -3090,11 +3090,11 @@
       "read": "25 September 2026"
      },
      {
-      "quote": "xAI Risk Management Framework (Draft)",
+      "quote": "Under this draft risk management framework, Grok would apply heightened safeguards if it receives requests that pose a foreseeable and non-trivial risk of resulting in large-scale violence, terrorism, or the use, development, or proliferation of weapons of mass destruction, including CBRN weapons, and major cyber weapons on critical infrastructure.",
       "title": "xAI Risk Management Framework (Draft)",
       "url": "https://data.x.ai/2025.02.20-RMF-Draft.pdf",
       "date": "undated; the file name carries 20 February 2025",
-      "read": "25 September 2026"
+      "read": "26 September 2026"
      }
     ],
     "looked": "The repository keeps every earlier state of the system prompts in its commit history, from May to November 2025. The Frontier AI Framework carries an effective date and no version number. Three earlier versions remain online at addresses of their own, and none is linked from the current one: a draft Risk Management Framework whose file name carries 20 February 2025, the Risk Management Framework of 20 August 2025 and the framework of 30 December 2025."
@@ -3607,14 +3607,14 @@
       "read": "24 September 2026"
      },
      {
-      "quote": "D.3.1 Risk Control System for DeepSeek-R1",
-      "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning, supplementary D.3",
-      "url": "https://arxiv.org/abs/2501.12948v2",
+      "quote": "In this subsection, we introduce the risk control system deployed in the official DeepSeek services. [...] After each round of conversation, the user’s query is automatically matched against a predefined keyword list.",
+      "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning, appendix D.3.1, Risk Control System for DeepSeek-R1",
+      "url": "https://arxiv.org/html/2501.12948v2",
       "date": "4 January 2026 (second version)",
-      "read": "25 September 2026"
+      "read": "26 September 2026"
      }
     ],
-    "looked": "The supplementary of the R1 paper gives the risk control system a subsection of its own, \"Risk Control System for DeepSeek-R1\", for R1 alone. We found no inventory of the filters running on DeepSeek's own products today, and nothing published on the system since."
+    "looked": "The appendix of the R1 paper describes the risk control system deployed on DeepSeek's official services: each user query is matched against a keyword list, and a flagged conversation is reviewed by DeepSeek-V3 against a prompt the paper publishes, which decides whether the answer is retracted. We found no inventory of the filters running on DeepSeek's own products today, and nothing published on the system since."
    },
    "3.2": {
     "looked": "We found no dated record of a change to a filter or a moderation rule. The change log on the API documentation announces model releases and pricing changes."
@@ -3824,7 +3824,7 @@
   "deepseek": {
    "1": "No constitution. Apart from its R1 paper (2025), which says its safety training labelled answers against predefined safety guidelines, the only document of its own that says anything about how its models should behave is a disclosure page on how its algorithms work, of the kind the regulator requires: 《模型原理与训练方法说明》, an explanation of the model's principles and training methods. Its entire contribution is one sentence: in the optimisation stage DeepSeek builds \"dedicated safety data to align the model, teaching it to give replies that conform to human values\". No order of authority, no list of what the model refuses, no worked examples, and no rules for conflicts. The terms of use govern users, and the English and Chinese versions carry different dates (27 March 2026 and 5 September 2025) and different lists of prohibited content, with no change log to reconcile them. The model cards for V4-Pro and V4.1-Flash have no section on safety, limitations or responsible use.",
    "2": "Nothing to score. The disclosure page has no date and no version. The API change log covers models and pricing. The terms keep no archive and point readers to the latest version: a new version \"replaces the original terms\" as soon as it is announced, and users are told to check the website themselves. DeepSeek published the web and app system prompts of V3-0324 and R1-0528 in their 2025 model cards, prompts that set only the assistant's identity and the date, and the R1 README says the app then used no system prompt, only templates for file upload and web search. Nothing of the kind has been published since V3.1 (August 2025), and nothing says which policy governs which model.",
-   "3": "A layer of moderation is reserved as a right in its contract, and the Chinese text claims more than the English: DeepSeek reserves the right to review \"inputs and outputs\", to set up \"risk filtering mechanisms\" and to build \"feature databases of illegal content\". The paper on its R1 model published in Nature (September 2025) says the model's own safety is \"moderate\", but \"when coupled with the risk control system, the safety level of the model is increased to a superior standard\". The paper's supplementary gives that system a subsection of its own, \"Risk Control System for DeepSeek-R1\". It concerns R1 alone, and nothing has been published on the system since. The system is not in the downloadable model. Nothing on logging changes to guardrails.",
+   "3": "A layer of moderation is reserved as a right in its contract, and the Chinese text claims more than the English: DeepSeek reserves the right to review \"inputs and outputs\", to set up \"risk filtering mechanisms\" and to build \"feature databases of illegal content\". The paper on its R1 model published in Nature (September 2025) says the model's own safety is \"moderate\", but \"when coupled with the risk control system, the safety level of the model is increased to a superior standard\". The paper's appendix describes that system as deployed on DeepSeek's official services: each user query is matched against a keyword list, and a flagged conversation is reviewed by DeepSeek-V3 against a prompt the paper publishes, which decides whether the answer is retracted. It was written for R1, and nothing has been published on the system since. The system is not in the downloadable model. Nothing on logging changes to guardrails.",
    "4": "No named set of hard constraints on the model, no channel for comment, and no period of notice. Changes are made by the company alone and take effect as soon as they are published.",
    "practices_published": "It publishes no constitution, so there is no text to put under a licence.",
    "practices_engaged": "The R1 paper in Nature contained a real safety evaluation, but it concerns a model DeepSeek stopped serving on 21 August 2025, when its API and app moved to DeepSeek-V3.1, and it measures the model against benchmarks, with no constitution involved. No safety evaluation has been published for V3.1, V3.2, V4 or V4.1. The US Center for AI Standards and Innovation evaluated DeepSeek models in September 2025 on weights it downloaded, without the developer's involvement, and its follow-up assessment of V4 Pro in May 2026 covers capabilities only, so the most recent authoritative safety data concerns models no longer offered. No framework for frontier risks, no programme giving outsiders access, and no published process for approving changes.",
