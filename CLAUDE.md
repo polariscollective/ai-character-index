@@ -39,6 +39,13 @@ This section is for whoever picks the index up next. It says how it works as of
 26 September 2026 and where to act. The rest of the file is the history behind
 it. The whole site is still a confidential work in progress.
 
+## Before writing any code
+
+Always start from a new branch taken from an up-to-date `develop`
+(`git checkout develop && git pull && git checkout -b <topic>`), never on
+`develop` or `main` directly. Merge back into `develop` when the work is done,
+and into `main` only when the owner asks.
+
 ## Where things live
 
 - **The database.** Every document, behaviour, judgement, depth and publication
