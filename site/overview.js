@@ -265,6 +265,7 @@ function aboutContextCell(content, context, row, company, entry) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
   if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (entry.band) content.append(view.figure(entry.band, " a month"));
+  if (entry.level && entry.level !== "-") content.append(view.figure(entry.level, ", our estimate"));
   if (Number.isFinite(entry.share)) content.append(view.figure(entry.shown, " of tokens on OpenRouter"));
   if (Number.isFinite(entry.eci)) {
     const line = element("p", "subtitle");
@@ -359,6 +360,9 @@ function contextRows(noteNumber) {
             : "cell-context-sub", entry.short), open);
       } else if (Number.isFinite(entry.share)) {
         button.append(element("span", "cell-context-band", entry.shown));
+      } else if (entry.level && entry.level !== "-") {
+        // Our rough estimate, in the data face, on one line.
+        button.append(element("span", "cell-context-band", entry.level));
       } else if (entry.band) {
         // A step of ten, in the data face, on one line.
         button.append(element("span", "cell-context-band", entry.band));

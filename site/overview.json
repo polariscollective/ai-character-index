@@ -193,7 +193,7 @@
  "context": {
   "name": "For context",
   "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
-  "note": "This row shows how capable each company's best model is. A published, well-governed constitution matters more as models grow more capable. It counts towards no score, and each cell says where its figure comes from.",
+  "note": "These rows show how capable each company's best model is and roughly how widely its models are used. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
   "rows": [
    {
     "id": "capability",
@@ -215,6 +215,15 @@
     ],
     "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Reading a gap in points as months is ours, and models a few months apart are within the index's own margin. Epoch rates only the models it has tested, which leaves out Microsoft AI's.",
     "sub": "Months behind the frontier"
+   },
+   {
+    "id": "usage",
+    "name": "Usage",
+    "sub": "Our rough estimate",
+    "plain": "A rough idea of how widely the company's models are used, in three steps. It is our own estimate and very subjective.",
+    "what": "A rough idea of how widely each company's models are used, in three steps: +++ for hundreds of millions of people a month, ++ for tens of millions or a large place among developers, + for less. A dash means we have nothing to go on.",
+    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. Each cell lists the signals behind it.",
+    "limits": "It is very subjective. No source counts every company the same way, most companies publish no comparable figure, and two careful readers could place several companies a step apart. It gives an idea of scale and should be read that way."
    }
   ],
   "companies": {
@@ -233,6 +242,12 @@
      "behind": "At the frontier",
      "months_behind": 0,
      "short": "Frontier"
+    },
+    "usage": {
+     "shown": "+++",
+     "level": "+++",
+     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT.",
+     "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/"
     }
    },
    "anthropic": {
@@ -250,6 +265,12 @@
      "behind": "At the frontier",
      "months_behind": 0,
      "short": "Frontier"
+    },
+    "usage": {
+     "shown": "+++",
+     "level": "+++",
+     "text": "Anthropic states no count of the people who use Claude. Its chief product officer said in March 2026 that more than a million people were signing up for Claude every day, and its models had the fourth largest share of developer traffic on OpenRouter in September 2026, 3.9%.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "alibaba": {
@@ -267,6 +288,12 @@
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
+    },
+    "usage": {
+     "shown": "+++",
+     "level": "+++",
+     "text": "Alibaba said in its annual report of 20 May 2026 that consumer-facing Qwen passed 295 million monthly active users in March 2026.",
+     "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm"
     }
    },
    "microsoft": {
@@ -276,6 +303,11 @@
      "eci": null,
      "text": "Epoch rates no model Microsoft AI has built. The one Microsoft model it rates is Phi-4, a Microsoft Research model released in December 2024, at 130.4.",
      "behind": null
+    },
+    "usage": {
+     "shown": "-",
+     "level": "-",
+     "text": "Microsoft AI's own models are barely deployed yet. It states no count for them, and the Copilot assistants Microsoft counts run mostly on models it licenses rather than builds."
     }
    },
    "google": {
@@ -293,6 +325,12 @@
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
+    },
+    "usage": {
+     "shown": "+++",
+     "level": "+++",
+     "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
+     "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/"
     }
    },
    "mistral": {
@@ -310,6 +348,12 @@
      "behind": "22 months behind",
      "months_behind": 22,
      "short": "22 months"
+    },
+    "usage": {
+     "shown": "+",
+     "level": "+",
+     "text": "Mistral AI states no count of its users. Its app passed a million downloads in February 2025, and its models took 0.2% of developer traffic on OpenRouter in September 2026.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "meta": {
@@ -327,6 +371,12 @@
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
+    },
+    "usage": {
+     "shown": "+++",
+     "level": "+++",
+     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger. The figure is old, and Meta has given none since.",
+     "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf"
     }
    },
    "xai": {
@@ -344,6 +394,12 @@
      "behind": "9 months behind",
      "months_behind": 9,
      "short": "9 months"
+    },
+    "usage": {
+     "shown": "++",
+     "level": "++",
+     "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, in a prospectus that counts Grok used inside X.",
+     "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm"
     }
    },
    "moonshot": {
@@ -361,6 +417,12 @@
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
+    },
+    "usage": {
+     "shown": "+",
+     "level": "+",
+     "text": "Moonshot AI last stated a count in 2024, 36 million monthly users of Kimi. Its models took 1.5% of developer traffic on OpenRouter in September 2026.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "deepseek": {
@@ -378,6 +440,12 @@
      "behind": "10 months behind",
      "months_behind": 10,
      "short": "10 months"
+    },
+    "usage": {
+     "shown": "++",
+     "level": "++",
+     "text": "DeepSeek states no count of the people who use its assistant. Its models had the largest share of developer traffic on OpenRouter in September 2026, 21.4%, and its open models are among the most downloaded.",
+     "url": "https://openrouter.ai/rankings"
     }
    }
   }
