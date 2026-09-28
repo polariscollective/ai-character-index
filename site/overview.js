@@ -340,6 +340,7 @@ function contextRows(noteNumber) {
         return;
       }
       const words = [entry.shown === "-" ? "none" : entry.shown, entry.behind,
+                     entry.open_weights ? "open weights" : null,
                      entry.band ? `${entry.band} a month` : null].filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
@@ -349,9 +350,13 @@ function contextRows(noteNumber) {
         // The model at the top and how far it trails the frontier at the
         // bottom, so both lines sit level across the row; a model at the
         // frontier is said in bold.
+        // A third line says whether that model's weights can be downloaded;
+        // it keeps its place when empty, so every line sits level across the row.
+        const open = element("span", "cell-context-sub", entry.open_weights ? "Open weights" : "\u00a0");
+        if (!entry.open_weights) open.setAttribute("aria-hidden", "true");
         button.append(element("span", "cell-context-words", entry.shown),
           element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
-            : "cell-context-sub", entry.short));
+            : "cell-context-sub", entry.short), open);
       } else if (Number.isFinite(entry.share)) {
         button.append(element("span", "cell-context-band", entry.shown));
       } else if (entry.band) {

@@ -1287,8 +1287,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   justify-content: space-between;
   align-items: center;
   background: transparent;
-  height: 72px;
-  min-height: 72px;
+  height: 80px;
+  min-height: 80px;
   padding: 10px 10px 8px;
   gap: 3px;
   overflow: hidden;
