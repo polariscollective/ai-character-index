@@ -247,29 +247,14 @@ function aboutCompany(content, company) {
 
 /* ---- The context --------------------------------------------------------- */
 
-/* What the context rows are, and where their figures come from. */
-function aboutContext(content, context) {
-  view.titled(content, context.name);
-  content.append(element("p", "", context.plain));
-  context.rows.forEach(row => {
-    content.append(view.h3(row.name), element("p", "", row.plain));
-  });
-  content.append(element("p", "subtitle", context.note));
-}
-
-function aboutContextRow(content, context, row) {
-  view.titled(content, row.name, context.name);
-  content.append(element("p", "", row.plain));
-  if (row.url) leadTo(content, row.url, row.source || row.url);
-}
-
 /* One company's fact on one context row: what it is, the company's own words
  * where there are some, and where they were said. */
 function aboutContextCell(content, context, row, company, entry) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
+  if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (Number.isFinite(entry.eci)) {
-    const line = element("p", "figure");
-    line.append(element("strong", "mono", entry.eci.toFixed(1)),
+    const line = element("p", "subtitle");
+    line.append(element("span", "mono", entry.eci.toFixed(1)),
                 document.createTextNode(" on the Epoch Capabilities Index"));
     content.append(line);
   }
@@ -285,41 +270,42 @@ function aboutContextCell(content, context, row, company, entry) {
   else if (row.url) leadTo(content, row.url, row.source || row.url);
 }
 
-/* The rows under the grid that no score counts: a heading row across the
- * table, then one row per fact. No colour and no tier, since nothing here is
- * ranked, and each cell opens where its figure comes from. */
+/* The rows under the grid that no score counts: a quiet heading across the
+ * table, then one row per fact, named in plain text rather than as a button, so
+ * nothing here reads as one more figure of the index. No colour and no tier,
+ * since nothing here is ranked; each cell opens where its fact comes from, and
+ * the note under the grid says what the rows are. */
 function contextRows(noteNumber) {
   const context = state.overview.context;
   if (!context?.rows?.length) return [];
-  const head = element("tr", "total-row outside-row context-head");
+  const head = element("tr", "context-head");
   const title = element("th");
   title.scope = "rowgroup";
   title.colSpan = state.companies.length + 1;
-  const line = element("div", "row-head");
-  line.append(view.rowName(context.name, null, content => aboutContext(content, context),
-    `${context.name}: what it is`, noteNumber ? [String(noteNumber)] : []));
-  title.append(line);
+  title.append(element("span", "context-title", context.name));
+  if (noteNumber) {
+    const mark = element("span", "row-mark", String(noteNumber));
+    mark.setAttribute("aria-hidden", "true");
+    title.append(mark);
+  }
   head.append(title);
   return [head, ...context.rows.map(row => {
-    const tr = element("tr", "question-row context-row");
+    const tr = element("tr", "context-row");
     tr.dataset.row = `context-${row.id}`;
-    tr.append(view.rowHead(null, view.rowName(row.name, null,
-      content => aboutContextRow(content, context, row), `${row.name}: what it is`)));
+    tr.append(view.rowHead(null, element("span", "context-name", row.name)));
     state.companies.forEach(company => {
       const entry = context.companies?.[company.id]?.[row.id];
       if (!entry) {
         tr.append(element("td", "cell"));
         return;
       }
-      const figure = Number.isFinite(entry.eci) ? `, ${entry.eci.toFixed(1)}` : "";
+      const words = [entry.shown, entry.behind].filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
-        `${company.name}, ${row.name.toLowerCase()}: ${entry.shown}${figure}`,
+        `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
         content => aboutContextCell(content, context, row, company, entry),
         "cell-button cell-context");
       button.append(element("span", "cell-context-words", entry.shown));
-      if (Number.isFinite(entry.eci)) {
-        button.append(element("span", "cell-context-figure mono", entry.eci.toFixed(1)));
-      }
+      if (entry.behind) button.append(element("span", "cell-context-sub", entry.behind));
       tr.append(cell);
     });
     return tr;
