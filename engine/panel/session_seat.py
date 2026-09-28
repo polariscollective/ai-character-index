@@ -3,6 +3,7 @@
 
     python3 engine/panel/session_seat.py judge compose --behaviours=a,b --documents=<version id> --go
     python3 engine/panel/session_seat.py judge store artefacts/session-<run>
+    python3 engine/panel/session_seat.py assess --documents=<version id> [--resume=<run id>]
 
 No provider is called, and no key is read. The engine's own pipelines run as they
 run for the panel, with one difference: the model they call is a file. A question
@@ -173,6 +174,43 @@ def judge_store(args):
     return 0
 
 
+def assess_step(args):
+    """One step of a provisional assessment: ask what the run can ask with the
+    answers written so far, and stop at the first question nobody has answered.
+
+    The assessment asks its questions in order, criteria, then contradictions,
+    then the reading of each contradiction found, and the last is composed from
+    the answers to the one before. So the run is taken up once per answer, with
+    `--resume`, exactly as a hosted run is taken up after a stop."""
+    import assess                                          # noqa: PLC0415
+    store = Store.from_env()
+    index_store.install_registry(store)
+    config = h.load_config()
+    version_ids = [s for s in args.documents.split(",") if s]
+    resume = None
+    if args.resume:
+        resume = assess.resumable(store, index_store.assessment_run_id(args.resume,
+                                                                       flag="--resume"))
+    folder = ROOT / "artefacts" / f"session-assess-{version_ids[0][:8]}"
+    panels = {"criteria": [SEAT], "contradictions": [SEAT]}
+    try:
+        _estimate, run_id = assess.assess(
+            store, config, version_ids, h.passages, call_model=stopping_wire(folder),
+            go=True, created_by=CREATED_BY, panel=PANEL, resume=resume, panels=panels,
+            provisional=True)
+    except Pending as waiting:
+        runs = sorted((row for row in store.select("aci_assessment_runs")
+                       if row.get("created_by") == CREATED_BY),
+                      key=lambda row: row["created_at"])
+        run_id = resume["id"] if resume else runs[-1]["id"]
+        print(f"waiting: {waiting}")
+        print(f"then:  python3 engine/panel/session_seat.py assess "
+              f"--documents={','.join(version_ids)} --resume={run_id}")
+        return 2
+    print(f"assessment run {run_id} is done")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="pipeline", required=True)
@@ -190,6 +228,12 @@ def main(argv=None):
     read = steps.add_parser("store", help="feed the answers through batch_job")
     read.add_argument("folder")
     read.set_defaults(func=judge_store)
+
+    whole = sub.add_parser("assess", help="the document as a whole, one question at a time")
+    whole.add_argument("--documents", required=True,
+                       help="comma-separated aci_spec_versions ids")
+    whole.add_argument("--resume", default=None, help="the assessment run to take up")
+    whole.set_defaults(func=assess_step)
 
     args = parser.parse_args(argv)
     return args.func(args)

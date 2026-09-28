@@ -305,6 +305,21 @@ class RunTest(unittest.TestCase):
         costs = [call["cost_usd"] for call in fake.tables["aci_assessment_calls"]]
         self.assertEqual(final["cost_usd"], round(sum(costs), 6))
 
+    def test_a_provisional_run_takes_the_panels_it_is_given_and_says_so(self):
+        panels = {"criteria": ["sol"], "contradictions": ["sol"]}
+        fake, _estimate, _run_id = run(Scripted(), panels=panels, provisional=True)
+        [row] = fake.inserted("aci_assessment_runs")
+        self.assertTrue(row["provisional"])
+        self.assertEqual(row["panels"], panels)
+        self.assertEqual({(call["question"], call["seat"])
+                          for call in fake.tables["aci_assessment_calls"]},
+                         {("criteria", "sol"), ("contradictions", "sol"), ("confirm", "sol")})
+
+    def test_a_run_that_is_not_provisional_carries_no_flag(self):
+        fake, _estimate, _run_id = run(Scripted())
+        [row] = fake.inserted("aci_assessment_runs")
+        self.assertNotIn("provisional", row)
+
     def test_the_calls_come_in_order_each_pending_then_running_then_done(self):
         fake, _estimate, run_id = run(Scripted())
         inserted = fake.inserted("aci_assessment_calls")

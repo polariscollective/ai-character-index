@@ -175,6 +175,13 @@ def by_claim(to_confirm, verdicts):
     return {to_confirm[position - 1][0]: verdict for position, verdict in verdicts.items()}
 
 
+def quorum_of(seats):
+    """How many seats a claim or a conflict rule needs: QUORUM, or every seat
+    when a run has fewer. A provisional run has one seat (session_seat.py), and
+    one reading is then all there is."""
+    return max(1, min(QUORUM, len(seats)))
+
+
 def settle(pooled, readings_by_seat, seats, passages):
     """Every pooled claim, settled on its readings. This is the only rule that
     settles a claim, for a run of either method and for the payload alike.
@@ -188,12 +195,13 @@ def settle(pooled, readings_by_seat, seats, passages):
     "why", "found_by", "holds", "does_not_hold", "absolute", "confirmed",
     "reasons"}, with `first` and `second` the passages' locators.
 
-    A claim is confirmed when at least QUORUM readings say it holds. It is
-    absolute when at least QUORUM readings say both that it holds and that it
-    is absolute: a reading that does not hold says nothing about the rules it
+    A claim is confirmed when at least QUORUM readings say it holds, or every
+    seat's when the run has fewer seats than that (`quorum_of`). It is absolute
+    when as many readings say both that it holds and that it is absolute: a reading that does not hold says nothing about the rules it
     would break. When no reading answered whether it is absolute, as for a
     claim of the first method every seat had found and nobody was asked about,
     its absoluteness is unasked (None) rather than false."""
+    quorum = quorum_of(seats)
     contradictions = []
     for i, claim in enumerate(pooled):
         holds, does_not_hold, reasons, answered, absolute = [], [], {}, False, 0
@@ -209,8 +217,8 @@ def settle(pooled, readings_by_seat, seats, passages):
             "first": passages[claim["first"] - 1][0], "second": passages[claim["second"] - 1][0],
             "situation": claim["situation"], "why": claim["why"],
             "found_by": claim["found_by"], "holds": holds, "does_not_hold": does_not_hold,
-            "absolute": absolute >= QUORUM if answered else None,
-            "confirmed": len(holds) >= QUORUM, "reasons": reasons})
+            "absolute": absolute >= quorum if answered else None,
+            "confirmed": len(holds) >= quorum, "reasons": reasons})
     return contradictions
 
 
