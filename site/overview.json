@@ -190,9 +190,9 @@
   }
  },
  "context": {
-  "name": "Context, not scored",
+  "name": "For context",
   "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
-  "note": "The more capable a company's models are, and the more people use them, the more it matters that they follow a published constitution and that the company governs it well. These facts put the figures above in perspective, and no score counts them. Each cell says where its fact comes from.",
+  "note": "These rows show how capable each company's best model is and how many people use its models. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
   "rows": [
    {
     "id": "capability",
