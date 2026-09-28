@@ -496,19 +496,26 @@ function draw() {
   // below them.
   const context = state.overview.context;
   const shownContext = state.showContext ? context : null;
-  // The notes the names point to, numbered after the file's own, and only
-  // those some company on the page carries.
+  // The notes the names point to, lettered rather than numbered so they are not
+  // taken for the page's own notes, and only those some company carries.
   const every = grid.name_notes || [];
   const carried = every.filter(note => state.companies.some(company =>
     [!company.publishes ? "no_constitution" : null,
      company.openWeights ? "open_weights" : null, company.id].includes(note.id)));
   state.nameNoteNumbers = Object.fromEntries(carried.map((note, index) =>
-    [note.id, (grid.notes || []).length + index + 1]));
+    [note.id, String.fromCharCode(97 + index)]));
+  const lettered = byId("ovw-name-notes");
+  lettered.hidden = !carried.length;
+  lettered.replaceChildren(...carried.map(({ title, text }) => {
+    const item = element("li");
+    item.append(element("strong", "", `${title}. `));
+    renderInline(item, text);
+    return item;
+  }));
   const notes = [...(grid.notes || []),
-                 ...carried.map(({ title, text }) => ({ title, text })),
                  ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
                  { title: "Relative", text: grid.relative_note }];
-  const contextNote = shownContext?.note ? (grid.notes || []).length + carried.length + 1 : null;
+  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
     [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
