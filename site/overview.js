@@ -503,13 +503,15 @@ function draw() {
   const carried = every.filter(note => state.companies.some(company =>
     [!company.publishes ? "no_constitution" : null,
      company.openWeights ? "open_weights" : null, company.id].includes(note.id)));
+  // A note may name its own sign, such as an asterisk; the others are lettered.
   state.nameNoteNumbers = Object.fromEntries(carried.map((note, index) =>
-    [note.id, String.fromCharCode(97 + index)]));
+    [note.id, note.mark || String.fromCharCode(97 + index)]));
   const lettered = byId("ovw-name-notes");
   lettered.hidden = !carried.length;
-  lettered.replaceChildren(...carried.map(({ title, text }) => {
+  lettered.replaceChildren(...carried.map(({ id, title, text }) => {
     const item = element("li");
-    item.append(element("strong", "", `${title}. `));
+    item.append(element("span", "name-note-mark", state.nameNoteNumbers[id]),
+                element("strong", "", `${title}. `));
     renderInline(item, text);
     return item;
   }));

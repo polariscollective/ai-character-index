@@ -554,7 +554,8 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-notes li::marker { font-family: var(--mono, "IBM Plex Mono", monospace); font-size: 11px; }
 .company-flag .row-mark { vertical-align: super; }
 /* The overview's lettered notes, on the companies' names. */
-.ovw-name-notes { list-style: lower-alpha; margin-top: 10px; }
+.ovw-name-notes { list-style: none; margin-top: 10px; padding-left: 0; }
+.ovw-name-notes .name-note-mark { display: inline-block; min-width: 14px; font-family: var(--mono); }
 
 /* A row's name says its level too, one step per level: the final score and
    its two halves in the display face, a figure's own rows bold, and the rows

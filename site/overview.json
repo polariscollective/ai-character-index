@@ -88,7 +88,8 @@
    {
     "id": "open_weights",
     "title": "Open weights",
-    "text": "Anyone can download the company's flagship model, or nearly, and run it where the company cannot see how it is used."
+    "text": "Anyone can download the company's flagship model, or nearly, and run it where the company cannot see how it is used.",
+    "mark": "*"
    }
   ]
  },
