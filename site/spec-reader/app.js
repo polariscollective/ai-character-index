@@ -3655,6 +3655,9 @@ const DOCUMENT_CONTEXT = {
          + "lab, not by the teams that build the Qwen models, and the only model we found publicly "
          + "built to it is Oyster-II, a research model. As of September 2026, nothing public ties it to "
          + "a model in production.",
+  microsoft: "A draft published on 14 September 2026 for public consultation. Microsoft AI says "
+           + "it is not yet using it to train its models, and that a revised version will follow "
+           + "toward the end of 2026 to guide its model development from 2027.",
 };
 
 const documentContext = id => DOCUMENT_CONTEXT[String(id).split("--")[0]] || "";
