@@ -29,6 +29,9 @@ const MODE_KEY = "aci-overview-mode";
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
 const shown = value => value.toFixed(1);
+/* "Open weights" read inside a sentence, keeping a leading acronym as it is. */
+const lowerFirst = text =>
+  (/^[A-Z]{2}/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
 
 /* One company's four figures, and whether it publishes a constitution. The
  * constitutions board names each company's newest document under the company's
@@ -56,6 +59,11 @@ function companiesOf(constitutions, governance, overview) {
       summary: overview.summaries?.[lab.id] || {},
       publishes: Boolean(written?.document),
       document: written?.document || null,
+      // What a reader should know under the name, as the two boards say it:
+      // the constitutions board's note on the document, and whether anyone can
+      // download the flagship model.
+      note: written?.note || null,
+      openWeights: Boolean(lab.open_weights),
       figures: {
         constitutions: { final: said.final ?? 0, whole: said.whole, behaviours: said.behaviours },
         governance: { total: governed.total, ...governed.byColumn },
@@ -255,9 +263,15 @@ function headRow() {
     button.dataset.lab = company.id;
     button.setAttribute("aria-haspopup", "dialog");
     button.setAttribute("aria-expanded", "false");
-    button.setAttribute("aria-label", `${company.name}: what it publishes`);
+    const flags = [!company.publishes ? "No published constitution" : null,
+                   company.note, company.openWeights ? "Open weights" : null].filter(Boolean);
+    button.setAttribute("aria-label", `${company.name}`
+      + `${flags.length ? `, ${flags.map(lowerFirst).join(", ")}` : ""}: what it publishes`);
     button.append(companyMark(company.mark));
     button.append(element("span", "company-name", company.name));
+    // A few words under the name, smaller: the facts a reader of the grid would
+    // otherwise assume the other way. The profile the head opens says each in full.
+    flags.forEach(flag => button.append(element("span", "company-flag", flag)));
     button.addEventListener("click", () =>
       view.openPopover(button, content => aboutCompany(content, company)));
     cell.append(button);
