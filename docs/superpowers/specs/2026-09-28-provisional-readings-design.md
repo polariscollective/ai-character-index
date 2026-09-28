@@ -136,7 +136,6 @@ reader.
   per-passage notes in session, and `compose_links.retained_passages` reads a
   cell's newest run, which for Microsoft is the provisional one. Until then a
   provisional document carries no bubbles and no comparison paragraph.
-
 - It does not run the panel, and it spends nothing.
 - It does not let a provisional run stand beside a panel run for the same cell;
   the panel wins.
