@@ -271,6 +271,18 @@ function aboutCompany(content, company) {
     "See its figures on how constitutions are governed");
 }
 
+/* A row's name on the overview, the same for a score and for a view in
+ * preparation: plain text that opens what the row is, and no more than that. */
+function rowTitle(name, build, label) {
+  const button = element("button", "ovw-row-name", name);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", label);
+  button.addEventListener("click", () => view.openPopover(button, build));
+  return button;
+}
+
 /* ---- The views in preparation ------------------------------------------- */
 
 function aboutComing(content, item) {
@@ -283,10 +295,8 @@ function aboutComing(content, item) {
 function comingRow(item) {
   const tr = element("tr", "total-row outside-row coming-row");
   tr.dataset.row = `coming-${item.id}`;
-  const label = element("span", "coming-label");
-  label.append(element("span", "coming-name", item.name));
-  if (item.sub) label.append(element("span", "coming-sub", item.sub));
-  tr.append(view.rowHead(null, label));
+  tr.append(view.rowHead(null, rowTitle(item.name, content => aboutComing(content, item),
+    `${item.name}: in preparation`)));
   const cell = element("td", "cell");
   cell.colSpan = state.companies.length;
   cell.append(element("span", "cell-coming", "In preparation"));
@@ -530,13 +540,8 @@ function figureRow(group, row, final) {
     const head = element("th");
     head.scope = "row";
     const line = element("div", "row-head");
-    // What the score is made of, in small type under its name, since the
-    // grid no longer shows those rows; the popover opens each of them.
-    const parts = group.rows.map(part => part.name);
-    const sub = parts.length > 1
-      ? `${parts.slice(0, -1).join(", ")} and ${lowerFirst(parts[parts.length - 1])}` : parts[0];
-    line.append(view.rowName(group.name, sub,
-      content => aboutGroup(content, group), `${group.name}: what it measures`));
+    line.append(rowTitle(group.name, content => aboutGroup(content, group),
+      `${group.name}: what it measures`));
     head.append(line);
     tr.append(head);
   } else {

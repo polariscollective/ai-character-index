@@ -89,14 +89,12 @@
    {
     "id": "regulated",
     "name": "How constitutions are regulated",
-    "plain": "How far laws and regulators refer to these documents and ask companies to keep them. We are working on this view, and it will follow when it is ready.",
-    "sub": "Laws and regulators"
+    "plain": "How far laws and regulators refer to these documents and ask companies to keep them. We are working on this view, and it will follow when it is ready."
    },
    {
     "id": "adherence",
     "name": "Adherence to constitutions",
-    "plain": "Whether a model actually behaves as its constitution says, from the results of independent organisations testing it. We are working on this view, and it will follow when it is ready.",
-    "sub": "Independent tests of models"
+    "plain": "Whether a model actually behaves as its constitution says, from the results of independent organisations testing it. We are working on this view, and it will follow when it is ready."
    }
   ]
  },
