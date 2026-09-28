@@ -265,6 +265,7 @@ function aboutContextCell(content, context, row, company, entry) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
   if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (entry.band) content.append(view.figure(entry.band, ` ${entry.per}`));
+  if (Number.isFinite(entry.share)) content.append(view.figure(entry.shown, " of tokens on OpenRouter"));
   if (Number.isFinite(entry.eci)) {
     const line = element("p", "subtitle");
     line.append(element("span", "mono", entry.eci.toFixed(1)),
@@ -351,6 +352,8 @@ function contextRows(noteNumber) {
         button.append(element("span", "cell-context-words", entry.shown),
           element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
             : "cell-context-sub", entry.short));
+      } else if (Number.isFinite(entry.share)) {
+        button.append(element("span", "cell-context-band", entry.shown));
       } else if (entry.band) {
         // A step of ten, in the data face, and what it counts.
         button.append(element("span", "cell-context-band", entry.band),

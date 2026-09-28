@@ -192,7 +192,7 @@
  "context": {
   "name": "For context",
   "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
-  "note": "These rows show how capable each company's best model is and how many people use its models. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
+  "note": "These rows show how capable each company's best model is and how much its models are used. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
   "rows": [
    {
     "id": "capability",
@@ -224,6 +224,21 @@
     "links": [],
     "limits": "Companies count differently: some a week and some a month, each its own products. A figure older than six months is not shown, and a company that sells mostly through its API may state no count at all. A model anyone can download reaches people no count includes.",
     "sub": "As the company states"
+   },
+   {
+    "id": "openrouter",
+    "name": "Share of tokens on OpenRouter",
+    "sub": "Developer use, last 30 days",
+    "plain": "The share of all tokens sent through OpenRouter in the 30 days to 27 September 2026 that went to the company's models.",
+    "what": "OpenRouter is a service developers use to reach many models through one interface. This is the share of all the tokens it handled in the 30 days to 27 September 2026 that went to the company's models, prompts and answers together.",
+    "from": "OpenRouter's public rankings, which list the tokens of every public model. We added up each company's models ourselves: OpenRouter publishes shares only for its largest authors, and our sums match them.",
+    "links": [
+     {
+      "text": "OpenRouter rankings",
+      "url": "https://openrouter.ai/rankings"
+     }
+    ],
+    "limits": "It sees only what developers send through OpenRouter, so a company's own apps and its direct contracts are missing. That makes it a better guide to models anyone can download, which have no user count and reach people through many hosts, and a poor one for closed models, whose main use it cannot see. An open model and a closed one are very hard to compare on it. Each company also counts tokens its own way, and counted in requests rather than tokens the order changes."
    }
   ],
   "companies": {
@@ -252,6 +267,12 @@
      "source": "The company",
      "band": "1B+",
      "per": "a week"
+    },
+    "openrouter": {
+     "shown": "15.0%",
+     "share": 14.97,
+     "text": "The company's models took 15.0% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 81.4 trillion tokens.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "anthropic": {
@@ -275,6 +296,12 @@
      "text": "Anthropic has published no count of the people who use Claude. It has said only that weekly users of Claude Code doubled between 1 January and 12 February 2026.",
      "band": null,
      "per": null
+    },
+    "openrouter": {
+     "shown": "3.9%",
+     "share": 3.94,
+     "text": "The company's models took 3.9% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 21.4 trillion tokens.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "alibaba": {
@@ -303,6 +330,12 @@
      "downloads": "Its most downloaded open-weight model, Qwen3-0.6B, was downloaded 29,308,906 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": "100M+",
      "per": "a month"
+    },
+    "openrouter": {
+     "shown": "1.7%",
+     "share": 1.73,
+     "text": "The company's models took 1.7% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 9.4 trillion tokens. Its models can be downloaded, so this is one of the few measures of how much they are used, whoever serves them.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "microsoft": {
@@ -322,6 +355,11 @@
      "source": "Satya Nadella, Microsoft fiscal year 2026 first quarter earnings call, 29 October 2025 (official transcript on Microsoft's investor site).",
      "band": null,
      "per": null
+    },
+    "openrouter": {
+     "shown": "No MAI language model",
+     "text": "OpenRouter carries no language model from Microsoft AI, only its image, voice and transcription models, so there is no share to show.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "google": {
@@ -349,6 +387,12 @@
      "source": "The company",
      "band": "1B+",
      "per": "a month"
+    },
+    "openrouter": {
+     "shown": "5.6%",
+     "share": 5.57,
+     "text": "The company's models took 5.6% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 30.3 trillion tokens.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "mistral": {
@@ -373,6 +417,12 @@
      "downloads": "Its most downloaded open-weight model, Mistral-7B-Instruct-v0.3, was downloaded 2,190,595 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
      "per": null
+    },
+    "openrouter": {
+     "shown": "0.2%",
+     "share": 0.25,
+     "text": "The company's models took 0.2% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 1.3 trillion tokens. Its models can be downloaded, so this is one of the few measures of how much they are used, whoever serves them.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "meta": {
@@ -400,6 +450,12 @@
      "source": "Mark Zuckerberg, Meta third quarter 2025 earnings call, 29 October 2025 (transcript published by Meta on its investor-relations CDN).",
      "band": null,
      "per": "since 2025"
+    },
+    "openrouter": {
+     "shown": "1.7%",
+     "share": 1.68,
+     "text": "The company's models took 1.7% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 9.2 trillion tokens.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "xai": {
@@ -427,6 +483,12 @@
      "source": "SpaceX final prospectus (Form 424B4), filed with the SEC on 12 June 2026. The 117 million figure first appeared in the S-1 filed on 20 May 2026. SpaceX reports Grok and X as its AI segment.",
      "band": "100M+",
      "per": "a month"
+    },
+    "openrouter": {
+     "shown": "0.5%",
+     "share": 0.47,
+     "text": "The company's models took 0.5% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 2.6 trillion tokens.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "moonshot": {
@@ -456,6 +518,12 @@
      "downloads": "Its most downloaded open-weight model, Kimi-K3, was downloaded 1,513,077 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
      "per": "since 2024"
+    },
+    "openrouter": {
+     "shown": "1.5%",
+     "share": 1.47,
+     "text": "The company's models took 1.5% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 8.0 trillion tokens. Its models can be downloaded, so this is one of the few measures of how much they are used, whoever serves them.",
+     "url": "https://openrouter.ai/rankings"
     }
    },
    "deepseek": {
@@ -480,6 +548,12 @@
      "downloads": "Its most downloaded open-weight model, DeepSeek-V4-Flash-0731, was downloaded 4,419,279 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
      "per": null
+    },
+    "openrouter": {
+     "shown": "21.4%",
+     "share": 21.43,
+     "text": "The company's models took 21.4% of all tokens sent through OpenRouter in the 30 days to 27 September 2026, about 116.4 trillion tokens. Its models can be downloaded, so this is one of the few measures of how much they are used, whoever serves them.",
+     "url": "https://openrouter.ai/rankings"
     }
    }
   }
