@@ -82,6 +82,9 @@ and into `main` only when the owner asks.
    depths in deepseek's seat). The reader and the MCP name them.
 4. **The document as a whole** is scored by the same panel on five criteria
    (`engine/assess.py`, `methodology/document-assessment-rubric.md`).
+5. **A document no panel has judged** can be read provisionally by one model in
+   session, through the same questions (see the next section but one). Its
+   figures and passages are marked provisional everywhere they appear.
 
 ## Correcting a figure by hand
 
@@ -115,6 +118,36 @@ python3 engine/manual_review.py --run=<run id> --behaviour=<slug> \
 - `engine/panel/depth_pass.py --manual-review` gives depths that show the judges
   the passages added by hand. It has not been run.
 
+## Reading a document the panel has not judged
+
+`engine/panel/session_seat.py` asks the panel's own questions of one model
+answering in this session: the seat `opus-5.5`, no provider called, nothing
+spent. Each step writes its questions to `artefacts/`, agents of the session
+write the answers beside them, and the engine's own pipeline reads them.
+
+```
+python3 engine/panel/session_seat.py judge compose --behaviours=<14 slugs> --documents=<version id> --go
+python3 engine/panel/session_seat.py judge store artefacts/session-<run8>
+python3 engine/panel/session_seat.py assess --documents=<version id> [--resume=<assessment run id>]
+python3 engine/panel/session_seat.py depth compose --run=<run id> --assessment-run=<assessment run id>
+python3 engine/panel/session_seat.py depth store --run=<run id> --assessment-run=<assessment run id>
+```
+
+- Give each agent its question file and nothing else, and check each answer
+  parses before storing: `judge store` refuses answers that do not.
+- `assess` stops at each question with no answer; answer it and run the command
+  again with `--resume`. It asks criteria, then contradictions, then their
+  confirmation.
+- The runs carry `provisional = true` and one seat. A publication takes a
+  provisional cell only where no run of the panel judged it, and the document's
+  assessment from its provisional assessment run; the reader, `/coverage` and
+  the MCP say the reading is one model's.
+- Set the document's column on `site/constitutions.json` from the depths and the
+  assessment, with a `provisional` field on each figure.
+- As of 28 September 2026: Microsoft AI's Code of Conduct, run `1424dc4b`,
+  assessment run `5dc3a93c`. Comparisons with other documents are not composed
+  for it yet; `link_self.py` is the way to do it.
+
 ## Publishing, and seeing a change
 
 Editing a board file changes nothing anyone sees until a publication carries it.
@@ -128,11 +161,11 @@ three board files, and the site reads them from the publication it serves.
 - **To publish**, build from the command line. The portal's publish job passes
   none of `--depth-prompt`, `--assessment-run` or `--manual-review`, so it can
   only build on the old scale of four. The last development publication,
-  `fb79e4b7`, was built with its parameters recorded in
-  `aci_publications.build_params`; repeat them, adding `--manual-review`:
+  `3cc72592`, was built with its parameters recorded in
+  `aci_publications.build_params`; repeat them:
 
 ```
-python3 engine/publish.py --behaviours=<14 slugs> --documents=<4 version ids> \
+python3 engine/publish.py --behaviours=<14 slugs> --documents=<5 version ids> \
     --link-runs=<8 link run ids> --depth-prompt=<sha256 of depth-v2.txt> \
     --assessment-run=e2c00b2e-e57c-4518-8856-00e81fa037a1 \
     --unanalysed-documents=<5 version ids> --manual-review --notes="..."
@@ -1812,6 +1845,43 @@ The MCP server reads the same columns. `constitutions_board` and
 `constitutions_board` now answers the board the front page shows rather than the
 one `/coverage` rebuilds from the payload. A publication without boards answers
 that it is not compatible, as the page does.
+
+### A document the panel has not read can be read by one model, and says so
+
+Since 28 September 2026 a run can be provisional: one seat, the model answering
+in a working session, asked the panel's own questions through the engine's own
+pipelines, with each reply read from a file an agent of the session wrote
+(`engine/panel/session_seat.py`, built on `link_self.py`'s two readers). It was
+built because Microsoft AI published its Code of Conduct on 14 September 2026,
+no panel had read it, and the owner wanted it in the reader with passages and
+depths rather than as text only.
+
+`aci_runs.provisional` and `aci_assessment_runs.provisional` say so, each with a
+check that a provisional run has one seat, and the publication trigger holds a
+provisional cell to its own run's seat rather than to the publication's panel
+(`20260928120000_aci_provisional_readings.sql`, `polaris-supabase` #59). A
+publication takes a provisional cell only where no run of the panel judged the
+cell, so the panel's reading replaces it on the next build without anything
+being deleted, and a document the named assessment run did not assess is read
+from its newest provisional assessment run, recorded in
+`build_params.provisional_assessment_runs`. Quorums follow the seats: two, or
+the one seat of a provisional run (`assessment_run.quorum_of`).
+
+It is not hidden. The payload marks the cell `provisional: {seat, run}`, its
+depth and its document's assessment `provisional: true`; the reader's depth note
+says one model gave the figure and folds "The reading of one model" in place of
+the judges; a passage's reason opens on "Provisional: marked by one model"; the
+MCP answers `provisional` on the pair, on the board's figures and in `about`.
+
+What the first one showed is worth writing down. The column written earlier the
+same day by agents reading the whole Code gave the document as a whole 8.0 and
+the behaviours 6.4. Through the pipeline the document is 6.5, because the
+contradictions question found twelve candidates and its confirmation kept three,
+and the behaviours 6.1, because the depth judge sees only the passages the
+passage judge marked, which left out the worked cases for caution and for
+proportionate risk. The seat is an Anthropic model reading another company's
+document, and with one seat the model that finds a contradiction also confirms
+it. The design is `docs/superpowers/specs/2026-09-28-provisional-readings-design.md`.
 
 ### The owner can correct a band or a depth by hand
 
