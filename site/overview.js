@@ -265,7 +265,9 @@ function aboutContextCell(content, context, row, company, entry) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
   if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (entry.band) content.append(view.figure(entry.band, " a month"));
-  if (entry.level && entry.level !== "-") content.append(view.figure(entry.level, ", our estimate"));
+  if (entry.level) {
+    content.append(view.figure(`${entry.level === "-" ? 0 : entry.level.length} of 3`, " squares, our estimate"));
+  }
   if (Number.isFinite(entry.share)) content.append(view.figure(entry.shown, " of tokens on OpenRouter"));
   if (Number.isFinite(entry.eci)) {
     const line = element("p", "subtitle");
