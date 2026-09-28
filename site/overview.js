@@ -205,11 +205,36 @@ function aboutFinal(content, company, group, value, best) {
     : `${grid.tiers[tier].name}: the best score on this row is ${shown(best)} out of ${TEN}.`));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
-  content.append(view.h3("What it is made of"), figureList(group.rows.map(row =>
-    ({ value: company.figures[row.board][row.figure] ?? 0, name: row.name,
-       cell: { lab: company.id, row: row.figure }, open: cellOpener(company, group, row, false) }))));
+  content.append(view.h3("What it is made of"), partsOpening(company, group));
   if (final.board === "constitutions") caveatOf(content, company);
   leadTo(content, group.href, "See every part of this score in the Index");
+}
+
+/* A final score's parts, each opening in place: its figure and name, then the
+ * overview's words about it and the parts it is made of in turn, each leading
+ * to its cell in the Index. Nothing opens a second popover. */
+function partsOpening(company, group) {
+  const list = element("div", "ovw-parts");
+  group.rows.forEach(row => {
+    const value = company.figures[row.board][row.figure] ?? 0;
+    const fold = element("details", "ovw-part");
+    const head = element("summary");
+    head.append(view.chip(value, TEN, shown(value)), element("span", "", row.name));
+    fold.append(head);
+    const reason = summaryOf(company, row.figure, row.board);
+    const body = element("div", "ovw-part-body");
+    if (reason) renderMarkup(body, reason);
+    const parts = company.parts[row.figure] || [];
+    if (parts.length && value > 0) {
+      body.append(figureList(parts.map(part =>
+        ({ ...part, href: part.row ? indexCell(company, row, part) : null }))));
+    }
+    const note = company.summary.notes?.[row.figure];
+    if (note) body.append(element("p", "subtitle", note));
+    fold.append(body);
+    list.append(fold);
+  });
+  return list;
 }
 
 function aboutGroup(content, group) {
@@ -258,18 +283,14 @@ function aboutComing(content, item) {
 function comingRow(item) {
   const tr = element("tr", "total-row outside-row coming-row");
   tr.dataset.row = `coming-${item.id}`;
-  const head = element("th");
-  head.scope = "row";
-  const line = element("div", "row-head");
-  line.append(view.rowName(item.name, null, content => aboutComing(content, item),
-    `${item.name}: in preparation`));
-  head.append(line);
-  tr.append(head);
-  state.companies.forEach(() => {
-    const cell = element("td", "cell");
-    cell.append(element("span", "cell-coming", "In preparation"));
-    tr.append(cell);
-  });
+  const label = element("span", "coming-label");
+  label.append(element("span", "coming-name", item.name));
+  if (item.sub) label.append(element("span", "coming-sub", item.sub));
+  tr.append(view.rowHead(null, label));
+  const cell = element("td", "cell");
+  cell.colSpan = state.companies.length;
+  cell.append(element("span", "cell-coming", "In preparation"));
+  tr.append(cell);
   return tr;
 }
 
@@ -374,8 +395,6 @@ function contextRows(noteNumber) {
     left.append(show);
   }
   line.append(left);
-  const legend = byId("ovw-legend");
-  if (legend) line.append(legend);
   title.append(line);
   head.append(title);
   if (!state.showContext) return [head];
@@ -511,7 +530,12 @@ function figureRow(group, row, final) {
     const head = element("th");
     head.scope = "row";
     const line = element("div", "row-head");
-    line.append(view.rowName(group.name, null,
+    // What the score is made of, in small type under its name, since the
+    // grid no longer shows those rows; the popover opens each of them.
+    const parts = group.rows.map(part => part.name);
+    const sub = parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} and ${lowerFirst(parts[parts.length - 1])}` : parts[0];
+    line.append(view.rowName(group.name, sub,
       content => aboutGroup(content, group), `${group.name}: what it measures`));
     head.append(line);
     tr.append(head);

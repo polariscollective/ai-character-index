@@ -1239,11 +1239,27 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   .board .cell-tier .cell-words { font-size: 11px; }
 }
 .ovw-pop-link { margin-top: 12px; }
+/* The overview's row names fit on one line, smaller than the Index's, with
+   what each score is made of in small type under them. */
+.ovw-board .outside-row th .head-name { font-size: 14px; white-space: nowrap; }
+.ovw-board .outside-row th .head-sub { display: block; font-family: var(--body, inherit); font-size: 11px; font-weight: 400; color: var(--faint); }
 /* The overview shows only the final scores, so its rows are divided by the
    light rule the tables use rather than the board's strong one. */
 .ovw-board .total-row { border-bottom: 1px solid rgb(92 107 60 / .2); }
 /* A view in preparation: no figure and no colour, the words quiet in the
    middle of a cell the height of a score's. */
+/* A view in preparation is named in plain text, and its one cell spans the
+   companies. */
+.ovw-board .coming-label { display: flex; flex-direction: column; gap: 2px; }
+.ovw-board .coming-name { font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.ovw-board .coming-sub { font-size: 11px; color: var(--faint); }
+/* The scale beside the modes at the top. */
+.ovw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.ovw-top-legend { margin: 0; }
+/* A final score's parts in its popover, each opening in place. */
+.gov-pop .ovw-part { border-top: 1px solid rgb(92 107 60 / .2); padding: 6px 0; }
+.gov-pop .ovw-part summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.gov-pop .ovw-part-body { margin: 6px 0 4px; font-size: 14px; }
 .ovw-board .cell-coming {
   display: grid;
   place-items: center;
