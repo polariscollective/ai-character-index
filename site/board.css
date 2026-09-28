@@ -1242,6 +1242,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .context-head th { padding: 12px 0 6px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
 .ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
 .ovw-board .context-head .row-mark { color: var(--faint); }
+/* The switch for the context, small, beside its heading. */
+.ovw-board .ovw-context-toggle { margin-left: 12px; padding: 2px 10px; font-size: 11px; vertical-align: baseline; }
 .ovw-board .context-row th { text-align: left; vertical-align: middle; }
 .ovw-board .context-name {
   padding: 0;

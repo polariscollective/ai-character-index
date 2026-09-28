@@ -301,7 +301,16 @@ function contextRows(noteNumber) {
     mark.setAttribute("aria-hidden", "true");
     title.append(mark);
   }
+  // The switch sits in the heading, right under the scores, and the heading
+  // stays when the rows are hidden, so the context can always be shown again.
+  const toggle = element("button", "gov-button ovw-context-toggle",
+    state.showContext ? "Hide context" : "Show context");
+  toggle.type = "button";
+  toggle.setAttribute("aria-pressed", String(state.showContext));
+  toggle.addEventListener("click", () => setContext(!state.showContext));
+  title.append(toggle);
   head.append(title);
+  if (!state.showContext) return [head];
   return [head, ...context.rows.map(row => {
     const tr = element("tr", "context-row");
     tr.dataset.row = `context-${row.id}`;
@@ -457,21 +466,16 @@ function draw() {
   // come: the file's own notes, which the introduction points to, the
   // context's sources, then the relative mode's, whose mark is on its button
   // below them.
-  const context = state.showContext ? state.overview.context : null;
+  const context = state.overview.context;
+  const shownContext = state.showContext ? context : null;
   const notes = [...(grid.notes || []),
-                 ...(context?.note ? [{ title: context.name, text: context.note }] : []),
+                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
                  { title: "Relative", text: grid.relative_note }];
-  const contextNote = context?.note ? (grid.notes || []).length + 1 : null;
+  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
     [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
-    ...(context ? contextRows(contextNote) : []));
-  const toggle = document.querySelector(".ovw-context-toggle");
-  if (toggle) {
-    toggle.hidden = !state.overview.context?.rows?.length;
-    toggle.textContent = state.showContext ? "Hide context" : "Show context";
-    toggle.setAttribute("aria-pressed", String(state.showContext));
-  }
+    ...contextRows(contextNote));
   byId("ovw-mode-note").textContent = grid.hint;
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
   if (relativeMark) relativeMark.textContent = String(notes.length);
@@ -559,8 +563,7 @@ export async function initializeOverview() {
   document.querySelectorAll(".ovw-mode button").forEach(button => {
     button.addEventListener("click", () => setMode(button.dataset.mode));
   });
-  document.querySelector(".ovw-context-toggle")?.addEventListener("click",
-    () => setContext(!state.showContext));
+
   status.textContent = "";
 }
 
