@@ -240,12 +240,12 @@
    {
     "id": "reach",
     "name": "Users",
-    "plain": "How many people use the company's assistant or apps, as the company itself stated it in the six months to 28 September 2026, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above. Some count a week and some a month, and each counts its own products, so the figures give a sense of scale. An older figure is not shown, and a company that sells mostly through its API may state no count at all.",
-    "what": "How many people use the company's assistant or apps, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above.",
+    "plain": "How many people use the company's assistant or apps in a month, as the company itself stated it in the six months to 28 September 2026, in steps of ten. It counts the people, whatever model answers them. A dash means no count was stated.",
+    "what": "How many people use the company's assistant or apps in a month, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above. A dash means the company has stated no count in the last six months.",
     "from": "Each company's own statements in the six months to 28 September 2026: blog posts, earnings calls and filings, each linked from its cell.",
     "links": [],
-    "limits": "Companies count differently: some a week and some a month, each its own products. A figure older than six months is not shown, and a company that sells mostly through its API may state no count at all. A model anyone can download reaches people no count includes.",
-    "sub": "As the company states"
+    "limits": "Each company counts its own products, and one states its figure by the week, which is shown as at least as many a month. A figure older than six months is not shown, and a company that sells mostly through its API may state no count at all. A model anyone can download reaches people no count includes.",
+    "sub": "Monthly users, as the company states"
    },
    {
     "id": "openrouter",
@@ -281,14 +281,14 @@
      "short": "Frontier"
     },
     "reach": {
-     "shown": "About a billion a week",
-     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT. The figure counts people using ChatGPT, not the use of its models by other companies' products.",
+     "shown": "1B+",
+     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT, which means at least a billion a month. The figure counts people using ChatGPT, not the use of its models by other companies' products.",
      "quote": "Every week, 1 billion people turn to ChatGPT for everything from quick questions and web searches to planning, research, advice, and complex decisions.",
      "date": "2026-08-06",
      "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/",
      "source": "The company",
      "band": "1B+",
-     "per": "a week"
+     "per": null
     },
     "openrouter": {
      "shown": "15.0%",
@@ -314,7 +314,7 @@
      "short": "Frontier"
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "Anthropic has published no count of the people who use Claude. It has said only that weekly users of Claude Code doubled between 1 January and 12 February 2026.",
      "band": null,
      "per": null
@@ -343,7 +343,7 @@
      "short": "8 months"
     },
     "reach": {
-     "shown": "Hundreds of millions a month",
+     "shown": "100M+",
      "text": "Alibaba said in its annual report, filed on 20 May 2026, that consumer-facing Qwen passed 295 million monthly active users across all platforms in March 2026.",
      "quote": "In March 2026, consumer-facing Qwen has surpassed 295 million monthly active users across all platforms.",
      "date": "2026-05-20",
@@ -351,7 +351,7 @@
      "source": "Alibaba Group annual report on Form 20-F for the fiscal year ended 31 March 2026, filed with the SEC on 20 May 2026.",
      "downloads": "Its most downloaded open-weight model, Qwen3-0.6B, was downloaded 29,308,906 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": "100M+",
-     "per": "a month"
+     "per": null
     },
     "openrouter": {
      "shown": "1.7%",
@@ -362,14 +362,14 @@
    },
    "microsoft": {
     "capability": {
-     "shown": "Not rated by Epoch",
+     "shown": "-",
      "model": null,
      "eci": null,
      "text": "Epoch rates no model Microsoft AI has built. The one Microsoft model it rates is Phi-4, a Microsoft Research model released in December 2024, at 130.4.",
      "behind": null
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "Microsoft AI has published no count of the people who use the MAI models. Microsoft said on 29 October 2025 that its family of Copilots had passed 150 million monthly active users, but those assistants run mostly on models Microsoft licenses rather than builds.",
      "quote": "And our first party family of Copilots now has surpassed 150 million monthly active users across information work, coding, security, science, health, and consumer.",
      "date": "2025-10-29",
@@ -379,7 +379,7 @@
      "per": null
     },
     "openrouter": {
-     "shown": "No MAI language model",
+     "shown": "-",
      "text": "OpenRouter carries no language model from Microsoft AI, only its image, voice and transcription models, so there is no share to show.",
      "url": "https://openrouter.ai/rankings"
     }
@@ -401,14 +401,14 @@
      "short": "8 months"
     },
     "reach": {
-     "shown": "About a billion a month",
+     "shown": "1B+",
      "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
      "quote": "The Gemini app has officially surpassed 1 billion monthly users, making it the fastest-growing product in Google’s history.",
      "date": "2026-08-11",
      "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/",
      "source": "The company",
      "band": "1B+",
-     "per": "a month"
+     "per": null
     },
     "openrouter": {
      "shown": "5.6%",
@@ -434,7 +434,7 @@
      "short": "22 months"
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "Mistral AI has published no count of the people who use its assistant or its models. It announced in February 2025 that its app had been downloaded more than a million times.",
      "downloads": "Its most downloaded open-weight model, Mistral-7B-Instruct-v0.3, was downloaded 2,190,595 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
@@ -464,14 +464,14 @@
      "short": "8 months"
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger as well as in its own app. It has published no count since, and it does not say which of its models answer those users.",
      "quote": "More than a billion monthly actives already use Meta AI, and we see usage increase as we improve our underlying models.",
      "date": "2025-10-29",
      "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf",
      "source": "Mark Zuckerberg, Meta third quarter 2025 earnings call, 29 October 2025 (transcript published by Meta on its investor-relations CDN).",
      "band": null,
-     "per": "since 2025"
+     "per": null
     },
     "openrouter": {
      "shown": "1.7%",
@@ -497,14 +497,14 @@
      "short": "9 months"
     },
     "reach": {
-     "shown": "Over a hundred million a month",
+     "shown": "100M+",
      "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, according to a prospectus filed on 12 June 2026 that reports Grok and X together.",
      "quote": "Of our MAUs, we had approximately 117 million and 89 million MAUs that used Grok’s AI features as of March 31, 2026 and December 31, 2025, respectively.",
      "date": "2026-06-12",
      "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm",
      "source": "SpaceX final prospectus (Form 424B4), filed with the SEC on 12 June 2026. The 117 million figure first appeared in the S-1 filed on 20 May 2026. SpaceX reports Grok and X as its AI segment.",
      "band": "100M+",
-     "per": "a month"
+     "per": null
     },
     "openrouter": {
      "shown": "0.5%",
@@ -530,7 +530,7 @@
      "short": "8 months"
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "Moonshot AI's founder said in November 2024, as a press report quoted him, that Kimi had passed 36 million monthly active users in October. Nothing has been published since.",
      "quote": "Moonshot AI founder Yang Zhilin disclosed at a press briefing that the AI assistant Kimi exceeded 36 million monthly active users in October, and is still growing faster.",
      "date": "2024-11-16",
@@ -539,7 +539,7 @@
      "quote_original": "月之暗面创始人杨植麟在沟通会上透露，AI助手Kimi在10月月活超过3600万，而且还在持续更快的增长。",
      "downloads": "Its most downloaded open-weight model, Kimi-K3, was downloaded 1,513,077 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
-     "per": "since 2024"
+     "per": null
     },
     "openrouter": {
      "shown": "1.5%",
@@ -565,7 +565,7 @@
      "short": "10 months"
     },
     "reach": {
-     "shown": "Not disclosed",
+     "shown": "-",
      "text": "DeepSeek has published no count of the people who use its assistant or its models. The figures that circulate come from third-party trackers.",
      "downloads": "Its most downloaded open-weight model, DeepSeek-V4-Flash-0731, was downloaded 4,419,279 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people.",
      "band": null,
