@@ -1299,9 +1299,10 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   overflow: hidden;
 }
 /* Three bands of one height in every cell, so each line sits level across the
-   row: two lines' room for the model's name, held to the bottom so a short name
-   meets the line under it, then the months, then open weights. */
-.ovw-board .cell-context > .cell-context-words { align-self: end; }
+   row: two lines' room for the model's name, which starts at the top of every
+   cell, then the months, then open weights, each starting at the same height
+   whatever the name above takes. */
+.ovw-board .cell-context > .cell-context-words { align-self: start; }
 .ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
 /* A row's name, and under it in small type what its cells say. */
 .ovw-board .context-label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
