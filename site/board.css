@@ -1239,17 +1239,17 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The context under the grid: facts no score counts, so no colour, no tier and
    no buttons for names. The heading and the row names are quiet text; every
    cell is the same size whatever it holds, a few words on two lines at most. */
-.ovw-board .context-head th { padding: 26px 0 6px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
+.ovw-board .context-head th { padding: 32px 0 8px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
 .ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
 .ovw-board .context-head .row-mark { color: var(--faint); }
 .ovw-board .context-row th { text-align: left; vertical-align: middle; }
 .ovw-board .context-name { font-size: 13px; font-weight: 400; color: var(--muted); }
 .ovw-board .cell-context {
   background: transparent;
-  height: 56px;
-  min-height: 56px;
-  padding: 4px 6px;
-  gap: 1px;
+  height: 72px;
+  min-height: 72px;
+  padding: 8px 10px;
+  gap: 3px;
   align-content: center;
   overflow: hidden;
 }
@@ -1263,7 +1263,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
-.ovw-board .cell-context-sub { -webkit-line-clamp: 1; color: var(--faint); }
+.ovw-board .cell-context-sub { color: var(--faint); }
+/* The rows keep a little air between them, as the grid above does. */
+.ovw-board .context-row .cell { padding-top: 5px; padding-bottom: 5px; }
 /* A model's distance from the frontier as a bar: full at the frontier, empty
    two years behind it, in the one energy colour on a pale track. */
 .ovw-board .cell-context-bar {
