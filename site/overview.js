@@ -25,6 +25,7 @@ import { renderMenu } from "./page-menu.js";
 
 const TEN = 10;
 const MODE_KEY = "aci-overview-mode";
+const CONTEXT_KEY = "aci-overview-context";
 
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
@@ -245,7 +246,189 @@ function aboutCompany(content, company) {
     "See its figures on how constitutions are governed");
 }
 
+/* ---- The context --------------------------------------------------------- */
+
+/* What a context row is, where it comes from, and what it cannot say. */
+function aboutContextRow(content, context, row) {
+  view.titled(content, row.name, context.name);
+  [["What it is", row.what], ["Where it comes from", row.from], ["Its limits", row.limits]]
+    .forEach(([heading, text]) => {
+      if (!text) return;
+      content.append(view.h3(heading), element("p", "", text));
+      // A row drawn in squares shows them, each with what it stands for.
+      if (heading === "What it is" && row.scale?.length) {
+        const list = element("ul", "usage-scale");
+        row.scale.forEach(step => {
+          const item = element("li");
+          item.append(usageMeter(step.level), element("span", "", step.text));
+          list.append(item);
+        });
+        content.append(list);
+      }
+    });
+  (row.links || []).forEach(link => leadTo(content, link.url, link.text));
+}
+
+/* The usage estimate as three squares, filled one per step, all three empty
+ * where there is nothing to go on. Decorative: the words beside it say it. */
+function usageMeter(level) {
+  const filled = level === "-" ? 0 : level.length;
+  const meter = element("span", "usage-meter");
+  meter.setAttribute("aria-hidden", "true");
+  for (let step = 0; step < 3; step += 1) {
+    meter.append(element("span", step < filled ? "usage-step usage-step-on" : "usage-step"));
+  }
+  return meter;
+}
+
+/* One company's fact on one context row: what it is, the company's own words
+ * where there are some, and where they were said. */
+function aboutContextCell(content, context, row, company, entry) {
+  view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
+  if (entry.behind) content.append(view.figure(entry.behind, ""));
+  if (entry.band) content.append(view.figure(entry.band, " a month"));
+  if (entry.level) {
+    // The same three squares the cell shows, and what they are.
+    const line = element("p", "figure usage-figure");
+    line.append(usageMeter(entry.level), document.createTextNode("Our estimate"));
+    content.append(line);
+  }
+  if (Number.isFinite(entry.share)) content.append(view.figure(entry.shown, " of tokens on OpenRouter"));
+  if (Number.isFinite(entry.eci)) {
+    const line = element("p", "subtitle");
+    line.append(element("span", "mono", entry.eci.toFixed(1)),
+                document.createTextNode(" on the Epoch Capabilities Index"));
+    content.append(line);
+  }
+  content.append(element("p", "", entry.text));
+  if (entry.quote) {
+    const said = element("blockquote", "ovw-quote", `“${entry.quote}”`);
+    content.append(said);
+    if (entry.source) content.append(element("p", "subtitle", entry.source));
+  }
+  if (entry.downloads) content.append(element("p", "subtitle", entry.downloads));
+  content.append(element("p", "subtitle", row.plain));
+  if (entry.url) leadTo(content, entry.url, "Where the company said it");
+  else if (row.url) leadTo(content, row.url, row.source || row.url);
+}
+
+/* The rows under the grid that no score counts: a quiet heading across the
+ * table, then one row per fact, named in plain text rather than as a button, so
+ * nothing here reads as one more figure of the index. No colour and no tier,
+ * since nothing here is ranked; each cell opens where its fact comes from, and
+ * the note under the grid says what the rows are. */
+function contextRows(noteNumber) {
+  const context = state.overview.context;
+  if (!context?.rows?.length) return [];
+  const head = element("tr", "context-head");
+  const title = element("th");
+  title.scope = "rowgroup";
+  title.colSpan = state.companies.length + 1;
+  // One line under the scores. At the left, "Hide" in small underlined type
+  // and the context's name, or when hidden a single "Show context" button; at
+  // the board's right edge, the grid's colour scale.
+  const line = element("div", "context-line");
+  const left = element("div", "context-left");
+  if (state.showContext) {
+    const hide = element("button", "context-hide", "Hide");
+    hide.type = "button";
+    hide.setAttribute("aria-label", "Hide the context");
+    hide.addEventListener("click", () => setContext(false));
+    left.append(hide, element("span", "context-title", context.name));
+    if (noteNumber) {
+      const mark = element("span", "row-mark", String(noteNumber));
+      mark.setAttribute("aria-hidden", "true");
+      left.append(mark);
+    }
+  } else {
+    const show = element("button", "context-hide", "Show context");
+    show.type = "button";
+    show.addEventListener("click", () => setContext(true));
+    left.append(show);
+  }
+  line.append(left);
+  const legend = byId("ovw-legend");
+  if (legend) line.append(legend);
+  title.append(line);
+  head.append(title);
+  if (!state.showContext) return [head];
+  return [head, ...context.rows.map(row => {
+    const tr = element("tr", "context-row");
+    tr.dataset.row = `context-${row.id}`;
+    // A name that opens what the row is, in plain text until pointed at: it
+    // explains the row and is no figure of the index.
+    const name = element("button", "context-name", row.name);
+    name.type = "button";
+    name.setAttribute("aria-haspopup", "dialog");
+    name.setAttribute("aria-expanded", "false");
+    name.setAttribute("aria-label", `${row.name}: what it is, where it comes from, its limits`);
+    name.addEventListener("click", () =>
+      view.openPopover(name, content => aboutContextRow(content, context, row)));
+    const label = element("span", "context-label");
+    label.append(name);
+    if (row.sub) label.append(element("span", "context-sub", row.sub));
+    tr.append(view.rowHead(null, label));
+    state.companies.forEach(company => {
+      const entry = context.companies?.[company.id]?.[row.id];
+      if (!entry) {
+        tr.append(element("td", "cell"));
+        return;
+      }
+      const words = [entry.level ? `${entry.level === "-" ? 0 : entry.level.length} of 3`
+                     : entry.shown === "-" ? "none" : entry.shown, entry.behind,
+                     entry.open_weights ? "open weights" : null,
+                     entry.band ? `${entry.band} a month` : null].filter(Boolean);
+      const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
+        `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
+        content => aboutContextCell(content, context, row, company, entry),
+        "cell-button cell-context");
+      if (entry.short) {
+        // The model at the top and how far it trails the frontier at the
+        // bottom, so both lines sit level across the row; a model at the
+        // frontier is said in bold.
+        // A third line says whether that model's weights can be downloaded;
+        // it keeps its place when empty, so every line sits level across the row.
+        const open = element("span", "cell-context-sub", entry.open_weights ? "Open weights" : "\u00a0");
+        if (!entry.open_weights) open.setAttribute("aria-hidden", "true");
+        button.append(element("span", "cell-context-words", entry.shown),
+          element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
+            : "cell-context-sub", entry.short), open);
+      } else if (Number.isFinite(entry.share)) {
+        button.append(element("span", "cell-context-band", entry.shown));
+      } else if (entry.level) {
+        // Our rough estimate as three squares, filled one per step, all three
+        // empty where there is nothing to go on.
+        button.append(usageMeter(entry.level));
+      } else if (entry.band) {
+        // A step of ten, in the data face, on one line.
+        button.append(element("span", "cell-context-band", entry.band));
+      } else if (entry.shown === "-") {
+        // Nothing to show: a dash, and the popover says why.
+        button.append(element("span", "cell-context-none", "-"));
+      } else {
+        button.append(element("span", "cell-context-words", entry.shown));
+      }
+      tr.append(cell);
+    });
+    return tr;
+  })];
+}
+
 /* ---- The table ----------------------------------------------------------- */
+
+/* The notes a company's name points to, with their numbers: whether it
+ * publishes a constitution, whether its flagship can be downloaded, and a note
+ * of its own where the file has one. */
+function nameNotesOf(company) {
+  const { grid } = state.overview;
+  const ids = [!company.publishes ? "no_constitution" : null,
+               company.openWeights ? "open_weights" : null, company.id];
+  return ids.filter(id => id && state.nameNoteNumbers?.[id]).map(id => {
+    const note = grid.name_notes.find(item => item.id === id);
+    return { number: state.nameNoteNumbers[id],
+             spoken: id === company.id ? note.text : note.title };
+  });
+}
 
 function headRow() {
   const row = element("tr");
@@ -263,15 +446,21 @@ function headRow() {
     button.dataset.lab = company.id;
     button.setAttribute("aria-haspopup", "dialog");
     button.setAttribute("aria-expanded", "false");
-    const flags = [!company.publishes ? "No published constitution" : null,
-                   company.note, company.openWeights ? "Open weights" : null].filter(Boolean);
+    // What a reader of the grid would otherwise assume the other way is said in
+    // the notes under it, and the name carries their numbers. The accessible
+    // name says the notes' words, since the numbers are hidden from it.
+    const notes = nameNotesOf(company);
     button.setAttribute("aria-label", `${company.name}`
-      + `${flags.length ? `, ${flags.map(lowerFirst).join(", ")}` : ""}: what it publishes`);
+      + `${notes.length ? `, ${notes.map(note => lowerFirst(note.spoken)).join(", ")}` : ""}`
+      + ": what it publishes");
     button.append(companyMark(company.mark));
-    button.append(element("span", "company-name", company.name));
-    // A few words under the name, smaller: the facts a reader of the grid would
-    // otherwise assume the other way. The profile the head opens says each in full.
-    flags.forEach(flag => button.append(element("span", "company-flag", flag)));
+    const name = element("span", "company-name", company.name);
+    if (notes.length) {
+      const mark = element("span", "row-mark", notes.map(note => note.number).join(","));
+      mark.setAttribute("aria-hidden", "true");
+      name.append(mark);
+    }
+    button.append(name);
     button.addEventListener("click", () =>
       view.openPopover(button, content => aboutCompany(content, company)));
     cell.append(button);
@@ -347,14 +536,39 @@ function drawLegend() {
 function draw() {
   const { grid } = state.overview;
   byId("ovw-caption").textContent = grid.caption;
+  // The numbered notes the marks on the page point to, in the order the marks
+  // come: the file's own notes, which the introduction points to, the
+  // context's sources, then the relative mode's, whose mark is on its button
+  // below them.
+  const context = state.overview.context;
+  const shownContext = state.showContext ? context : null;
+  // The notes the names point to, lettered rather than numbered so they are not
+  // taken for the page's own notes, and only those some company carries.
+  const every = grid.name_notes || [];
+  const carried = every.filter(note => state.companies.some(company =>
+    [!company.publishes ? "no_constitution" : null,
+     company.openWeights ? "open_weights" : null, company.id].includes(note.id)));
+  // A note may name its own sign, such as an asterisk; the others are lettered.
+  state.nameNoteNumbers = Object.fromEntries(carried.map((note, index) =>
+    [note.id, note.mark || String.fromCharCode(97 + index)]));
+  const lettered = byId("ovw-name-notes");
+  lettered.hidden = !carried.length;
+  lettered.replaceChildren(...carried.map(({ id, title, text }) => {
+    const item = element("li");
+    item.append(element("span", "name-note-mark", state.nameNoteNumbers[id]),
+                element("strong", "", `${title}. `));
+    renderInline(item, text);
+    return item;
+  }));
+  const notes = [...(grid.notes || []),
+                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
+                 { title: "Relative", text: grid.relative_note }];
+  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
-    [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]));
+    [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
+    ...contextRows(contextNote));
   byId("ovw-mode-note").textContent = grid.hint;
-  // The numbered notes the marks on the page point to, in the order the marks
-  // come: the file's own notes, which the introduction points to, then the
-  // relative mode's, whose mark is on its button below them.
-  const notes = [...(grid.notes || []), { title: "Relative", text: grid.relative_note }];
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
   if (relativeMark) relativeMark.textContent = String(notes.length);
   byId("ovw-notes").replaceChildren(...notes.map(({ title, text }, index) => {
@@ -375,6 +589,22 @@ function setMode(mode) {
   state.mode = mode;
   try { localStorage.setItem(MODE_KEY, mode); } catch { /* the default stands */ }
   draw();
+}
+
+function setContext(show) {
+  if (view.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
+  state.showContext = show;
+  try { localStorage.setItem(CONTEXT_KEY, show ? "shown" : "hidden"); } catch { /* the default stands */ }
+  draw();
+}
+
+/* Shown unless this browser chose to hide it. */
+function savedContext() {
+  try {
+    return localStorage.getItem(CONTEXT_KEY) !== "hidden";
+  } catch {
+    return true;
+  }
 }
 
 function savedMode() {
@@ -410,7 +640,8 @@ export async function initializeOverview() {
   try {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
-    state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode() };
+    state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode(),
+              showContext: savedContext() };
     draw();
     drawTakeaways(overview.takeaways || []);
     renderMenu(document.getElementById("view-overview"));
@@ -424,6 +655,7 @@ export async function initializeOverview() {
   document.querySelectorAll(".ovw-mode button").forEach(button => {
     button.addEventListener("click", () => setMode(button.dataset.mode));
   });
+
   status.textContent = "";
 }
 

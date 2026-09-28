@@ -553,6 +553,9 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-notes li { margin: 0 0 6px; padding-left: 4px; }
 .gov-notes li::marker { font-family: var(--mono, "IBM Plex Mono", monospace); font-size: 11px; }
 .company-flag .row-mark { vertical-align: super; }
+/* The overview's lettered notes, on the companies' names. */
+.ovw-name-notes { list-style: none; margin-top: 10px; padding-left: 0; }
+.ovw-name-notes .name-note-mark { display: inline-block; min-width: 14px; font-family: var(--mono); }
 
 /* A row's name says its level too, one step per level: the final score and
    its two halves in the display face, a figure's own rows bold, and the rows
@@ -1236,6 +1239,118 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   .board .cell-tier .cell-words { font-size: 11px; }
 }
 .ovw-pop-link { margin-top: 12px; }
+/* The context under the grid: facts no score counts, so no colour, no tier and
+   no buttons for names. The heading and the row names are quiet text; every
+   cell is the same size whatever it holds, a few words on two lines at most. */
+.ovw-board .context-head th { padding: 12px 0 6px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
+.ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
+/* The heading's one line: the switch and the name at the left, the grid's
+   colour scale at the board's right edge. */
+.ovw-board .context-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ovw-board .context-left { display: flex; align-items: center; gap: 4px; }
+.ovw-board .context-line .gov-legend { margin: 0 0 0 auto; font-weight: 400; justify-content: flex-end; }
+.ovw-board .context-head .row-mark { color: var(--faint); }
+/* The switch for the context, small, beside its heading. */
+/* Hidden, the context is one small button; shown, it is closed again by a
+   small underlined word before its heading. */
+.ovw-board .ovw-context-toggle { padding: 3px 12px; font-size: 12px; }
+.ovw-board .context-hide {
+  margin-right: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  color: var(--faint);
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ovw-board .context-hide:hover { color: var(--ink); }
+.ovw-board .context-hide:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.ovw-board .context-row th { text-align: left; vertical-align: middle; }
+.ovw-board .context-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline 1px transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms;
+}
+.ovw-board .context-name:hover,
+.ovw-board .context-name:focus-visible { text-decoration-color: currentColor; outline: none; }
+.ovw-board .context-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.ovw-board .cell-context {
+  display: grid;
+  grid-template-rows: 28px 15px 15px;
+  row-gap: 2px;
+  align-content: center;
+  justify-items: center;
+  background: transparent;
+  height: 80px;
+  min-height: 80px;
+  padding: 8px 4px;
+  overflow: hidden;
+}
+/* Three bands of one height in every cell, so each line sits level across the
+   row: two lines' room for the model's name, which starts at the top of every
+   cell, then the months, then open weights, each starting at the same height
+   whatever the name above takes. */
+.ovw-board .cell-context > .cell-context-words { align-self: start; }
+.ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
+/* A row's name, and under it in small type what its cells say. */
+.ovw-board .context-label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ovw-board .context-sub { font-size: 11px; color: var(--faint); }
+.ovw-board .cell-context-words,
+.ovw-board .cell-context-sub {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ovw-board .cell-context-sub { color: var(--faint); }
+/* The rows keep a little air between them, as the grid above does. */
+.ovw-board .context-row .cell { position: relative; padding: 5px 1px 5px 0; }
+/* A light divider between two context cells, short of the cell's top and
+   bottom, so the columns read apart without drawing boxes. */
+.ovw-board .context-row .cell + .cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgb(92 107 60 / .2);
+}
+/* A model at the frontier: its words in bold and in ink. */
+.ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); }
+.ovw-board .cell-context-band { font-family: var(--mono); font-size: 13px; line-height: 1.2; }
+/* The usage estimate: three small squares in grey, filled one per step, the
+   empty ones drawn as an outline. Grey rather than a colour of the boards, since
+   it is a rough estimate and no score. */
+.ovw-board .usage-meter, .gov-pop .usage-meter { display: inline-flex; gap: 3px; }
+.ovw-board .usage-step, .gov-pop .usage-step {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--neutral);
+  border-radius: 2px;
+}
+.ovw-board .usage-step-on, .gov-pop .usage-step-on { background: var(--faint); border-color: var(--faint); }
+.gov-pop .usage-figure { display: flex; align-items: center; gap: 10px; }
+.gov-pop .usage-scale { margin: 6px 0 10px; padding: 0; list-style: none; }
+.gov-pop .usage-scale li { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 13px; }
+.ovw-board .cell-context-none { font-family: var(--mono); font-size: 13px; color: var(--faint); }
+.gov-pop .mono { font-family: var(--mono); }
+.gov-pop .ovw-quote { margin: 10px 0 4px; padding-left: 12px; border-left: 3px solid var(--energy); }
 /* A caveat on a company's document: under everything else, set off by a rule,
    in the popover's quiet subtitle ink. */
 .gov-pop .ovw-caveat { margin-top: 14px; padding-top: 10px; border-top: 1px solid rgb(92 107 60 / .2); }
