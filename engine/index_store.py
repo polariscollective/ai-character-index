@@ -246,7 +246,7 @@ def runlog_rows(store, run_id):
     return rows
 
 
-def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
+def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None, provisional=None):
     """The depth of each cell a publication carries, from its own run.
 
     {(behaviour_slug, spec_version_id): {"mean": float, "judges": {model: {"depth",
@@ -267,6 +267,10 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     A depth out of ten is given from the conflict rules of an assessment run's
     criteria, so an assessment run that takes its criteria from an earlier run
     reads the depths given against that run (`criteria_run_id`).
+
+    `provisional` maps a document read by one model in session to the
+    provisional assessment run its depths were given against, which is read for
+    that document in place of the named run.
     """
     wanted = {(c["run_id"], c["behaviour_slug"], c["spec_version_id"]) for c in cells}
     # The manual call is not a judge: its depth, where it gave one, is read by
@@ -282,8 +286,12 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
             raise ValueError("depths out of ten are read by the digest of the prompt they were "
                              "given under: pass depth_prompt")
         given_with = criteria_run_id(store, assessment_run_id)
+        run_of_version = provisional or {}
+        run_of_call = {c["id"]: run_of_version.get(c["spec_version_id"], given_with)
+                       for c in calls}
         depths = {d["call_id"]: d for d in _rows(store, "aci_depths_out_of_ten")
-                  if d.get("assessment_run_id") == given_with
+                  if d["call_id"] in run_of_call
+                  and d.get("assessment_run_id") == run_of_call[d["call_id"]]
                   and d.get("prompt_sha256") == depth_prompt}
 
     by_cell = {}
@@ -310,7 +318,7 @@ def cell_depths(store, cells, assessment_run_id=None, depth_prompt=None):
     return out
 
 
-def manual_reviews(store, cells, assessment_run_id=None, depth_prompt=None):
+def manual_reviews(store, cells, assessment_run_id=None, depth_prompt=None, provisional=None):
     """The owner's corrections to the cells a publication carries.
 
     {(behaviour_slug, spec_version_id): {"passages": {locator: {"verdict", "note"}},
@@ -342,7 +350,8 @@ def manual_reviews(store, cells, assessment_run_id=None, depth_prompt=None):
         for row in _rows(store, "aci_depths_out_of_ten", {"call_id": ids}):
             key = by_call.get(row["call_id"])
             if (key is not None and row.get("status") == "done"
-                    and row.get("assessment_run_id") == given_with
+                    and row.get("assessment_run_id")
+                    == (provisional or {}).get(key[1], given_with)
                     and row.get("prompt_sha256") == depth_prompt):
                 out[key]["depth"] = {"depth": row["depth"],
                                      "rationale": row.get("rationale") or ""}

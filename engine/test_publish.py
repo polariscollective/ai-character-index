@@ -463,6 +463,95 @@ class DepthCompleteKeysTest(unittest.TestCase):
         self.assertEqual(publish._depth_complete_keys(s, matched, "assessment-1"), set())
 
 
+PROVISIONAL_RUN = {"id": "p1", "rubric": "v5", "created_at": "2026-09-28",
+                   "provisional": True, "panel": ["opus-5.5"]}
+
+
+class ProvisionalCellsTest(unittest.TestCase):
+    """A provisional run is one model read in session. It answers a cell only
+    where no run of the panel judged it, and it is held to its own one seat."""
+
+    def test_a_provisional_run_answers_a_cell_no_panel_judged(self):
+        s = store([dict(PROVISIONAL_RUN)], calls("p1", "helpfulness", "v1", ["opus-5.5"]))
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "p1")
+
+    def test_a_panel_run_wins_over_a_newer_provisional_one(self):
+        s = store([{"id": "r1", "rubric": "v5", "created_at": "2026-09-01"},
+                   dict(PROVISIONAL_RUN)],
+                  calls("r1", "helpfulness", "v1", PANEL)
+                  + calls("p1", "helpfulness", "v1", ["opus-5.5"]))
+        [cell] = publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+        self.assertEqual(cell["run_id"], "r1")
+
+    def test_a_provisional_run_with_a_second_seat_is_not_an_answer(self):
+        s = store([dict(PROVISIONAL_RUN)],
+                  calls("p1", "helpfulness", "v1", ["opus-5.5", "sol"]))
+        with self.assertRaises(SystemExit):
+            publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+
+    def test_a_run_that_is_not_provisional_is_still_held_to_the_panel(self):
+        s = store([{"id": "r1", "rubric": "v5", "created_at": "2026-09-01",
+                    "panel": ["opus-5.5"]}],
+                  calls("r1", "helpfulness", "v1", ["opus-5.5"]))
+        with self.assertRaises(SystemExit):
+            publish.choose_cells(s, ["helpfulness"], [V1], PANEL, "v5")
+
+    def depth_store(self, depth_run):
+        run_calls = [{**c, "id": "c-opus"} for c in calls("p1", "helpfulness", "v1", ["opus-5.5"])]
+        return FakeStore(aci_runs=[dict(PROVISIONAL_RUN)], aci_judge_calls=run_calls,
+                         aci_depths=[], aci_depths_out_of_ten=ten_depth_rows(["c-opus"], depth_run),
+                         aci_spec_versions=[V1, V2], aci_seat_substitutions=[])
+
+    def test_a_provisional_cell_needs_its_one_seat_s_depth_given_with_its_own_assessment(self):
+        cell = {"run_id": "p1", "behaviour_slug": "helpfulness", "spec_version_id": "v1"}
+        publish.require_depths(self.depth_store("prov-a"), [cell], PANEL, "main-a",
+                               provisional={"v1": "prov-a"})
+        with self.assertRaises(SystemExit):
+            publish.require_depths(self.depth_store("prov-a"), [cell], PANEL, "main-a")
+
+    def test_depth_completeness_reads_a_version_with_its_own_assessment_run(self):
+        run_calls = [{**c, "id": "c-opus"} for c in calls("p1", "helpfulness", "v1", ["opus-5.5"])]
+        matched = {("p1", "helpfulness", "v1"): run_calls}
+        s = FakeStore(aci_depths_out_of_ten=ten_depth_rows(["c-opus"], "prov-a"))
+        self.assertEqual(publish._depth_complete_keys(s, matched, "main-a",
+                                                      provisional={"v1": "prov-a"}),
+                         {("p1", "helpfulness", "v1")})
+        self.assertEqual(publish._depth_complete_keys(s, matched, "main-a"), set())
+
+
+class ProvisionalAssessmentsTest(unittest.TestCase):
+    """The assessment a publication carries for a document its named run did
+    not assess: the newest done provisional assessment run that did."""
+
+    def test_a_version_the_named_run_left_out_takes_the_newest_provisional_run(self):
+        s = FakeStore(
+            aci_assessment_runs=[
+                {"id": "main-a", "status": "done", "created_at": "2026-09-22"},
+                {"id": "prov-old", "status": "done", "provisional": True,
+                 "created_at": "2026-09-27"},
+                {"id": "prov-new", "status": "done", "provisional": True,
+                 "created_at": "2026-09-28"},
+                {"id": "prov-open", "status": "error", "provisional": True,
+                 "created_at": "2026-09-29"}],
+            aci_assessment_calls=[
+                {"run_id": "main-a", "spec_version_id": "v1"},
+                {"run_id": "prov-old", "spec_version_id": "v2"},
+                {"run_id": "prov-new", "spec_version_id": "v2"},
+                {"run_id": "prov-open", "spec_version_id": "v2"}])
+        self.assertEqual(publish.provisional_assessments(s, [V1, V2], "main-a"),
+                         {"v2": "prov-new"})
+
+    def test_nothing_is_taken_for_a_version_the_named_run_assessed(self):
+        s = FakeStore(
+            aci_assessment_runs=[{"id": "main-a", "status": "done", "created_at": "2026-09-22"},
+                                 {"id": "prov", "status": "done", "provisional": True,
+                                  "created_at": "2026-09-28"}],
+            aci_assessment_calls=[{"run_id": "main-a", "spec_version_id": "v1"},
+                                  {"run_id": "prov", "spec_version_id": "v1"}])
+        self.assertEqual(publish.provisional_assessments(s, [V1], "main-a"), {})
+
+
 class BuildTest(unittest.TestCase):
     def test_the_payload_is_built_for_the_publication_panel(self):
         seen = {}

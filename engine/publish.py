@@ -111,7 +111,7 @@ def panel_seats(config, name):
     return sorted(seats)
 
 
-def require_depths(store, cells, panel, assessment_run_id=None):
+def require_depths(store, cells, panel, assessment_run_id=None, provisional=None):
     """Refuse a publication any of whose cells lacks a depth from every judge of
     its run, naming them all at once.
 
@@ -122,17 +122,24 @@ def require_depths(store, cells, panel, assessment_run_id=None):
     `assessment_run_id` names the assessment run to read depths out of ten
     from, under the current prompt of ten, the only one a new publication is
     built with; without it, depths come from the scale of four, the prompt
-    every publication built so far was judged on."""
+    every publication built so far was judged on.
+
+    A provisional cell is held to its own run's one seat, and its depth is read
+    with the assessment run `provisional` names for its document."""
     given = index_store.cell_depths(
         store, cells, assessment_run_id,
-        depth_prompt=depth_call.prompt_sha256(10) if assessment_run_id is not None else None)
+        depth_prompt=depth_call.prompt_sha256(10) if assessment_run_id is not None else None,
+        provisional=provisional)
     recorded = seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells])
     versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+    runs = {run["id"]: run for run in store.select("aci_runs")}
 
     def complete(cell):
         depth = given.get((cell["behaviour_slug"], cell["spec_version_id"]))
-        seated = seat_substitutions.seats(panel, recorded.get(
-            (cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]), ()))
+        run = runs.get(cell["run_id"]) or {}
+        seated = (sorted(run["panel"]) if run.get("provisional") else
+                  seat_substitutions.seats(panel, recorded.get(
+                      (cell["run_id"], cell["behaviour_slug"], cell["spec_version_id"]), ())))
         return depth is not None and sorted(depth["judges"]) == seated
 
     missing = sorted(
@@ -187,7 +194,7 @@ def require_declared_substitutes(store, cells, config, panel_name, panel):
             + "\n  ".join(problems))
 
 
-def _depth_complete_keys(store, matched, assessment_run_id=None):
+def _depth_complete_keys(store, matched, assessment_run_id=None, provisional=None):
     """The keys of `matched` whose every done call also carries a done depth.
 
     Read with the store's filtered selects, scoped to exactly the calls the
@@ -198,27 +205,33 @@ def _depth_complete_keys(store, matched, assessment_run_id=None):
     With no assessment run this reads `aci_depths`, the scale of four, exactly
     as today. With one it reads `aci_depths_out_of_ten` instead, for the run
     whose criteria stand for that assessment run (`index_store.criteria_run_id`)
-    and the current prompt of ten (`depth_call.prompt_sha256(10)`).
+    and the current prompt of ten (`depth_call.prompt_sha256(10)`). A document
+    `provisional` names is read with its own provisional assessment run instead.
     """
     ids = sorted({call["id"] for calls in matched.values() for call in calls})
     if not ids:
         return set()
     call_ids = "in.(" + ",".join(f'"{i}"' for i in ids) + ")"
     if assessment_run_id is None:
-        table = "aci_depths"
-        params = {"call_id": call_ids, "status": "eq.done"}
-    else:
-        table = "aci_depths_out_of_ten"
-        params = {"call_id": call_ids, "status": "eq.done",
-                  "assessment_run_id":
-                      f"eq.{index_store.criteria_run_id(store, assessment_run_id)}",
-                  "prompt_sha256": f"eq.{depth_call.prompt_sha256(10)}"}
-    done_depths = {row["call_id"] for row in store.select(table, params)}
+        done_depths = {row["call_id"] for row in store.select(
+            "aci_depths", {"call_id": call_ids, "status": "eq.done"})}
+        return {key for key, calls in matched.items()
+                if all(call["id"] in done_depths for call in calls)}
+    given_with = index_store.criteria_run_id(store, assessment_run_id)
+    provisional = provisional or {}
+    run_of = {key: provisional.get(key[2], given_with) for key in matched}
+    wanted = sorted(set(run_of.values()))
+    done_depths = {(row["call_id"], row["assessment_run_id"]) for row in store.select(
+        "aci_depths_out_of_ten",
+        {"call_id": call_ids, "status": "eq.done",
+         "assessment_run_id": "in.(" + ",".join(f'"{i}"' for i in wanted) + ")",
+         "prompt_sha256": f"eq.{depth_call.prompt_sha256(10)}"})}
     return {key for key, calls in matched.items()
-            if all(call["id"] in done_depths for call in calls)}
+            if all((call["id"], run_of[key]) in done_depths for call in calls)}
 
 
-def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run_id=None):
+def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run_id=None,
+                 provisional=None):
     """One run per cell, or a refusal naming every cell that has no answer.
 
     The newest run that can actually be published for the cell: it judged the
@@ -239,6 +252,11 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
 
     With an assessment run, "every depth done" means every depth out of ten
     given with that run, since those are the depths the publication will carry.
+
+    A provisional run (session_seat.py), one model read in session, answers a
+    cell only where no run of this panel judged it, and is held to its own one
+    seat. Its depths are read with the assessment run `provisional` names for
+    the cell's document.
 
     A cell nothing judged with this panel at all is refused here, naming every
     such cell at once. A cell some run did judge, but none of those runs has
@@ -262,21 +280,33 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
 
     matched = {
         key: calls for key, calls in calls_by_key.items()
-        if runs[key[0]]["rubric"] == rubric
+        if runs[key[0]]["rubric"] == rubric and not runs[key[0]].get("provisional")
         and sorted({call["model"] for call in calls}) == seat_substitutions.seats(
             want, recorded.get(key, ()))
     }
-    publishable = _depth_complete_keys(store, matched, assessment_run_id)
+    held = {
+        key: calls for key, calls in calls_by_key.items()
+        if runs[key[0]]["rubric"] == rubric and runs[key[0]].get("provisional")
+        and sorted({call["model"] for call in calls}) == sorted(runs[key[0]]["panel"])
+    }
+    publishable = _depth_complete_keys(store, {**matched, **held}, assessment_run_id,
+                                       provisional)
 
-    by_cell = {}
+    by_cell, held_by_cell = {}, {}
     for key in matched:
         run_id, slug, version_id = key
         by_cell.setdefault((slug, version_id), []).append(key)
+    for key in held:
+        run_id, slug, version_id = key
+        held_by_cell.setdefault((slug, version_id), []).append(key)
 
     cells, unanswered = [], []
     for slug in sorted(behaviours):
         for version in spec_versions:
-            keys = by_cell.get((slug, version["id"]), [])
+            # The panel's reading wherever there is one; one model's only where
+            # there is none.
+            keys = (by_cell.get((slug, version["id"]))
+                    or held_by_cell.get((slug, version["id"]), []))
             if not keys:
                 unanswered.append(f"{slug} x {version['spec_id']}@{version['version']}")
                 continue
@@ -294,9 +324,28 @@ def choose_cells(store, behaviours, spec_versions, panel, rubric, assessment_run
     return cells
 
 
+def provisional_assessments(store, versions, assessment_run_id):
+    """{version id: assessment run id} for every version `assessment_run_id` did
+    not assess and a done provisional assessment run did (session_seat.py), the
+    newest such run. A document read by one model in session is assessed by that
+    reading, and its depths out of ten were given against it."""
+    covered = {call["spec_version_id"] for call in store.select(
+        "aci_assessment_calls", {"run_id": f"eq.{assessment_run_id}"})}
+    runs = sorted((run for run in store.select("aci_assessment_runs")
+                   if run.get("provisional") and run.get("status") == "done"),
+                  key=lambda run: run.get("created_at") or "")
+    out = {}
+    for run in runs:
+        for call in store.select("aci_assessment_calls", {"run_id": f"eq.{run['id']}"}):
+            version_id = call["spec_version_id"]
+            if version_id not in covered and version_id in {v["id"] for v in versions}:
+                out[version_id] = run["id"]
+    return out
+
+
 def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
           note_prompts=None, depth_prompt=None, assessment_run=None, comparisons=True,
-          unanalysed=None, manual_review=False):
+          unanalysed=None, manual_review=False, provisional=None):
     """One payload, as its builder writes it, with its digest.
 
     The behaviour list is passed explicitly, and that is not a detail. Without it
@@ -332,6 +381,9 @@ def build(name, cells, behaviours, run_date=None, panel_name=None, link_runs=(),
                 extra.append(f"--assessment-run={assessment_run}")
             if manual_review:
                 extra.append("--manual-review")
+            if provisional:
+                extra.append("--provisional-assessments=" + ",".join(
+                    f"{version_id}:{run_id}" for version_id, run_id in sorted(provisional.items())))
         if name == "links":
             extra.append("--link-runs=" + ",".join(sorted(link_runs)))
             if note_prompts is not None:
@@ -438,16 +490,24 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
     panel_name = config["display"]["panel"]
     panel = panel_seats(config, panel_name)
     versions = document_versions(store, document_ids)
+    # A document the named assessment run did not assess, and one model read in
+    # session did, is carried with that provisional assessment.
+    provisional = provisional_assessments(store, versions, assessment_run) if out_of_ten else {}
     if out_of_ten:
-        index_store.assessment(store, assessment_run, versions)
-    cells = choose_cells(store, behaviours, versions, panel, rubric, assessment_run)
+        index_store.assessment(store, assessment_run,
+                               [v for v in versions if v["id"] not in provisional])
+        for run_id in sorted(set(provisional.values())):
+            index_store.assessment(store, run_id,
+                                   [v for v in versions if provisional.get(v["id"]) == run_id])
+    cells = choose_cells(store, behaviours, versions, panel, rubric, assessment_run, provisional)
     require_declared_substitutes(store, cells, config, panel_name, panel)
-    require_depths(store, cells, panel, assessment_run)
+    require_depths(store, cells, panel, assessment_run, provisional)
     note_prompts = document_note_prompts(store, out_of_ten)
 
     payload, payload_sha256 = build("payload", cells, behaviours, run_date, panel_name,
                                     depth_prompt=depth_prompt, assessment_run=assessment_run,
-                                    **({"manual_review": True} if manual_review else {}))
+                                    **({"manual_review": True} if manual_review else {}),
+                                    **({"provisional": provisional} if provisional else {}))
     # Versions carried for reading only: in the reader's text, in no cell, and
     # marked as not yet judged. Checked to exist like the others, and refused if a
     # judged document is named twice.
@@ -490,6 +550,8 @@ def publish(store, behaviours, document_ids, rubric, published_by, notes="",
         build_params["unanalysed_documents"] = sorted(unanalysed)
     if manual_review:
         build_params["manual_review"] = True
+    if provisional:
+        build_params["provisional_assessment_runs"] = dict(sorted(provisional.items()))
 
     publication = {
         "published_by": published_by,
