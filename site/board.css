@@ -1239,6 +1239,18 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   .board .cell-tier .cell-words { font-size: 11px; }
 }
 .ovw-pop-link { margin-top: 12px; }
+/* The overview shows only the final scores, so its rows are divided by the
+   light rule the tables use rather than the board's strong one. */
+.ovw-board .total-row { border-bottom: 1px solid rgb(92 107 60 / .2); }
+/* A view in preparation: no figure and no colour, the words quiet in the
+   middle of a cell the height of a score's. */
+.ovw-board .cell-coming {
+  display: grid;
+  place-items: center;
+  min-height: 54px;
+  font-size: 11px;
+  color: var(--faint);
+}
 /* The context under the grid: facts no score counts, so no colour, no tier and
    no buttons for names. The heading and the row names are quiet text; every
    cell is the same size whatever it holds, a few words on two lines at most. */

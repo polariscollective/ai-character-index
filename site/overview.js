@@ -246,6 +246,33 @@ function aboutCompany(content, company) {
     "See its figures on how constitutions are governed");
 }
 
+/* ---- The views in preparation ------------------------------------------- */
+
+function aboutComing(content, item) {
+  view.titled(content, item.name, "In preparation");
+  content.append(element("p", "", item.plain));
+}
+
+/* A view the index does not carry yet: its name, which opens what it will be,
+ * and a quiet "In preparation" in every company's cell. */
+function comingRow(item) {
+  const tr = element("tr", "total-row outside-row coming-row");
+  tr.dataset.row = `coming-${item.id}`;
+  const head = element("th");
+  head.scope = "row";
+  const line = element("div", "row-head");
+  line.append(view.rowName(item.name, null, content => aboutComing(content, item),
+    `${item.name}: in preparation`));
+  head.append(line);
+  tr.append(head);
+  state.companies.forEach(() => {
+    const cell = element("td", "cell");
+    cell.append(element("span", "cell-coming", "In preparation"));
+    tr.append(cell);
+  });
+  return tr;
+}
+
 /* ---- The context --------------------------------------------------------- */
 
 /* What a context row is, where it comes from, and what it cannot say. */
@@ -565,8 +592,11 @@ function draw() {
                  { title: "Relative", text: grid.relative_note }];
   const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
-  view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
-    [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
+  // Only the final scores of the two boards, each opening what it is made of,
+  // then the views still in preparation, then the context.
+  view.nodes.table.tBodies[0].replaceChildren(
+    ...grid.groups.map(group => figureRow(group, group.final, true)),
+    ...(grid.coming || []).map(comingRow),
     ...contextRows(contextNote));
   byId("ovw-mode-note").textContent = grid.hint;
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
