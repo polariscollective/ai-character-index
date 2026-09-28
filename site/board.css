@@ -1239,7 +1239,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The context under the grid: facts no score counts, so no colour, no tier and
    no buttons for names. The heading and the row names are quiet text; every
    cell is the same size whatever it holds, a few words on two lines at most. */
-.ovw-board .context-head th { padding: 32px 0 8px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
+.ovw-board .context-head th { padding: 12px 0 6px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
 .ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
 .ovw-board .context-head .row-mark { color: var(--faint); }
 .ovw-board .context-row th { text-align: left; vertical-align: middle; }
