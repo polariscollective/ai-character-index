@@ -1383,7 +1383,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .context-row .cell + .cell::before {
   content: "";
   position: absolute;
-  left: 0;
+  /* In the middle of the 6px gap the cell before leaves on its right, which is
+     where the gap between two score cells above falls. */
+  left: -3.5px;
   top: 22%;
   bottom: 22%;
   width: 1px;
