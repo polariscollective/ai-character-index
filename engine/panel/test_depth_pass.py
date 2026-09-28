@@ -705,6 +705,22 @@ class GiveTest(unittest.TestCase):
             self.assertIn(PASSAGES[2][2], user, "the retained behaviour passage is shown")
             self.assertNotIn(PASSAGES[3][2], user, "the un-retained passage is left out")
 
+    def test_a_one_seat_assessment_run_needs_its_one_seat(self):
+        """A provisional assessment run has one seat, and a rule its one seat
+        cites is in the block: the quorum is two, or every seat when there are
+        fewer (assessment_run.quorum_of)."""
+        row = {"id": ASSESSMENT_RUN, "status": "done",
+               "panels": {"criteria": ["sol"], "contradictions": ["sol"]}}
+        fake = store(aci_assessment_runs=[row],
+                     aci_assessment_calls=[dict(c) for c in ASSESSMENT_CALLS if c["seat"] == "sol"],
+                     aci_assessment_scores=[dict(s) for s in ASSESSMENT_SCORES
+                                            if s["call_id"] == "ac-sol"])
+        _estimate, _report, model = give(fake)
+        self.assertTrue(model.asked)
+        for _tag, user in model.asked:
+            self.assertIn(PASSAGES[0][2], user)
+            self.assertIn(PASSAGES[1][2], user)
+
     def test_a_depth_is_given_by_the_seat_and_carries_no_model_or_reason(self):
         fake = store()
         give(fake)

@@ -120,11 +120,12 @@ def require_assessed(store, assessment_run_id, version_ids, versions):
     return by_version
 
 
-def conflict_rules_for(rows, version, passages_for):
+def conflict_rules_for(rows, version, passages_for, quorum=assessment_run.QUORUM):
     """The document's general rules for conflicts, as the passages its
     criteria calls cited under `conflict_rules` in `rows` (one document's rows
     of one assessment run), resolved through `passages_for` and kept when at
-    least two seats cited them.
+    least `quorum` seats cited them: two, or the one seat of a provisional run
+    (`assessment_run.quorum_of`).
 
     Locators are turned back into `assessment_run.conflict_rules`'s own
     1-based passage numbers, so the quorum rule this index already tests
@@ -139,7 +140,7 @@ def conflict_rules_for(rows, version, passages_for):
             continue
         numbers = [index_of[locator] for locator in score["locators"] if locator in index_of]
         by_seat[seat] = {"conflict_rule_passages": numbers}
-    return assessment_run.conflict_rules(by_seat, passages)
+    return assessment_run.conflict_rules(by_seat, passages, quorum)
 
 
 def ready_cells(store, run_ids):
@@ -206,6 +207,12 @@ def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, ver
             key = manual_calls.get(row["call_id"])
             if key is not None:
                 corrections.setdefault(key, {})[row["locator"]] = manual_review.band_of(row["verdict"])
+    # The quorum of the run whose criteria stand for the one named: two seats,
+    # or the one seat of a provisional run.
+    standing = store.select("aci_assessment_runs", {"id": f"eq.{given_against}"})
+    criteria_seats = (standing[0].get("panels") or {}).get("criteria") if standing else None
+    quorum = (assessment_run.quorum_of(criteria_seats) if criteria_seats
+              else assessment_run.QUORUM)
     rules_of = {}
     jobs = []
     for key, cell in sorted(ready.items()):
@@ -215,7 +222,7 @@ def jobs_for(store, run_ids, assessment_run_id, given_against, passages_for, ver
                                                corrections.get(key))
         if version_id not in rules_of:
             rules_of[version_id] = conflict_rules_for(assessed[version_id], version,
-                                                       passages_for)
+                                                       passages_for, quorum)
         rules = rules_of[version_id]
         seated = ({c["model"] for c in cell}
                   | {done[c["id"]]["model"] for c in cell

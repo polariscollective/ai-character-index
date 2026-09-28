@@ -4,6 +4,8 @@
     python3 engine/panel/session_seat.py judge compose --behaviours=a,b --documents=<version id> --go
     python3 engine/panel/session_seat.py judge store artefacts/session-<run>
     python3 engine/panel/session_seat.py assess --documents=<version id> [--resume=<run id>]
+    python3 engine/panel/session_seat.py depth compose --run=<run id> --assessment-run=<run id>
+    python3 engine/panel/session_seat.py depth store --run=<run id> --assessment-run=<run id>
 
 No provider is called, and no key is read. The engine's own pipelines run as they
 run for the panel, with one difference: the model they call is a file. A question
@@ -211,6 +213,64 @@ def assess_step(args):
     return 0
 
 
+def depth_compose(args):
+    """Write the question of every depth out of ten the provisional run's cells
+    are owed against the provisional assessment, composed exactly as
+    depth_pass.give_one composes it. Nothing is written to the database."""
+    import depth_call                                      # noqa: PLC0415
+    import depth_pass                                      # noqa: PLC0415
+    store = Store.from_env()
+    index_store.install_registry(store)
+    versions = {v["id"]: v for v in store.select("aci_spec_versions")}
+    given_against = index_store.criteria_run_id(store, args.assessment_run)
+    jobs = depth_pass.jobs_for(store, [args.run], args.assessment_run, given_against,
+                               h.passages, versions)
+    registry = index_store.judging_registry(store)
+    folder = ROOT / "artefacts" / f"session-{args.run[:8]}" / "depth"
+    folder.mkdir(parents=True, exist_ok=True)
+    index = {}
+    for call, retained, rules, _seated in jobs:
+        if not retained:
+            # give_one writes 0 for a cell with no passage shown, asking nobody.
+            continue
+        system, user = depth_call.compose(call["behaviour_slug"], registry, retained,
+                                          scale=10, conflict_rules=rules)
+        key = link_self.key_of(user)
+        (folder / f"{key}.question").write_text(
+            f"{system}\n\n---- the call ----\n\n{user}", encoding="utf-8")
+        index[key] = {"call_id": call["id"], "behaviour": call["behaviour_slug"],
+                      "passages": len(retained), "conflict_rules": len(rules)}
+    (folder / "index.json").write_text(json.dumps(index, indent=1, ensure_ascii=False),
+                                       encoding="utf-8")
+    print(f"  questions    {len(index)} in {folder}")
+    print(f"then, once every question has its answer:\n"
+          f"  python3 engine/panel/session_seat.py depth store --run={args.run} "
+          f"--assessment-run={args.assessment_run}")
+    return 0
+
+
+def depth_store(args):
+    """Give the depths through depth_pass, the answers read from the files.
+
+    A reply the depth parser refuses makes the ladder ask again with a
+    reminder. That is a new question: it is written beside the others, and the
+    pass stops there until it is answered and this is run again."""
+    import depth_pass                                      # noqa: PLC0415
+    store = Store.from_env()
+    index_store.install_registry(store)
+    folder = ROOT / "artefacts" / f"session-{args.run[:8]}" / "depth"
+    try:
+        _estimate, report = depth_pass.give_pass(
+            store, h.load_config(), [args.run], args.assessment_run, h.passages,
+            call_model=stopping_wire(folder), go=True)
+    except Pending as waiting:
+        print(f"waiting: {waiting}")
+        print("answer it, then run this again")
+        return 2
+    print(f"  stored       {report}")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="pipeline", required=True)
@@ -234,6 +294,16 @@ def main(argv=None):
                        help="comma-separated aci_spec_versions ids")
     whole.add_argument("--resume", default=None, help="the assessment run to take up")
     whole.set_defaults(func=assess_step)
+
+    depth = sub.add_parser("depth", help="each cell's depth out of ten")
+    steps = depth.add_subparsers(dest="step", required=True)
+    for name, func, text in (("compose", depth_compose, "write the depth questions"),
+                             ("store", depth_store, "give the depths from the answers")):
+        step = steps.add_parser(name, help=text)
+        step.add_argument("--run", required=True, help="the provisional aci_runs id")
+        step.add_argument("--assessment-run", required=True,
+                          help="the provisional aci_assessment_runs id")
+        step.set_defaults(func=func)
 
     args = parser.parse_args(argv)
     return args.func(args)
