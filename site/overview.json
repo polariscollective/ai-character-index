@@ -100,6 +100,10 @@
    "text": "We found no company that publishes the rules its models follow when they are deployed for governments or defence. Anthropic writes that some models built for specialised uses do not fully fit its constitution, and a spokesperson has said its military models may not be trained on it. xAI agreed to the Pentagon's \"all lawful use\" standard for Grok, as Axios reported."
   },
   {
+   "title": "Three companies have agreed to write this document for a regulator, and not for the public",
+   "text": "Google, Mistral AI and xAI publish no constitution and have signed the part of the EU's General-Purpose AI Code of Practice that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public. These asks belong in regulation as well as in voluntary commitments."
+  },
+  {
    "title": "OpenAI and Anthropic stand out, and still fall short on governance",
    "text": "OpenAI and Anthropic are best in class on every figure, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on what the constitutions say, but its constitution names none of the models it governs and Alibaba is behind on governance. Microsoft AI is in the middle tier throughout, for a Code of Conduct that is still a draft."
   },
