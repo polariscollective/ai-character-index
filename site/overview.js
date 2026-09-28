@@ -239,6 +239,14 @@ function partsOpening(company, group) {
 function aboutGroup(content, group) {
   view.titled(content, group.name);
   content.append(element("p", "", group.final.plain));
+  // The two parts the score is made of, each with what it measures, since the
+  // grid no longer shows them as rows.
+  content.append(view.h3("What it is made of"));
+  group.rows.forEach(row => {
+    const part = element("p", "");
+    part.append(element("strong", "", `${row.name}. `), document.createTextNode(row.plain));
+    content.append(part);
+  });
   leadTo(content, group.href, "See every company's score in the Index");
 }
 
