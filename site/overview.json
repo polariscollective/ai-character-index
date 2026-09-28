@@ -204,7 +204,7 @@
    {
     "id": "reach",
     "name": "Users",
-    "plain": "How many people use the company's assistant or models, as the company itself last stated it, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. Some count a week and some a month, and each counts its own products, so the figures are a sense of scale rather than a ranking. A company that sells mostly through its API may state no count at all, and a model anyone can download reaches further than any count."
+    "plain": "How many people use the company's assistant or apps, as the company itself stated it in the six months to 28 September 2026, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above. Some count a week and some a month, and each counts its own products, so the figures give a sense of scale. An older figure is not shown, and a company that sells mostly through its API may state no count at all."
    }
   ],
   "companies": {
@@ -373,14 +373,14 @@
      "strength": 0.667
     },
     "reach": {
-     "shown": "Over a billion a month",
-     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger as well as in its own app.",
+     "shown": "Not disclosed",
+     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger as well as in its own app. It has published no count since, and it does not say which of its models answer those users.",
      "quote": "More than a billion monthly actives already use Meta AI, and we see usage increase as we improve our underlying models.",
      "date": "2025-10-29",
      "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf",
      "source": "Mark Zuckerberg, Meta third quarter 2025 earnings call, 29 October 2025 (transcript published by Meta on its investor-relations CDN).",
-     "band": "1B+",
-     "per": "a month"
+     "band": null,
+     "per": "since 2025"
     }
    },
    "xai": {
