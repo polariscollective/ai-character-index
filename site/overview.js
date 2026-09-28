@@ -377,7 +377,23 @@ function aboutContextCell(content, context, row, company, entry) {
                 document.createTextNode(" on the Epoch Capabilities Index"));
     content.append(line);
   }
-  content.append(element("p", "", entry.text));
+  if (entry.text) content.append(element("p", "", entry.text));
+  // Every signal the estimate rests on, each with where it comes from.
+  if (entry.signals?.length) {
+    const list = element("ul", "usage-signals");
+    entry.signals.forEach(signal => {
+      const item = element("li", "", `${signal.text} `);
+      if (signal.url) {
+        const link = element("a", "", "Source");
+        link.href = signal.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        item.append(link);
+      }
+      list.append(item);
+    });
+    content.append(list);
+  }
   if (entry.quote) {
     const said = element("blockquote", "ovw-quote", `“${entry.quote}”`);
     content.append(said);

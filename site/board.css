@@ -1408,6 +1408,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .usage-step-on, .gov-pop .usage-step-on { background: var(--faint); border-color: var(--faint); }
 .gov-pop .usage-figure { display: flex; align-items: center; gap: 10px; }
 .gov-pop .usage-scale { margin: 6px 0 10px; padding: 0; list-style: none; }
+.gov-pop .usage-signals { margin: 8px 0 10px; padding-left: 18px; font-size: 13px; }
+.gov-pop .usage-signals li { margin: 0 0 6px; }
+.gov-pop .usage-signals a { font-size: 12px; }
 .gov-pop .usage-scale li { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 13px; }
 .ovw-board .cell-context-none { font-family: var(--mono); font-size: 13px; color: var(--faint); }
 .gov-pop .mono { font-family: var(--mono); }

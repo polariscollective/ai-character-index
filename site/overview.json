@@ -264,8 +264,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT.",
-     "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/"
+     "signals": [
+      {
+       "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT.",
+       "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/"
+      },
+      {
+       "text": "Sensor Tower counted more than 1.1 billion monthly users of ChatGPT's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 44% of American adults said they use ChatGPT.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 15.0% of the tokens and 17.9% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model gpt-oss-20b was downloaded 6.8 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/openai/gpt-oss-20b"
+      }
+     ]
     }
    },
    "anthropic": {
@@ -287,8 +307,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Anthropic states no count of the people who use Claude. Sensor Tower counted 245 million monthly users of its app and website together in May 2026, as TechCrunch reported, and Similarweb counted 157 million monthly users of its app in August 2026. Its chief product officer said in March 2026 that more than a million people were signing up every day.",
-     "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+     "signals": [
+      {
+       "text": "Anthropic states no count of the people who use Claude. It said in May 2026 that its revenue was running at more than $47 billion a year.",
+       "url": "https://www.anthropic.com/news/series-h"
+      },
+      {
+       "text": "Sensor Tower counted 245 million monthly users of Claude's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "Similarweb counted 157 million monthly users of the Claude app and 950 million visits to claude.ai in August 2026.",
+       "url": "https://ppc.land/claude-gains-540-in-visits-with-0-46-from-paid-traffic-similarweb-finds/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 6% of American adults said they use Claude.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 3.9% of the tokens and 2.7% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "alibaba": {
@@ -310,8 +350,24 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Alibaba said in its annual report of 20 May 2026 that consumer-facing Qwen passed 295 million monthly active users in March 2026.",
-     "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm"
+     "signals": [
+      {
+       "text": "Alibaba said in its annual report of 20 May 2026 that consumer-facing Qwen passed 295 million monthly active users across all platforms in March 2026.",
+       "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm"
+      },
+      {
+       "text": "QuestMobile counted 167 million monthly active users of the Qwen app in China alone in June 2026.",
+       "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
+      },
+      {
+       "text": "Its open Qwen models are the most downloaded of any company on Hugging Face: about 276 million downloads across its hundred most downloaded models in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/Qwen"
+      },
+      {
+       "text": "Its models took 1.7% of the tokens and 6.4% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "microsoft": {
@@ -325,7 +381,16 @@
     "usage": {
      "shown": "-",
      "level": "-",
-     "text": "Microsoft AI's own models are barely deployed yet. It states no count for them, and the Copilot assistants Microsoft counts run mostly on models it licenses rather than builds."
+     "signals": [
+      {
+       "text": "Microsoft AI states no count for its own models, which are barely deployed yet. The Copilot assistants Microsoft counts, 150 million monthly users in October 2025, run mostly on models Microsoft licenses rather than builds.",
+       "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1"
+      },
+      {
+       "text": "No language model of Microsoft AI is offered on OpenRouter.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "google": {
@@ -347,8 +412,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
-     "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/"
+     "signals": [
+      {
+       "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
+       "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/"
+      },
+      {
+       "text": "Sensor Tower counted 662 million monthly users of Gemini's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 24% of American adults said they use Gemini.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 5.6% of the tokens and 20.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Gemma 4 26B was downloaded 12.1 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/google/gemma-4-26B-A4B-it"
+      }
+     ]
     }
    },
    "mistral": {
@@ -370,8 +455,20 @@
     "usage": {
      "shown": "+",
      "level": "+",
-     "text": "Mistral AI states no count of its users. Its app passed a million downloads in February 2025, and its models took 0.2% of developer traffic on OpenRouter in September 2026.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "Mistral AI states no count of its users. It announced in February 2025 that its app had passed a million downloads, as a press report relayed.",
+       "url": "https://www.maddyness.com/2025/02/20/plus-dun-million-de-telechargements-pour-le-chat-de-mistral-ai/"
+      },
+      {
+       "text": "Its models took 0.2% of the tokens and 2.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Mistral 7B Instruct was downloaded 2.2 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3"
+      }
+     ]
     }
    },
    "meta": {
@@ -393,8 +490,24 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger, without saying what counts as active or which of its models answers. It has given no count since. Active use looks far smaller: in an Ipsos survey of March 2026, 8% of American adults had used Meta AI in the past week.",
-     "url": "https://www.ipsos.com/en-us/half-americans-report-using-ai-services-information-and-productivity-leading-use-cases"
+     "signals": [
+      {
+       "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger, without saying what counts as active or which of its models answers. It has given no count since.",
+       "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf"
+      },
+      {
+       "text": "In an Ipsos survey of March 2026, 8% of American adults had used Meta AI in the past week.",
+       "url": "https://www.ipsos.com/en-us/half-americans-report-using-ai-services-information-and-productivity-leading-use-cases"
+      },
+      {
+       "text": "Its models took 1.7% of the tokens and 2.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Llama 3.2 1B was downloaded 7.3 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct"
+      }
+     ]
     }
    },
    "xai": {
@@ -416,8 +529,16 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, in a prospectus that counts Grok used inside X.",
-     "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm"
+     "signals": [
+      {
+       "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, according to a prospectus filed on 12 June 2026 that counts Grok used inside X.",
+       "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm"
+      },
+      {
+       "text": "Its models took 0.5% of the tokens and 0.6% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "moonshot": {
@@ -439,8 +560,20 @@
     "usage": {
      "shown": "+",
      "level": "+",
-     "text": "Moonshot AI last stated a count in 2024, 36 million monthly users of Kimi. Its models took 1.5% of developer traffic on OpenRouter in September 2026.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "Moonshot AI's founder said in November 2024, as a press report quoted him, that Kimi had passed 36 million monthly active users in October. Nothing has been published since.",
+       "url": "https://www.gelonghui.com/live/1761006"
+      },
+      {
+       "text": "Its models took 1.5% of the tokens and 0.7% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Kimi K3 was downloaded 1.5 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/moonshotai/Kimi-K3"
+      }
+     ]
     }
    },
    "deepseek": {
@@ -462,8 +595,28 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "DeepSeek states no count of the people who use its assistant. QuestMobile counted 129 million monthly active users of its app in China in June 2026, and its models had the largest share of developer traffic on OpenRouter in September 2026.",
-     "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
+     "signals": [
+      {
+       "text": "DeepSeek states no count of the people who use its assistant.",
+       "url": "https://api-docs.deepseek.com/updates/"
+      },
+      {
+       "text": "QuestMobile counted 129 million monthly active users of the DeepSeek app in China alone in June 2026.",
+       "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
+      },
+      {
+       "text": "Similarweb counted 354 million visits to deepseek.com in August 2026, half of them from China.",
+       "url": "https://www.similarweb.com/website/deepseek.com/"
+      },
+      {
+       "text": "Its models took 21.4% of the tokens and 24.4% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model DeepSeek V4 Flash was downloaded 4.4 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731"
+      }
+     ]
     }
    }
   }
