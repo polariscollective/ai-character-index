@@ -169,3 +169,12 @@ test("the overview answers each company's figures from the two boards, with its 
   assert.throws(() => overviewBoard({ ...snapshot(), overview: null }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });
+
+test("a figure one model gave in session says so, and a panel's figure carries no key", () => {
+  const answer = constitutionsBoard(snapshot());
+  const microsoft = answer.companies.find(company => company.id === "microsoft");
+  const openai = answer.companies.find(company => company.id === "openai");
+  assert.ok(microsoft.behaviours.cells.every(cell => cell.provisional?.seat === "opus-5.5"));
+  assert.ok(microsoft.whole_document.criteria.every(criterion => criterion.provisional));
+  assert.ok(openai.behaviours.cells.every(cell => !("provisional" in cell)));
+});
