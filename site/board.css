@@ -1361,6 +1361,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .cell-context-sub { color: var(--faint); }
 /* The rows keep a little air between them, as the grid above does. */
 .ovw-board .context-row .cell { position: relative; padding: 5px 1px 5px 0; }
+/* The context starts under a rule like the one at the top of the grid. */
+.ovw-board .context-first > th, .ovw-board .context-first > td { border-top: 1px solid var(--muted); }
+.ovw-board .context-first th, .ovw-board .context-first td { padding-top: 10px; }
 /* A light divider between two context cells, short of the cell's top and
    bottom, so the columns read apart without drawing boxes. */
 .ovw-board .context-row .cell + .cell::before {

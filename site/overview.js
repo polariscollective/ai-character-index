@@ -25,7 +25,6 @@ import { renderMenu } from "./page-menu.js";
 
 const TEN = 10;
 const MODE_KEY = "aci-overview-mode";
-const CONTEXT_KEY = "aci-overview-context";
 
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
@@ -385,38 +384,9 @@ function aboutContextCell(content, context, row, company, entry) {
 function contextRows(noteNumber) {
   const context = state.overview.context;
   if (!context?.rows?.length) return [];
-  const head = element("tr", "context-head");
-  const title = element("th");
-  title.scope = "rowgroup";
-  title.colSpan = state.companies.length + 1;
-  // One line under the scores. At the left, "Hide" in small underlined type
-  // and the context's name, or when hidden a single "Show context" button; at
-  // the board's right edge, the grid's colour scale.
-  const line = element("div", "context-line");
-  const left = element("div", "context-left");
-  if (state.showContext) {
-    const hide = element("button", "context-hide", "Hide");
-    hide.type = "button";
-    hide.setAttribute("aria-label", "Hide the context");
-    hide.addEventListener("click", () => setContext(false));
-    left.append(hide, element("span", "context-title", context.name));
-    if (noteNumber) {
-      const mark = element("span", "row-mark", String(noteNumber));
-      mark.setAttribute("aria-hidden", "true");
-      left.append(mark);
-    }
-  } else {
-    const show = element("button", "context-hide", "Show context");
-    show.type = "button";
-    show.addEventListener("click", () => setContext(true));
-    left.append(show);
-  }
-  line.append(left);
-  title.append(line);
-  head.append(title);
-  if (!state.showContext) return [head];
-  return [head, ...context.rows.map(row => {
-    const tr = element("tr", "context-row");
+  // No heading: a rule like the one at the top of the grid, then the rows.
+  return context.rows.map((row, index) => {
+    const tr = element("tr", index === 0 ? "context-row context-first" : "context-row");
     tr.dataset.row = `context-${row.id}`;
     // A name that opens what the row is, in plain text until pointed at: it
     // explains the row and is no figure of the index.
@@ -429,6 +399,11 @@ function contextRows(noteNumber) {
       view.openPopover(name, content => aboutContextRow(content, context, row)));
     const label = element("span", "context-label");
     label.append(name);
+    if (index === 0 && noteNumber) {
+      const mark = element("span", "row-mark", String(noteNumber));
+      mark.setAttribute("aria-hidden", "true");
+      name.append(mark);
+    }
     if (row.sub) label.append(element("span", "context-sub", row.sub));
     tr.append(view.rowHead(null, label));
     state.companies.forEach(company => {
@@ -474,7 +449,7 @@ function contextRows(noteNumber) {
       tr.append(cell);
     });
     return tr;
-  })];
+  });
 }
 
 /* ---- The table ----------------------------------------------------------- */
@@ -657,22 +632,6 @@ function setMode(mode) {
   draw();
 }
 
-function setContext(show) {
-  if (view.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
-  state.showContext = show;
-  try { localStorage.setItem(CONTEXT_KEY, show ? "shown" : "hidden"); } catch { /* the default stands */ }
-  draw();
-}
-
-/* Shown unless this browser chose to hide it. */
-function savedContext() {
-  try {
-    return localStorage.getItem(CONTEXT_KEY) !== "hidden";
-  } catch {
-    return true;
-  }
-}
-
 function savedMode() {
   try {
     return localStorage.getItem(MODE_KEY) === "absolute" ? "absolute" : "relative";
@@ -707,7 +666,7 @@ export async function initializeOverview() {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
     state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode(),
-              showContext: savedContext() };
+              showContext: true };
     draw();
     drawTakeaways(overview.takeaways || []);
     renderMenu(document.getElementById("view-overview"));
