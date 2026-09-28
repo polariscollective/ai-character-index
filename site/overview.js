@@ -324,28 +324,31 @@ function contextRows(noteNumber) {
   const title = element("th");
   title.scope = "rowgroup";
   title.colSpan = state.companies.length + 1;
-  // One line under the scores: the context's name and the grid's colour scale
-  // on the left, the switch at the far right. Hidden, the name goes and the
-  // scale and the switch stay.
+  // One line under the scores. At the left, "Hide" in small underlined type
+  // and the context's name, or when hidden a single "Show context" button; at
+  // the board's right edge, the grid's colour scale.
   const line = element("div", "context-line");
   const left = element("div", "context-left");
   if (state.showContext) {
-    left.append(element("span", "context-title", context.name));
+    const hide = element("button", "context-hide", "Hide");
+    hide.type = "button";
+    hide.setAttribute("aria-label", "Hide the context");
+    hide.addEventListener("click", () => setContext(false));
+    left.append(hide, element("span", "context-title", context.name));
     if (noteNumber) {
       const mark = element("span", "row-mark", String(noteNumber));
       mark.setAttribute("aria-hidden", "true");
       left.append(mark);
     }
+  } else {
+    const show = element("button", "gov-button ovw-context-toggle", "Show context");
+    show.type = "button";
+    show.addEventListener("click", () => setContext(true));
+    left.append(show);
   }
+  line.append(left);
   const legend = byId("ovw-legend");
-  if (legend) left.append(legend);
-  const toggle = state.showContext
-    ? element("button", "context-hide", "Hide")
-    : element("button", "gov-button ovw-context-toggle", "Show context");
-  toggle.type = "button";
-  if (state.showContext) toggle.setAttribute("aria-label", "Hide the context");
-  toggle.addEventListener("click", () => setContext(!state.showContext));
-  line.append(left, toggle);
+  if (legend) line.append(legend);
   title.append(line);
   head.append(title);
   if (!state.showContext) return [head];
