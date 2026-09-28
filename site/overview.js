@@ -327,17 +327,12 @@ function contextRows(noteNumber) {
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
         content => aboutContextCell(content, context, row, company, entry),
         "cell-button cell-context");
-      if (Number.isFinite(entry.strength)) {
-        // The model, a bar that is full at the frontier and empty two years
-        // behind it, and how far behind in words. The bar says it at a glance;
-        // the words are there for whoever wants the figure behind the bar.
-        button.append(element("span", "cell-context-words", entry.shown));
-        const bar = element("span", "cell-context-bar");
-        bar.setAttribute("aria-hidden", "true");
-        const fill = element("span");
-        fill.style.width = `${Math.round(entry.strength * 100)}%`;
-        bar.append(fill);
-        button.append(bar, element("span", "cell-context-sub", entry.behind));
+      if (entry.behind) {
+        // The model, and how far it trails the frontier in words, set in bold
+        // for a model at the frontier.
+        button.append(element("span", "cell-context-words", entry.shown),
+          element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
+            : "cell-context-sub", entry.behind));
       } else if (entry.band) {
         // A step of ten, in the data face, and what it counts.
         button.append(element("span", "cell-context-band", entry.band),

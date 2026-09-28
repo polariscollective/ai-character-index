@@ -1282,19 +1282,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .cell-context-sub { color: var(--faint); }
 /* The rows keep a little air between them, as the grid above does. */
 .ovw-board .context-row .cell { padding-top: 5px; padding-bottom: 5px; }
-/* A model's distance from the frontier as a bar: full at the frontier, empty
-   two years behind it, in the one energy colour on a pale track. */
-.ovw-board .cell-context-bar {
-  display: block;
-  width: 100%;
-  max-width: 72px;
-  height: 6px;
-  margin: 2px 0;
-  border-radius: 3px;
-  background: rgb(92 107 60 / .15);
-  overflow: hidden;
-}
-.ovw-board .cell-context-bar > span { display: block; height: 100%; background: var(--energy); }
+/* A model at the frontier: its words in bold and in ink. */
+.ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); }
 .ovw-board .cell-context-band { font-family: var(--mono); font-size: 13px; line-height: 1.2; }
 .gov-pop .mono { font-family: var(--mono); }
 .gov-pop .ovw-quote { margin: 10px 0 4px; padding-left: 12px; border-left: 3px solid var(--energy); }

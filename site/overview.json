@@ -197,10 +197,10 @@
    {
     "id": "capability",
     "name": "Most capable model",
-    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability. The bar shows how far that model trails the most capable model Epoch rates: full at the frontier, empty at two years or more behind it. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
+    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
-    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability. The bar shows how far that model trails the most capable model Epoch rates: full at the frontier, empty at two years or more behind it.",
+    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates.",
     "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months come from Epoch's finding that, since reasoning models arrived in September 2024, the frontier has gained about 14 points a year on its index.",
     "links": [
      {
@@ -238,8 +238,7 @@
      "open_weights": false,
      "text": "GPT-6 Astra, released on 3 September 2026, scores 166.6 on the Epoch Capabilities Index, within an interval of 163.0 to 172.0. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than the index's own margin.",
      "behind": "At the frontier",
-     "months_behind": 0,
-     "strength": 1.0
+     "months_behind": 0
     },
     "reach": {
      "shown": "About a billion a week",
@@ -265,8 +264,7 @@
      "open_weights": false,
      "text": "Claude Fable 5.1, released on 1 September 2026, scores 165.0 on the Epoch Capabilities Index, within an interval of 161.6 to 169.6. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than the index's own margin.",
      "behind": "At the frontier",
-     "months_behind": 0,
-     "strength": 1.0
+     "months_behind": 0
     },
     "reach": {
      "shown": "Not disclosed",
@@ -288,8 +286,7 @@
      "open_weights": false,
      "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
-     "months_behind": 8,
-     "strength": 0.667
+     "months_behind": 8
     },
     "reach": {
      "shown": "Hundreds of millions a month",
@@ -335,8 +332,7 @@
      "open_weights": false,
      "text": "Gemini 3.7 Flash, released on 13 August 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.6 to 160.6. Its weights cannot be downloaded. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
-     "months_behind": 8,
-     "strength": 0.667
+     "months_behind": 8
     },
     "reach": {
      "shown": "About a billion a month",
@@ -362,8 +358,7 @@
      "open_weights": true,
      "text": "Mistral Medium 3.5, released on 28 April 2026, scores 141.4 on the Epoch Capabilities Index, within an interval of 138.6 to 143.5. Its weights can be downloaded, for restricted use. That is about 22 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "22 months behind",
-     "months_behind": 22,
-     "strength": 0.083
+     "months_behind": 22
     },
     "reach": {
      "shown": "Not disclosed",
@@ -386,8 +381,7 @@
      "open_weights": false,
      "text": "Muse Spark 1.3, released on 2 September 2026, scores 156.9 on the Epoch Capabilities Index, within an interval of 154.7 to 159.4. Its weights cannot be downloaded. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
-     "months_behind": 8,
-     "strength": 0.667
+     "months_behind": 8
     },
     "reach": {
      "shown": "Not disclosed",
@@ -413,8 +407,7 @@
      "open_weights": false,
      "text": "Grok 4.6, released on 12 August 2026, scores 156.5 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 9 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "9 months behind",
-     "months_behind": 9,
-     "strength": 0.625
+     "months_behind": 9
     },
     "reach": {
      "shown": "Over a hundred million a month",
@@ -440,8 +433,7 @@
      "open_weights": true,
      "text": "Kimi K3, released on 16 July 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.1 to 160.7. Its weights can be downloaded, for non-commercial use. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
-     "months_behind": 8,
-     "strength": 0.667
+     "months_behind": 8
     },
     "reach": {
      "shown": "Not disclosed",
@@ -469,8 +461,7 @@
      "open_weights": true,
      "text": "DeepSeek V4 Pro 0813, released on 13 August 2026, scores 155.4 on the Epoch Capabilities Index, within an interval of 153.7 to 157.3. Its weights can be downloaded by anyone. That is about 10 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "10 months behind",
-     "months_behind": 10,
-     "strength": 0.583
+     "months_behind": 10
     },
     "reach": {
      "shown": "Not disclosed",
