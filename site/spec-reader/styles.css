@@ -844,6 +844,9 @@ body.resizing-columns {
 }
 /* A figure set by hand, first among the details. */
 .depth-note-manual { color: var(--ink); }
+/* One model's reading in place of the panel's: said under the figure, never
+   folded, since it changes what every line of the note is. */
+.depth-note-provisional { display: block; margin: 0 0 10px; color: var(--ink); }
 
 /* The judges, folded. Reachable in one press, out of the way in none: a record
    that cannot be opened is a claim, and a record opened by default is three

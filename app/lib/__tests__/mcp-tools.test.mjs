@@ -823,3 +823,20 @@ test("a cursor naming a cell outside the request is refused", () => {
     }),
     error => error instanceof ToolError && /does not name a cell of this request/.test(error.message));
 });
+
+/* A cell one model read in session, where no panel has judged the document: the
+ * pair says so, with the seat and a note, and a cell the panel judged carries no
+ * key at all. */
+test("a cell one model read in session says so, in the list and in the passages", () => {
+  const read = snapshot();
+  read.payload = structuredClone(payload);
+  const [defined] = read.payload.behaviours;
+  defined.coverage[SUBSTITUTED].provisional = { seat: "opus-5.5", run: "p1" };
+  const listed = listBehaviours(read).behaviours[0].coverage;
+  assert.equal(listed[SUBSTITUTED].provisional.seat, "opus-5.5");
+  assert.match(listed[SUBSTITUTED].provisional.note, /one model/);
+  assert.ok(!("provisional" in listed["acme--corpus@2026-01-01"]));
+  const retrieved = retrievePassages(read, { behaviours: ["defined-behaviour"] }).results;
+  assert.equal(retrieved[1].provisional.seat, "opus-5.5");
+  assert.ok(!("provisional" in retrieved[0]));
+});

@@ -138,6 +138,7 @@ eval(extractFn("function depthScaleLede(behaviours) {"));
 eval(extractFn("function depthScaleNote(behaviours) {"));
 eval(extractFn("function cellNote(behaviour, documentId, kind) {"));
 eval(extractFn("function boardEntry(slug, documentId) {"));
+eval(extractFn("function provisionalSentence(mark) {"));
 eval(extractFn("function depthCellNote(behaviour, doc) {"));
 eval(extractFn("function depthFigureNote(behaviour, documents) {"));
 eval(extractFn("function releaseDepthTrigger() {"));
@@ -418,7 +419,7 @@ check("a judged cell gives the mean out of 4, the rubric word, and every judge w
       { document: "Claude’s Constitution 2026-01-20",
         figure: "2.7",
         summary: "2.7 out of 4, prescribed.",
-        says: "", why: "", same: "", differs: "", manual: "",
+        says: "", why: "", same: "", differs: "", manual: "", provisional: "",
         // Empty with no file loaded, and asserted rather than omitted: the note
         // branches on whether these carry anything, so a cell that answered
         // undefined would read the same here and fold the judges differently.
@@ -440,7 +441,7 @@ check("a document a behaviour was not judged on says so plainly, and lists no ju
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[0]),
       { document: "Claude’s Constitution 2026-01-20", figure: null,
         summary: "No depth given: this behaviour was not judged on this document.",
-        says: "", why: "", same: "", differs: "", manual: "",
+        says: "", why: "", same: "", differs: "", manual: "", provisional: "",
         written: "", stands: "", substitutions: [], judges: [] });
 check("a document the constitutions board has a column for opens on the board's words",
       () => {
@@ -460,6 +461,16 @@ check("a figure set by hand says so with the judges' own mean, and not in the su
         return [cell.summary.includes("hand"), cell.manual];
       },
       [false, "Set by hand at 9.0; the judges' mean was 8.0. Worked cases."]);
+check("a cell one model read in session says so, naming the model",
+      () => {
+        const read = { ...THREE_JUDGES, coverage: { [JUDGED_DOCUMENTS[0].id]: {
+          provisional: { seat: "opus-5.5", run: "p1" },
+          depth: { mean: 7, provisional: true, judges: { "opus-5.5": { depth: 7, rationale: "Rules." } } } } } };
+        return depthCellNote(read, JUDGED_DOCUMENTS[0]).provisional;
+      },
+      "Provisional: the passages were marked, and this figure given, by one model, "
+        + "Claude Opus 5.5, reading in one session. The panel of three judges has not "
+        + "read this document yet.");
 check("a document the behaviour carries no entry for reads the same way",
       () => depthCellNote(UNJUDGED, JUDGED_DOCUMENTS[1]).summary,
       "No depth given: this behaviour was not judged on this document.");
