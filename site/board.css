@@ -1328,20 +1328,19 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .context-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 .ovw-board .cell-context {
   display: grid;
-  grid-template-rows: 28px 15px 15px;
+  grid-template-rows: 28px 15px;
   row-gap: 2px;
   align-content: center;
   justify-items: center;
   background: transparent;
-  height: 80px;
-  min-height: 80px;
-  padding: 8px 4px;
+  height: 60px;
+  min-height: 60px;
+  padding: 6px 4px;
   overflow: hidden;
 }
-/* Three bands of one height in every cell, so each line sits level across the
+/* Two bands of one height in every cell, so each line sits level across the
    row: two lines' room for the model's name, which starts at the top of every
-   cell, then the months, then open weights, each starting at the same height
-   whatever the name above takes. */
+   cell, then the months, starting at the same height whatever the name takes. */
 .ovw-board .cell-context > .cell-context-words { align-self: start; }
 .ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
 /* A row's name, and under it in small type what its cells say. */

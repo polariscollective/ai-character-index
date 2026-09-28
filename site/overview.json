@@ -198,10 +198,10 @@
    {
     "id": "capability",
     "name": "Most capable model",
-    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin. \"Open weights\" under it means anyone can download that model and run it where the company cannot see how it is used.",
+    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
-    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. \"Open weights\" under it means anyone can download that model and run it where the company cannot see how it is used.",
+    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates.",
     "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months come from Epoch's finding that, since reasoning models arrived in September 2024, the frontier has gained about 14 points a year on its index.",
     "links": [
      {
