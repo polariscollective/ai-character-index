@@ -221,9 +221,27 @@
     "name": "Usage",
     "sub": "Our rough estimate",
     "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate and very subjective.",
-    "what": "A rough idea of how widely each company's models are used, in three squares: all three filled for hundreds of millions of people a month, two for tens of millions or a large place among developers, one for less. Three empty squares mean we have nothing to go on.",
+    "what": "A rough idea of how widely each company's models are used.",
     "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. Each cell lists the signals behind it.",
-    "limits": "It is very subjective. No source counts every company the same way, most companies publish no comparable figure, and two careful readers could place several companies a step apart. It gives an idea of scale and should be read that way."
+    "limits": "It is very subjective. No source counts every company the same way, most companies publish no comparable figure, and two careful readers could place several companies a step apart. It gives an idea of scale and should be read that way.",
+    "scale": [
+     {
+      "level": "+++",
+      "text": "Hundreds of millions of people a month"
+     },
+     {
+      "level": "++",
+      "text": "Tens of millions, or a large place among developers"
+     },
+     {
+      "level": "+",
+      "text": "Less"
+     },
+     {
+      "level": "-",
+      "text": "Nothing to go on"
+     }
+    ]
    }
   ],
   "companies": {

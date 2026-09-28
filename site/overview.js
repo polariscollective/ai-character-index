@@ -255,6 +255,16 @@ function aboutContextRow(content, context, row) {
     .forEach(([heading, text]) => {
       if (!text) return;
       content.append(view.h3(heading), element("p", "", text));
+      // A row drawn in squares shows them, each with what it stands for.
+      if (heading === "What it is" && row.scale?.length) {
+        const list = element("ul", "usage-scale");
+        row.scale.forEach(step => {
+          const item = element("li");
+          item.append(usageMeter(step.level), element("span", "", step.text));
+          list.append(item);
+        });
+        content.append(list);
+      }
     });
   (row.links || []).forEach(link => leadTo(content, link.url, link.text));
 }
