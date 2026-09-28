@@ -192,7 +192,7 @@
  "context": {
   "name": "Context, not scored",
   "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
-  "note": "Capability is the Epoch Capabilities Index, from Epoch AI under CC BY 4.0, as of 28 September 2026, drawn as a bar from the frontier (full) to two years behind it (empty), a reading of ours from Epoch's finding that the frontier gains about 14 points a year. Reach is the latest figure each company has published itself, in steps of ten; companies count differently, so the figures are not strictly comparable.",
+  "note": "The more capable a company's models are, and the more people use them, the more it matters that they follow a published constitution and that the company governs it well. These facts put the figures above in perspective, and no score counts them. Each cell says where its fact comes from.",
   "rows": [
    {
     "id": "capability",
@@ -203,8 +203,8 @@
    },
    {
     "id": "reach",
-    "name": "Reach",
-    "plain": "How many people use the company's assistant or models, as the company itself last stated it, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. Some count a week and some a month, and each counts its own products, so the figures are a sense of scale rather than a ranking. A model anyone can download reaches further than any count."
+    "name": "Users",
+    "plain": "How many people use the company's assistant or models, as the company itself last stated it, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. Some count a week and some a month, and each counts its own products, so the figures are a sense of scale rather than a ranking. A company that sells mostly through its API may state no count at all, and a model anyone can download reaches further than any count."
    }
   ],
   "companies": {
