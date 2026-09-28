@@ -7,8 +7,8 @@ Date: 28 September 2026. Status: approved in conversation, to be planned.
 A document the panel has not judged has nothing in the doc reader: its text can
 be read, no passage is marked and no depth is given. Microsoft AI's Code of
 Conduct, published on 14 September 2026, is the first such document. The owner
-wants something to show quickly, without paying for a panel run, and without
-pretending it is the panel's reading.
+wants something to show quickly, passages and depths included, without paying for a panel run, and without pretending
+it is the panel's reading.
 
 A provisional reading is that: the same questions the panel is asked, answered by
 one model from inside a working session, recorded in the same tables, published
@@ -44,23 +44,30 @@ panel run, one for a provisional run.
 
 ## Answering in session
 
-`engine/panel/session_seat.py` is the wire, generalised from `link_self.py`. Its
-`call_model` has the signature of `batch_job.call_openrouter`. On `compose` it
-writes each question to `artefacts/session-<run>/calls/<key>.question` and records
-the call as waiting; on `store` it reads `<key>.answer` and hands the text back to
-the pipeline, which parses and stores it as it would a provider's reply. The key
-is a digest of the question, as in `link_self.py`.
+`engine/panel/session_seat.py` is the wire, built on the two functions
+`link_self.py` already has: `through_files` writes a question beside the run and
+`replies_from` reads its answer back, both keyed by a digest of the question. The
+seat is a new entry of `panel-config.json`, `opus-5.5` (Claude Opus 5.5), with no
+price, beside `opus-5`, and a panel `session_opus_5_5` of that one seat.
 
 Three subcommands drive the three pipelines, each in two halves, compose and
 store:
 
-- `judge`: composes a provisional run for the named documents and behaviours and
-  asks `batch_job.run` for its calls.
-- `assess`: starts a provisional assessment run for the named documents and asks
-  `assess.assess` for its calls. The confirmation call is composed only after the
-  contradictions answer is stored, as the hosted run does.
-- `depth`: asks `depth_pass.give_pass` for the depths of a provisional run against
-  a provisional assessment run.
+- `judge`: composes a provisional run with `compose_run.plan` on the session
+  panel, writes the run and its calls, and writes each call's question with
+  `judge_call.compose`, the same composition `batch_job.one_call` makes. No depth
+  of the scale of four is composed. `store` runs `batch_job.run` with
+  `replies_from`, once every question has its answer.
+- `assess`: starts a provisional assessment run with `assess.assess` on the
+  session panel for every question. Its call_model writes the question and stops
+  the run with an exception no provider handler catches, so the run is left
+  resumable with nothing recorded as a refusal. Each answer is followed by
+  `--resume`, which asks the next question: criteria, then contradictions, then
+  the confirmation, which is composed from the contradictions found.
+- `depth`: writes the question of every depth `depth_pass.jobs_for` returns for
+  the provisional run against the provisional assessment run, composed as
+  `depth_pass.give_one` composes it; `store` runs `depth_pass.give_pass` with
+  `replies_from`.
 
 The answers are written by agents of the session, one file each, from the
 question file alone. For Microsoft that is 14 judge calls (236 passages each),
@@ -76,13 +83,14 @@ today. A document may therefore mix panel cells and provisional cells, and
 
 The assessment follows the same rule per document: the publication's
 `--assessment-run` where it assessed the document, and otherwise the newest done
-provisional assessment run that did. The provisional assessment runs used are
-recorded in `build_params.provisional_assessment_runs`, so a rebuild is
-deterministic.
+provisional assessment run that did. Depths out of ten are read per document with
+the same run, since a depth is keyed by the assessment run whose conflict rules it
+was shown. The provisional assessment runs used are recorded in
+`build_params.provisional_assessment_runs`, so a rebuild is deterministic.
 
 ## Database
 
-One migration in `polaris-supabase`:
+One migration in `polaris-supabase`, merged on `main` and pushed from `main`:
 
 - `aci_runs.provisional boolean not null default false`, with a check that a
   provisional run has exactly one seat.
@@ -122,9 +130,14 @@ reader.
 
 ## What this does not do
 
+- It does not compare documents yet. Comparing Microsoft's Code with the newest
+  document of each other lab is the next step, and needs no new machinery:
+  `link_self.py` already judges links, arbitrates, summarises and writes the
+  per-passage notes in session, and `compose_links.retained_passages` reads a
+  cell's newest run, which for Microsoft is the provisional one. Until then a
+  provisional document carries no bubbles and no comparison paragraph.
+
 - It does not run the panel, and it spends nothing.
-- It does not compare documents: links and comparison paragraphs are not composed
-  for provisional cells.
 - It does not let a provisional run stand beside a panel run for the same cell;
   the panel wins.
 
