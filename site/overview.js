@@ -341,7 +341,7 @@ function contextRows(noteNumber) {
       left.append(mark);
     }
   } else {
-    const show = element("button", "gov-button ovw-context-toggle", "Show context");
+    const show = element("button", "context-hide", "Show context");
     show.type = "button";
     show.addEventListener("click", () => setContext(true));
     left.append(show);
