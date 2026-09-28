@@ -25,6 +25,7 @@ import { renderMenu } from "./page-menu.js";
 
 const TEN = 10;
 const MODE_KEY = "aci-overview-mode";
+const CONTEXT_KEY = "aci-overview-context";
 
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
@@ -457,7 +458,7 @@ function draw() {
   // come: the file's own notes, which the introduction points to, the
   // context's sources, then the relative mode's, whose mark is on its button
   // below them.
-  const context = state.overview.context;
+  const context = state.showContext ? state.overview.context : null;
   const notes = [...(grid.notes || []),
                  ...(context?.note ? [{ title: context.name, text: context.note }] : []),
                  { title: "Relative", text: grid.relative_note }];
@@ -465,7 +466,13 @@ function draw() {
   view.nodes.table.tHead.replaceChildren(headRow());
   view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
     [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
-    ...contextRows(contextNote));
+    ...(context ? contextRows(contextNote) : []));
+  const toggle = document.querySelector(".ovw-context-toggle");
+  if (toggle) {
+    toggle.hidden = !state.overview.context?.rows?.length;
+    toggle.textContent = state.showContext ? "Hide context" : "Show context";
+    toggle.setAttribute("aria-pressed", String(state.showContext));
+  }
   byId("ovw-mode-note").textContent = grid.hint;
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
   if (relativeMark) relativeMark.textContent = String(notes.length);
@@ -487,6 +494,22 @@ function setMode(mode) {
   state.mode = mode;
   try { localStorage.setItem(MODE_KEY, mode); } catch { /* the default stands */ }
   draw();
+}
+
+function setContext(show) {
+  if (view.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
+  state.showContext = show;
+  try { localStorage.setItem(CONTEXT_KEY, show ? "shown" : "hidden"); } catch { /* the default stands */ }
+  draw();
+}
+
+/* Shown unless this browser chose to hide it. */
+function savedContext() {
+  try {
+    return localStorage.getItem(CONTEXT_KEY) !== "hidden";
+  } catch {
+    return true;
+  }
 }
 
 function savedMode() {
@@ -522,7 +545,8 @@ export async function initializeOverview() {
   try {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
-    state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode() };
+    state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode(),
+              showContext: savedContext() };
     draw();
     drawTakeaways(overview.takeaways || []);
     renderMenu(document.getElementById("view-overview"));
@@ -536,6 +560,8 @@ export async function initializeOverview() {
   document.querySelectorAll(".ovw-mode button").forEach(button => {
     button.addEventListener("click", () => setMode(button.dataset.mode));
   });
+  document.querySelector(".ovw-context-toggle")?.addEventListener("click",
+    () => setContext(!state.showContext));
   status.textContent = "";
 }
 
