@@ -605,10 +605,13 @@ function draw() {
     renderInline(item, text);
     return item;
   }));
+  // In the order their marks come down the page: the file's own notes, the
+  // relative mode's on its button above the grid, then the context's under it.
   const notes = [...(grid.notes || []),
-                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
-                 { title: "Relative", text: grid.relative_note }];
-  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
+                 { title: "Relative", text: grid.relative_note },
+                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : [])];
+  const relativeNote = (grid.notes || []).length + 1;
+  const contextNote = shownContext?.note ? relativeNote + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   // Only the final scores of the two boards, each opening what it is made of,
   // then the views still in preparation, then the context.
@@ -618,7 +621,7 @@ function draw() {
     ...contextRows(contextNote));
   byId("ovw-mode-note").textContent = grid.hint;
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
-  if (relativeMark) relativeMark.textContent = String(notes.length);
+  if (relativeMark) relativeMark.textContent = String(relativeNote);
   byId("ovw-notes").replaceChildren(...notes.map(({ title, text }, index) => {
     const item = element("li");
     item.id = `ovw-note-${index + 1}`;
