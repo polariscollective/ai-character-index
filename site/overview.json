@@ -403,10 +403,10 @@
      "short": "8 months"
     },
     "usage": {
-     "shown": "+++",
-     "level": "+++",
-     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger. The figure is old, and Meta has given none since.",
-     "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf"
+     "shown": "++",
+     "level": "++",
+     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger, without saying what counts as active or which of its models answers. It has given no count since. Active use looks far smaller: in an Ipsos survey of March 2026, 8% of American adults had used Meta AI in the past week.",
+     "url": "https://www.ipsos.com/en-us/half-americans-report-using-ai-services-information-and-productivity-leading-use-cases"
     }
    },
    "xai": {
