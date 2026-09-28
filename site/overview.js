@@ -259,6 +259,18 @@ function aboutContextRow(content, context, row) {
   (row.links || []).forEach(link => leadTo(content, link.url, link.text));
 }
 
+/* The usage estimate as three squares, filled one per step, all three empty
+ * where there is nothing to go on. Decorative: the words beside it say it. */
+function usageMeter(level) {
+  const filled = level === "-" ? 0 : level.length;
+  const meter = element("span", "usage-meter");
+  meter.setAttribute("aria-hidden", "true");
+  for (let step = 0; step < 3; step += 1) {
+    meter.append(element("span", step < filled ? "usage-step usage-step-on" : "usage-step"));
+  }
+  return meter;
+}
+
 /* One company's fact on one context row: what it is, the company's own words
  * where there are some, and where they were said. */
 function aboutContextCell(content, context, row, company, entry) {
@@ -266,7 +278,10 @@ function aboutContextCell(content, context, row, company, entry) {
   if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (entry.band) content.append(view.figure(entry.band, " a month"));
   if (entry.level) {
-    content.append(view.figure(`${entry.level === "-" ? 0 : entry.level.length} of 3`, " squares, our estimate"));
+    // The same three squares the cell shows, and what they are.
+    const line = element("p", "figure usage-figure");
+    line.append(usageMeter(entry.level), document.createTextNode("Our estimate"));
+    content.append(line);
   }
   if (Number.isFinite(entry.share)) content.append(view.figure(entry.shown, " of tokens on OpenRouter"));
   if (Number.isFinite(entry.eci)) {
@@ -370,13 +385,7 @@ function contextRows(noteNumber) {
       } else if (entry.level) {
         // Our rough estimate as three squares, filled one per step, all three
         // empty where there is nothing to go on.
-        const filled = entry.level === "-" ? 0 : entry.level.length;
-        const meter = element("span", "usage-meter");
-        meter.setAttribute("aria-hidden", "true");
-        for (let step = 0; step < 3; step += 1) {
-          meter.append(element("span", step < filled ? "usage-step usage-step-on" : "usage-step"));
-        }
-        button.append(meter);
+        button.append(usageMeter(entry.level));
       } else if (entry.band) {
         // A step of ten, in the data face, on one line.
         button.append(element("span", "cell-context-band", entry.band));

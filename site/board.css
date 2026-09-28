@@ -1336,14 +1336,15 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The usage estimate: three small squares in grey, filled one per step, the
    empty ones drawn as an outline. Grey rather than a colour of the boards, since
    it is a rough estimate and no score. */
-.ovw-board .usage-meter { display: inline-flex; gap: 3px; }
-.ovw-board .usage-step {
+.ovw-board .usage-meter, .gov-pop .usage-meter { display: inline-flex; gap: 3px; }
+.ovw-board .usage-step, .gov-pop .usage-step {
   width: 10px;
   height: 10px;
   border: 1px solid var(--neutral);
   border-radius: 2px;
 }
-.ovw-board .usage-step-on { background: var(--faint); border-color: var(--faint); }
+.ovw-board .usage-step-on, .gov-pop .usage-step-on { background: var(--faint); border-color: var(--faint); }
+.gov-pop .usage-figure { display: flex; align-items: center; gap: 10px; }
 .ovw-board .cell-context-none { font-family: var(--mono); font-size: 13px; color: var(--faint); }
 .gov-pop .mono { font-family: var(--mono); }
 .gov-pop .ovw-quote { margin: 10px 0 4px; padding-left: 12px; border-left: 3px solid var(--energy); }
