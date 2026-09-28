@@ -252,6 +252,7 @@ function aboutCompany(content, company) {
 function aboutContextCell(content, context, row, company, entry) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, context.name);
   if (entry.behind) content.append(view.figure(entry.behind, ""));
+  if (entry.band) content.append(view.figure(entry.band, ` ${entry.per}`));
   if (Number.isFinite(entry.eci)) {
     const line = element("p", "subtitle");
     line.append(element("span", "mono", entry.eci.toFixed(1)),
@@ -299,13 +300,31 @@ function contextRows(noteNumber) {
         tr.append(element("td", "cell"));
         return;
       }
-      const words = [entry.shown, entry.behind].filter(Boolean);
+      const words = [entry.shown, entry.behind, entry.band ? `${entry.band} ${entry.per}` : entry.per]
+        .filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
         content => aboutContextCell(content, context, row, company, entry),
         "cell-button cell-context");
-      button.append(element("span", "cell-context-words", entry.shown));
-      if (entry.behind) button.append(element("span", "cell-context-sub", entry.behind));
+      if (Number.isFinite(entry.strength)) {
+        // The model, a bar that is full at the frontier and empty two years
+        // behind it, and how far behind in words. The bar says it at a glance;
+        // the words are there for whoever wants the figure behind the bar.
+        button.append(element("span", "cell-context-words", entry.shown));
+        const bar = element("span", "cell-context-bar");
+        bar.setAttribute("aria-hidden", "true");
+        const fill = element("span");
+        fill.style.width = `${Math.round(entry.strength * 100)}%`;
+        bar.append(fill);
+        button.append(bar, element("span", "cell-context-sub", entry.behind));
+      } else if (entry.band) {
+        // A step of ten, in the data face, and what it counts.
+        button.append(element("span", "cell-context-band", entry.band),
+                      element("span", "cell-context-sub", entry.per));
+      } else {
+        button.append(element("span", "cell-context-words", entry.shown));
+        if (entry.per) button.append(element("span", "cell-context-sub", entry.per));
+      }
       tr.append(cell);
     });
     return tr;
