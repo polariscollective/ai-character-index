@@ -247,6 +247,17 @@ function aboutCompany(content, company) {
 
 /* ---- The context --------------------------------------------------------- */
 
+/* What a context row is, where it comes from, and what it cannot say. */
+function aboutContextRow(content, context, row) {
+  view.titled(content, row.name, context.name);
+  [["What it is", row.what], ["Where it comes from", row.from], ["Its limits", row.limits]]
+    .forEach(([heading, text]) => {
+      if (!text) return;
+      content.append(view.h3(heading), element("p", "", text));
+    });
+  (row.links || []).forEach(link => leadTo(content, link.url, link.text));
+}
+
 /* One company's fact on one context row: what it is, the company's own words
  * where there are some, and where they were said. */
 function aboutContextCell(content, context, row, company, entry) {
@@ -293,7 +304,16 @@ function contextRows(noteNumber) {
   return [head, ...context.rows.map(row => {
     const tr = element("tr", "context-row");
     tr.dataset.row = `context-${row.id}`;
-    tr.append(view.rowHead(null, element("span", "context-name", row.name)));
+    // A name that opens what the row is, in plain text until pointed at: it
+    // explains the row and is no figure of the index.
+    const name = element("button", "context-name", row.name);
+    name.type = "button";
+    name.setAttribute("aria-haspopup", "dialog");
+    name.setAttribute("aria-expanded", "false");
+    name.setAttribute("aria-label", `${row.name}: what it is, where it comes from, its limits`);
+    name.addEventListener("click", () =>
+      view.openPopover(name, content => aboutContextRow(content, context, row)));
+    tr.append(view.rowHead(null, name));
     state.companies.forEach(company => {
       const entry = context.companies?.[company.id]?.[row.id];
       if (!entry) {

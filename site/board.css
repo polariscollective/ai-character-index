@@ -1243,7 +1243,23 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
 .ovw-board .context-head .row-mark { color: var(--faint); }
 .ovw-board .context-row th { text-align: left; vertical-align: middle; }
-.ovw-board .context-name { font-size: 13px; font-weight: 400; color: var(--muted); }
+.ovw-board .context-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline 1px transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms;
+}
+.ovw-board .context-name:hover,
+.ovw-board .context-name:focus-visible { text-decoration-color: currentColor; outline: none; }
+.ovw-board .context-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 .ovw-board .cell-context {
   background: transparent;
   height: 72px;

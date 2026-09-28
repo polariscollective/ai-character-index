@@ -199,12 +199,29 @@
     "name": "Most capable model",
     "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability. The bar shows how far that model trails the most capable model Epoch rates: full at the frontier, empty at two years or more behind it. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
-    "url": "https://epoch.ai/eci"
+    "url": "https://epoch.ai/eci",
+    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability. The bar shows how far that model trails the most capable model Epoch rates: full at the frontier, empty at two years or more behind it.",
+    "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months come from Epoch's finding that, since reasoning models arrived in September 2024, the frontier has gained about 14 points a year on its index.",
+    "links": [
+     {
+      "text": "Epoch Capabilities Index",
+      "url": "https://epoch.ai/eci"
+     },
+     {
+      "text": "How fast the frontier advances",
+      "url": "https://epoch.ai/data-insights/eci-frontier-trend"
+     }
+    ],
+    "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Reading a gap in points as months is ours, and models a few months apart are within the index's own margin. Epoch rates only the models it has tested, which leaves out Microsoft AI's."
    },
    {
     "id": "reach",
     "name": "Users",
-    "plain": "How many people use the company's assistant or apps, as the company itself stated it in the six months to 28 September 2026, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above. Some count a week and some a month, and each counts its own products, so the figures give a sense of scale. An older figure is not shown, and a company that sells mostly through its API may state no count at all."
+    "plain": "How many people use the company's assistant or apps, as the company itself stated it in the six months to 28 September 2026, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above. Some count a week and some a month, and each counts its own products, so the figures give a sense of scale. An older figure is not shown, and a company that sells mostly through its API may state no count at all.",
+    "what": "How many people use the company's assistant or apps, in steps of ten: 100M+ is at least a hundred million, 1B+ at least a billion. It counts the people, whatever model answers them, so it is not a count for the model on the line above.",
+    "from": "Each company's own statements in the six months to 28 September 2026: blog posts, earnings calls and filings, each linked from its cell.",
+    "links": [],
+    "limits": "Companies count differently: some a week and some a month, each its own products. A figure older than six months is not shown, and a company that sells mostly through its API may state no count at all. A model anyone can download reaches people no count includes."
    }
   ],
   "companies": {
