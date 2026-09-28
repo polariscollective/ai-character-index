@@ -188,5 +188,233 @@
    "published": "No constitution. Beyond the disclosure its regulator requires, there is its R1 paper of 2025, which describes its safety training and its risk control system, and the system prompts of two models, published in their 2025 model cards.",
    "engages": "A description of training against an internal policy, and a safety evaluation of R1, a model it no longer serves, against its own standards."
   }
+ },
+ "context": {
+  "name": "Context, not scored",
+  "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
+  "note": "Capability is the Epoch Capabilities Index, from Epoch AI under CC BY 4.0, as of 28 September 2026. Reach is the latest figure each company has published itself; companies count differently, so the figures are not strictly comparable.",
+  "rows": [
+   {
+    "id": "capability",
+    "name": "Most capable model",
+    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, on which GPT-5 scores 150. It measures capability, not danger, and models a few points apart are within the index's own margin.",
+    "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
+    "url": "https://epoch.ai/eci"
+   },
+   {
+    "id": "reach",
+    "name": "Reach",
+    "plain": "How many people use the company's assistant or models, as the company itself last stated it, rounded to an order of magnitude. Some count a week and some a month, and each counts its own products, so the figures are a sense of scale rather than a ranking. A model anyone can download reaches further than any count."
+   }
+  ],
+  "companies": {
+   "openai": {
+    "capability": {
+     "shown": "GPT-6 Astra",
+     "model": "GPT-6 Astra",
+     "eci": 166.6,
+     "interval": [
+      163.0,
+      172.0
+     ],
+     "released": "2026-09-03",
+     "open_weights": false,
+     "text": "GPT-6 Astra, released on 3 September 2026, scores 166.6 on the Epoch Capabilities Index, within an interval of 163.0 to 172.0. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "About a billion a week",
+     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT. The figure counts people using ChatGPT, not the use of its models by other companies' products.",
+     "quote": "Every week, 1 billion people turn to ChatGPT for everything from quick questions and web searches to planning, research, advice, and complex decisions.",
+     "date": "2026-08-06",
+     "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/",
+     "source": "The company"
+    }
+   },
+   "anthropic": {
+    "capability": {
+     "shown": "Claude Fable 5.1",
+     "model": "Claude Fable 5.1",
+     "eci": 165.0,
+     "interval": [
+      161.6,
+      169.6
+     ],
+     "released": "2026-09-01",
+     "open_weights": false,
+     "text": "Claude Fable 5.1, released on 1 September 2026, scores 165.0 on the Epoch Capabilities Index, within an interval of 161.6 to 169.6. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "Not disclosed",
+     "text": "Anthropic has published no count of the people who use Claude. It has said only that weekly users of Claude Code doubled between 1 January and 12 February 2026."
+    }
+   },
+   "alibaba": {
+    "capability": {
+     "shown": "Qwen 3.8 Max",
+     "model": "Qwen 3.8 Max",
+     "eci": 156.7,
+     "interval": [
+      154.6,
+      159.0
+     ],
+     "released": "2026-08-02",
+     "open_weights": false,
+     "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "Hundreds of millions a month",
+     "text": "Alibaba said in its annual report, filed on 20 May 2026, that consumer-facing Qwen passed 295 million monthly active users across all platforms in March 2026.",
+     "quote": "In March 2026, consumer-facing Qwen has surpassed 295 million monthly active users across all platforms.",
+     "date": "2026-05-20",
+     "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm",
+     "source": "Alibaba Group annual report on Form 20-F for the fiscal year ended 31 March 2026, filed with the SEC on 20 May 2026.",
+     "downloads": "Its most downloaded open-weight model, Qwen3-0.6B, was downloaded 29,308,906 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people."
+    }
+   },
+   "microsoft": {
+    "capability": {
+     "shown": "Not rated by Epoch",
+     "model": null,
+     "eci": null,
+     "text": "Epoch rates no model Microsoft AI has built. The one Microsoft model it rates is Phi-4, a Microsoft Research model released in December 2024, at 130.4."
+    },
+    "reach": {
+     "shown": "Not disclosed",
+     "text": "Microsoft AI has published no count of the people who use the MAI models. Microsoft said on 29 October 2025 that its family of Copilots had passed 150 million monthly active users, but those assistants run mostly on models Microsoft licenses rather than builds.",
+     "quote": "And our first party family of Copilots now has surpassed 150 million monthly active users across information work, coding, security, science, health, and consumer.",
+     "date": "2025-10-29",
+     "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1",
+     "source": "Satya Nadella, Microsoft fiscal year 2026 first quarter earnings call, 29 October 2025 (official transcript on Microsoft's investor site)."
+    }
+   },
+   "google": {
+    "capability": {
+     "shown": "Gemini 3.7 Flash",
+     "model": "Gemini 3.7 Flash",
+     "eci": 157.7,
+     "interval": [
+      155.6,
+      160.6
+     ],
+     "released": "2026-08-13",
+     "open_weights": false,
+     "text": "Gemini 3.7 Flash, released on 13 August 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.6 to 160.6. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "About a billion a month",
+     "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
+     "quote": "The Gemini app has officially surpassed 1 billion monthly users, making it the fastest-growing product in Google’s history.",
+     "date": "2026-08-11",
+     "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/",
+     "source": "The company"
+    }
+   },
+   "mistral": {
+    "capability": {
+     "shown": "Mistral Medium 3.5",
+     "model": "Mistral Medium 3.5",
+     "eci": 141.4,
+     "interval": [
+      138.6,
+      143.5
+     ],
+     "released": "2026-04-28",
+     "open_weights": true,
+     "text": "Mistral Medium 3.5, released on 28 April 2026, scores 141.4 on the Epoch Capabilities Index, within an interval of 138.6 to 143.5. Its weights can be downloaded, for restricted use."
+    },
+    "reach": {
+     "shown": "Not disclosed",
+     "text": "Mistral AI has published no count of the people who use its assistant or its models. It announced in February 2025 that its app had been downloaded more than a million times.",
+     "downloads": "Its most downloaded open-weight model, Mistral-7B-Instruct-v0.3, was downloaded 2,190,595 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people."
+    }
+   },
+   "meta": {
+    "capability": {
+     "shown": "Muse Spark 1.3",
+     "model": "Muse Spark 1.3",
+     "eci": 156.9,
+     "interval": [
+      154.7,
+      159.4
+     ],
+     "released": "2026-09-02",
+     "open_weights": false,
+     "text": "Muse Spark 1.3, released on 2 September 2026, scores 156.9 on the Epoch Capabilities Index, within an interval of 154.7 to 159.4. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "Over a billion a month",
+     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger as well as in its own app.",
+     "quote": "More than a billion monthly actives already use Meta AI, and we see usage increase as we improve our underlying models.",
+     "date": "2025-10-29",
+     "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf",
+     "source": "Mark Zuckerberg, Meta third quarter 2025 earnings call, 29 October 2025 (transcript published by Meta on its investor-relations CDN)."
+    }
+   },
+   "xai": {
+    "capability": {
+     "shown": "Grok 4.6",
+     "model": "Grok 4.6",
+     "eci": 156.5,
+     "interval": [
+      154.6,
+      159.0
+     ],
+     "released": "2026-08-12",
+     "open_weights": false,
+     "text": "Grok 4.6, released on 12 August 2026, scores 156.5 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded."
+    },
+    "reach": {
+     "shown": "Over a hundred million a month",
+     "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, according to a prospectus filed on 12 June 2026 that reports Grok and X together.",
+     "quote": "Of our MAUs, we had approximately 117 million and 89 million MAUs that used Grok’s AI features as of March 31, 2026 and December 31, 2025, respectively.",
+     "date": "2026-06-12",
+     "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm",
+     "source": "SpaceX final prospectus (Form 424B4), filed with the SEC on 12 June 2026. The 117 million figure first appeared in the S-1 filed on 20 May 2026. SpaceX reports Grok and X as its AI segment."
+    }
+   },
+   "moonshot": {
+    "capability": {
+     "shown": "Kimi K3",
+     "model": "Kimi K3",
+     "eci": 157.7,
+     "interval": [
+      155.1,
+      160.7
+     ],
+     "released": "2026-07-16",
+     "open_weights": true,
+     "text": "Kimi K3, released on 16 July 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.1 to 160.7. Its weights can be downloaded, for non-commercial use."
+    },
+    "reach": {
+     "shown": "Not disclosed since 2024",
+     "text": "Moonshot AI's founder said in November 2024, as a press report quoted him, that Kimi had passed 36 million monthly active users in October. Nothing has been published since.",
+     "quote": "Moonshot AI founder Yang Zhilin disclosed at a press briefing that the AI assistant Kimi exceeded 36 million monthly active users in October, and is still growing faster.",
+     "date": "2024-11-16",
+     "url": "https://www.gelonghui.com/live/1761006",
+     "source": "Press report (Gelonghui, citing 全天候科技) quoting the company's founder at a press briefing. No company-published source was found.",
+     "quote_original": "月之暗面创始人杨植麟在沟通会上透露，AI助手Kimi在10月月活超过3600万，而且还在持续更快的增长。",
+     "downloads": "Its most downloaded open-weight model, Kimi-K3, was downloaded 1,513,077 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people."
+    }
+   },
+   "deepseek": {
+    "capability": {
+     "shown": "DeepSeek V4 Pro 0813",
+     "model": "DeepSeek V4 Pro 0813",
+     "eci": 155.4,
+     "interval": [
+      153.7,
+      157.3
+     ],
+     "released": "2026-08-13",
+     "open_weights": true,
+     "text": "DeepSeek V4 Pro 0813, released on 13 August 2026, scores 155.4 on the Epoch Capabilities Index, within an interval of 153.7 to 157.3. Its weights can be downloaded by anyone."
+    },
+    "reach": {
+     "shown": "Not disclosed",
+     "text": "DeepSeek has published no count of the people who use its assistant or its models. The figures that circulate come from third-party trackers.",
+     "downloads": "Its most downloaded open-weight model, DeepSeek-V4-Flash-0731, was downloaded 4,419,279 times from Hugging Face in the 30 days to 28 September 2026. That counts files downloaded, not people."
+    }
+   }
+  }
  }
 }

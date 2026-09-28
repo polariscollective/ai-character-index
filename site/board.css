@@ -1236,6 +1236,22 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   .board .cell-tier .cell-words { font-size: 11px; }
 }
 .ovw-pop-link { margin-top: 12px; }
+/* The context under the grid: facts no score counts, so no colour and no tier.
+   The heading row stands apart by a rule and some air; the cells carry a few
+   words and, where there is one, a figure in the data face. */
+.ovw-board .context-head th { padding-top: 28px; border-top: 1px solid var(--muted); }
+.ovw-board .cell-context {
+  background: transparent;
+  border: 1px solid rgb(92 107 60 / .2);
+  height: auto;
+  min-height: 44px;
+  gap: 2px;
+  align-content: center;
+}
+.ovw-board .cell-context-words { font-size: 11px; line-height: 1.2; overflow-wrap: anywhere; }
+.ovw-board .cell-context-figure { font-family: var(--mono); font-size: 13px; }
+.gov-pop .figure .mono { font-family: var(--mono); }
+.gov-pop .ovw-quote { margin: 10px 0 4px; padding-left: 12px; border-left: 3px solid var(--energy); }
 /* A caveat on a company's document: under everything else, set off by a rule,
    in the popover's quiet subtitle ink. */
 .gov-pop .ovw-caveat { margin-top: 14px; padding-top: 10px; border-top: 1px solid rgb(92 107 60 / .2); }
