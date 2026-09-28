@@ -1344,9 +1344,10 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   align-content: center;
   justify-items: center;
   background: transparent;
-  height: 60px;
-  min-height: 60px;
-  padding: 6px 4px;
+  /* The height of a score's cell above, so every row of the grid is one height. */
+  height: 54px;
+  min-height: 54px;
+  padding: 4px 4px;
   overflow: hidden;
 }
 /* Two bands of one height in every cell, so each line sits level across the
