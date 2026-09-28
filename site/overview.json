@@ -313,8 +313,8 @@
       159.0
      ],
      "released": "2026-08-02",
-     "open_weights": false,
-     "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
+     "open_weights": true,
+     "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Epoch lists it as served through an API, but the model behind it was published for anyone to download on 12 August 2026. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
