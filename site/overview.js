@@ -159,6 +159,11 @@ function leadTo(content, href, text) {
   const line = element("p", "ovw-pop-link");
   const link = element("a", "", text);
   link.href = href;
+  // A source elsewhere opens in its own tab, so the page stays where it was.
+  if (/^https?:/.test(href)) {
+    link.target = "_blank";
+    link.rel = "noopener";
+  }
   line.append(link);
   content.append(line);
 }
@@ -380,7 +385,7 @@ function aboutContextCell(content, context, row, company, entry) {
   }
   if (entry.downloads) content.append(element("p", "subtitle", entry.downloads));
   content.append(element("p", "subtitle", row.plain));
-  if (entry.url) leadTo(content, entry.url, "Where the company said it");
+  if (entry.url) leadTo(content, entry.url, "Source");
   else if (row.url) leadTo(content, row.url, row.source || row.url);
 }
 

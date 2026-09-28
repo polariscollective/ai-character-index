@@ -299,8 +299,8 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Anthropic states no count of the people who use Claude. Its chief product officer said in March 2026 that more than a million people were signing up for Claude every day, and its models had the fourth largest share of developer traffic on OpenRouter in September 2026, 3.9%.",
-     "url": "https://openrouter.ai/rankings"
+     "text": "Anthropic states no count of the people who use Claude. Sensor Tower counted 245 million monthly users of its app and website together in May 2026, as TechCrunch reported, and Similarweb counted 157 million monthly users of its app in August 2026. Its chief product officer said in March 2026 that more than a million people were signing up every day.",
+     "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
     }
    },
    "alibaba": {
@@ -474,8 +474,8 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "DeepSeek states no count of the people who use its assistant. Its models had the largest share of developer traffic on OpenRouter in September 2026, 21.4%, and its open models are among the most downloaded.",
-     "url": "https://openrouter.ai/rankings"
+     "text": "DeepSeek states no count of the people who use its assistant. QuestMobile counted 129 million monthly active users of its app in China in June 2026, and its models had the largest share of developer traffic on OpenRouter in September 2026.",
+     "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
     }
    }
   }
