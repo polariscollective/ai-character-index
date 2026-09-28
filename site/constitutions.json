@@ -732,6 +732,7 @@
     "version": "2026-09-14",
     "url": "https://microsoft.ai/code-of-conduct/"
    },
+   "note": "Draft, not yet used in training",
    "whole": {
     "total": 6.5,
     "criteria": {
