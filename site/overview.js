@@ -370,6 +370,20 @@ function contextRows(noteNumber) {
 
 /* ---- The table ----------------------------------------------------------- */
 
+/* The notes a company's name points to, with their numbers: whether it
+ * publishes a constitution, whether its flagship can be downloaded, and a note
+ * of its own where the file has one. */
+function nameNotesOf(company) {
+  const { grid } = state.overview;
+  const ids = [!company.publishes ? "no_constitution" : null,
+               company.openWeights ? "open_weights" : null, company.id];
+  return ids.filter(id => id && state.nameNoteNumbers?.[id]).map(id => {
+    const note = grid.name_notes.find(item => item.id === id);
+    return { number: state.nameNoteNumbers[id],
+             spoken: id === company.id ? note.text : note.title };
+  });
+}
+
 function headRow() {
   const row = element("tr");
   const corner = element("th", "row-col");
@@ -386,15 +400,21 @@ function headRow() {
     button.dataset.lab = company.id;
     button.setAttribute("aria-haspopup", "dialog");
     button.setAttribute("aria-expanded", "false");
-    const flags = [!company.publishes ? "No published constitution" : null,
-                   company.note, company.openWeights ? "Open weights" : null].filter(Boolean);
+    // What a reader of the grid would otherwise assume the other way is said in
+    // the notes under it, and the name carries their numbers. The accessible
+    // name says the notes' words, since the numbers are hidden from it.
+    const notes = nameNotesOf(company);
     button.setAttribute("aria-label", `${company.name}`
-      + `${flags.length ? `, ${flags.map(lowerFirst).join(", ")}` : ""}: what it publishes`);
+      + `${notes.length ? `, ${notes.map(note => lowerFirst(note.spoken)).join(", ")}` : ""}`
+      + ": what it publishes");
     button.append(companyMark(company.mark));
-    button.append(element("span", "company-name", company.name));
-    // A few words under the name, smaller: the facts a reader of the grid would
-    // otherwise assume the other way. The profile the head opens says each in full.
-    flags.forEach(flag => button.append(element("span", "company-flag", flag)));
+    const name = element("span", "company-name", company.name);
+    if (notes.length) {
+      const mark = element("span", "row-mark", notes.map(note => note.number).join(","));
+      mark.setAttribute("aria-hidden", "true");
+      name.append(mark);
+    }
+    button.append(name);
     button.addEventListener("click", () =>
       view.openPopover(button, content => aboutCompany(content, company)));
     cell.append(button);
@@ -476,10 +496,19 @@ function draw() {
   // below them.
   const context = state.overview.context;
   const shownContext = state.showContext ? context : null;
+  // The notes the names point to, numbered after the file's own, and only
+  // those some company on the page carries.
+  const every = grid.name_notes || [];
+  const carried = every.filter(note => state.companies.some(company =>
+    [!company.publishes ? "no_constitution" : null,
+     company.openWeights ? "open_weights" : null, company.id].includes(note.id)));
+  state.nameNoteNumbers = Object.fromEntries(carried.map((note, index) =>
+    [note.id, (grid.notes || []).length + index + 1]));
   const notes = [...(grid.notes || []),
+                 ...carried.map(({ title, text }) => ({ title, text })),
                  ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
                  { title: "Relative", text: grid.relative_note }];
-  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
+  const contextNote = shownContext?.note ? (grid.notes || []).length + carried.length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
     [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),

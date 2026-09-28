@@ -83,6 +83,28 @@
     "title": "Our ambition",
     "text": "We are working on two more views. How constitutions are regulated will follow how far laws and regulators refer to these documents and ask companies to keep them. Adherence of models to constitutions will carry the results of independent organisations testing whether a model actually behaves as its constitution says."
    }
+  ],
+  "name_notes": [
+   {
+    "id": "no_constitution",
+    "title": "No published constitution",
+    "text": "The company publishes no document setting out how its models should behave, so it scores 0 on what the constitutions say. A document of this kind may exist inside the company without having been released."
+   },
+   {
+    "id": "open_weights",
+    "title": "Open weights",
+    "text": "Anyone can download the company's flagship model, or nearly, and run it where the company cannot see how it is used."
+   },
+   {
+    "id": "alibaba",
+    "title": "Alibaba",
+    "text": "Its constitution names none of the models it governs, although it says Alibaba is training its models towards it."
+   },
+   {
+    "id": "microsoft",
+    "title": "Microsoft AI",
+    "text": "Its Code of Conduct is a draft under public consultation, which the company says it is not yet using to train its models."
+   }
   ]
  },
  "takeaways": [
