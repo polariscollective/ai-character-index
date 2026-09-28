@@ -653,7 +653,18 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   color: var(--accent);
 }
 .company-name { color: var(--muted); }
-.company-flag { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--faint); }
+/* The few words under a company's name, small enough that "Open weights" and a
+   version fit on one line, and never broken inside a word. */
+.company-flag {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--faint);
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
 /* Open and shut, drawn rather than typed: two borders of a small square, turned
    to point right when shut and down when open. The same chevron marks every
    fold on the board. */
@@ -1079,7 +1090,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
      which is what keeps one company from looking wider than another. */
   .board thead th .company-name { font-size: 13px; overflow-wrap: anywhere; }
   .board .row-name .head-name { font-size: 14px; overflow-wrap: anywhere; }
-  .board .row-name .head-sub, .board .company-flag { font-size: 11px; }
+  .board .row-name .head-sub { font-size: 11px; }
   /* The indent that shows a check belongs to the row above it, at the width a
      phone can lend it: 34px of a 136px column is a quarter of the room the name
      has to set in. */
