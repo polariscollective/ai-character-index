@@ -295,20 +295,25 @@ function contextRows(noteNumber) {
   const title = element("th");
   title.scope = "rowgroup";
   title.colSpan = state.companies.length + 1;
-  title.append(element("span", "context-title", context.name));
-  if (noteNumber) {
-    const mark = element("span", "row-mark", String(noteNumber));
-    mark.setAttribute("aria-hidden", "true");
-    title.append(mark);
+  // Shown, the heading reads "Hide" in small underlined type, then its name;
+  // hidden, it is one button and nothing else, since there is nothing to name.
+  if (state.showContext) {
+    const hide = element("button", "context-hide", "Hide");
+    hide.type = "button";
+    hide.setAttribute("aria-label", "Hide the context");
+    hide.addEventListener("click", () => setContext(false));
+    title.append(hide, element("span", "context-title", context.name));
+    if (noteNumber) {
+      const mark = element("span", "row-mark", String(noteNumber));
+      mark.setAttribute("aria-hidden", "true");
+      title.append(mark);
+    }
+  } else {
+    const show = element("button", "gov-button ovw-context-toggle", "Show context");
+    show.type = "button";
+    show.addEventListener("click", () => setContext(true));
+    title.append(show);
   }
-  // The switch sits in the heading, right under the scores, and the heading
-  // stays when the rows are hidden, so the context can always be shown again.
-  const toggle = element("button", "gov-button ovw-context-toggle",
-    state.showContext ? "Hide context" : "Show context");
-  toggle.type = "button";
-  toggle.setAttribute("aria-pressed", String(state.showContext));
-  toggle.addEventListener("click", () => setContext(!state.showContext));
-  title.append(toggle);
   head.append(title);
   if (!state.showContext) return [head];
   return [head, ...context.rows.map(row => {
