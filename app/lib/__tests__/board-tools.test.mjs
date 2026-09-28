@@ -67,9 +67,9 @@ test("a publication that froze no boards is not compatible, on either tool", () 
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });
 
-test("the board of governance answers the nine companies in the board's own order", () => {
+test("the board of governance answers the ten companies in the board's own order", () => {
   const answer = governanceBoard(snapshot());
-  assert.equal(answer.companies.length, 9);
+  assert.equal(answer.companies.length, 10);
   assert.deepEqual(answer.companies.map(company => company.rank).slice(0, 3), [1, 2, 3]);
   // Two figures out of 10, and a final score out of 10 that averages them with
   // the weights it names, and ranks the companies.

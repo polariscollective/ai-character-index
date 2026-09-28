@@ -41,9 +41,12 @@ PAGE = (ROOT / "site" / "boards.html").read_text(encoding="utf-8")
 # eighth, below Mistral AI. On 26 September 2026 nine rules were written down
 # for cases the descriptions left open, and four corrections to Anthropic's rows
 # were approved: xAI moved from fourth to third, above Google DeepMind, and
-# DeepSeek from ninth to eighth, above Moonshot AI.
-ORDER = ["openai", "anthropic", "xai", "google", "alibaba", "meta", "mistral",
-         "deepseek", "moonshot"]
+# DeepSeek from ninth to eighth, above Moonshot AI. On 28 September 2026
+# Microsoft AI was added as the tenth company, scored on its draft Code of
+# Conduct and a tenth rule, and took third place: everyone from xAI down moved
+# one place lower.
+ORDER = ["openai", "anthropic", "microsoft", "xai", "google", "alibaba", "meta",
+         "mistral", "deepseek", "moonshot"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
 QUESTIONS = [question["id"] for question in DATA["questions"]]
 
@@ -307,17 +310,18 @@ class TheTwoFigures(unittest.TestCase):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["6.3", "6.2", "3.4", "3.0", "2.5", "2.0", "1.7", "1.0", "0.8"])
+                         ["6.3", "6.2", "4.1", "3.4", "3.0", "2.5", "2.0", "1.7", "1.0", "0.8"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
-                         ["7.0", "6.8", "4.3", "3.0", "3.2", "1.6", "3.4", "0.7", "0.9"])
+                         ["7.0", "6.8", "4.5", "4.3", "3.0", "3.2", "1.6", "3.4", "0.7", "0.9"])
         # OpenAI, Anthropic and Moonshot AI land on exactly 5.625 and 0.625,
         # which the board prints as 5.6 and 0.6, the digit after the half being
-        # a 2. DeepSeek lands on exactly 1.25, a true half, printed 1.3.
+        # a 2. DeepSeek and Microsoft AI land on exactly 1.25 and 3.75, true
+        # halves, printed 1.3 and 3.8.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.6", "5.6", "2.5", "3.1", "1.9", "2.5", "0.0", "1.3", "0.6"])
+                         ["5.6", "5.6", "3.8", "2.5", "3.1", "1.9", "2.5", "0.0", "1.3", "0.6"])
         # No two companies are level on the final score, so every place is
         # taken once.
-        self.assertEqual([rank(lab) for lab in order], [1, 2, 3, 4, 5, 6, 7, 8, 9])
+        self.assertEqual([rank(lab) for lab in order], list(range(1, 11)))
 
     def test_the_labs_marked_open_weights_are_the_notes(self):
         marked = {lab["id"] for lab in DATA["labs"] if lab.get("open_weights")}
@@ -526,7 +530,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         # meeting it means on the board's own scale.
         self.assertEqual([q["id"] for q in DATA["questions"] if q.get("minimum")], ["1", "2"])
         self.assertIn("10 out of 10 on both questions", first)
-        # "across all nine, the best score on it is 5.8 out of 10"
+        # "across all ten, the best score on it is 5.8 out of 10"
         best_log = max(totals(lab)[0]["2"] for lab in ORDER)
         self.assertIn(f"the best score on it is {shown(on_ten(best_log))} out of 10", first)
 
@@ -537,35 +541,35 @@ class TheProseAgreesWithTheData(unittest.TestCase):
         _, columns = totals("meta")
         self.assertIn(f"{shown(columns['published'])} out of 10 on what is published", text)
         self.assertIn(f"{shown(columns['engages'])} out of 10 on what it engages", text)
-        # Meta is fourth on the figure it names, level with xAI, and seventh on
+        # Meta is fifth on the figure it names, level with xAI, and eighth on
         # the other, with no company level with it there.
         engages = sorted((totals(lab)[1]["engages"] for lab in ORDER), reverse=True)
-        self.assertEqual(engages.index(columns["engages"]), 3)
+        self.assertEqual(engages.index(columns["engages"]), 4)
         self.assertEqual(columns["engages"], totals("xai")[1]["engages"])
-        self.assertIn("fourth of the nine and level with xAI", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("meta"), 6)
+        self.assertIn("fifth of the ten and level with xAI", text)
+        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("meta"), 7)
         self.assertEqual([lab for lab in ORDER if published(lab) == columns["published"]], ["meta"])
-        self.assertIn("on what is published, seventh of the nine", text)
-        # "which puts it sixth on the final score with 2.0 out of 10"
-        self.assertIn(f"sixth on the final score with {shown(ranking('meta'))} out of 10", text)
-        self.assertEqual(rank("meta"), 6)
+        self.assertIn("on what is published, eighth of the ten", text)
+        # "which puts it seventh on the final score with 2.0 out of 10"
+        self.assertIn(f"seventh on the final score with {shown(ranking('meta'))} out of 10", text)
+        self.assertEqual(rank("meta"), 7)
 
     def test_the_open_weights_finding_quotes_what_is_published(self):
         # "Moonshot AI's 0.9 and DeepSeek's 0.7 are the two lowest scores, and
-        # Mistral AI's 3.4 is fourth", with Alibaba named as the one open-weight
+        # Mistral AI's 3.4 is fifth", with Alibaba named as the one open-weight
         # company that is not near the bottom.
         text = next(bare(f["text"]) for f in DATA["findings"] if "Moonshot AI's" in f["text"])
         for lab, label in (("mistral", "Mistral AI's"), ("moonshot", "Moonshot AI's"),
                            ("deepseek", "DeepSeek's")):
             self.assertIn(f"{label} {shown(published(lab))}", text, lab)
-        self.assertIn(f"fifth on what is published with {shown(published('alibaba'))}", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 4)
+        self.assertIn(f"sixth on what is published with {shown(published('alibaba'))}", text)
+        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 5)
         # Two of the three it names hold the two lowest scores on that figure,
-        # and the third is fourth on it.
+        # and the third is fifth on it.
         self.assertEqual(set(sorted(ORDER, key=published)[:2]), {"moonshot", "deepseek"})
         self.assertIn("are the two lowest scores", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("mistral"), 3)
-        self.assertIn(f"Mistral AI's {shown(published('mistral'))} is fourth", text)
+        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("mistral"), 4)
+        self.assertIn(f"Mistral AI's {shown(published('mistral'))} is fifth", text)
         # The three are the last three on the final score, with the figures the
         # finding quotes.
         self.assertIn("Three of them take the last three places on the final score", text)
@@ -575,27 +579,32 @@ class TheProseAgreesWithTheData(unittest.TestCase):
                       f"{shown(ranking('moonshot'))}", text)
 
     def test_the_findings_on_whole_columns_hold(self):
-        # "On the check that asks for a comment window, only OpenAI and Anthropic
-        # score anything at all: OpenAI 5.0 out of 10 ... and Anthropic 2.5."
+        # "On the check that asks for a comment window, three companies score
+        # anything at all. Microsoft AI scores 7.5 out of 10 ... OpenAI scores
+        # 5.0 out of 10 ... and Anthropic 2.5."
         window = {lab: DATA["scores"][lab]["4.2"] for lab in ORDER}
         self.assertEqual({lab for lab, score in window.items() if score},
-                         {"openai", "anthropic"})
+                         {"openai", "anthropic", "microsoft"})
+        self.assertEqual(window["microsoft"], 3)
         self.assertEqual(window["openai"], 2)
         self.assertEqual(window["anthropic"], 1)
         notice = next(bare(f["text"]) for f in DATA["findings"] if "comment window" in f["text"])
-        self.assertIn(f"OpenAI {shown(on_ten(2))} out of 10", notice)
+        self.assertIn("three companies score anything at all", notice)
+        self.assertIn(f"Microsoft AI scores {shown(on_ten(3))} out of 10", notice)
+        self.assertIn(f"OpenAI scores {shown(on_ten(2))} out of 10", notice)
         self.assertIn(f"and Anthropic {shown(on_ten(1))}.", notice)
-        # On special deployments, "Anthropic, OpenAI and xAI score 5.0 out of 10
-        # each, and the other six nothing at all."
+        # On special deployments, "Anthropic, Microsoft AI, OpenAI and xAI score
+        # 5.0 out of 10 each, and the other six nothing at all."
         special = {lab: DATA["scores"][lab]["1.3"] for lab in ORDER}
         self.assertEqual(special["anthropic"], 2)
+        self.assertEqual(special["microsoft"], 2)
         self.assertEqual(special["openai"], 2)
         self.assertEqual(special["xai"], 2)
         self.assertEqual({lab for lab, score in special.items() if score},
-                         {"openai", "anthropic", "xai"})
+                         {"openai", "anthropic", "microsoft", "xai"})
         gap = next(bare(f["text"]) for f in DATA["findings"] if "armed forces" in f["title"])
-        self.assertIn(f"Anthropic, OpenAI and xAI score {shown(on_ten(2))} out of 10 each, "
-                      f"and the other six nothing at all", gap)
+        self.assertIn(f"Anthropic, Microsoft AI, OpenAI and xAI score {shown(on_ten(2))} out of 10 "
+                      f"each, and the other six nothing at all", gap)
 
     def test_there_are_eight_findings(self):
         self.assertEqual(len(DATA["findings"]), 8)
@@ -624,7 +633,7 @@ def flat(text):
 REGISTRY = {entry["id"]: entry for entry in DATA["sources"]}
 PREFIX = {"openai": "OA", "anthropic": "AN", "alibaba": "AL", "google": "GO",
           "mistral": "MI", "meta": "ME", "xai": "XA", "moonshot": "MO",
-          "deepseek": "DS", "several": "CO"}
+          "deepseek": "DS", "microsoft": "MS", "several": "CO"}
 # Every passage the board quotes from a company's document, with the row it
 # sits on: the ten checks and five practices anyone can check, and the four
 # practices only a company can show.

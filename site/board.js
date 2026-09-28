@@ -53,7 +53,7 @@ export const place = rank => {
 };
 
 export const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh",
-                         "eighth", "ninth"];
+                         "eighth", "ninth", "tenth"];
 
 /* Two figures that are the same figure. Scores are sums and means of small
  * whole numbers, so two that should be equal can differ in the last bit. */

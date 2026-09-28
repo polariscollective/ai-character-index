@@ -204,7 +204,7 @@ function withPlainCitations(value) {
 }
 
 /**
- * The board of governance: nine companies on a final score and the two figures
+ * The board of governance: ten companies on a final score and the two figures
  * it adds.
  *
  * Read from the board the publication froze. Nothing in it was judged by a
