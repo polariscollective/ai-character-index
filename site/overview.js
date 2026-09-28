@@ -295,8 +295,15 @@ function aboutComing(content, item) {
 function comingRow(item) {
   const tr = element("tr", "total-row outside-row coming-row");
   tr.dataset.row = `coming-${item.id}`;
-  tr.append(view.rowHead(null, rowTitle(item.name, content => aboutComing(content, item),
-    `${item.name}: in preparation`)));
+  // The same head as a score's row, with no fold's space before the name, so
+  // the four names start at one edge.
+  const head = element("th");
+  head.scope = "row";
+  const line = element("div", "row-head");
+  line.append(rowTitle(item.name, content => aboutComing(content, item),
+    `${item.name}: in preparation`));
+  head.append(line);
+  tr.append(head);
   const cell = element("td", "cell");
   cell.colSpan = state.companies.length;
   cell.append(element("span", "cell-coming", "In preparation"));
