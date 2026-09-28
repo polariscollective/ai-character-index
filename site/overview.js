@@ -405,7 +405,14 @@ function contextRows(noteNumber) {
       name.append(mark);
     }
     if (row.sub) label.append(element("span", "context-sub", row.sub));
-    tr.append(view.rowHead(null, label));
+    // No fold's space before the name, so it starts at the same edge as the
+    // rows above.
+    const head = element("th");
+    head.scope = "row";
+    const line = element("div", "row-head");
+    line.append(label);
+    head.append(line);
+    tr.append(head);
     state.companies.forEach(company => {
       const entry = context.companies?.[company.id]?.[row.id];
       if (!entry) {
