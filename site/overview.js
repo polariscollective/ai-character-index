@@ -455,7 +455,7 @@ function contextRows(noteNumber) {
         // Under the squares, whether anyone can download the company's
         // flagship model, as the governance board records it; the line keeps
         // its place when empty, so the squares sit level across the row.
-        const open = element("span", "cell-context-sub", company.openWeights ? "Open weights" : "\u00a0");
+        const open = element("span", "cell-context-open", company.openWeights ? "Open weights" : "\u00a0");
         if (!company.openWeights) open.setAttribute("aria-hidden", "true");
         button.append(usageMeter(entry.level), open);
       } else if (entry.band) {
