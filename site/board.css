@@ -1262,9 +1262,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The overview shows only the final scores, so its rows are divided by the
    light rule the tables use rather than the board's strong one. */
 .ovw-board .total-row { border-bottom: 1px solid rgb(92 107 60 / .2); }
-/* A view in preparation: no figure and no colour, the words quiet at the start
-   of the one cell that spans the companies, where they stay in view however far
-   the grid is scrolled sideways. */
+/* A view in preparation: no figure and no colour, the words quiet in the
+   middle of the one cell that spans the companies. */
 /* The scale beside the modes at the top. */
 .ovw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
 .ovw-top-legend { margin: 0; }
@@ -1275,7 +1274,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .cell-coming {
   display: flex;
   align-items: center;
-  padding-left: 8px;
+  justify-content: center;
   min-height: 54px;
   font-size: 11px;
   color: var(--faint);
