@@ -80,7 +80,7 @@ sys.path.insert(0, str(ROOT / "engine"))
 import seat_substitutions         # noqa: E402
 import manual_review              # noqa: E402
 
-MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
+MODEL_LABEL = {"sol": "GPT-5.6 Sol", "fable": "Claude Fable 5", "opus-5.5": "Claude Opus 5.5", "qwen-max": "Qwen3.7-Max", "kimi": "Kimi-K3", "kimi-k2": "Kimi-K2.6", "qwen-big": "Qwen3-235B", "opus": "Claude Opus 4.8",
                "gpt-mini": "GPT-5 mini", "haiku": "Claude Haiku 4.5", "qwen-small": "Qwen3-32B"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -140,13 +140,18 @@ def cell_of(row):
     return row["behaviour"], row["locator"].split(" > ", 1)[0]
 
 
-def admits(row, rubric, panel, substitutions=None):
+def admits(row, rubric, panel, substitutions=None, provisional=None):
     """Pure: whether a runlog row votes in the payload. Its rubric must be the
     build's, its reply must have parsed, and its model must hold a seat of the
     panel as its cell was seated -- a recorded substitute in its seat's place on
-    that cell, and on no other."""
+    that cell, and on no other.
+
+    `provisional` is {(slug, document id): seat} for the cells one model read in
+    session (session_seat.py): in such a cell that seat votes, and nobody else."""
     if row.get("rubric", "v1") != rubric or not row.get("parsed", True):
         return False
+    if cell_of(row) in (provisional or {}):
+        return row["model"] == provisional[cell_of(row)]
     seated = seat_substitutions.seats(panel, (substitutions or {}).get(cell_of(row), ()))
     return row["model"] in seated
 
@@ -217,7 +222,7 @@ def display_behaviours(keep, registry):
 
 
 def build_behaviours(behaviours, votes, text, document_ids, depths, panel, display,
-                     substitutions=None, manual=None):
+                     substitutions=None, manual=None, provisional=None):
     """The payload's behaviours.
 
     `votes` is {(slug, locator): {model: verdict}}, `text` {locator: passage text},
@@ -232,7 +237,12 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
     {"band", "note"}, the band None where the correction takes it off; its
     verdicts stay the judges'. A corrected depth's `mean` is the manual figure,
     with the judges' mean as `judgesMean` and the correction as `manual`. A
-    build given no corrections writes what it always wrote."""
+    build given no corrections writes what it always wrote.
+
+    `provisional` is {(slug, document id): {"seat", "run"}} for the cells one
+    model read in session. Such a cell keeps every passage its one seat banded,
+    as the reader bands a lone judge, whatever the panel's retention cut; its
+    coverage entry carries `provisional`, and its depth `provisional: true`."""
     sym = {3: "✓✓", 2: "✓", 1: "~", 0: "✗"}
     word = {3: "defining", 2: "core", 1: "related", 0: "not relevant"}
     out = []
@@ -241,6 +251,7 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
         for document_id in document_ids:
             review = (manual or {}).get((b["slug"], document_id)) or {}
             corrected = review.get("passages") or {}
+            held = (provisional or {}).get((b["slug"], document_id))
             cell = []
             for (slug, locator), mv in votes.items():
                 if slug != b["slug"] or locator.split(" > ", 1)[0] != document_id:
@@ -258,8 +269,10 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
             for locator, mv in cell:
                 score = sum(mv.values())
                 correction = corrected.get(locator)
-                if correction is None and not keeps_citation(
-                        score, len(mv), len(panel), display["threshold"]):
+                # One model's reading keeps what it banded: the lone judge's cut.
+                if correction is None and not (
+                        keeps_citation(score, len(mv), 1, 1) if held else keeps_citation(
+                            score, len(mv), len(panel), display["threshold"])):
                     continue
                 if correction is not None and locator not in text:
                     sys.exit(f"a manual review names {locator}, which "
@@ -268,6 +281,8 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
                                       for m, v in sorted(mv.items(), key=lambda x: -x[1]))
                 quote, is_example = citation_quote(text.get(locator, ""))
                 role = f"Model determined relevance (score {score}/{max_verdict * len(mv)}):\n{decisions}"
+                if held:
+                    role = f"Provisional: marked by one model, reading in one session.\n{role}"
                 citation = {
                     "id": f"{document_id}-{b['slug']}-panel-{len(cits) + 1}",
                     "locator": locator, "quote": quote, "exampleBlock": is_example,
@@ -288,7 +303,11 @@ def build_behaviours(behaviours, votes, text, document_ids, depths, panel, displ
                 depth = {**(depth or {}), "mean": float(given["depth"]),
                          "judgesMean": (depth or {}).get("mean"),
                          "manual": {"depth": given["depth"], "rationale": given["rationale"]}}
+            if held and depth is not None:
+                depth = {**depth, "provisional": True}
             cov[document_id] = {"depth": depth, "passages": cits}
+            if held:
+                cov[document_id]["provisional"] = held
             # Only where there is one: an absent key keeps every other cell's bytes.
             seated = (substitutions or {}).get((b["slug"], document_id))
             if seated:
@@ -415,6 +434,12 @@ def document_assessment(run, calls, scores, claims, verdicts, text):
     }
 
 
+def assessed_as_read(run, assessment):
+    """A document's assessment, marked `provisional` when one model read it in
+    session (session_seat.py); every other assessment exactly as it was."""
+    return {**assessment, "provisional": True} if run and run.get("provisional") else assessment
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     sp = importlib.util.spec_from_file_location("h", HERE / "harness.py")
@@ -435,6 +460,7 @@ def main(argv=None):
     depth_prompt = None       # the prompt of four unless named
     assessment_run_id = None  # none: the scale of four, and no assessment
     with_manual = False       # the owner's corrections, read only when asked
+    provisional_assessments = {}   # {version id: assessment run} read in session
     for a in argv:
         if a.startswith("--rubric="):
             rubric = a.split("=", 1)[1]
@@ -473,13 +499,16 @@ def main(argv=None):
             assessment_run_id = a.split("=", 1)[1]
         elif a == "--manual-review":            # the owner's corrections win over the judges
             with_manual = True
+        elif a.startswith("--provisional-assessments="):  # version:run, read in session
+            provisional_assessments = dict(pair.split(":", 1) for pair in
+                                           a.split("=", 1)[1].split(",") if pair)
         else:
             # Unknown args were ignored, so `--help` ran a full build and wrote a
             # payload + manifest. Asking for help must not mutate the repo.
             sys.exit(f"unknown argument {a!r} -- valid: --rubric= --panel= "
                      "--behaviours= --run-date= --out= --cells= "
                      "--threshold= --solid-threshold= --depth-prompt= --assessment-run= "
-                     "--manual-review")
+                     "--manual-review --provisional-assessments=")
     if out_name is None:
         sys.exit("--out=PATH is required: this writes the payload where it is told")
     panel = resolve_panel(config, DISPLAY["panel"])
@@ -505,6 +534,16 @@ def main(argv=None):
     substitutions = cell_substitutions(
         seat_substitutions.recorded(store, run_id=[c["run_id"] for c in cells]),
         cells, versions, panel)
+    # The cells one model read in session: its seat votes there, and they say so.
+    runs = {run["id"]: run for run in store.select("aci_runs")}
+    provisional = {}
+    for cell in cells:
+        run = runs.get(cell["run_id"]) or {}
+        if run.get("provisional"):
+            version = versions[cell["spec_version_id"]]
+            provisional[(cell["behaviour_slug"], f"{version['spec_id']}@{version['version']}")] = {
+                "seat": run["panel"][0], "run": run["id"]}
+    provisional_seats = {key: mark["seat"] for key, mark in provisional.items()}
     votes = collections.defaultdict(dict)
     runlog_models = set()
     runlog_rubrics = set()
@@ -514,7 +553,7 @@ def main(argv=None):
         runlog_keys.add(d["behaviour"])
         runlog_models.add(d["model"])   # pre-filter, so a zero can name them
         runlog_rubrics.add(d.get("rubric", "v1"))
-        if not admits(d, rubric, panel, substitutions):
+        if not admits(d, rubric, panel, substitutions, provisional_seats):
             continue
         votes[(d["behaviour"], d["locator"])][d["model"]] = d.get("verdict", 0)
         max_verdict = max(max_verdict, d.get("verdict", 0))
@@ -527,8 +566,17 @@ def main(argv=None):
     document_ids = [f"{v['spec_id']}@{v['version']}" for v in published]
     if assessment_run_id is not None:
         # Refused here, naming every document the run left out, before anything
-        # else is read on its behalf.
-        assessment_run_row, assessed = index_store.assessment(store, assessment_run_id, published)
+        # else is read on its behalf. A document read by one model in session is
+        # read from its own provisional assessment run.
+        assessment_of = {}
+        by_run = {}
+        for version in published:
+            by_run.setdefault(provisional_assessments.get(version["id"], assessment_run_id),
+                              []).append(version)
+        for run_id, members in by_run.items():
+            run_row, assessed = index_store.assessment(store, run_id, members)
+            for version in members:
+                assessment_of[version["id"]] = (run_row, assessed[version["id"]])
     text = {}
     for version in published:
         for loc, _sec, t in h.passages(version["spec_id"], version["version"]):
@@ -536,18 +584,20 @@ def main(argv=None):
     depths = {(slug, f"{versions[version_id]['spec_id']}@{versions[version_id]['version']}"): depth
               for (slug, version_id), depth
               in index_store.cell_depths(store, cells, assessment_run_id,
-                                         depth_prompt=depth_prompt).items()}
+                                         depth_prompt=depth_prompt,
+                                         provisional=provisional_assessments).items()}
 
     manual = None
     if with_manual:
         manual = {(slug, f"{versions[version_id]['spec_id']}@{versions[version_id]['version']}"): review
                   for (slug, version_id), review
                   in index_store.manual_reviews(store, cells, assessment_run_id,
-                                                depth_prompt=depth_prompt).items()}
+                                                depth_prompt=depth_prompt,
+                                                provisional=provisional_assessments).items()}
 
     behaviours = display_behaviours(DISPLAY["behaviours"], registry)
     out_behaviours = build_behaviours(behaviours, votes, text, document_ids, depths,
-                                      panel, DISPLAY, substitutions, manual)
+                                      panel, DISPLAY, substitutions, manual, provisional)
     seats = sorted({m for b_ in out_behaviours for cov in b_["coverage"].values()
                     for p in cov["passages"] for m in p.get("verdicts", {})})
     # The substitution note records WHY a provider failed on a given cell -- something
@@ -578,9 +628,11 @@ def main(argv=None):
         # before these existed, byte for byte.
         out["depthScale"] = 10
         out["assessment"] = dict(sorted(
-            (f"{version['spec_id']}@{version['version']}", document_assessment(
-                assessment_run_row, *(assessed[version["id"]][table] for table in
-                                      ("calls", "scores", "claims", "verdicts")), text))
+            (f"{version['spec_id']}@{version['version']}", assessed_as_read(
+                assessment_of[version["id"]][0], document_assessment(
+                    assessment_of[version["id"]][0],
+                    *(assessment_of[version["id"]][1][table] for table in
+                      ("calls", "scores", "claims", "verdicts")), text)))
             for version in published))
     out["behaviours"] = out_behaviours
     n = sum(len(c["passages"]) for b in out_behaviours for c in b["coverage"].values())
