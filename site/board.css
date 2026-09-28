@@ -1282,17 +1282,22 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .context-name:focus-visible { text-decoration-color: currentColor; outline: none; }
 .ovw-board .context-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 .ovw-board .cell-context {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-rows: 28px 15px 15px;
+  row-gap: 2px;
+  align-content: center;
+  justify-items: center;
   background: transparent;
   height: 80px;
   min-height: 80px;
-  padding: 10px 4px 8px;
-  gap: 3px;
+  padding: 8px 4px;
   overflow: hidden;
 }
+/* Three bands of one height in every cell, so each line sits level across the
+   row: two lines' room for the model's name, held to the bottom so a short name
+   meets the line under it, then the months, then open weights. */
+.ovw-board .cell-context > .cell-context-words { align-self: end; }
+.ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
 /* A row's name, and under it in small type what its cells say. */
 .ovw-board .context-label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .ovw-board .context-sub { font-size: 11px; color: var(--faint); }
@@ -1320,8 +1325,6 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   width: 1px;
   background: rgb(92 107 60 / .2);
 }
-/* A cell with one thing to say says it in the middle. */
-.ovw-board .cell-context > :only-child { margin: auto 0; }
 /* A model at the frontier: its words in bold and in ink. */
 .ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); }
 .ovw-board .cell-context-band { font-family: var(--mono); font-size: 13px; line-height: 1.2; }
