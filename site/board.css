@@ -1244,13 +1244,18 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    cell is the same size whatever it holds, a few words on two lines at most. */
 .ovw-board .context-head th { padding: 12px 0 6px; text-align: left; border-bottom: 1px solid rgb(92 107 60 / .2); }
 .ovw-board .context-title { font-size: 12px; font-weight: 600; color: var(--faint); }
+/* The heading's one line: name and colour scale at the left, the switch at the
+   table's right edge. */
+.ovw-board .context-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ovw-board .context-left { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 20px; }
+.ovw-board .context-left .gov-legend { margin: 0; font-weight: 400; }
 .ovw-board .context-head .row-mark { color: var(--faint); }
 /* The switch for the context, small, beside its heading. */
 /* Hidden, the context is one small button; shown, it is closed again by a
    small underlined word before its heading. */
 .ovw-board .ovw-context-toggle { padding: 3px 12px; font-size: 12px; }
 .ovw-board .context-hide {
-  margin-right: 10px;
+  margin-left: 10px;
   padding: 0;
   border: 0;
   background: none;
