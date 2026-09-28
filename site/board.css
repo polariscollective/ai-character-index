@@ -1308,7 +1308,18 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 }
 .ovw-board .cell-context-sub { color: var(--faint); }
 /* The rows keep a little air between them, as the grid above does. */
-.ovw-board .context-row .cell { padding: 5px 1px 5px 0; }
+.ovw-board .context-row .cell { position: relative; padding: 5px 1px 5px 0; }
+/* A light divider between two context cells, short of the cell's top and
+   bottom, so the columns read apart without drawing boxes. */
+.ovw-board .context-row .cell + .cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgb(92 107 60 / .2);
+}
 /* A cell with one thing to say says it in the middle. */
 .ovw-board .cell-context > :only-child { margin: auto 0; }
 /* A model at the frontier: its words in bold and in ink. */
