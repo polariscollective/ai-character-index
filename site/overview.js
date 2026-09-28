@@ -314,7 +314,10 @@ function contextRows(noteNumber) {
     name.setAttribute("aria-label", `${row.name}: what it is, where it comes from, its limits`);
     name.addEventListener("click", () =>
       view.openPopover(name, content => aboutContextRow(content, context, row)));
-    tr.append(view.rowHead(null, name));
+    const label = element("span", "context-label");
+    label.append(name);
+    if (row.sub) label.append(element("span", "context-sub", row.sub));
+    tr.append(view.rowHead(null, label));
     state.companies.forEach(company => {
       const entry = context.companies?.[company.id]?.[row.id];
       if (!entry) {
@@ -327,12 +330,13 @@ function contextRows(noteNumber) {
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
         content => aboutContextCell(content, context, row, company, entry),
         "cell-button cell-context");
-      if (entry.behind) {
-        // The model, and how far it trails the frontier in words, set in bold
-        // for a model at the frontier.
+      if (entry.short) {
+        // The model at the top and how far it trails the frontier at the
+        // bottom, so both lines sit level across the row; a model at the
+        // frontier is said in bold.
         button.append(element("span", "cell-context-words", entry.shown),
           element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
-            : "cell-context-sub", entry.behind));
+            : "cell-context-sub", entry.short));
       } else if (entry.band) {
         // A step of ten, in the data face, and what it counts.
         button.append(element("span", "cell-context-band", entry.band),
