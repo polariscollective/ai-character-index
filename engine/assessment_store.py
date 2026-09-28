@@ -542,8 +542,11 @@ class Assessment:
     says (`record_replay`, `group`)."""
 
     def __init__(self, store, config, panels, call_model, panel=PANEL, run=None,
-                 existing=None, criteria_from=None, replay=False):
+                 existing=None, criteria_from=None, replay=False, provisional=False):
         self.store, self.config, self.panels = store, config, panels
+        # One seat answering in a working session (session_seat.py): the run
+        # row says so, and the database refuses one of more than one seat.
+        self.provisional = provisional
         self.call_model, self.panel = call_model, panel
         self.run = run
         self.criteria_from = criteria_from
@@ -597,10 +600,13 @@ class Assessment:
             panels["criteria"] = list(self.criteria_from["panels"]["criteria"])
             prompts["criteria"] = self.criteria_from["prompts"]["criteria"]
             config["criteria_from"] = self.criteria_from["id"]
-        self.store.insert("aci_assessment_runs", [{
-            "id": self.run_id, "created_by": created_by, "status": "pending",
-            "panels": panels, "prompts": prompts, "config": config,
-            "estimated_usd": estimate}])
+        row = {"id": self.run_id, "created_by": created_by, "status": "pending",
+               "panels": panels, "prompts": prompts, "config": config,
+               "estimated_usd": estimate}
+        # Only when set, so a run started as before writes the row it always wrote.
+        if self.provisional:
+            row["provisional"] = True
+        self.store.insert("aci_assessment_runs", [row])
         self.written = True
         patch = {"status": "running", "started_at": now()}
         try:

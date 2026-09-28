@@ -132,6 +132,7 @@ export function constitutionsBoard(snapshot, args = {}) {
             figure: given === null ? null : given / CRITERION_SCALE * TEN, given,
             what_the_document_does: entry.what_the_document_does ?? null,
             why: entry.why ?? null,
+            ...provisionalOf(entry),
           };
         }),
       },
@@ -153,11 +154,21 @@ export function constitutionsBoard(snapshot, args = {}) {
             // A figure set by hand carries the judges' own mean and the reason.
             ...(entry.manual ? { manual_review: {
               judges_mean: numeric(entry.manual.judges), note: entry.manual.note ?? null } } : {}),
+            ...provisionalOf(entry),
           };
         }),
       },
     })),
   };
+}
+
+/* A figure one model gave in session, where no panel has read the document
+ * (engine/panel/session_seat.py): its seat and the board's own note, or
+ * nothing for a figure the panel gave. */
+function provisionalOf(entry) {
+  const mark = entry?.provisional;
+  if (!mark || typeof mark.seat !== "string") return {};
+  return { provisional: { seat: mark.seat, note: mark.note ?? null } };
 }
 
 /* The governance board of the publication being answered from. Set at the head
@@ -204,7 +215,7 @@ function withPlainCitations(value) {
 }
 
 /**
- * The board of governance: nine companies on a final score and the two figures
+ * The board of governance: ten companies on a final score and the two figures
  * it adds.
  *
  * Read from the board the publication froze. Nothing in it was judged by a

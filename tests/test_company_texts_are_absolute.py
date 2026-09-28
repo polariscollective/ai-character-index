@@ -29,6 +29,7 @@ NAMES = {
     "xai": ["xAI", "Grok"],
     "moonshot": ["Moonshot", "Kimi"],
     "deepseek": ["DeepSeek"],
+    "microsoft": ["Microsoft", "Copilot"],
 }
 
 

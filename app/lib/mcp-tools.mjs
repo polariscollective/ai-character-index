@@ -55,6 +55,21 @@ function substitutionsOf(behaviour, modelSpecId) {
   return recorded.map(({ seat, substitute, reason }) => ({ seat, substitute, reason }));
 }
 
+/**
+ * The seat that read a cell alone, from inside a working session, where no
+ * panel has judged the document yet, or null. Its passages and its depth are
+ * that one model's reading (engine/panel/session_seat.py).
+ */
+export const PROVISIONAL_NOTE = "Provisional: one model read this document in a working "
+  + "session and marked these passages and gave this depth. The panel of three judges "
+  + "has not read it yet, and will replace this reading when it does.";
+
+function provisionalOf(behaviour, modelSpecId) {
+  const mark = behaviour?.coverage?.[modelSpecId]?.provisional;
+  if (!mark || typeof mark.seat !== "string") return null;
+  return { seat: mark.seat, note: PROVISIONAL_NOTE };
+}
+
 /** The fields that identify a specification, without its text. */
 function specSummary(document) {
   return {
@@ -108,12 +123,14 @@ export function listBehaviours({ publication, payload, notes }) {
       for (const modelSpecId of Object.keys(behaviour.coverage || {})) {
         const passages = passagesOf(behaviour, modelSpecId);
         const substitutions = substitutionsOf(behaviour, modelSpecId);
+        const provisional = provisionalOf(behaviour, modelSpecId);
         coverage[modelSpecId] = {
           passages: passages.length,
           strongest: TIERS.find(
             tier => passages.some(passage => passage.band === tier)) || null,
           depth: panelDepth(behaviour, modelSpecId),
           ...(substitutions ? { substitutions } : {}),
+          ...(provisional ? { provisional } : {}),
         };
       }
 
@@ -283,11 +300,13 @@ export function retrievePassages({ publication, payload, documents }, args = {})
     results: page.map(cell => {
       const behaviour = behaviourBySlug.get(cell.slug);
       const substitutions = substitutionsOf(behaviour, cell.modelSpecId);
+      const provisional = provisionalOf(behaviour, cell.modelSpecId);
       return {
         behaviour: cell.slug,
         model_spec_id: cell.modelSpecId,
         depth: panelDepth(behaviour, cell.modelSpecId),
         ...(substitutions ? { substitutions } : {}),
+        ...(provisional ? { provisional } : {}),
         passages: cell.passages.map(shapePassage),
         // Two silences, and they are different claims: a panel read this
         // document and found nothing, or no panel has read it at all. Only a
@@ -608,6 +627,10 @@ seat's model replied off the scale, is marked on that judge's entry of the depth
 with the model and the reason; the pair then carries no substitutions field,
 since its passages are the panel's own.
 
+Where no panel has judged a document yet, one model may have read it in a working
+session, and each pair of that document carries provisional: the seat and a note.
+Its passages and its depth are that one model's reading, not the panel's.
+
 Every answer names the publication it was read from. A publication whose
 is_public is false is a build nobody has published, served by a development
 deployment, and what it answers is not the index's published data.
@@ -641,7 +664,7 @@ governance_board scores what the companies do around those documents. Whether a
 company publishes a constitution at all, whether it logs the changes it makes to
 it, what it says about the filters that sit outside the model, which rules it
 declares can never be lifted, and what it states about training, testing and
-monitoring against its own text. Nine companies, two figures out of 10 each,
+monitoring against its own text. Ten companies, two figures out of 10 each,
 averaged into a final score out of 10. Those scores were given by hand from
 public documents, and a nought there means nothing public was found. The board
 is the one the publication froze, as the front page shows it.
@@ -760,6 +783,14 @@ export function about({ publication, payload, documents, notes }, { site = null 
   const levels = levelsOf(scale);
   const substitutions = substitutionsByModel(behaviours);
   const depthSubstitutions = depthSubstitutionsByModel(behaviours);
+  // The documents one model read in session, and the seat that read them.
+  const provisional = new Map();
+  for (const behaviour of behaviours) {
+    for (const id of Object.keys(behaviour.coverage || {})) {
+      const mark = provisionalOf(behaviour, id);
+      if (mark) provisional.set(id, mark.seat);
+    }
+  }
 
   // The panel as the payload recorded it, skipping what it did not record.
   const judged = [
@@ -843,6 +874,11 @@ export function about({ publication, payload, documents, notes }, { site = null 
       ...depthSubstitutions.map(each => `  ${each.substitute} in the seat of ${each.seat}, `
         + `on ${each.count === 1 ? "one pair" : `${each.count} pairs`}: `
         + each.cells.join("; "))] : []),
+    ...(provisional.size ? ["",
+      "Provisional readings. No panel has judged these documents yet. One model read "
+      + "each of them in a working session, and its passages and depths are that "
+      + "model's alone; every pair of them carries provisional:",
+      ...[...provisional].map(([id, seat]) => `  ${id}, read by ${seat}`)] : []),
     "",
     "Quoting. Every passage comes back with its quote and a locator naming the "
     + "document, its version, the section and the sentences."
@@ -869,7 +905,7 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "scale it is on and what it means, for every constitution or for one "
     + "company. Reach for it to answer how far a constitution goes, or how two of "
     + "them compare.",
-    "  governance_board: nine companies scored on four questions about how they "
+    "  governance_board: ten companies scored on four questions about how they "
     + "govern the rules their models follow. Those figures were given by hand "
     + "from public documents rather than judged by the panel. The board is the "
     + "one the publication froze, and carries its own as-of date.",

@@ -560,3 +560,47 @@ class ManualReviewTest(unittest.TestCase):
         self.assertEqual(cell["depth"]["judgesMean"], 5.3)
         self.assertEqual(cell["depth"]["manual"], {"depth": 3, "rationale": "One facet."})
         self.assertIn("sol", cell["depth"]["judges"])
+
+
+class ProvisionalTest(unittest.TestCase):
+    """A cell one model read in session (session_seat.py) is carried on its one
+    seat's verdicts, whatever the panel's retention cut, and says so."""
+    SEAT = "opus-5.5"
+    MS = "microsoft--code-of-conduct@2026-09-14"
+    CUT = {"threshold": 4, "solid_threshold": 6}
+    VOTES = {("b", f"{MS} > #x > ¶1"): {"opus-5.5": 1},
+             ("b", f"{MS} > #x > ¶2"): {"opus-5.5": 3},
+             ("b", f"{MS} > #x > ¶3"): {"opus-5.5": 0}}
+    TEXT = {locator: "Quoted." for _slug, locator in VOTES}
+    DEPTHS = {("b", MS): {"mean": 7.0, "scale": 10,
+                          "judges": {"opus-5.5": {"depth": 7, "rationale": "Rules."}}}}
+    MARK = {("b", MS): {"seat": "opus-5.5", "run": "p1"}}
+
+    def cell(self, provisional):
+        [row] = bs.build_behaviours(BRAVO, self.VOTES, self.TEXT, [self.MS], self.DEPTHS,
+                                    PANEL, self.CUT, provisional=provisional)
+        return row["coverage"][self.MS]
+
+    def test_every_passage_the_one_seat_banded_is_carried(self):
+        cell = self.cell(self.MARK)
+        self.assertEqual([p["locator"] for p in cell["passages"]],
+                         [f"{self.MS} > #x > ¶2", f"{self.MS} > #x > ¶1"])
+
+    def test_the_cell_and_its_depth_say_they_are_provisional(self):
+        cell = self.cell(self.MARK)
+        self.assertEqual(cell["provisional"], {"seat": "opus-5.5", "run": "p1"})
+        self.assertTrue(cell["depth"]["provisional"])
+        self.assertIn("Claude Opus 5.5", cell["passages"][0]["role"])
+
+    def test_a_cell_that_is_not_provisional_carries_neither_mark(self):
+        [row] = bs.build_behaviours(BRAVO, VOTES, TEXT, [OLD], {}, PANEL, DISPLAY,
+                                    provisional={})
+        self.assertNotIn("provisional", row["coverage"][OLD])
+
+    def test_the_one_seat_votes_only_in_its_own_cell(self):
+        row = {"behaviour": "b", "locator": f"{self.MS} > #x > ¶1", "model": self.SEAT,
+               "rubric": "v5", "parsed": True}
+        seats = {("b", self.MS): self.SEAT}
+        self.assertTrue(bs.admits(row, "v5", PANEL, None, seats))
+        self.assertFalse(bs.admits(row, "v5", PANEL, None, {}))
+        self.assertFalse(bs.admits(dict(row, locator=f"{OLD} > #x > ¶1"), "v5", PANEL, None, seats))

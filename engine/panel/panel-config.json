@@ -63,6 +63,11 @@
       "id": "claude-opus-5",
       "_note": "Not a hosted seat, and no request for it is ever sent to a provider. It names the model judging from inside a Claude Code session, driven by engine/panel/link_self.py, and exists here only so harness.resolve is satisfied and link_job's pipeline can run unchanged with the reply read from a file. It carries no price_per_mtok deliberately: batch_job.cost_of then records null, which this project reads as unknown rather than as free, and a session's tokens are not billed through this ledger. A run judged by this seat is not the panel and must not be published as one."
     },
+    "opus-5.5": {
+      "provider": "anthropic",
+      "id": "claude-opus-5-5",
+      "_note": "Not a hosted seat, and no request for it is ever sent to a provider. It names Claude Opus 5.5 answering from inside a Claude Code session, driven by engine/panel/session_seat.py, for a provisional reading of a document no panel has judged. It exists here only so harness.resolve is satisfied and the engine's pipelines run unchanged with each reply read from a file. It carries no price_per_mtok deliberately: batch_job.cost_of then records null, which this project reads as unknown rather than as free."
+    },
     "fable": {
       "provider": "anthropic",
       "id": "claude-fable-5",
@@ -264,6 +269,10 @@
       "opus-5"
     ],
     "_opus_5_self_note": "One seat, and it is the model running the Claude Code session rather than a hosted judge. Composed and driven by engine/panel/link_self.py: the engine's own pipeline runs unchanged, with each reply coming from a file a subagent wrote instead of from a socket. Two things follow from having one seat and must be said rather than discovered. A single judge cannot assert a silence, which needs all three, so an absent row from this panel is one model's opinion and not the index's finding. And it cannot disagree with itself across seats, so the second pass over such a run compares its two directions against each other rather than its judges. Never a published panel: this seat is an Anthropic model reading Anthropic's own constitution against another laboratory's specification, which is precisely the conflict the index exists to avoid.",
+    "session_opus_5_5": [
+      "opus-5.5"
+    ],
+    "_session_opus_5_5_note": "One seat, the model running a Claude Code session, for a provisional reading (engine/panel/session_seat.py). Its runs carry provisional = true, and a publication takes one of its cells only where no run of the display panel judged that cell, marking it provisional wherever it is shown. Never the display panel: one model is not a panel, and the seat is an Anthropic model reading other companies' documents.",
     "itest": [
       "qwen-big"
     ],

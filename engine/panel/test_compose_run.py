@@ -127,6 +127,27 @@ class PlanTest(unittest.TestCase):
         _run, calls = self.plan(FakeStore(failed))
         self.assertEqual(len(calls), 4)
 
+    def test_a_provisional_plan_says_so_on_its_run(self):
+        """A provisional run is one model reading in session, and the run carries
+        the flag the publication trigger and the publisher read."""
+        config = dict(CONFIG, panels={"one": ["a"]})
+        run, calls = compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"], "one",
+                                      config=config, provisional=True)
+        self.assertTrue(run["provisional"])
+        self.assertEqual(run["panel"], ["a"])
+        self.assertEqual({c["model"] for c in calls}, {"a"})
+
+    def test_a_provisional_run_has_one_seat(self):
+        with self.assertRaises(SystemExit):
+            compose_run.plan(FakeStore(), ["defined-behaviour"], ["v-new"], "two",
+                             config=CONFIG, provisional=True)
+
+    def test_a_run_that_is_not_provisional_carries_no_flag(self):
+        """Absent rather than false, so a run composed as before writes the row it
+        always wrote."""
+        run, _calls = self.plan(FakeStore())
+        self.assertNotIn("provisional", run)
+
     def test_the_estimate_follows_the_documents_and_the_prices(self):
         run, _calls = self.plan(FakeStore())
         self.assertGreater(run["estimated_usd"], 0)

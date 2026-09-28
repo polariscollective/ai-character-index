@@ -49,7 +49,7 @@ DEPTH_OUTPUT_TOKENS = 600
 
 
 def plan(store, behaviours, documents, panel_name=None, rubric="v5", config=None,
-         again=False):
+         again=False, provisional=False):
     """Every call a run would carry, and what it would cost.
 
     Pure: it reads, it computes, it writes nothing. --go is the only thing that
@@ -64,10 +64,17 @@ def plan(store, behaviours, documents, panel_name=None, rubric="v5", config=None
     covers. Without it, a panel that shares a judge with an earlier run is composed
     without that judge, and a publication cannot use the result: it needs all of a
     cell's judges in one run.
+
+    `provisional` composes a run of one seat answering from inside a working
+    session (session_seat.py), which a publication takes only where no run of
+    the display panel judged the cell. The run says so, and the database
+    refuses a provisional run of more than one seat.
     """
     config = config or h.load_config()
     panel_name = panel_name or config["display"]["panel"]
     seats = sorted(config["panels"][panel_name])
+    if provisional and len(seats) != 1:
+        sys.exit(f"a provisional run has one seat, and panel {panel_name} has {len(seats)}")
 
     registry = index_store.behaviours(store)
     unknown = sorted(set(behaviours) - set(registry))
@@ -114,6 +121,9 @@ def plan(store, behaviours, documents, panel_name=None, rubric="v5", config=None
                                "depth_prompt_sha256": depth_call.prompt_sha256()},
            "behaviours": {slug: registry[slug] for slug in sorted(behaviours)},
            "estimated_usd": round(estimate, 2)}
+    # Only when set, so a run composed as before writes the row it always wrote.
+    if provisional:
+        run["provisional"] = True
     return run, calls
 
 

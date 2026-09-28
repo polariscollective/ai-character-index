@@ -322,6 +322,28 @@ def verdict(holds, absolute=False, reason=""):
     return {"holds": holds, "absolute": absolute, "reason": reason}
 
 
+class OneSeatSettleTest(unittest.TestCase):
+    """A provisional run has one seat, and its quorum is one: the rule is at
+    least two readings, or every reading when there are fewer seats than two."""
+
+    def test_the_quorum_follows_the_seats(self):
+        self.assertEqual(assessment_run.quorum_of(["sol", "opus", "kimi"]), 2)
+        self.assertEqual(assessment_run.quorum_of(["opus-5.5"]), 1)
+
+    def test_the_one_seat_s_holding_reading_confirms_a_claim(self):
+        pooled = [dict(item(2, 3), found_by=["opus-5.5"])]
+        [claim] = assessment_run.settle(
+            pooled, {"opus-5.5": {0: verdict(True, absolute=True)}}, ["opus-5.5"], PASSAGES)
+        self.assertTrue(claim["confirmed"])
+        self.assertTrue(claim["absolute"])
+
+    def test_a_panel_of_three_still_needs_two(self):
+        pooled = [dict(item(2, 3), found_by=["sol"])]
+        [claim] = assessment_run.settle(
+            pooled, {"sol": {0: verdict(True)}}, ["sol", "opus", "kimi"], PASSAGES)
+        self.assertFalse(claim["confirmed"])
+
+
 class SettleTest(unittest.TestCase):
     """A claim is settled on its readings, one per seat that read it. Finding
     a claim is not a reading of it."""

@@ -139,7 +139,8 @@ def check_the_publication_rebuilds_to_its_digests(store, publication):
                  ("assessment_run_id", "assessment_run"),
                  ("comparisons", "comparisons"),
                  ("unanalysed_documents", "unanalysed"),
-                 ("manual_review", "manual_review"))
+                 ("manual_review", "manual_review"),
+                 ("provisional_assessment_runs", "provisional"))
                 if key in params}
     built = {}
     for name in ("payload", "documents", "links"):

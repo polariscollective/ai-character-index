@@ -180,13 +180,13 @@ const handler = createMcpHandler(
     server.registerTool("governance_board", {
       title: "The board of governance",
       description:
-        "How openly each of nine AI companies governs the rules it gives its "
+        "How openly each of ten AI companies governs the rules it gives its "
         + "models. A constitution here is the document in which a company sets "
         + "out how its models are meant to behave, such as Claude's Constitution "
         + "or the OpenAI Model Spec. This tool does not read those documents, it "
         + "scores what the company does around them; constitutions_board reads "
-        + "the documents themselves. The nine are OpenAI, Anthropic, Alibaba, "
-        + "Google DeepMind, Mistral AI, Meta, xAI, Moonshot AI and DeepSeek.\n\n"
+        + "the documents themselves. The ten are OpenAI, Anthropic, Alibaba, "
+        + "Microsoft AI, Google DeepMind, Mistral AI, Meta, xAI, Moonshot AI and DeepSeek.\n\n"
         + "Each company answers with a final score out of 10, which ranks the "
         + "companies, and the two figures out of 10 it averages, each counting "
         + "for half.\n\n"
@@ -220,12 +220,12 @@ const handler = createMcpHandler(
         + "documents, on a date the answer names. The board is the one the "
         + "publication froze. A nought means nothing public was found, "
         + "not that the company does not do the thing.\n\n"
-        + "Pass company to narrow to one. All nine come to about 455,000 "
+        + "Pass company to narrow to one. All ten come to about 529,000 "
         + "characters, sources included; one company to between 67,000 and "
-        + "104,000.",
+        + "113,000.",
       inputSchema: z.object({
         company: z.string().optional().describe(
-          "One company's name, or part of it, such as Anthropic. All nine by "
+          "One company's name, or part of it, such as Anthropic. All ten by "
           + "default."),
       }),
     }, args => answer(snapshot => governanceBoard(snapshot, args)));
@@ -233,7 +233,7 @@ const handler = createMcpHandler(
     server.registerTool("overview_board", {
       title: "The overview",
       description:
-        "The grid the index's site opens on: for each of nine AI companies, "
+        "The grid the index's site opens on: for each of ten AI companies, "
         + "the few figures that sum up the two boards, what its constitution "
         + "says (the document as a whole, the behaviours it covers, and their "
         + "final score) and how it governs it (what it publishes, what it "

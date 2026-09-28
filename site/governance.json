@@ -185,6 +185,17 @@
     "view_box": "0 0 24 24",
     "source": "Simple Icons 16.32.0, simpleicons.org/?q=deepseek, CC0 1.0"
    }
+  },
+  {
+   "id": "microsoft",
+   "name": "Microsoft AI",
+   "mark": {
+    "path": "M0 0v11.408h11.408V0zm12.594 0v11.408H24V0zM0 12.594V24h11.408V12.594zm12.594 0V24H24V12.594z",
+    "view_box": "0 0 24 24",
+    "source": "Simple Icons 9.21.0, simpleicons.org/?q=microsoft, CC0 1.0; later versions of the set no longer carry it",
+    "drawn_as": "Microsoft's mark"
+   },
+   "legal": "A division of Microsoft Corporation, of Redmond, which makes the MAI models."
   }
  ],
  "questions": [
@@ -813,7 +824,7 @@
  "disclosure_note": "A 0 means we looked and found nothing published, at the company's own pages and at the sources listed under the board. A company may well follow a practice without saying so, and no audit anyone outside could check exists. Tell us if we are wrong.",
  "internal_note": "The paper raises this as an open problem and asks no company to publish it, so it is not assessed for any company, is marked NA, and is counted in neither figure.",
  "open_weights_note": "Marks a company whose flagship model, or nearly, anyone can download and run. None of these questions can reach how such a model behaves once it has been downloaded, so part of a low score there reflects a limit of the questions.",
- "ours_note": "Every score is ours, given by hand from public documents, and open to challenge. The checks under each question, the groups of practices and the weights are ours too: neither paper splits a question into checks or weighs one row against another. So are the rules we added on 26 September 2026 for cases the descriptions left open.",
+ "ours_note": "Every score is ours, given by hand from public documents, and open to challenge. The checks under each question, the groups of practices and the weights are ours too: neither paper splits a question into checks or weighs one row against another. So are the rules we added on 26 and 28 September 2026 for cases the descriptions left open.",
  "scores": {
   "openai": {
    "1.1": 4,
@@ -922,6 +933,18 @@
    "3.2": 0,
    "4.1": 0,
    "4.2": 0
+  },
+  "microsoft": {
+   "1.1": 4,
+   "1.2": 2,
+   "1.3": 2,
+   "2.1": 0,
+   "2.2": 0,
+   "2.3": 0,
+   "3.1": 3,
+   "3.2": 2,
+   "4.1": 4,
+   "4.2": 3
   }
  },
  "supporting_scores": {
@@ -987,6 +1010,13 @@
    "S3": 0,
    "S4": 0,
    "S5": 0
+  },
+  "microsoft": {
+   "S1": 0,
+   "S2": 1,
+   "S3": 1,
+   "S4": 1,
+   "S5": 0
   }
  },
  "supporting_notes": {
@@ -1048,6 +1078,12 @@
    "I2": 0,
    "I3": 0,
    "I4": 0
+  },
+  "microsoft": {
+   "I1": 1,
+   "I2": 0,
+   "I3": 1,
+   "I4": 1
   }
  },
  "internal_evidence": {
@@ -1596,6 +1632,91 @@
    "I4": {
     "sentence": "DeepSeek's R1 paper describes a filter that screens conversations on its own service, which is counted under guardrails disclosed (3.1); DeepSeek publishes nothing on monitoring how its models behave in use, and no incident reports.",
     "sources": []
+   }
+  },
+  "microsoft": {
+   "I1": {
+    "sentence": "Microsoft AI says its current models are not yet trained on the Code; the technical report of MAI-Thinking-1 describes reinforcement learning that rewards compliance with Microsoft's internal safety policies, which are not published.",
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "Our current models are not yet trained on this document, but in anticipation of work to align MAI models with the Code of Conduct we are establishing a program to build Humanist AI Evaluations.",
+      "title": "Humanist AI Code of Conduct, Appendix B, Evaluations",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026"
+     },
+     {
+      "ref": "MS16",
+      "quote": "Policy compliance measures whether the response violates our safety policies.",
+      "title": "MAI-Thinking-1 technical report, 3.4.3 Safety",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026"
+     },
+     {
+      "ref": "MS16",
+      "quote": "If the safety judge marks a response non-compliant, the rollout receives the minimum reward regardless of other scores; otherwise the normal weighted mixture is used.",
+      "title": "MAI-Thinking-1 technical report, 3.4.3 Safety",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026"
+     }
+    ]
+   },
+   "I2": {
+    "sentence": "The Code covers the MAI models, including when operators deploy them, and says nothing about the models Microsoft AI uses internally.",
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "This Code of Conduct sets the intended behavior of MAI Models, including when deployed by Operators; it does not extend to other models simply because Microsoft uses or hosts them.",
+      "title": "Humanist AI Code of Conduct, Appendix A, Glossary",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026"
+     }
+    ]
+   },
+   "I3": {
+    "sentence": "Microsoft AI says it does not use the published Code to train its models today and that the Code is not a complete account of how they behave now, without saying what text they are trained on instead or how it differs.",
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "This document, and our approach more generally, is still under development so we are not using it to train our models today.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "The Code of Conduct is both descriptive and aspirational. It outlines what we are working toward and is not a complete account of current model behavior.",
+      "title": "Humanist AI Code of Conduct, Part 5, Conclusion",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026"
+     }
+    ]
+   },
+   "I4": {
+    "sentence": "Microsoft describes monitoring its image models in use after release and watching for abuse of the MAI models it sells on Foundry, and commits to report serious incidents to regulators and affected customers; we found no public report of an incident involving an MAI model.",
+    "sources": [
+     {
+      "ref": "MS15",
+      "quote": "Teams monitor real-world performance, analyze patterns in flagged inputs and outputs, and iteratively refine protections over time.",
+      "title": "Microsoft, 2026 Responsible AI Transparency Report, MAI-Image-1 and Image-2 case study",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Responsible-AI-Transparency-Report-2026.pdf",
+      "date": "1 September 2026"
+     },
+     {
+      "ref": "MS19",
+      "quote": "The abuse monitoring system for Models sold by Azure looks at customer usage patterns and employs algorithms and heuristics to detect and score indicators of potential abuse.",
+      "title": "Microsoft Learn, Abuse monitoring for Foundry Models sold by Azure",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/abuse-monitoring",
+      "date": "19 May 2026"
+     },
+     {
+      "ref": "MS8",
+      "quote": "Where we or others identify serious or critical incidents that may pose public safety or national security risks, we operationalize incident response policies and processes, conduct investigations, provide reports to regulatory authorities and impacted customers as appropriate, apply mitigations and remediation, and manage after-action reviews and policy, process, and practice updates.",
+      "title": "Microsoft Frontier Governance Framework, February 2026, 4. Mitigations",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026"
+     }
+    ]
    }
   }
  },
@@ -4231,6 +4352,483 @@
    "S5": {
     "looked": "We found nothing published on who inside DeepSeek approves a change to its documents, on the disclosure page or in the terms of use in either language."
    }
+  },
+  "microsoft": {
+   "1.1": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "Humanist AI is controllable and subordinate, with a clear Chain of Command for instructions and configurability.",
+      "title": "Humanist AI Code of Conduct, 2.2 Chain of Command",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "This Objective, along with the Safety Constraints in Part 2 and all applicable laws and regulations, takes precedence over other Objectives.",
+      "title": "Humanist AI Code of Conduct, 1.1 Objectives of Humanist AI",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "They will check whether an Absolute Constraint or Human Control Requirement applies and then consider these Guidelines where no Safety Constraint determines the response.",
+      "title": "Humanist AI Code of Conduct, 3.1 Resolving Conflicts and Ambiguity",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "This document, and our approach more generally, is still under development so we are not using it to train our models today.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code of Conduct sets out how the MAI models should behave in ordinary use, an order of authority that runs from the Code through operators to users, and a rule that safety and human control take precedence over its other objectives.[^MS1] It also says how a model settles a case its rules leave open.[^MS1] That is a full constitution, a 4. It is a draft published for public consultation, and Microsoft AI says it does not yet use it to train its models.[^MS1] A draft its company says is not yet in force is scored here for what its text contains."
+   },
+   "1.2": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "MAI Models: A series of models produced by Microsoft AI used across a number of AI products and services.",
+      "title": "Humanist AI Code of Conduct, Appendix A, Glossary",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "This Code of Conduct sets the intended behavior of MAI Models, including when deployed by Operators; it does not extend to other models simply because Microsoft uses or hosts them.",
+      "title": "Humanist AI Code of Conduct, Appendix A, Glossary",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "Our current models are not yet trained on this document, but in anticipation of work to align MAI models with the Code of Conduct we are establishing a program to build Humanist AI Evaluations.",
+      "title": "Humanist AI Code of Conduct, Appendix B, Evaluations",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS5",
+      "quote": "Since launching MAI-Code-1-Flash in GitHub Copilot in June, millions of developers have been using it for their day-to-day work, where it’s outperforming other similarly sized models while using fewer tokens.",
+      "title": "Hill-climbing MAI models for GitHub Copilot and Excel",
+      "url": "https://microsoft.ai/news/hill-climbing-mai-models-for-github-copilot-and-excel/",
+      "date": "23 July 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS6",
+      "quote": "With MAI-Image-2.5‘s new precise image editing capabilities, it is now the default model powering Bing Image Creator end-to-end, for high-quality generation and greater creative control.",
+      "title": "Introducing MAI-Image-2.5-Pro and MAI-Voice-2-Flash",
+      "url": "https://microsoft.ai/news/introducing-mai-image-2-5-pro-and-mai-voice-2-flash/",
+      "date": "23 July 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code states its coverage as a class, the MAI models, and the models of that class in widest use belong to it: the coding model that millions of developers use in GitHub Copilot, and the image model that is the default in Bing Image Creator.[^MS1][^MS5][^MS6] A class that includes the most-used models would be a 4. Microsoft AI says its current models are not yet trained on this draft, so under the rule for a draft that is not yet in force coverage counts at most as implied, a 2.[^MS1] The Code also says it does not extend to other models simply because Microsoft uses or hosts them.[^MS1]"
+   },
+   "1.3": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "A small number of use cases with authorized organizations in specialized domains, such as defensive cybersecurity, public safety work, national security applications, and dual-use scientific research, may require model capabilities that are not available through the ordinary configurability settings governed by this document.",
+      "title": "Humanist AI Code of Conduct, 2.5 Operator Configurability",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "In such domains, the potential for adverse rights impacts may be heightened, and we will apply enhanced review processes and frameworks, including requiring separate and careful review through authorized Microsoft channels, with enhanced assessment of safety, legal, and rights implications.",
+      "title": "Humanist AI Code of Conduct, 2.5 Operator Configurability",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "Other approaches and changes may be needed over time, and more work may be required in specialist domains (like government, healthcare or financials) alongside developments to account for emergent technical risks (like multi-agent considerations or recursive self-improvement).",
+      "title": "Humanist AI Code of Conduct, 5.1 Next Steps",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code names national security applications, defensive cybersecurity, public safety work and dual-use scientific research as domains where authorised organisations may need capabilities beyond its ordinary settings, and sends them to separate review through authorised Microsoft channels.[^MS1] It does not say which rules apply there, and it says more work may be needed in specialist domains such as government.[^MS1] A special regime acknowledged and not described is a 2. Microsoft's list of the models it sells in Azure Government names no MAI model, and we found nothing published on MAI models used inside Microsoft at scale.[^MS7]"
+   },
+   "2.1": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "We are now publishing this draft version to solicit wider feedback and refine our approach towards developing Humanist AI.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "We’ll take feedback, iterate on it, and publish a revised version toward the end of the year, which we’ll use to guide our model development in 2027 and beyond.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code carries one date, 14 September 2026, at the end of its preface, and calls itself a draft and a first version without giving a version number.[^MS1] Its page and its PDF sit at addresses that carry no version. We found no versions menu, no archive and no promise to keep this draft online once the revised version promised for the end of 2026 is published.[^MS1] A bare date is a 0."
+   },
+   "2.2": {
+    "sources": [
+     {
+      "ref": "MS2",
+      "quote": "When the consultation closes, we will have the core drafting team review feedback, publish a summary of what we learned, and what we changed.",
+      "title": "Humanist AI in practice: A public consultation on our Code of Conduct for MAI Models, Tell us how AI can work better",
+      "url": "https://microsoft.ai/news/mai-code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS8",
+      "quote": "One year update following finalization of the EU Code of Practice for General Purpose AI (CoP), NY RAISE Act and CA Transparency in Frontier Artificial Intelligence Act including:",
+      "title": "Microsoft Frontier Governance Framework, February 2026, Appendix II, Change log",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "There is one version, so nothing has changed yet, and we found no change log. Microsoft AI has promised a summary of what it learned and what it changed once the consultation closes.[^MS2] That promise is counted on the comment window (4.2), under the rule that one disclosure earns points on one row. Microsoft's Frontier Governance Framework, a separate document about catastrophic risk, keeps a change log of its own.[^MS8]"
+   },
+   "2.3": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "Additional mitigations clearly also operate alongside what is detailed here including system instructions, classifiers, monitoring, deployment controls, and incident response processes.",
+      "title": "Humanist AI Code of Conduct, Part 5, Conclusion",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS8",
+      "quote": "All material revisions will be made public within 30 days of adoption, and, where appropriate, may be published at the same time as we adopt them.",
+      "title": "Microsoft Frontier Governance Framework, February 2026, 5. Governance",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "We found no log of system prompts or guardrails, no statement of which version of the Code governs which model beyond the statement that current models are not trained on it, and no period within which a change is recorded.[^MS1] The Code names system instructions and classifiers among the mitigations that operate alongside it, and neither is logged.[^MS1] The Frontier Governance Framework commits to publish its own material revisions within 30 days of adoption, which does not reach the Code.[^MS8]"
+   },
+   "3.1": {
+    "sources": [
+     {
+      "ref": "MS12",
+      "quote": "MAI models available in Foundry: MAI-Image models and MAI-Thinking models.",
+      "title": "Microsoft Learn, Foundry Models sold directly by Azure",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+      "date": "21 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS10",
+      "quote": "The guardrail system applies to all Foundry Models sold by Azure, except for prompts and completions processed by audio transcription models.",
+      "title": "Microsoft Learn, Guardrails and controls overview in Microsoft Foundry",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/guardrails/guardrails-overview",
+      "date": "31 July 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS10",
+      "quote": "For Models sold by Azure, only customers who have been approved for modified Guardrails can turn them off.",
+      "title": "Microsoft Learn, Guardrails and controls overview in Microsoft Foundry",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/guardrails/guardrails-overview",
+      "date": "31 July 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS11",
+      "quote": "Default safety aims to mitigate risks such as hate and fairness, sexual, violence, self-harm, protected material content, and user prompt injection attacks.",
+      "title": "Microsoft Learn, Default guardrail policies for Microsoft Foundry Models",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/default-safety-policies",
+      "date": "3 December 2025",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS13",
+      "quote": "When a user enters a prompt in Copilot, the prompt, conversation history, and the system message are sent through several input classifiers to help filter out harmful or inappropriate content.",
+      "title": "Transparency Note for Microsoft Copilot",
+      "url": "https://support.microsoft.com/en-us/privacy/microsoft-copilot/transparency-note",
+      "date": "18 August 2026, updated 8 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS14",
+      "quote": "When using MAI-Code-1.1-Flash, input prompts and output completions continue to run through GitHub Copilot's content filters for public code matching, when applied, along with those for harmful or offensive content.",
+      "title": "GitHub Docs, Hosting of models for GitHub Copilot",
+      "url": "https://docs.github.com/en/copilot/reference/ai-models/model-hosting",
+      "date": "undated",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The MAI models are sold to developers on Microsoft Foundry, and the guardrails there are listed by category: hate and fairness, sexual content, violence, self-harm, protected material and prompt attacks, applied by default and switched off only for customers Microsoft approves.[^MS10][^MS11][^MS12] Guardrails listed by category for one platform are a 3. For its consumer Copilot Microsoft describes input and output classifiers, and GitHub Copilot runs its content filters on the MAI coding model.[^MS13][^MS14] We found no inventory across every product that runs an MAI model."
+   },
+   "3.2": {
+    "sources": [
+     {
+      "ref": "MS15",
+      "quote": "To reduce the frequency of depicting children and the likelihood of depicting children in potentially concerning situations, the sensitivity threshold was adjusted.",
+      "title": "Microsoft, 2026 Responsible AI Transparency Report, MAI-Image-1 and Image-2 case study",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Responsible-AI-Transparency-Report-2026.pdf",
+      "date": "1 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS13",
+      "quote": "We are making changes to Copilot regularly to improve product performance and existing mitigations and implement new mitigations in response to our learnings.",
+      "title": "Transparency Note for Microsoft Copilot",
+      "url": "https://support.microsoft.com/en-us/privacy/microsoft-copilot/transparency-note",
+      "date": "18 August 2026, updated 8 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "Microsoft reports some guardrail changes after the fact in its yearly Responsible AI Transparency Report, among them a sensitivity threshold of MAI-Image-1 adjusted so that it depicts children less often.[^MS15] Its Copilot transparency note says mitigations are changed regularly.[^MS13] We found no register of guardrail changes for Copilot or for the MAI models. Changes announced on the company's own channels, with no register, are a 2."
+   },
+   "4.1": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "The following categories of harm are foundational safety constraints and are intended to apply in all settings, regardless of Operator preference or User intent.",
+      "title": "Humanist AI Code of Conduct, 2.3 Absolute Constraints",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "Users and Operators cannot override these Absolute Constraints on the model’s actions.",
+      "title": "Humanist AI Code of Conduct, 2.3 Absolute Constraints",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "The Absolute Constraints and Human Control Requirements are non-negotiables that Operators and Users cannot override.",
+      "title": "Humanist AI Code of Conduct, 2.2 Chain of Command",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code lists ten Absolute Constraints under two headings, frontier and public safety risks and personal harms, and says no operator or user can override them.[^MS1] Its human control requirements are marked as non-negotiable in the same way.[^MS1] Named, listed and marked as impossible to override is a 4. Like the rest of the Code, they are a draft its models are not yet trained on.[^MS1]"
+   },
+   "4.2": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "Our public consultation process begins today and will run for the next six weeks.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "We will run similar consultation processes as we develop new versions of this Code of Conduct over time.",
+      "title": "Humanist AI Code of Conduct, preface",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "If the need for occasional expedited actions or changes arises, we will take it.",
+      "title": "Humanist AI Code of Conduct, 5.1 Next Steps",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS2",
+      "quote": "When the consultation closes, we will have the core drafting team review feedback, publish a summary of what we learned, and what we changed.",
+      "title": "Humanist AI in practice: A public consultation on our Code of Conduct for MAI Models, Tell us how AI can work better",
+      "url": "https://microsoft.ai/news/mai-code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS3",
+      "quote": "This consultation closes on Sunday October 25th.",
+      "title": "MAI Code of Conduct Public Consultation, the feedback form",
+      "url": "https://forms.cloud.microsoft/r/qrsWVA6gEZ",
+      "date": "undated; the form was created on 13 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS3",
+      "quote": "We won’t automatically publish submissions and will only quote you or identify your organization if you give us your permission.",
+      "title": "MAI Code of Conduct Public Consultation, the feedback form",
+      "url": "https://forms.cloud.microsoft/r/qrsWVA6gEZ",
+      "date": "undated; the form was created on 13 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The draft is open to comment from anyone for six weeks, until 25 October 2026, through a form, and Microsoft AI has promised to publish a summary of what it learned and what it changed.[^MS1][^MS2][^MS3] Submissions are published only with their authors' permission.[^MS3] The Code commits to hold similar consultations as new versions are developed, which is a standing commitment.[^MS1] It also keeps the right to make expedited changes, with no consultation before or after them, and nothing ties the commitment to a weakening of the Absolute Constraints.[^MS1] That falls between a one-off consultation and a standing window with room to act first in an emergency, a 3."
+   },
+   "S1": {
+    "sources": [
+     {
+      "ref": "MS1",
+      "quote": "© Microsoft 2026",
+      "title": "Humanist AI Code of Conduct, page footer",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS4",
+      "quote": "You may not modify, copy, distribute, transmit, display, perform, reproduce, publish, license, create derivative works from, transfer, or sell any information, software, products or services obtained from the Services.",
+      "title": "Microsoft Terms of Use, Personal and Non-Commercial Use Limitation",
+      "url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+      "date": "7 February 2022",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The Code names no licence, on its page or in its PDF. The page carries Microsoft's copyright line and links Microsoft's general terms of use, which forbid modifying the content or making works derived from it.[^MS1][^MS4] We found no copy of the Code in any Microsoft repository."
+   },
+   "S2": {
+    "sources": [
+     {
+      "ref": "MS16",
+      "quote": "A safe model needs to provide helpful responses that remain compliant with our safety policies and standards.",
+      "title": "MAI-Thinking-1 technical report, 1 Introduction",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS16",
+      "quote": "Across fifteen engagements spanning the early, mid, and late stages during MAI-Thinking-1’s development, red teamers executed over 2,170 goal-based adversarial scenarios across 25 policy categories.",
+      "title": "MAI-Thinking-1 technical report, 5.1 Internal Red Teaming",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "This Appendix includes examples showing how we think about categorizing aligned and non-aligned responses. These are illustrative examples only.",
+      "title": "Humanist AI Code of Conduct, Appendix B, Evaluations",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The technical report of MAI-Thinking-1 publishes a safety evaluation against Microsoft's own safety policies, with its method and its results by harm category and by kind of jailbreak.[^MS16] A published safety evaluation against the company's own policies, with results, is a 1. The policies are not published, and the cards of the other MAI models describe tests without results. The Code's appendix describes evaluations of adherence to the Code that are still being built, with illustrative examples and no results.[^MS1]"
+   },
+   "S3": {
+    "sources": [
+     {
+      "ref": "MS16",
+      "quote": "Additional red-teaming was conducted independently by Microsoft’s AI Red Team (AIRT) and third-party vendors.",
+      "title": "MAI-Thinking-1 technical report, 5.2 Independent Red Teaming",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS17",
+      "quote": "Finally, we invited an independent third party to conduct its own assessment of the model.",
+      "title": "MAI-Cyber-1-Flash model card, 3.2 Safety evaluation and red-teaming",
+      "url": "https://microsoft.ai/pdf/MAI-Cyber-1-Flash-Model-Card.pdf",
+      "date": "27 July 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS17",
+      "quote": "The independent assessment identified no critical-severity findings.",
+      "title": "MAI-Cyber-1-Flash model card, 3.2 Safety evaluation and red-teaming",
+      "url": "https://microsoft.ai/pdf/MAI-Cyber-1-Flash-Model-Card.pdf",
+      "date": "27 July 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS18",
+      "quote": "Today, Microsoft is announcing new agreements with the Center for AI Standards and Innovation (CAISI) in the US and the AI Security Institute (AISI) in the UK to advance the science of AI testing and evaluation, including through collaborative work to test Microsoft’s frontier models, assess safeguards, and help mitigate national security and large-scale public safety risks.",
+      "title": "Microsoft On the Issues, advancing AI evaluation with CAISI and the UK AI Security Institute",
+      "url": "https://blogs.microsoft.com/on-the-issues/2026/05/05/advancing-ai-evaluation-with-the-center-for-ai-standards-us-and-innovation-and-the-ai-security-institute-uk/",
+      "date": "5 May 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS1",
+      "quote": "As our Humanist AI Evaluations develop, we plan to work closely with expert external partners to find answers.",
+      "title": "Humanist AI Code of Conduct, Appendix B, Evaluations",
+      "url": "https://microsoft.ai/code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "Outside testers have assessed MAI models for other risks: unnamed third-party vendors red-teamed MAI-Thinking-1, and an independent third party assessed MAI-Cyber-1-Flash and reported no critical-severity findings.[^MS16][^MS17] Microsoft signed testing agreements with the US Center for AI Standards and Innovation and the UK AI Security Institute in May 2026, and we found no published evaluation of an MAI model under them.[^MS18] None of these tests adherence to the Code, and the Code says only that Microsoft AI plans to work with external partners on its evaluations.[^MS1] That is a 1."
+   },
+   "S4": {
+    "sources": [
+     {
+      "ref": "MS16",
+      "quote": "Every internal release candidate must pass an acceptance threshold on a fixed bundle of safety evaluations and must do so without regressing against the previous accepted release.",
+      "title": "MAI-Thinking-1 technical report, Appendix J.1.2",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS16",
+      "quote": "The threshold is then placed at a fixed percentile along this frontier rather than at a static absolute number, so the bar tracks what is currently achievable on the architecture and data mix rather than a stale historical floor.",
+      "title": "MAI-Thinking-1 technical report, Appendix J.1.2",
+      "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+      "date": "June 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS8",
+      "quote": "If, during the implementation of this framework, we identify a risk we cannot sufficiently mitigate, we will pause development and deployment until the point at which mitigation practices evolve to meet the risk.",
+      "title": "Microsoft Frontier Governance Framework, February 2026, 4. Mitigations",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "The technical report of MAI-Thinking-1 says every release candidate must pass an acceptance threshold on a fixed set of safety evaluations, without regressing against the previous release.[^MS16] The level is not published, it is set in each release cycle from that cycle's results, and the evaluations measure Microsoft's safety policies and not the Code.[^MS16] That is part of the practice, a 1. The thresholds in the Frontier Governance Framework are about risk.[^MS8]"
+   },
+   "S5": {
+    "sources": [
+     {
+      "ref": "MS2",
+      "quote": "Teams from across MAI and Microsoft more widely contributed, from Responsible AI, legal, red teaming, safety, Futures, AI training, and sales.",
+      "title": "Humanist AI in practice: A public consultation on our Code of Conduct for MAI Models, How we got here",
+      "url": "https://microsoft.ai/news/mai-code-of-conduct/",
+      "date": "14 September 2026",
+      "read": "28 September 2026"
+     },
+     {
+      "ref": "MS8",
+      "quote": "Any updates to our practices will be reviewed by Microsoft’s Chief Responsible AI Officer prior to their adoption.",
+      "title": "Microsoft Frontier Governance Framework, February 2026, 5. Governance",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026",
+      "read": "28 September 2026"
+     }
+    ],
+    "looked": "We found no published account of who inside Microsoft may change the Code, or what approval a change needs, in the Code, its announcement or the consultation form. The announcement names the teams that contributed to the draft and says a core drafting team will review the feedback.[^MS2] The Frontier Governance Framework, a different document, says updates to it are reviewed by Microsoft's Chief Responsible AI Officer before adoption, and names no approver.[^MS8]"
+   }
   }
  },
  "sources": [
@@ -6630,6 +7228,423 @@
    "quotes": []
   },
   {
+   "id": "MS1",
+   "company": "microsoft",
+   "title": "Humanist AI Code of Conduct, draft for public consultation",
+   "url": "https://microsoft.ai/code-of-conduct/",
+   "date": "14 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "Humanist AI is controllable and subordinate, with a clear Chain of Command for instructions and configurability.",
+     "where": "Part 2, 2.2 Chain of Command"
+    },
+    {
+     "text": "This Objective, along with the Safety Constraints in Part 2 and all applicable laws and regulations, takes precedence over other Objectives.",
+     "where": "Part 1, 1.1 Objectives of Humanist AI"
+    },
+    {
+     "text": "They will check whether an Absolute Constraint or Human Control Requirement applies and then consider these Guidelines where no Safety Constraint determines the response.",
+     "where": "Part 3, 3.1 Resolving Conflicts and Ambiguity"
+    },
+    {
+     "text": "This document, and our approach more generally, is still under development so we are not using it to train our models today.",
+     "where": "Preface"
+    },
+    {
+     "text": "MAI Models: A series of models produced by Microsoft AI used across a number of AI products and services.",
+     "where": "Appendix A, Glossary"
+    },
+    {
+     "text": "This Code of Conduct sets the intended behavior of MAI Models, including when deployed by Operators; it does not extend to other models simply because Microsoft uses or hosts them.",
+     "where": "Appendix A, Glossary"
+    },
+    {
+     "text": "Our current models are not yet trained on this document, but in anticipation of work to align MAI models with the Code of Conduct we are establishing a program to build Humanist AI Evaluations.",
+     "where": "Appendix B, Evaluations"
+    },
+    {
+     "text": "A small number of use cases with authorized organizations in specialized domains, such as defensive cybersecurity, public safety work, national security applications, and dual-use scientific research, may require model capabilities that are not available through the ordinary configurability settings governed by this document.",
+     "where": "Part 2, 2.5 Operator Configurability"
+    },
+    {
+     "text": "In such domains, the potential for adverse rights impacts may be heightened, and we will apply enhanced review processes and frameworks, including requiring separate and careful review through authorized Microsoft channels, with enhanced assessment of safety, legal, and rights implications.",
+     "where": "Part 2, 2.5 Operator Configurability"
+    },
+    {
+     "text": "Other approaches and changes may be needed over time, and more work may be required in specialist domains (like government, healthcare or financials) alongside developments to account for emergent technical risks (like multi-agent considerations or recursive self-improvement).",
+     "where": "Part 5, 5.1 Next Steps"
+    },
+    {
+     "text": "We are now publishing this draft version to solicit wider feedback and refine our approach towards developing Humanist AI.",
+     "where": "Preface"
+    },
+    {
+     "text": "We’ll take feedback, iterate on it, and publish a revised version toward the end of the year, which we’ll use to guide our model development in 2027 and beyond.",
+     "where": "Preface"
+    },
+    {
+     "text": "Additional mitigations clearly also operate alongside what is detailed here including system instructions, classifiers, monitoring, deployment controls, and incident response processes.",
+     "where": "Part 5, Conclusion"
+    },
+    {
+     "text": "The following categories of harm are foundational safety constraints and are intended to apply in all settings, regardless of Operator preference or User intent.",
+     "where": "Part 2, 2.3 Absolute Constraints"
+    },
+    {
+     "text": "Users and Operators cannot override these Absolute Constraints on the model’s actions.",
+     "where": "Part 2, 2.3 Absolute Constraints"
+    },
+    {
+     "text": "The Absolute Constraints and Human Control Requirements are non-negotiables that Operators and Users cannot override.",
+     "where": "Part 2, 2.2 Chain of Command"
+    },
+    {
+     "text": "Our public consultation process begins today and will run for the next six weeks.",
+     "where": "Preface"
+    },
+    {
+     "text": "We will run similar consultation processes as we develop new versions of this Code of Conduct over time.",
+     "where": "Preface"
+    },
+    {
+     "text": "If the need for occasional expedited actions or changes arises, we will take it.",
+     "where": "Part 5, 5.1 Next Steps"
+    },
+    {
+     "text": "© Microsoft 2026",
+     "where": "page footer"
+    },
+    {
+     "text": "This Appendix includes examples showing how we think about categorizing aligned and non-aligned responses. These are illustrative examples only.",
+     "where": "Appendix B, Evaluations"
+    },
+    {
+     "text": "As our Humanist AI Evaluations develop, we plan to work closely with expert external partners to find answers.",
+     "where": "Appendix B, Evaluations"
+    },
+    {
+     "text": "The Code of Conduct is both descriptive and aspirational. It outlines what we are working toward and is not a complete account of current model behavior.",
+     "where": "Part 5, Conclusion"
+    }
+   ]
+  },
+  {
+   "id": "MS2",
+   "company": "microsoft",
+   "title": "Humanist AI in practice: A public consultation on our Code of Conduct for MAI Models",
+   "url": "https://microsoft.ai/news/mai-code-of-conduct/",
+   "date": "14 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "When the consultation closes, we will have the core drafting team review feedback, publish a summary of what we learned, and what we changed.",
+     "where": "Tell us how AI can work better"
+    },
+    {
+     "text": "Teams from across MAI and Microsoft more widely contributed, from Responsible AI, legal, red teaming, safety, Futures, AI training, and sales.",
+     "where": "How we got here, and why we’re not done"
+    }
+   ]
+  },
+  {
+   "id": "MS3",
+   "company": "microsoft",
+   "title": "MAI Code of Conduct Public Consultation, the feedback form",
+   "url": "https://forms.cloud.microsoft/r/qrsWVA6gEZ",
+   "date": "undated; the form was created on 13 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "This consultation closes on Sunday October 25th.",
+     "where": "form description"
+    },
+    {
+     "text": "We won’t automatically publish submissions and will only quote you or identify your organization if you give us your permission.",
+     "where": "form description"
+    }
+   ]
+  },
+  {
+   "id": "MS4",
+   "company": "microsoft",
+   "title": "Microsoft Terms of Use",
+   "url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+   "date": "7 February 2022",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "You may not modify, copy, distribute, transmit, display, perform, reproduce, publish, license, create derivative works from, transfer, or sell any information, software, products or services obtained from the Services.",
+     "where": "Personal and Non-Commercial Use Limitation"
+    }
+   ]
+  },
+  {
+   "id": "MS5",
+   "company": "microsoft",
+   "title": "Hill-climbing MAI models for GitHub Copilot and Excel",
+   "url": "https://microsoft.ai/news/hill-climbing-mai-models-for-github-copilot-and-excel/",
+   "date": "23 July 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "Since launching MAI-Code-1-Flash in GitHub Copilot in June, millions of developers have been using it for their day-to-day work, where it’s outperforming other similarly sized models while using fewer tokens.",
+     "where": "MAI-Code-1-Flash in GitHub Copilot"
+    }
+   ]
+  },
+  {
+   "id": "MS6",
+   "company": "microsoft",
+   "title": "Introducing MAI-Image-2.5-Pro and MAI-Voice-2-Flash",
+   "url": "https://microsoft.ai/news/introducing-mai-image-2-5-pro-and-mai-voice-2-flash/",
+   "date": "23 July 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "With MAI-Image-2.5‘s new precise image editing capabilities, it is now the default model powering Bing Image Creator end-to-end, for high-quality generation and greater creative control.",
+     "where": "Bing Image Creator is now 100% in-house by default"
+    }
+   ]
+  },
+  {
+   "id": "MS7",
+   "company": "microsoft",
+   "title": "Microsoft Learn, Foundry Models sold by Azure in Azure Government",
+   "url": "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov",
+   "date": "1 September 2026",
+   "read": "28 September 2026",
+   "quotes": []
+  },
+  {
+   "id": "MS8",
+   "company": "microsoft",
+   "title": "Microsoft Frontier Governance Framework, February 2026",
+   "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+   "date": "February 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "One year update following finalization of the EU Code of Practice for General Purpose AI (CoP), NY RAISE Act and CA Transparency in Frontier Artificial Intelligence Act including:",
+     "where": "Appendix II, Change log"
+    },
+    {
+     "text": "All material revisions will be made public within 30 days of adoption, and, where appropriate, may be published at the same time as we adopt them.",
+     "where": "5. Governance, Updates to this framework"
+    },
+    {
+     "text": "If, during the implementation of this framework, we identify a risk we cannot sufficiently mitigate, we will pause development and deployment until the point at which mitigation practices evolve to meet the risk.",
+     "where": "4. Mitigations, Post-mitigation capability assessment and safety buffer"
+    },
+    {
+     "text": "Any updates to our practices will be reviewed by Microsoft’s Chief Responsible AI Officer prior to their adoption.",
+     "where": "5. Governance, Updates to this framework"
+    },
+    {
+     "text": "Where we or others identify serious or critical incidents that may pose public safety or national security risks, we operationalize incident response policies and processes, conduct investigations, provide reports to regulatory authorities and impacted customers as appropriate, apply mitigations and remediation, and manage after-action reviews and policy, process, and practice updates.",
+     "where": "4. Mitigations, Safety mitigations"
+    }
+   ]
+  },
+  {
+   "id": "MS9",
+   "company": "microsoft",
+   "title": "Microsoft Frontier Governance Framework, version 1",
+   "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/final/en-us/microsoft-brand/documents/Microsoft-Frontier-Governance-Framework.pdf",
+   "date": "February 2025",
+   "read": "28 September 2026",
+   "quotes": []
+  },
+  {
+   "id": "MS10",
+   "company": "microsoft",
+   "title": "Microsoft Learn, Guardrails and controls overview in Microsoft Foundry",
+   "url": "https://learn.microsoft.com/en-us/azure/foundry/guardrails/guardrails-overview",
+   "date": "31 July 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "The guardrail system applies to all Foundry Models sold by Azure, except for prompts and completions processed by audio transcription models.",
+     "where": "Guardrails and controls overview"
+    },
+    {
+     "text": "For Models sold by Azure, only customers who have been approved for modified Guardrails can turn them off.",
+     "where": "Severity levels"
+    }
+   ]
+  },
+  {
+   "id": "MS11",
+   "company": "microsoft",
+   "title": "Microsoft Learn, Default guardrail policies for Microsoft Foundry Models",
+   "url": "https://learn.microsoft.com/en-us/azure/foundry-classic/foundry-models/concepts/default-safety-policies",
+   "date": "3 December 2025",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "Default safety aims to mitigate risks such as hate and fairness, sexual, violence, self-harm, protected material content, and user prompt injection attacks.",
+     "where": "introduction"
+    }
+   ]
+  },
+  {
+   "id": "MS12",
+   "company": "microsoft",
+   "title": "Microsoft Learn, Foundry Models sold directly by Azure",
+   "url": "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+   "date": "21 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "MAI models available in Foundry: MAI-Image models and MAI-Thinking models.",
+     "where": "Microsoft models sold by Azure"
+    }
+   ]
+  },
+  {
+   "id": "MS13",
+   "company": "microsoft",
+   "title": "Transparency Note for Microsoft Copilot",
+   "url": "https://support.microsoft.com/en-us/privacy/microsoft-copilot/transparency-note",
+   "date": "18 August 2026, updated 8 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "When a user enters a prompt in Copilot, the prompt, conversation history, and the system message are sent through several input classifiers to help filter out harmful or inappropriate content.",
+     "where": "system description"
+    },
+    {
+     "text": "We are making changes to Copilot regularly to improve product performance and existing mitigations and implement new mitigations in response to our learnings.",
+     "where": "Phased release plans and continual evaluation"
+    }
+   ]
+  },
+  {
+   "id": "MS14",
+   "company": "microsoft",
+   "title": "GitHub Docs, Hosting of models for GitHub Copilot",
+   "url": "https://docs.github.com/en/copilot/reference/ai-models/model-hosting",
+   "date": "undated",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "When using MAI-Code-1.1-Flash, input prompts and output completions continue to run through GitHub Copilot's content filters for public code matching, when applied, along with those for harmful or offensive content.",
+     "where": "Microsoft models"
+    }
+   ]
+  },
+  {
+   "id": "MS15",
+   "company": "microsoft",
+   "title": "Microsoft, 2026 Responsible AI Transparency Report",
+   "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Responsible-AI-Transparency-Report-2026.pdf",
+   "date": "1 September 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "To reduce the frequency of depicting children and the likelihood of depicting children in potentially concerning situations, the sensitivity threshold was adjusted.",
+     "where": "MAI-Image-1 and Image-2 case study, Step 5"
+    },
+    {
+     "text": "Teams monitor real-world performance, analyze patterns in flagged inputs and outputs, and iteratively refine protections over time.",
+     "where": "MAI-Image-1 and Image-2 case study, release and post-release monitoring"
+    }
+   ]
+  },
+  {
+   "id": "MS16",
+   "company": "microsoft",
+   "title": "MAI-Thinking-1 technical report",
+   "url": "https://microsoft.ai/pdf/mai-thinking-1.pdf",
+   "date": "June 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "A safe model needs to provide helpful responses that remain compliant with our safety policies and standards.",
+     "where": "1 Introduction"
+    },
+    {
+     "text": "Across fifteen engagements spanning the early, mid, and late stages during MAI-Thinking-1’s development, red teamers executed over 2,170 goal-based adversarial scenarios across 25 policy categories.",
+     "where": "5.1 Internal Red Teaming"
+    },
+    {
+     "text": "Additional red-teaming was conducted independently by Microsoft’s AI Red Team (AIRT) and third-party vendors.",
+     "where": "5.2 Independent Red Teaming"
+    },
+    {
+     "text": "Every internal release candidate must pass an acceptance threshold on a fixed bundle of safety evaluations and must do so without regressing against the previous accepted release.",
+     "where": "Appendix J.1.2, Threshold setting"
+    },
+    {
+     "text": "The threshold is then placed at a fixed percentile along this frontier rather than at a static absolute number, so the bar tracks what is currently achievable on the architecture and data mix rather than a stale historical floor.",
+     "where": "Appendix J.1.2, Threshold setting"
+    },
+    {
+     "text": "Policy compliance measures whether the response violates our safety policies.",
+     "where": "3.4.3 Safety, Reward design"
+    },
+    {
+     "text": "If the safety judge marks a response non-compliant, the rollout receives the minimum reward regardless of other scores; otherwise the normal weighted mixture is used.",
+     "where": "3.4.3 Safety, Reward design"
+    }
+   ]
+  },
+  {
+   "id": "MS17",
+   "company": "microsoft",
+   "title": "MAI-Cyber-1-Flash model card",
+   "url": "https://microsoft.ai/pdf/MAI-Cyber-1-Flash-Model-Card.pdf",
+   "date": "27 July 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "Finally, we invited an independent third party to conduct its own assessment of the model.",
+     "where": "3.2 Safety evaluation and red-teaming"
+    },
+    {
+     "text": "The independent assessment identified no critical-severity findings.",
+     "where": "3.2 Safety evaluation and red-teaming"
+    }
+   ]
+  },
+  {
+   "id": "MS18",
+   "company": "microsoft",
+   "title": "Microsoft On the Issues, advancing AI evaluation with CAISI and the UK AI Security Institute",
+   "url": "https://blogs.microsoft.com/on-the-issues/2026/05/05/advancing-ai-evaluation-with-the-center-for-ai-standards-us-and-innovation-and-the-ai-security-institute-uk/",
+   "date": "5 May 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "Today, Microsoft is announcing new agreements with the Center for AI Standards and Innovation (CAISI) in the US and the AI Security Institute (AISI) in the UK to advance the science of AI testing and evaluation, including through collaborative work to test Microsoft’s frontier models, assess safeguards, and help mitigate national security and large-scale public safety risks.",
+     "where": "opening paragraph"
+    }
+   ]
+  },
+  {
+   "id": "MS19",
+   "company": "microsoft",
+   "title": "Microsoft Learn, Abuse monitoring for Foundry Models sold by Azure",
+   "url": "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/abuse-monitoring",
+   "date": "19 May 2026",
+   "read": "28 September 2026",
+   "quotes": [
+    {
+     "text": "The abuse monitoring system for Models sold by Azure looks at customer usage patterns and employs algorithms and heuristics to detect and score indicators of potential abuse.",
+     "where": "Components of abuse monitoring"
+    }
+   ]
+  },
+  {
+   "id": "MS20",
+   "company": "microsoft",
+   "title": "Azure Government blog, AI capabilities in Azure for US Government Secret and Top Secret clouds",
+   "url": "https://devblogs.microsoft.com/azuregov/advancing-ai-capabilities-in-azure-for-u-s-government-secret-and-top-secret-clouds/",
+   "date": "15 January 2026",
+   "read": "28 September 2026",
+   "quotes": []
+  },
+  {
    "id": "CO1",
    "company": "several",
    "paper": "memo",
@@ -6894,35 +7909,35 @@
  "findings": [
   {
    "title": "No company meets the minimum",
-   "text": "Our proposal names its first two asks as the minimum it expects of every company: a published constitution for every model in use, and one public change log that says up front what it covers and how soon a change is recorded.[^CO1] Meeting it means 10 out of 10 on both questions, and no company does. OpenAI has the best pair, 8.3 on the constitution and 5.8 on the change log. Anthropic scores 8.3 and 5.0. The change log is where every company falls short, the two leaders included: across all nine, the best score on it is 5.8 out of 10."
+   "text": "Our proposal names its first two asks as the minimum it expects of every company: a published constitution for every model in use, and one public change log that says up front what it covers and how soon a change is recorded.[^CO1] Meeting it means 10 out of 10 on both questions, and no company does. OpenAI has the best pair, 8.3 on the constitution and 5.8 on the change log. Anthropic scores 8.3 and 5.0. Microsoft AI scores 6.7 and 0.0, for a Code of Conduct that is a draft its models are not yet trained on, with no change log.[^MS1] The change log is where every company falls short, the two leaders included: across all ten, the best score on it is 5.8 out of 10."
   },
   {
-   "title": "No company gives notice before weakening a hard constraint",
-   "text": "None has committed to warn the public, or to hear from it, before weakening one of the things its model must never do. On the check that asks for a comment window, only OpenAI and Anthropic score anything at all: OpenAI 5.0 out of 10, for three rounds of public input on its Model Spec in 2024 and 2025 with no commitment to hold another, and Anthropic 2.5.[^OA12][^OA13][^OA14][^AN1] Every weakening we found in the period went out with no advance notice. OpenAI's Model Spec of 18 August 2026 replaced a root-level rule that every scope of autonomous action \"must include a shutdown timer\" with one that it \"must include an ending condition\", calling a time limit \"a best practice\", and its change log does not mention the change.[^OA1][^OA7] Mistral AI's coding agent, Vibe, gained on 26 August 2026 a variant of its system prompt that lets a user authorise in advance the actions the earlier prompt marked as never overridable, and its release notes do not mention it.[^MI1][^MI2] Other weakenings we found concern what a company will build or release. Google removed its commitments on weapons and surveillance from its AI Principles in February 2025, in a blog post that did not mention the removal.[^GO9][^GO19][^GO25] xAI's Frontier AI Framework of 30 June 2026 dropped the two numerical criteria its December 2025 version set for deployment, and its passages on whistleblower protections and anonymous reporting, with no record of the change.[^XA1][^XA8] Meta's framework of April 2026 turned its critical threshold from \"Stop\" into \"Develop with Mitigations\" and its high threshold from \"Do not release\" into \"Deploy with mitigations\", recorded only in its change log and with none of the justification it promises for an update.[^ME1] Changes that tighten a rule go out the same way: in January 2026, under pressure from regulators, X's Safety account (X has belonged to xAI since 2025) announced that the Grok account on X would no longer edit images of real people into revealing clothing.[^XA15][^XA16] Terms of use change the same way. DeepSeek's user agreement says a new version \"replaces the original terms\" the moment it is announced, and Moonshot AI reserves the same right to change its terms alone, with continued use counting as acceptance, though its latest revision took effect seven days after its date.[^MO3][^DS2][^DS3]"
+   "title": "No company commits to notice before every weakening of a hard constraint",
+   "text": "None has committed to warn the public, or to hear from it, before every weakening of one of the things its model must never do. On the check that asks for a comment window, three companies score anything at all. Microsoft AI scores 7.5 out of 10: its draft Code of Conduct is open to comment from anyone for six weeks, it has promised a summary of what it learned and changed, and it commits to hold similar consultations on new versions, while it keeps the right to make expedited changes with no consultation before or after.[^MS1][^MS2] OpenAI scores 5.0 out of 10, for three rounds of public input on its Model Spec in 2024 and 2025 with no commitment to hold another, and Anthropic 2.5.[^OA12][^OA13][^OA14][^AN1] Every weakening we found in the period went out with no advance notice. OpenAI's Model Spec of 18 August 2026 replaced a root-level rule that every scope of autonomous action \"must include a shutdown timer\" with one that it \"must include an ending condition\", calling a time limit \"a best practice\", and its change log does not mention the change.[^OA1][^OA7] Mistral AI's coding agent, Vibe, gained on 26 August 2026 a variant of its system prompt that lets a user authorise in advance the actions the earlier prompt marked as never overridable, and its release notes do not mention it.[^MI1][^MI2] Other weakenings we found concern what a company will build or release. Google removed its commitments on weapons and surveillance from its AI Principles in February 2025, in a blog post that did not mention the removal.[^GO9][^GO19][^GO25] xAI's Frontier AI Framework of 30 June 2026 dropped the two numerical criteria its December 2025 version set for deployment, and its passages on whistleblower protections and anonymous reporting, with no record of the change.[^XA1][^XA8] Microsoft's Frontier Governance Framework of February 2026 repeats its deeper capability assessments only when a deployed model's risk profile changes materially, where its first version repeated them at least every six months, and it dropped a sentence on monitoring chain-of-thought outputs; its change log names the first change and not the second.[^MS8][^MS9] Meta's framework of April 2026 turned its critical threshold from \"Stop\" into \"Develop with Mitigations\" and its high threshold from \"Do not release\" into \"Deploy with mitigations\", recorded only in its change log and with none of the justification it promises for an update.[^ME1] Changes that tighten a rule go out the same way: in January 2026, under pressure from regulators, X's Safety account (X has belonged to xAI since 2025) announced that the Grok account on X would no longer edit images of real people into revealing clothing.[^XA15][^XA16] Terms of use change the same way. DeepSeek's user agreement says a new version \"replaces the original terms\" the moment it is announced, and Moonshot AI reserves the same right to change its terms alone, with continued use counting as acceptance, though its latest revision took effect seven days after its date.[^MO3][^DS2][^DS3]"
   },
   {
    "title": "The companies that offer guardrails to developers describe them in detail, and none lists by kind the guardrails across its own apps",
-   "text": "Google, OpenAI, Alibaba, Meta and Mistral AI publish detailed descriptions of the guardrails they offer developers building on their models: which categories of content can be filtered, how strict each setting is, and guardrail models that anyone can download.[^OA9][^AL3][^GO12][^MI11][^MI12][^ME9] Alibaba's own model platform, Model Studio, lists the categories of an optional guardrail and says its models carry compliance checks of their own.[^AL2][^AL3] None publishes an inventory, by kind, of the guardrails across its own consumer products, and on the check that asks for one, seven companies score 7.5 out of 10 and none scores more. Some describe parts of them: OpenAI its age prediction on ChatGPT, Anthropic the classifiers on its own apps and API, Meta, kind by kind, the permission layer and classifiers around its Muse agent, and Google, in general terms, a safety check on every answer of the Gemini app and its defences against prompt injection.[^OA10][^AN10][^GO3][^GO26][^ME5] xAI and DeepSeek run the other way. They offer developers no guardrail product, and what they disclose concerns their own services: xAI names the filters on its products by harm class in its model cards, and DeepSeek's R1 paper gives its risk control system a subsection, while its developer agreement leaves API customers to build their own filters.[^XA4][^XA14][^DS6][^DS7] Moonshot AI describes the filter on its own API and app and offers developers nothing to configure.[^MO3][^MO5][^MO6][^MO7] OpenAI states that its safety policies in production can be updated faster than an automated guardrail can be retrained, so the layer that can change fastest is one with no register.[^OA9] Mistral's Shieldstral takes the developer side furthest: it comes with no categories at all, and takes its policy from whoever deploys it, at the moment of use.[^MI12]"
+   "text": "Google, Microsoft, OpenAI, Alibaba, Meta and Mistral AI publish detailed descriptions of the guardrails they offer developers building on their models: which categories of content can be filtered, how strict each setting is, and guardrail models that anyone can download.[^OA9][^AL3][^GO12][^MI11][^MI12][^ME9][^MS10][^MS11] Alibaba's own model platform, Model Studio, lists the categories of an optional guardrail and says its models carry compliance checks of their own.[^AL2][^AL3] None publishes an inventory, by kind, of the guardrails across its own consumer products, and on the check that asks for one, eight companies score 7.5 out of 10 and none scores more. Some describe parts of them: OpenAI its age prediction on ChatGPT, Anthropic the classifiers on its own apps and API, Microsoft the input and output classifiers of its Copilot app, Meta, kind by kind, the permission layer and classifiers around its Muse agent, and Google, in general terms, a safety check on every answer of the Gemini app and its defences against prompt injection.[^OA10][^AN10][^MS13][^GO3][^GO26][^ME5] xAI and DeepSeek run the other way. They offer developers no guardrail product, and what they disclose concerns their own services: xAI names the filters on its products by harm class in its model cards, and DeepSeek's R1 paper gives its risk control system a subsection, while its developer agreement leaves API customers to build their own filters.[^XA4][^XA14][^DS6][^DS7] Moonshot AI describes the filter on its own API and app and offers developers nothing to configure.[^MO3][^MO5][^MO6][^MO7] OpenAI states that its safety policies in production can be updated faster than an automated guardrail can be retrained, so the layer that can change fastest is one with no register.[^OA9] Mistral's Shieldstral takes the developer side furthest: it comes with no categories at all, and takes its policy from whoever deploys it, at the moment of use.[^MI12]"
   },
   {
    "title": "No company says which rules apply when its models go to governments and armed forces",
-   "text": "Almost nothing is published here. Anthropic, OpenAI and xAI score 5.0 out of 10 each, and the other six nothing at all. Anthropic is the only one that says in writing that some of its models do not fully fit its constitution.[^AN1] The constitution names none of them, and it is a spokesperson who has said that its military models may not be trained on it. Claude Gov, built for national security customers, is in use and has no published constitution of its own.[^AN2] OpenAI's Model Spec distinguishes kinds of deployment and names models used for safety testing as an exception, and OpenAI's post on its agreement with the Department of War says that deployment gets safety-trained models behind a safety stack OpenAI runs.[^OA1][^OA3] OpenAI never names its Model Spec in any announcement about government or defence. xAI's Frontier AI Framework says that \"the full functionality of our models may be available to only a limited set of trusted parties, partners, and government agencies\", and its post of December 2025 announces government-optimised models for classified work, without saying what rules apply to them.[^XA1][^XA5] xAI also agreed to the Pentagon's \"all lawful use\" standard for Grok in classified systems, as Axios reported in February 2026.[^XA6] Google confirmed in April 2026 an agreement letting the Pentagon use Gemini on classified networks, and has published neither the rules its models follow there nor any acknowledgement that they differ.[^GO8] Meta opened its Llama models to NATO and to EU institutions while its own acceptable use policy still prohibits military uses.[^ME2] Mistral is the extreme case. Its usage policy says that it \"does not apply to Mistral AI Products deployed on a customer's infrastructure, on the infrastructure of our partners, or to our open-source AI models and products\", and its chief executive has said publicly of defence customers that \"choices about deployment and usage are not our business\".[^MI6]"
+   "text": "Almost nothing is published here. Anthropic, Microsoft AI, OpenAI and xAI score 5.0 out of 10 each, and the other six nothing at all. Anthropic says in its constitution that some of its models do not fully fit it, and Microsoft AI's draft Code of Conduct says that national security applications, among other uses, may need capabilities beyond its ordinary settings.[^AN1][^MS1] Anthropic's constitution names none of those models, and it is a spokesperson who has said that its military models may not be trained on it. Claude Gov, built for national security customers, is in use and has no published constitution of its own.[^AN2] OpenAI's Model Spec distinguishes kinds of deployment and names models used for safety testing as an exception, and OpenAI's post on its agreement with the Department of War says that deployment gets safety-trained models behind a safety stack OpenAI runs.[^OA1][^OA3] OpenAI never names its Model Spec in any announcement about government or defence. Microsoft AI's Code sends those uses to separate review through authorised Microsoft channels without saying what rules apply there, no MAI model is among the models Microsoft sells in Azure Government, and the model Microsoft offers in its Secret and Top Secret government clouds is OpenAI's GPT-5.2, which the Code does not cover.[^MS1][^MS7][^MS20] xAI's Frontier AI Framework says that \"the full functionality of our models may be available to only a limited set of trusted parties, partners, and government agencies\", and its post of December 2025 announces government-optimised models for classified work, without saying what rules apply to them.[^XA1][^XA5] xAI also agreed to the Pentagon's \"all lawful use\" standard for Grok in classified systems, as Axios reported in February 2026.[^XA6] Google confirmed in April 2026 an agreement letting the Pentagon use Gemini on classified networks, and has published neither the rules its models follow there nor any acknowledgement that they differ.[^GO8] Meta opened its Llama models to NATO and to EU institutions while its own acceptable use policy still prohibits military uses.[^ME2] Mistral is the extreme case. Its usage policy says that it \"does not apply to Mistral AI Products deployed on a customer's infrastructure, on the infrastructure of our partners, or to our open-source AI models and products\", and its chief executive has said publicly of defence customers that \"choices about deployment and usage are not our business\".[^MI6]"
   },
   {
    "title": "Alibaba's constitution is well built and names nothing it governs",
-   "text": "It has forty-three rules, four levels of authority, paired examples of compliant and violating answers, and a procedure for settling conflicts that is more explicit than OpenAI's or Anthropic's.[^AL1] It names no model, no family of models and no government, defence or other specialised deployment. Its overview implies that it governs Alibaba's production models, when it speaks of the gap between them and the Spec, which scores 5.0 out of 10 on coverage.[^AL1] The only model publicly built on it is Oyster-II, a research model of 14 billion parameters (a measure of a model's size) built on Qwen3-14B, a base model from April 2025, and the same release scores Qwen3-Max and Qwen3.5-397B against it.[^AL4][^AL5] Alibaba's flagship line goes unmentioned, up to Qwen3.8-Max of August 2026. The Max product is served through the API, and the 2.4-trillion-parameter model behind it was published for anyone to download on 12 August 2026. It is the clearest reason in our evidence to score whether a constitution exists and whether it covers anything as two separate checks."
+   "text": "It has forty-three rules, four levels of authority, paired examples of compliant and violating answers, and a procedure for settling conflicts that is more explicit than Anthropic's.[^AL1] It names no model, no family of models and no government, defence or other specialised deployment. Its overview implies that it governs Alibaba's production models, when it speaks of the gap between them and the Spec, which scores 5.0 out of 10 on coverage.[^AL1] The only model publicly built on it is Oyster-II, a research model of 14 billion parameters (a measure of a model's size) built on Qwen3-14B, a base model from April 2025, and the same release scores Qwen3-Max and Qwen3.5-397B against it.[^AL4][^AL5] Alibaba's flagship line goes unmentioned, up to Qwen3.8-Max of August 2026. The Max product is served through the API, and the 2.4-trillion-parameter model behind it was published for anyone to download on 12 August 2026. It is the clearest reason in our evidence to score whether a constitution exists and whether it covers anything as two separate checks."
   },
   {
    "title": "Meta publishes little, and scores its models against a document nobody outside can read",
-   "text": "It scores 1.6 out of 10 on what is published, seventh of the nine, and 2.5 out of 10 on what it engages, fourth of the nine and level with xAI, which puts it sixth on the final score with 2.0 out of 10. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\"[^ME1] Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read.[^ME6] A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The Muse Spark report keeps two internal texts apart: a behaviour specification it scores the model against, and the content safety policy it tests compliance with.[^ME6] The document that leaked in 2025, \"GenAI: Content Risk Standards\", belongs with the second.[^ME8] It set out acceptable and unacceptable answers to sample prompts with the reasoning, much like the rules-with-examples form of the published constitutions.[^ME8]"
+   "text": "It scores 1.6 out of 10 on what is published, eighth of the ten, and 2.5 out of 10 on what it engages, fifth of the ten and level with xAI, which puts it seventh on the final score with 2.0 out of 10. Its Advanced AI Scaling Framework, version 2, dated 7 April 2026, commits in writing: \"Meta will also publish a model spec describing the behavior we intend each of our Frontier AI to exhibit across different settings, including agentic environments.\"[^ME1] Five months on, nothing is published, and there is no deadline. Meanwhile the safety report for its Muse Spark model publishes scores for how well the model follows an internal constitution that nobody outside Meta can read.[^ME6] A company publishing scores against a document nobody outside it can read shows why the first question exists more clearly than any company that publishes nothing. We do not know what form that document takes. The Muse Spark report keeps two internal texts apart: a behaviour specification it scores the model against, and the content safety policy it tests compliance with.[^ME6] The document that leaked in 2025, \"GenAI: Content Risk Standards\", belongs with the second.[^ME8] It set out acceptable and unacceptable answers to sample prompts with the reasoning, much like the rules-with-examples form of the published constitutions.[^ME8]"
   },
   {
    "title": "Most companies whose models anyone can download sit at the bottom, partly because of the questions",
-   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them take the last three places on the final score, Mistral AI with 1.7, DeepSeek with 1.0 and Moonshot AI with 0.8. On what is published, Moonshot AI's 0.9 and DeepSeek's 0.7 are the two lowest scores, and Mistral AI's 3.4 is fourth, carried by the system prompts of its coding agent, while it scores nothing on what it engages. Alibaba is the exception, fifth on what is published with 3.2 and fifth on the final score, and its Qwen models are among the most used open-weight models there are. Their licences say almost nothing about behaviour. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, which adds no condition on how the model is used or behaves.[^DS1] Mistral AI releases Mistral Large 3 under Apache 2.0, with a sentence in its model card on respecting the rights of third parties, and its current flagship, Mistral Medium 3.5, under a modified MIT licence whose added condition is commercial, a ceiling of $20 million of monthly revenue.[^MI15] Moonshot AI's licence for Kimi K3 adds one sentence about use, that use of the software must comply with applicable laws and regulations, and two commercial conditions.[^MO2] Section 2 asks for a separate agreement once a model-as-a-service business passes $20 million of revenue over any twelve consecutive months, and section 3 asks that the name Kimi K3 be displayed prominently on any product or service with more than 100 million monthly active users or more than $20 million of monthly revenue.[^MO2] None of the three says anything about how its models behave in deployments the company does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
+   "text": "Four companies publish the weights of their flagship model, or nearly: the numbers that make up the model can be downloaded and run by anyone. Three of them take the last three places on the final score, Mistral AI with 1.7, DeepSeek with 1.0 and Moonshot AI with 0.8. On what is published, Moonshot AI's 0.9 and DeepSeek's 0.7 are the two lowest scores, and Mistral AI's 3.4 is fifth, carried by the system prompts of its coding agent, while it scores nothing on what it engages. Alibaba is the exception, sixth on what is published with 3.2 and sixth on the final score, and its Qwen models are among the most used open-weight models there are. Their licences say almost nothing about behaviour. DeepSeek releases its 1.6-trillion-parameter model under the plain MIT licence, which adds no condition on how the model is used or behaves.[^DS1] Mistral AI releases Mistral Large 3 under Apache 2.0, with a sentence in its model card on respecting the rights of third parties, and its current flagship, Mistral Medium 3.5, under a modified MIT licence whose added condition is commercial, a ceiling of $20 million of monthly revenue.[^MI15] Moonshot AI's licence for Kimi K3 adds one sentence about use, that use of the software must comply with applicable laws and regulations, and two commercial conditions.[^MO2] Section 2 asks for a separate agreement once a model-as-a-service business passes $20 million of revenue over any twelve consecutive months, and section 3 asks that the name Kimi K3 be displayed prominently on any product or service with more than 100 million monthly active users or more than $20 million of monthly revenue.[^MO2] None of the three says anything about how its models behave in deployments the company does not control. The honest reading is that these questions ask who governs the model once it is deployed, and for a model anyone can download the answer is nobody, by design. That is a gap in our proposal, because the first question has no way to reach models in the wild. The proposal should say so, so that the ranking does not suggest these companies simply chose not to comply."
   },
   {
    "title": "Three companies have agreed to write this document for a regulator, and do not publish it",
-   "text": "Google and Mistral AI have signed the EU's General-Purpose AI Code of Practice in full, and xAI has signed its Safety and Security chapter, which is where Measure 7.1 sits.[^CO7][^CO8] For any model that carries systemic risk, Measure 7.1 asks the provider's report to the EU AI Office to set out how the model is meant to operate: the principles it follows, how it ranks principles and instructions, the topics it refuses, and its system prompt.[^CO8] The report is not public; the Code asks only for summaries to be published where needed, and sets no date.[^CO8] Mistral AI's own AI Act pages label its models, Mistral Large 3 and Mistral Medium 3.5 included, as general-purpose AI models and none as carrying systemic risk, so on its own classification the Code asks it for no such report today.[^MI7][^MI8] It is established in the EU, has built a genuine public AI compliance hub with 41 entries across 11 families of models, and publishes no document on how its models should behave in general, only the system prompts of its coding agent.[^MI1][^MI7] With three companies that have made this commitment and publish no constitution, it is a pattern, and it is the strongest argument available that our asks belong on a regulatory checklist as well as a voluntary one."
+   "text": "Google and Mistral AI have signed the EU's General-Purpose AI Code of Practice in full, and xAI has signed its Safety and Security chapter, which is where Measure 7.1 sits.[^CO7][^CO8] Microsoft has signed the Code in full as well, and its Microsoft AI division published in September 2026 a draft Code of Conduct for its MAI models, which those models are not yet trained on.[^CO7][^MS1] For any model that carries systemic risk, Measure 7.1 asks the provider's report to the EU AI Office to set out how the model is meant to operate: the principles it follows, how it ranks principles and instructions, the topics it refuses, and its system prompt.[^CO8] The report is not public; the Code asks only for summaries to be published where needed, and sets no date.[^CO8] Mistral AI's own AI Act pages label its models, Mistral Large 3 and Mistral Medium 3.5 included, as general-purpose AI models and none as carrying systemic risk, so on its own classification the Code asks it for no such report today.[^MI7][^MI8] It is established in the EU, has built a genuine public AI compliance hub with 41 entries across 11 families of models, and publishes no document on how its models should behave in general, only the system prompts of its coding agent.[^MI1][^MI7] With three companies that have made this commitment and publish no constitution, it is a pattern, and it is the strongest argument available that our asks belong on a regulatory checklist as well as a voluntary one."
   }
  ],
  "profiles": {
@@ -7017,9 +8032,17 @@
     "title": "Behaviour that travels with the model",
     "text": "Two things are worth knowing. First, the censorship also sits in the model itself.[^DS8] The US Center for AI Standards and Innovation found that \"CCP censorship is built directly into DeepSeek models\", testing copies downloaded from Hugging Face without touching DeepSeek's own service, so behaviour the company has never described travels with the model.[^DS8] Second, DeepSeek publishes its filing numbers with the Cyberspace Administration of China in full, with links to the regulator's notices.[^DS1]"
    }
+  },
+  "microsoft": {
+   "1": "Microsoft AI's constitution, which it calls the Humanist AI Code of Conduct, was published on 14 September 2026 as a draft for public consultation.[^MS1][^MS2] It sets out how the MAI models should behave in ordinary use, an order of authority that runs from the Code through operators to users, and a rule that safety and human control take precedence over its other objectives.[^MS1] It states its coverage as a class, the MAI models, which takes in the coding model that millions of developers use in GitHub Copilot and the image model that is the default in Bing Image Creator.[^MS1][^MS5][^MS6] It says it does not extend to other models simply because Microsoft uses or hosts them.[^MS1] Microsoft AI says its current models are not yet trained on the Code, and that a revised version will guide its model development from 2027.[^MS1] Under our rule for a draft that its company says is not yet in force, the text is scored for what it contains and its coverage counts at most as implied. The Code names national security applications, defensive cybersecurity, public safety work and dual-use scientific research as domains where authorised organisations may need capabilities beyond its ordinary settings, sends them to separate review through authorised Microsoft channels, and does not say what rules apply there.[^MS1] We found no MAI model among the models Microsoft sells in Azure Government.[^MS7]",
+   "2": "The Code is a first version and carries one date, 14 September 2026, with no version number, no archive and no change log.[^MS1] Microsoft AI has promised a summary of what it learned and what it changed when the consultation closes, and a revised version toward the end of 2026.[^MS1][^MS2] Nothing says whether this draft will stay online once the revision is published, which version will govern which model, or how soon a change will be recorded. We found no published system prompts for Microsoft's Copilot products and no register of changes to its guardrails. Microsoft's Frontier Governance Framework, a separate document about catastrophic risk, keeps its first version online and a change log of its own, and commits to publish material revisions within 30 days of adoption.[^MS8][^MS9]",
+   "3": "The MAI models are sold to developers on Microsoft Foundry, where the guardrails are listed by category: hate and fairness, sexual content, violence, self-harm, protected material and prompt attacks, applied by default and switched off only for customers Microsoft approves.[^MS10][^MS11][^MS12] For its consumer Copilot Microsoft describes input and output classifiers and classifiers that look for signs of suicide or self-harm, and GitHub Copilot runs its content filters on the MAI coding model.[^MS13][^MS14] There is no inventory across every product that runs an MAI model. Changes to guardrails are reported after the fact in Microsoft's yearly Responsible AI Transparency Report, which says, for one, that a sensitivity threshold of MAI-Image-1 was adjusted so that it depicts children less often.[^MS15] We found no register of such changes. The Code names classifiers, system instructions and monitoring among the mitigations that operate alongside it.[^MS1]",
+   "4": "The Code lists ten Absolute Constraints under two headings, frontier and public safety risks and personal harms, and says no operator or user can override them.[^MS1] They run from weapons of mass harm and offensive cyber operations to sexually explicit content and romantic role-play, and the Code's human control requirements carry the same protection.[^MS1] Like the rest of the Code, they are a draft its models are not yet trained on.[^MS1] The draft is open to comment from anyone for six weeks, until 25 October 2026, through a form. Submissions are published only with their authors' permission, and Microsoft AI has promised a summary of what it learned and what it changed.[^MS1][^MS2][^MS3] The Code commits to hold similar consultations as new versions are developed. It also keeps the right to make expedited changes, and says nothing about consulting before or after them, or before an Absolute Constraint is weakened.[^MS1]",
+   "practices_published": "The Code names no licence. Its page carries Microsoft's copyright line and links Microsoft's general terms of use, which forbid modifying the content or making works derived from it (0).[^MS1][^MS4]",
+   "practices_engaged": "The technical report of MAI-Thinking-1 publishes a safety evaluation against Microsoft's own safety policies, with its method and results by harm category, and no test of adherence to the Code has been published (1).[^MS16][^MS1] Unnamed outside vendors red-teamed MAI-Thinking-1, an independent third party assessed MAI-Cyber-1-Flash, and Microsoft signed testing agreements with the US and UK government institutes in May 2026 that have produced no published result for an MAI model; none tests adherence to the Code (1).[^MS16][^MS17][^MS18] Every release candidate of MAI-Thinking-1 must pass a threshold on a fixed set of safety evaluations, set in each release cycle and not published (1).[^MS16] Nothing is published on who approves a change to the Code (0). Microsoft AI says its current models are not yet trained on the Code, describes training MAI-Thinking-1 against internal safety policies, and describes monitoring MAI models in use without reporting any incident publicly.[^MS1][^MS16][^MS15][^MS19]"
   }
  },
- "looked": "The scores were given by hand, from documents found and dated between 18 and 21 September 2026. Some were corrected on 25 September 2026, where an audit carried out with language models found documents that reading had missed, and each correction follows the board's own description of each score. On 26 September 2026 nine rules were written down for cases the descriptions left open and applied to every company, and a person approved four corrections the audit had proposed for Anthropic. Nothing was taken from another ranking.",
+ "looked": "The scores were given by hand, from documents found and dated between 18 and 21 September 2026. Some were corrected on 25 September 2026, where an audit carried out with language models found documents that reading had missed, and each correction follows the board's own description of each score. On 26 September 2026 nine rules were written down for cases the descriptions left open and applied to every company, and a person approved four corrections the audit had proposed for Anthropic. On 28 September 2026 Microsoft AI was added: its rows were researched and scored by a language model against the same descriptions and rules, and a tenth rule was written down for a draft that its company says is not yet in force. Nothing was taken from another ranking.",
  "total": {
   "name": "Final score",
   "out_of": 10,
@@ -7032,7 +8055,7 @@
  },
  "page": {
   "title": "How constitutions are governed",
-  "intro": "Some AI companies publish a constitution, a document setting out how their models should[*](/about#why) behave. This view scores nine companies, as of September 2026, on two things: how transparent they are about the constitutions they publish, and the extent to which those constitutions are actually made to bind the models. The final score is the average of the two, and it ranks the companies.",
+  "intro": "Some AI companies publish a constitution, a document setting out how their models should[*](/about#why) behave. This view scores ten companies, as of September 2026, on two things: how transparent they are about the constitutions they publish, and the extent to which those constitutions are actually made to bind the models. The final score is the average of the two, and it ranks the companies.",
   "sections": [
    {
     "id": "gov-motivation",
@@ -7051,7 +8074,7 @@
       "tag": "div",
       "class": ""
      },
-     "### Rules we added to the descriptions*\n\nSome cases fit none of the descriptions above, or two of them. We decided each once, for all nine companies.\n\n- A sentence naming a class of models that includes the most-used ones counts as a statement of coverage, and is worth 4 of 4 on coverage stated (1.2).\n- System prompts a company publishes count as a partial constitution, worth 2 of 4 on constitution published (1.1), and a history that shows each change to them line by line, without reasons, is worth 2 of 4 on changes explained (2.2).\n- On versions kept (2.1) a bare date is worth 0, and a version label, a versions menu, an earlier text still online or a published promise to keep past versions is worth 1.\n- Coverage that a document implies without stating it is worth 2 of 4 on coverage stated (1.2), as the description of a 2 says.\n- A published safety evaluation against the company's own policies, with its results, is worth 1 of 2 on adherence tests published (S2).\n- One disclosure earns points on one row only, the row it fits best.\n- Guardrails listed by category for one platform are worth 3 of 4 on guardrails disclosed (3.1).\n- Guardrail changes a company announces on its own channels, with no register, are worth 2 of 4 on guardrail changes logged (3.2), as the description of a 2 says.\n- A special regime a company acknowledges without describing it is worth 2 of 4 on special deployments (1.3), as the description of a 2 says.\n\n*These rules are our own choices, made on 26 September 2026 so that every company is scored the same way where the descriptions left a case open. They come from neither working paper.",
+     "### Rules we added to the descriptions*\n\nSome cases fit none of the descriptions above, or two of them. We decided each once, for every company on the board.\n\n- A sentence naming a class of models that includes the most-used ones counts as a statement of coverage, and is worth 4 of 4 on coverage stated (1.2).\n- System prompts a company publishes count as a partial constitution, worth 2 of 4 on constitution published (1.1), and a history that shows each change to them line by line, without reasons, is worth 2 of 4 on changes explained (2.2).\n- On versions kept (2.1) a bare date is worth 0, and a version label, a versions menu, an earlier text still online or a published promise to keep past versions is worth 1.\n- Coverage that a document implies without stating it is worth 2 of 4 on coverage stated (1.2), as the description of a 2 says.\n- A published safety evaluation against the company's own policies, with its results, is worth 1 of 2 on adherence tests published (S2).\n- One disclosure earns points on one row only, the row it fits best.\n- Guardrails listed by category for one platform are worth 3 of 4 on guardrails disclosed (3.1).\n- Guardrail changes a company announces on its own channels, with no register, are worth 2 of 4 on guardrail changes logged (3.2), as the description of a 2 says.\n- A special regime a company acknowledges without describing it is worth 2 of 4 on special deployments (1.3), as the description of a 2 says.\n- A draft that its company says is not yet in force is scored on constitution published (1.1) for what its text contains, with a note that it is a draft, and is worth at most 2 of 4 on coverage stated (1.2), as coverage implied, because the models it names do not follow it yet.\n\n*These rules are our own choices, the first nine made on 26 September 2026 and the last on 28 September 2026, so that every company is scored the same way where the descriptions left a case open. They come from neither working paper.",
      "### The best practices, figure by figure\n\nThe ten best practices come from the second working paper named above, note 6 under the board.[^CO2] Each is named below as it is on the board, followed by what the paper asks and where it asks it.\n\nOne practice is counted in what is published, because it is a fact about the published text.",
      {
       "slot": "gov-published-practices",
@@ -7076,14 +8099,14 @@
       "tag": "ul",
       "class": "gov-bullets"
      },
-     "The paper gives no description of what 0, 1 and 2 mean on a practice. In our scoring, 2 is the practice in full, 1 part of it or a weaker form of it, and 0 means we found nothing published.\n\n### How we looked\n\nEvery score was first given by hand, by reading documents. No model judged any row in that reading, and no score was taken from another ranking. The reading was done between 18 and 21 September 2026, and the sources it rests on are listed company by company below.\n\nFor each company we searched its own pages first: the constitution or policy document where one exists, the developer documentation, the model cards and system cards, the terms of service and usage policy, the change logs and release notes, and the safety or frontier framework. We then searched for the company by name against the practices it had not answered, and read the outside sources listed below, among them the EU Code of Practice signatory list, the Stanford Foundation Model Transparency Index, and the evaluations published by the UK AI Security Institute and the US Center for AI Standards and Innovation.[^AN12][^MI5][^MO10][^DS8][^DS9][^CO7] For the four practices only a company can show, the search was run one practice at a time across all nine companies, so that each practice was judged the same way everywhere.\n\nEvery row was read again on 23 and 24 September 2026, and the passage behind each score was recorded with its address and its date.\n\nOn 25 September 2026 an audit carried out with language models checked every row against its sources and found documents that reading had missed. Where a second model confirmed a correction, the score was changed to follow the board's descriptions of each score, and the rows it changed cite the documents it found with that date. Corrections that turned on a rule the board had not written down were held, and so were corrections that would raise Anthropic, since the models that carried out the audit are Anthropic's. A person decided both on 26 September 2026: the nine rules listed above were written down and applied to every company, and four corrections raising Anthropic were approved. The rows they changed cite the audit's sources with that date.\n\n**Where nothing is published, the board says nothing is published.** A 0 is not a judgement that a company does not do something. It says we looked and found nothing public, and a company may well follow a practice without saying so. Every row on the board rests on a passage quoted with its address in the popover behind the score, or on a sentence there saying where we looked and found nothing. Two searches failed outright, and both are named under Limitations: the Chinese regulatory filings, and older copies of pages that carry no date.\n\nTell us if we are wrong. The button at the bottom right of this page sends us a note, and a correction that carries the address of the document is the most useful thing anyone can send.\n\n### How to read the scores\n\n**Publishing a constitution and covering models with it are scored separately.** Alibaba's constitution names no model, and on a single \"has a constitution\" column it would score the same as one that binds a company's products.\n\n**The rows say more than the figure.** OpenAI and Anthropic are the two highest on what is published and fall short in opposite ways. OpenAI keeps every version at a dated address, where Anthropic's one earlier version survives at its old address and nothing records the edits since.[^OA5][^OA6][^OA7][^AN4] Anthropic names the things its models must never do as a closed set, where OpenAI's top level points at detailed policies it does not publish.[^OA1][^AN1]\n\n**The two figures do not agree with each other.** Meta publishes little and is fourth on what it engages, level with xAI, which leaves it sixth on the final score. Mistral AI is fourth on what is published and scores 0 on what it engages, the only company that does, which leaves it seventh. That is why both figures stay on the board under the final score.\n\n**Six of the nine companies publish no constitution**, and what they publish instead decides their first figure. xAI and Mistral AI publish system prompts, which we count as a partial constitution, and they are third and fourth on what is published, ahead of Alibaba, whose full constitution names no model and keeps no change log.[^MI1][^XA7] Google DeepMind publishes guidelines for its app and is sixth.[^GO1] Meta, Moonshot AI and DeepSeek publish fragments and hold the three lowest places. Among the three that publish a constitution, the change log is what separates them.\n\n### Who the companies are\n\nSome trading names mislead, so here are the companies behind three of them. Moonshot AI is Beijing Moonshot AI Technology (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is 杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI SAS, of Paris."
+     "The paper gives no description of what 0, 1 and 2 mean on a practice. In our scoring, 2 is the practice in full, 1 part of it or a weaker form of it, and 0 means we found nothing published.\n\n### How we looked\n\nEvery score was first given by hand, by reading documents. No model judged any row in that reading, and no score was taken from another ranking. The reading was done between 18 and 21 September 2026, and the sources it rests on are listed company by company below. Microsoft AI was added on 28 September 2026. Its rows were researched and scored that day by a language model, against the same descriptions and rules, and no person has yet read them against their sources.\n\nFor each company we searched its own pages first: the constitution or policy document where one exists, the developer documentation, the model cards and system cards, the terms of service and usage policy, the change logs and release notes, and the safety or frontier framework. We then searched for the company by name against the practices it had not answered, and read the outside sources listed below, among them the EU Code of Practice signatory list, the Stanford Foundation Model Transparency Index, and the evaluations published by the UK AI Security Institute and the US Center for AI Standards and Innovation.[^AN12][^MI5][^MO10][^DS8][^DS9][^CO7] For the four practices only a company can show, the search was run one practice at a time across the nine companies then on the board, so that each practice was judged the same way everywhere, and Microsoft AI, added on 28 September 2026, was searched for the same four practices on its own.\n\nEvery row was read again on 23 and 24 September 2026, and the passage behind each score was recorded with its address and its date.\n\nOn 25 September 2026 an audit carried out with language models checked every row against its sources and found documents that reading had missed. Where a second model confirmed a correction, the score was changed to follow the board's descriptions of each score, and the rows it changed cite the documents it found with that date. Corrections that turned on a rule the board had not written down were held, and so were corrections that would raise Anthropic, since the models that carried out the audit are Anthropic's. A person decided both on 26 September 2026: the first nine rules listed above were written down and applied to every company, and four corrections raising Anthropic were approved. The rows they changed cite the audit's sources with that date.\n\n**Where nothing is published, the board says nothing is published.** A 0 is not a judgement that a company does not do something. It says we looked and found nothing public, and a company may well follow a practice without saying so. Every row on the board rests on a passage quoted with its address in the popover behind the score, or on a sentence there saying where we looked and found nothing. Two searches failed outright, and both are named under Limitations: the Chinese regulatory filings, and older copies of pages that carry no date.\n\nTell us if we are wrong. The button at the bottom right of this page sends us a note, and a correction that carries the address of the document is the most useful thing anyone can send.\n\n### How to read the scores\n\n**Publishing a constitution and covering models with it are scored separately.** Alibaba's constitution names no model, and on a single \"has a constitution\" column it would score the same as one that binds a company's products.\n\n**The rows say more than the figure.** OpenAI and Anthropic are the two highest on what is published and fall short in opposite ways. OpenAI keeps every version at a dated address, where Anthropic's one earlier version survives at its old address and nothing records the edits since.[^OA5][^OA6][^OA7][^AN4] Anthropic names the things its models must never do as a closed set, where OpenAI's top level points at detailed policies it does not publish.[^OA1][^AN1]\n\n**The two figures do not agree with each other.** Meta publishes little and is fifth on what it engages, level with xAI, which leaves it seventh on the final score. Mistral AI is fifth on what is published and scores 0 on what it engages, the only company that does, which leaves it eighth. That is why both figures stay on the board under the final score.\n\n**Six of the ten companies publish no constitution**, and what they publish instead decides their first figure. xAI and Mistral AI publish system prompts, which we count as a partial constitution, and they are fourth and fifth on what is published, ahead of Alibaba, whose full constitution names no model and keeps no change log.[^MI1][^XA7] Google DeepMind publishes guidelines for its app and is seventh.[^GO1] Meta, Moonshot AI and DeepSeek publish fragments and hold the three lowest places. Of the four that publish a constitution, OpenAI and Anthropic score on the change log and Alibaba and Microsoft AI score nothing there. Microsoft AI's Code of Conduct, a draft its models are not yet trained on, is third on what is published.[^MS1]\n\n### Who the companies are\n\nSome trading names mislead, so here are the companies behind four of them. Moonshot AI is Beijing Moonshot AI Technology (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is 杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI SAS, of Paris. Microsoft AI is a division of Microsoft Corporation, of Redmond, and makes the MAI models."
     ]
    },
    {
     "id": "gov-limitations",
     "title": "Limitations",
     "blocks": [
-     "Both working papers were written to argue for change, and scoring them gives them more precision than they were designed for. The descriptions of each score are ours, and so are the nine rules we added on 26 September 2026 where they left a case open. A different reading could move a company by a few points. The wider picture would stay: all nine fall short on the change log, none offers a comment window before one of the things a model must never do is weakened, and none covers government, defence and other special deployments.\n\nEvery score rests on a document found and dated, in the reading of 18 to 21 September 2026, in the audit of 25 September 2026, or when its findings were applied on 26 September 2026. These points are open.\n\n- **Alibaba's constitution serves no text at its own address.** A plain request to it returns an application shell and no document, so the text used is the copy this index holds, 210 passages of it, word for word, at [its April 2026 version](/doc-reader/?spec=alibaba--model-spec@2026-04-00). The index keeps only passages that bear on a behaviour, so prefaces and boilerplate are not in it. The preface's invitation to public comment and the overview's acknowledgement of safeguards the service applies around the model are both confirmed, and there is no statement of coverage anywhere in the document.[^AL1] Anyone who tries to check a quotation at that address will meet the same shell.\n- **Alibaba's list of guardrail categories for Model Studio was last updated on 23 September 2026**, after our reading, and no earlier copy was checked.[^AL3] Its 3 on guardrails disclosed rests on that page.\n- **No older copies of the undated pages were found.** Where a page carries no date and no earlier copy, a quiet edit to it would not show. This matters most for Google, where three of the relevant documents carry no date at all, and for DeepSeek, whose disclosure page has no earlier copy anyone could find.\n- **The Chinese regulatory filings were not found.** The Cyberspace Administration of China publishes its lists as attachments that could not be retrieved. So when this board says Moonshot AI publishes no filing number, it means none appears on Moonshot AI's own sites.\n- **Whether Anthropic has signed the EU Code of Practice is unconfirmed.** Its July 2025 post says it \"intends to sign\"; its own page of voluntary commitments does not list it. No score depends on this.\n- **Which chapters of the EU Code of Practice Mistral has signed is unconfirmed.** The European Commission's list names Mistral with no exception, and sets out chapters only for xAI.[^CO7] No score depends on this.\n- **Which Anthropic models do not fully fit its constitution** is not written down: the constitution names none, and the point about military models comes from a spokesperson quoted by TIME. Coverage of Claude Mythos's system card says it was trained with the constitution, so it is not counted among them.\n- **What Meta's log of updates to its Community Standards contains could not be established**, so the reading that it does not cover AI is an inference nobody has checked.\n- **The release date of Kimi K3 is disputed** between Moonshot AI's own blog (27 July 2026, for the downloadable model) and the UK AI Security Institute and Wikipedia (16 July 2026). No score depends on this.\n- **All scores are ours.** None comes from an established, published scoring method."
+     "Both working papers were written to argue for change, and scoring them gives them more precision than they were designed for. The descriptions of each score are ours, and so are the ten rules we added on 26 and 28 September 2026 where they left a case open. A different reading could move a company by a few points. The wider picture would stay: all ten fall short on the change log, none commits to a comment window before every weakening of one of the things a model must never do, and none covers government, defence and other special deployments.\n\nEvery score rests on a document found and dated, in the reading of 18 to 21 September 2026, in the audit of 25 September 2026, or when its findings were applied on 26 September 2026, or, for Microsoft AI, on 28 September 2026. These points are open.\n\n- **Alibaba's constitution serves no text at its own address.** A plain request to it returns an application shell and no document, so the text used is the copy this index holds, 210 passages of it, word for word, at [its April 2026 version](/doc-reader/?spec=alibaba--model-spec@2026-04-00). The index keeps only passages that bear on a behaviour, so prefaces and boilerplate are not in it. The preface's invitation to public comment and the overview's acknowledgement of safeguards the service applies around the model are both confirmed, and there is no statement of coverage anywhere in the document.[^AL1] Anyone who tries to check a quotation at that address will meet the same shell.\n- **Alibaba's list of guardrail categories for Model Studio was last updated on 23 September 2026**, after our reading, and no earlier copy was checked.[^AL3] Its 3 on guardrails disclosed rests on that page.\n- **No older copies of the undated pages were found.** Where a page carries no date and no earlier copy, a quiet edit to it would not show. This matters most for Google, where three of the relevant documents carry no date at all, and for DeepSeek, whose disclosure page has no earlier copy anyone could find.\n- **The Chinese regulatory filings were not found.** The Cyberspace Administration of China publishes its lists as attachments that could not be retrieved. So when this board says Moonshot AI publishes no filing number, it means none appears on Moonshot AI's own sites.\n- **Whether Anthropic has signed the EU Code of Practice is unconfirmed.** Its July 2025 post says it \"intends to sign\"; its own page of voluntary commitments does not list it. No score depends on this.\n- **Which chapters of the EU Code of Practice Mistral has signed is unconfirmed.** The European Commission's list names Mistral with no exception, and sets out chapters only for xAI.[^CO7] No score depends on this.\n- **Which Anthropic models do not fully fit its constitution** is not written down: the constitution names none, and the point about military models comes from a spokesperson quoted by TIME. Coverage of Claude Mythos's system card says it was trained with the constitution, so it is not counted among them.\n- **What Meta's log of updates to its Community Standards contains could not be established**, so the reading that it does not cover AI is an inference nobody has checked.\n- **The release date of Kimi K3 is disputed** between Moonshot AI's own blog (27 July 2026, for the downloadable model) and the UK AI Security Institute and Wikipedia (16 July 2026). No score depends on this.\n- **Microsoft AI's rows were researched and scored by a language model** on 28 September 2026, from the documents each row cites, and no person has yet read them against their sources. The other nine companies were first scored by hand.\n- **Microsoft AI's Code of Conduct is a draft under consultation until 25 October 2026**, and a revised version is promised for the end of 2026.[^MS1][^MS3] Every row that reads the Code will need reading again then.\n- **All scores are ours.** None comes from an established, published scoring method."
     ]
    },
    {
@@ -7111,14 +8134,14 @@
   {
    "id": "s5-anthropic-against-meta",
    "title": "Anthropic and Meta both score nought on who approves a change, and each names who approves changes to a risk framework",
-   "question": "Anthropic's Responsible Scaling Policy names a proposer, the CEO and the RSO, and an approver, the Board in consultation with the LTBT, for changes to that policy. Section 5.1 of Meta's Advanced AI Scaling Framework says an update is confirmed by its Director of Alignment and Risk and its Chief AI Officer. Neither publishes an approval arrangement for a constitution, which is what the row asks about, so both are nought as the row is written.",
-   "what_would_settle_it": "Deciding whether the row scores a published approval arrangement for any governing document or only for a constitution, saying which in the row's own words, and applying it to all nine companies at once.",
+   "question": "Anthropic's Responsible Scaling Policy names a proposer, the CEO and the RSO, and an approver, the Board in consultation with the LTBT, for changes to that policy. Section 5.1 of Meta's Advanced AI Scaling Framework says an update is confirmed by its Director of Alignment and Risk and its Chief AI Officer. Microsoft's Frontier Governance Framework says updates to it are reviewed by its Chief Responsible AI Officer before adoption, and names no approver; Microsoft AI scores nought here too. None of them publishes an approval arrangement for a constitution, which is what the row asks about, so all are nought as the row is written.",
+   "what_would_settle_it": "Deciding whether the row scores a published approval arrangement for any governing document or only for a constitution, saying which in the row's own words, and applying it to all ten companies at once.",
    "raised": "24 September 2026"
   },
   {
    "id": "the-two-figures-are-added-without-anchors",
    "title": "The two figures are added, and the condition set for adding them was never met",
-   "question": "Adding what is published to what it engages was argued on the ground that the practices would be anchored as the checks are. No full description of 0, 1 and 2 was written for S1 to S5; the rules of 26 September 2026 say what earns a 1 in two cases, an open licence on a partial text and a safety evaluation against the company's own policies. Fourteen of the thirty-two non-zero cells of what it engages sit on S2 to S5, and they decide places: OpenAI leads Anthropic by less than what one point on any of them is worth, and DeepSeek is eighth, ahead of Moonshot AI, on the strength of its 1 on published adherence tests.",
+   "question": "Adding what is published to what it engages was argued on the ground that the practices would be anchored as the checks are. No full description of 0, 1 and 2 was written for S1 to S5; the rules of 26 September 2026 say what earns a 1 in two cases, an open licence on a partial text and a safety evaluation against the company's own policies. Seventeen of the thirty-eight non-zero cells of what it engages sit on S2 to S5, and they decide places: OpenAI leads Anthropic by less than what one point on any of them is worth, DeepSeek is ninth, ahead of Moonshot AI, on the strength of its 1 on published adherence tests, and Microsoft AI's three points on S2 to S4 are what put it above xAI.",
    "what_would_settle_it": "Writing an anchor for each of S1 to S5, then rescoring those cells against it.",
    "raised": "24 September 2026"
   },
@@ -7139,21 +8162,21 @@
   {
    "id": "rule-coverage-stated-as-a-class",
    "title": "Coverage stated as a class counts as stated",
-   "question": "We score a sentence that names a class of models, such as the models that power a company's products, as a full statement of coverage when the most-used models belong to it. OpenAI's coverage stated rose from 3 to 4, level with Anthropic, whose constitution names no model either. The other choice was 3 for both, keeping 4 for a document that lists its models: each of the two leaders would lose 0.11 on the final score and their order would stand. The rule makes naming models unnecessary. A reader cannot tell from the document alone whether a given model is covered, only from what the company says elsewhere, such as a system card saying a model was trained on it. It rewards the broad sentence both leaders already wrote, and gives no company a reason to publish a list of models.",
+   "question": "We score a sentence that names a class of models, such as the models that power a company's products, as a full statement of coverage when the most-used models belong to it. OpenAI's coverage stated rose from 3 to 4, level with Anthropic, whose constitution names no model either. The other choice was 3 for both, keeping 4 for a document that lists its models: each of the two leaders would lose 0.11 on the final score and their order would stand. The rule makes naming models unnecessary. A reader cannot tell from the document alone whether a given model is covered, only from what the company says elsewhere, such as a system card saying a model was trained on it. It rewards the broad sentence both leaders already wrote, and gives no company a reason to publish a list of models. Microsoft AI's Code of Conduct also names a class, the MAI models, and would score 4 under this rule if the rule for a draft not yet in force did not hold it at 2.",
    "what_would_settle_it": "Deciding whether the memo's ask, that no deployed model goes ungoverned, can be checked without a list of models, and if it cannot, scoring 3 on coverage stated for every company that names a class and no model.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-system-prompts-as-a-partial-constitution",
    "title": "Published system prompts count as a partial constitution",
-   "question": "We count the system prompts a company publishes as a partial constitution. xAI already scored 2 on constitution published on that basis. The rule moved Mistral AI from 0 to 2 there, from 1 to 2 on hard constraints listed and from 0 to 1 on the open licence, and moved Mistral AI and xAI each from 0 to 2 on changes explained, because the prompts' history on GitHub shows every change line by line. Mistral AI rose from 0.9 to 1.7 on the final score, and to fourth on what is published, ahead of Alibaba, which publishes a full constitution. Read the other way, as a layer of their own that is no constitution, Mistral AI would be eighth, below DeepSeek, and xAI, losing its earlier points on the same basis, fourth below Google DeepMind. The rule rewards publishing the prompts of one product as if they were a behaviour document. Mistral AI's govern one coding agent, a user can replace them, and what they mark as not overridable is a list of confirmations that a flag switches off. xAI's govern models retired in May 2026. Moonshot AI stays at 1 for a sample prompt in its quickstart, which governs no product, and the prompts DeepSeek published for two 2025 models set only the assistant's identity and the date, so they add nothing. The constitutions board, which scores the documents themselves, still counts neither xAI nor Mistral AI as publishing a constitution, so the two boards read the same texts differently. Mistral AI stays at 1 on versions kept, although the same history keeps every earlier prompt at a permanent address, which is part of what earns xAI 2 there.",
+   "question": "We count the system prompts a company publishes as a partial constitution. xAI already scored 2 on constitution published on that basis. The rule moved Mistral AI from 0 to 2 there, from 1 to 2 on hard constraints listed and from 0 to 1 on the open licence, and moved Mistral AI and xAI each from 0 to 2 on changes explained, because the prompts' history on GitHub shows every change line by line. Mistral AI rose from 0.9 to 1.7 on the final score, and is fifth on what is published, ahead of Alibaba, which publishes a full constitution. Read the other way, as a layer of their own that is no constitution, Mistral AI would be ninth, below DeepSeek, and xAI, losing its earlier points on the same basis, fifth below Google DeepMind. The rule rewards publishing the prompts of one product as if they were a behaviour document. Mistral AI's govern one coding agent, a user can replace them, and what they mark as not overridable is a list of confirmations that a flag switches off. xAI's govern models retired in May 2026. Moonshot AI stays at 1 for a sample prompt in its quickstart, which governs no product, and the prompts DeepSeek published for two 2025 models set only the assistant's identity and the date, so they add nothing. The constitutions board, which scores the documents themselves, still counts neither xAI nor Mistral AI as publishing a constitution, so the two boards read the same texts differently. Mistral AI stays at 1 on versions kept, although the same history keeps every earlier prompt at a permanent address, which is part of what earns xAI 2 there.",
    "what_would_settle_it": "Deciding whether the board scores the rules a company publishes for its models in whatever form, or only a document meant to govern its models in general, then reading system prompts the same way on both boards and on versions kept.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-a-bare-date-is-not-a-version",
    "title": "A bare date is not a version",
-   "question": "On versions kept we score a date alone at 0, and a version label, a versions menu, an earlier text still online or a published promise to keep past versions at 1. No score moved. Alibaba and DeepSeek stay at 0 for a dated text with nothing else, Moonshot AI stays at 1 because an earlier version of its terms is still served at ?version=v1, and Mistral AI stays at 1 for a versions menu on its usage policy that lists nothing. The other choice, 1 for any dated text, would have raised Alibaba and DeepSeek by 0.11 each on the final score and moved no place. The line is thin. An empty versions menu earns what a dated text does not, which rewards the fixture over the archive, and a promise to keep past versions earns as much as keeping one.",
+   "question": "On versions kept we score a date alone at 0, and a version label, a versions menu, an earlier text still online or a published promise to keep past versions at 1. No score moved. Alibaba and DeepSeek stay at 0 for a dated text with nothing else, Moonshot AI stays at 1 because an earlier version of its terms is still served at ?version=v1, and Mistral AI stays at 1 for a versions menu on its usage policy that lists nothing. Microsoft AI's Code of Conduct, added on 28 September 2026, carries one date and calls itself a draft and a first version without a version number, and scores 0. The other choice, 1 for any dated text, would have raised Alibaba, DeepSeek and Microsoft AI by 0.11 each on the final score and moved no place. The line is thin. An empty versions menu earns what a dated text does not, which rewards the fixture over the archive, and a promise to keep past versions earns as much as keeping one.",
    "what_would_settle_it": "Writing into the check's description which of these earns a 1, and deciding whether a versions menu that lists nothing should.",
    "raised": "26 September 2026"
   },
@@ -7167,35 +8190,35 @@
   {
    "id": "rule-own-policy-safety-evaluations-earn-1",
    "title": "A safety evaluation against a company's own policies earns 1 on adherence tests",
-   "question": "We score a published safety evaluation against the company's own policies, with its results, at 1 of 2 on adherence tests published, as Google DeepMind and xAI were scored on 25 September 2026. DeepSeek rose from 0 to 1 for the safety report on R1, whose results stop at a model it stopped serving in August 2025. That point is what puts DeepSeek eighth, ahead of Moonshot AI: without it DeepSeek would score 0.65 and be last. The other choice, reading the practice as a test against a constitution only, would take Google DeepMind, xAI and DeepSeek back to 0 and move one place, DeepSeek's. The rule gives a benchmark of harmful requests the same point as a test of whether a model follows a written rule, and a single report on a model since withdrawn earns what a report on current models earns.",
+   "question": "We score a published safety evaluation against the company's own policies, with its results, at 1 of 2 on adherence tests published, as Google DeepMind and xAI were scored on 25 September 2026. DeepSeek rose from 0 to 1 for the safety report on R1, whose results stop at a model it stopped serving in August 2025. That point is what puts DeepSeek ninth, ahead of Moonshot AI: without it DeepSeek would score 0.65 and be last. Microsoft AI scores 1 on the same basis, for the safety evaluation in the technical report of MAI-Thinking-1, against policies Microsoft does not publish. The other choice, reading the practice as a test against a constitution only, would take Google DeepMind, xAI, DeepSeek and Microsoft AI back to 0 and move one place, DeepSeek's. The rule gives a benchmark of harmful requests the same point as a test of whether a model follows a written rule, and a single report on a model since withdrawn earns what a report on current models earns.",
    "what_would_settle_it": "Writing a description of 0, 1 and 2 for this practice that says whether a test must be against the constitution or may be against any written policy of the company's, and whether results for withdrawn models count.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-one-disclosure-counted-once",
    "title": "One disclosure is counted once",
-   "question": "We count a disclosure on the one row it fits best. DeepSeek's R1 paper describes a filter that screens conversations on its own service. It earns DeepSeek 2 on guardrails disclosed, and it is not counted again as monitoring in use, where DeepSeek stays at 0. The other choice would have given DeepSeek 1 on monitoring in use, worth 0.31 on the final score, which would not have moved its place. The rule keeps one document from lifting a company on several rows at once, and it leaves open which row is the right one: a filter that retracts answers as they are given is a guardrail by the board's definition, and it is also the only thing DeepSeek has said about watching its models in use. Meta's 1 on monitoring in use rests on a sentence about automated monitoring after launch, which the rule does not touch.",
+   "question": "We count a disclosure on the one row it fits best. DeepSeek's R1 paper describes a filter that screens conversations on its own service. It earns DeepSeek 2 on guardrails disclosed, and it is not counted again as monitoring in use, where DeepSeek stays at 0. The other choice would have given DeepSeek 1 on monitoring in use, worth 0.31 on the final score, which would not have moved its place. The rule keeps one document from lifting a company on several rows at once, and it leaves open which row is the right one: a filter that retracts answers as they are given is a guardrail by the board's definition, and it is also the only thing DeepSeek has said about watching its models in use. Meta's 1 on monitoring in use rests on a sentence about automated monitoring after launch, which the rule does not touch. Microsoft AI's promise to publish a summary of what it learned and changed after its consultation is counted on the comment window (4.2), where it answers the memo's synopsis report, and not again on changes explained (2.2), where it would have earned a point for a summary not yet written.",
    "what_would_settle_it": "Writing into the description of monitoring in use whether a filter that acts on each answer counts as monitoring, and checking every company's 1 there against it.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-category-list-for-one-platform-is-a-3",
    "title": "Guardrails listed by category for one platform earn 3",
-   "question": "We score guardrails disclosed by category for one platform at 3 of 4, the precedent set for Mistral AI. Alibaba rose from 2 to 3 for Model Studio, its own model platform, which says its models carry compliance checks of their own and lists the categories of an optional guardrail. Meta rose from 1 to 3 for the guardrails of its Muse agent, listed by kind, the kinds of safeguard its Muse Spark report names for Meta AI, and the categories of Llama Guard. Seven of the nine companies now score 3 on this check and none scores 4, so the check separates almost nobody. The descriptions give 2 to a disclosure for one product, and 3 sits between that and an inventory across every product; the rule puts a single platform there whatever share of the company's products it is. The other choice, 2 for one platform, would have cost Meta and Alibaba 0.11 each on the final score, and any other company whose 3 rests on one platform the same, without moving a place. Alibaba's page of categories was last updated on 23 September 2026, after our reading, and Meta's Muse guardrails are security controls, against prompt injection, leaks of personal data and unapproved payments.",
+   "question": "We score guardrails disclosed by category for one platform at 3 of 4, the precedent set for Mistral AI. Alibaba rose from 2 to 3 for Model Studio, its own model platform, which says its models carry compliance checks of their own and lists the categories of an optional guardrail. Meta rose from 1 to 3 for the guardrails of its Muse agent, listed by kind, the kinds of safeguard its Muse Spark report names for Meta AI, and the categories of Llama Guard. Eight of the ten companies now score 3 on this check and none scores 4, so the check separates almost nobody; Microsoft AI's 3 rests on Microsoft Foundry, the platform where its models are sold. The descriptions give 2 to a disclosure for one product, and 3 sits between that and an inventory across every product; the rule puts a single platform there whatever share of the company's products it is. The other choice, 2 for one platform, would have cost Meta, Alibaba and Microsoft AI 0.11 each on the final score, and any other company whose 3 rests on one platform the same, without moving a place. Alibaba's page of categories was last updated on 23 September 2026, after our reading, and Meta's Muse guardrails are security controls, against prompt injection, leaks of personal data and unapproved payments.",
    "what_would_settle_it": "Writing a description of a 3 on this check, and deciding whether a platform for developers and a single consumer product count the same.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-announcements-without-a-register-are-a-2",
    "title": "Changes announced on a company's own channels, with no register, earn 2",
-   "question": "We score guardrail changes a company announces on its own channels, with no register, at 2 of 4 on guardrail changes logged, as the description of a 2 says. Meta rose from 0 to 2 for posts in its newsroom: the pause of teenagers' access to AI characters, added in January 2026 as an update to a post of October 2025, and a system of July 2026 that flags signs of distress in teenagers' conversations. xAI rose from 1 to 2 for the restriction on image editing that X's Safety account announced in January 2026; X has belonged to xAI since 2025. Six of the nine now score 2 on this check and none more. The rule rewards a blog post, or a post on a social network made under pressure from regulators, as much as anything short of a register, and it asks nothing about how many changes are announced: one announced change among many silent ones earns the same 2. The other choice, 1 wherever changes are announced case by case, would have lowered six companies by 0.11 each on the final score and moved no place.",
+   "question": "We score guardrail changes a company announces on its own channels, with no register, at 2 of 4 on guardrail changes logged, as the description of a 2 says. Meta rose from 0 to 2 for posts in its newsroom: the pause of teenagers' access to AI characters, added in January 2026 as an update to a post of October 2025, and a system of July 2026 that flags signs of distress in teenagers' conversations. xAI rose from 1 to 2 for the restriction on image editing that X's Safety account announced in January 2026; X has belonged to xAI since 2025. Seven of the ten now score 2 on this check and none more; Microsoft AI's 2 rests on changes reported after the fact in its yearly Responsible AI Transparency Report. The rule rewards a blog post, or a post on a social network made under pressure from regulators, as much as anything short of a register, and it asks nothing about how many changes are announced: one announced change among many silent ones earns the same 2. The other choice, 1 wherever changes are announced case by case, would have lowered seven companies by 0.11 each on the final score and moved no place.",
    "what_would_settle_it": "Deciding whether a 2 needs most changes to be announced or any, and writing that into the check's description.",
    "raised": "26 September 2026"
   },
   {
    "id": "rule-an-acknowledged-regime-is-a-2",
    "title": "A special regime acknowledged but not described earns 2",
-   "question": "We score a special regime a company acknowledges without describing it at 2 of 4 on special deployments, as the description of a 2 says. xAI rose from 0 to 2: section 2.3 of its Frontier AI Framework says that \"the full functionality of our models may be available to only a limited set of trusted parties, partners, and government agencies\", and its post of December 2025 announces government-optimised models for classified work. Google DeepMind stays at 0. It confirmed an agreement letting the Pentagon use Gemini on classified networks and has not acknowledged that the rules there differ; that they differ was reported by the press, citing The Information. The rule gives a sentence about tiered access in a risk framework the same 2 as Anthropic's statement, in its constitution, that some of its models do not fully fit it, and it turns on what a company admits: a company that says nothing scores 0 whatever it deploys. xAI's third place rests on three of these rules together. Its 2 here, or its 2 on changes explained, would each have lifted it above Google DeepMind alone, and its 2 on guardrail changes logged would not.",
+   "question": "We score a special regime a company acknowledges without describing it at 2 of 4 on special deployments, as the description of a 2 says. xAI rose from 0 to 2: section 2.3 of its Frontier AI Framework says that \"the full functionality of our models may be available to only a limited set of trusted parties, partners, and government agencies\", and its post of December 2025 announces government-optimised models for classified work. Google DeepMind stays at 0. It confirmed an agreement letting the Pentagon use Gemini on classified networks and has not acknowledged that the rules there differ; that they differ was reported by the press, citing The Information. The rule gives a sentence about tiered access in a risk framework the same 2 as Anthropic's statement, in its constitution, that some of its models do not fully fit it, and it turns on what a company admits: a company that says nothing scores 0 whatever it deploys. Microsoft AI scores 2 on the same basis, for a clause in its Code that sends national security applications and other specialised uses to separate review without saying what applies to them; without it Microsoft AI would lose 0.23 and keep its place. xAI's place above Google DeepMind rests on three of these rules together. Its 2 here, or its 2 on changes explained, would each have lifted it above Google DeepMind alone, and its 2 on guardrail changes logged would not.",
    "what_would_settle_it": "Deciding whether acknowledging a deployment is enough, or whether the company must say that the rules there differ, and writing that into the check's description of a 2.",
    "raised": "26 September 2026"
   },
@@ -7226,6 +8249,34 @@
    "question": "GO27, Google's Gemini for Government guide, is named only in a sentence saying nothing was found there. MI14, NewsGuard's audit of Le Chat, is named by no text.",
    "what_would_settle_it": "Citing each where it supports a sentence, or dropping it from the registry.",
    "raised": "26 September 2026"
+  },
+  {
+   "id": "rule-a-draft-not-in-force",
+   "title": "A draft not yet in force earns its text's score on constitution published and at most 2 on coverage stated",
+   "question": "We score a draft that its company says is not yet in force on constitution published (1.1) for what its text contains, noting that it is a draft, and give it at most 2 of 4 on coverage stated (1.2), as coverage implied, because the models it names do not follow it yet. The rule was written on 28 September 2026 for Microsoft AI's Code of Conduct, a draft under public consultation until 25 October 2026 that Microsoft AI says its current models are not trained on. The Code names a class, the MAI models, which would earn 4 under the rule on coverage stated as a class. The cap costs Microsoft AI 0.23 on the final score, 4.15 against 4.38, and moves no place. Treating a document no model follows as no constitution at all would take both checks to 0, cost 0.68 and leave Microsoft AI third, 0.06 above xAI. The rule rewards publishing a draft for comment, the mechanism the fourth question asks for, and it scores a text that governs nothing yet on its contents. It touches only 1.1 and 1.2: the Absolute Constraints earn full marks on hard constraints listed (4.1) and the consultation earns 3 on the comment window (4.2), although no model is held to either yet.",
+   "what_would_settle_it": "Deciding whether a constitution counts from the day it is published or from the day its company says its models follow it, applying the answer to every row that reads the document, and reading Microsoft AI's rows again when the revised version promised for the end of 2026 is published.",
+   "raised": "28 September 2026"
+  },
+  {
+   "id": "microsoft-models-it-deploys-and-does-not-make",
+   "title": "Microsoft's products run models the Code of Conduct does not cover",
+   "question": "The first question asks whether every model a company puts in use has a constitution. Microsoft AI's Code covers the MAI models and says it does not extend to other models simply because Microsoft uses or hosts them. Microsoft's consumer Copilot runs models from OpenAI and other developers beside its own, its support pages say Smart mode runs on GPT-5, and Microsoft offers OpenAI's GPT-5.2 in its Secret and Top Secret government clouds. We scored coverage stated on the MAI models, the models Microsoft AI makes, as for every other company. Read as the models Microsoft puts in use, the most-used ones would sit outside the Code, which is a 0 on coverage stated whatever the draft's status: Microsoft AI would lose 0.23 on the final score and keep its place.",
+   "what_would_settle_it": "Deciding whether the first question is asked of the models a company makes or of the models it deploys, and whether another developer's constitution counts for a model a company deploys in its own product.",
+   "raised": "28 September 2026"
+  },
+  {
+   "id": "microsoft-comment-window-at-3",
+   "title": "A standing commitment to consult on new versions earns 3 on the comment window",
+   "question": "Microsoft AI's Code commits to hold consultations like the present one as new versions are developed, and the present one has most of the mechanism the memo describes: a fixed window on a published draft, open to anyone, with a promised summary of what was learned and changed. Submissions are not public, the commitment is not tied to a weakening of the Absolute Constraints, and the Code keeps a route for expedited changes with no consultation before or after them, where the memo asks for a window opened afterwards. We scored it 3, between a one-off consultation and a standing window with an emergency route. The descriptions have no 3. A 2 would cost Microsoft AI 0.11 on the final score and a 4 would add as much, and neither moves a place. It is the highest score on this check and the only one earned by a commitment for the future.",
+   "what_would_settle_it": "Writing into the description of the comment window what earns a 3, and whether a commitment to consult on every new version counts as a window before a weakening when it carries an exception for expedited changes.",
+   "raised": "28 September 2026"
+  },
+  {
+   "id": "microsoft-scored-by-a-model",
+   "title": "Microsoft AI's rows were scored by a language model and no person has read them yet",
+   "question": "The other nine companies were first scored by hand, then audited with language models, and a person approved the corrections. Microsoft AI's rows were researched on 28 September 2026 by language models working from public sources and scored by a language model against the same descriptions and rules, and each passage quoted was checked by script against the copy of its page fetched that day. The model that scored them is Anthropic's, and Microsoft AI sits one place below Anthropic on the final score. Microsoft AI's third place is 0.74 above xAI, larger than any single row can move it.",
+   "what_would_settle_it": "A person reading every Microsoft AI row against its sources before a publication carries the board, as the audit's corrections were read on 26 September 2026.",
+   "raised": "28 September 2026"
   }
  ],
  "column_readings": {
@@ -7264,6 +8315,10 @@
   "deepseek": {
    "published": "No constitution. Beyond the disclosure its regulator requires, its R1 paper of 2025 describes its safety training and its risk control system, and almost nothing else is published about its rules.[^DS1][^DS5][^DS6]",
    "engages": "Little: a description of training against an internal policy, and a safety evaluation of R1, a model it no longer serves, against its own standards.[^DS4][^DS5][^DS6]"
+  },
+  "microsoft": {
+   "published": "A full constitution, published as a draft its models are not yet trained on, which lists its Absolute Constraints and is open for comment under a commitment to consult on new versions.[^MS1] It has no change log and no licence, and its guardrails are listed by category for one platform only.[^MS1][^MS4][^MS10]",
+   "engages": "It tests MAI-Thinking-1 against Microsoft's own safety policies and gates each release candidate on those tests, and outside testers have assessed MAI models for other risks.[^MS16][^MS17] The Code itself is not yet used to train the models, and nothing is published on who may change it.[^MS1]"
   }
  }
 }

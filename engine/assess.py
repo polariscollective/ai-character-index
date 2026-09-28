@@ -366,7 +366,7 @@ def remedy(store, run_id, version_ids):
 
 def assess(store, config, version_ids, passages_for, call_model=None, go=False,
            created_by="assess.py", panel=PANEL, resume=None, criteria_from=None,
-           replay=False):
+           replay=False, panels=None, provisional=False):
     """Price the assessment of each document and, with `go`, run it and write it.
     Returns (the price in dollars, the run's id, or None when nothing was run).
 
@@ -388,10 +388,14 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
     A seat whose every candidate failed leaves its call in error and the run
     goes on. Anything else that stops the run, a model that could not be
     reached included, is written on the run, as its error, and raised, once a
-    line on stderr has named the `--resume` that takes the run up again."""
+    line on stderr has named the `--resume` that takes the run up again.
+
+    `panels` replaces the configuration's `assessment` block, and
+    `provisional` marks the run as one seat answering in a working session
+    (session_seat.py), whose quorum is that one seat."""
     if replay and resume is None:
         raise SystemExit(REPLAY_WITHOUT_RESUME)
-    panels = assessment_panels(config)
+    panels = panels or assessment_panels(config)
     documents = load_documents(store, version_ids, passages_for)
     if resume is not None:
         if criteria_from is not None:
@@ -469,7 +473,7 @@ def assess(store, config, version_ids, passages_for, call_model=None, go=False,
     run = assessment_store.Assessment(store, config, panels,
                                       call_model or batch_job.call_openrouter, panel,
                                       run=resume, existing=existing, criteria_from=earlier,
-                                      replay=replay)
+                                      replay=replay, provisional=provisional)
     try:
         run.start(created_by, estimate)
         if replays:

@@ -1195,6 +1195,7 @@ function openDepthNote(trigger, note) {
         summary.textContent = cell.summary;
       }
       body.append(heading, summary);
+      if (cell.provisional) body.append(span("depth-note-provisional", cell.provisional));
       /* The summary first, as the constitutions board gives it: what the
        * document asks on the behaviour and why the figure is what it is. A
        * document the board has no column for opens on the judges' own reading. */
@@ -1246,8 +1247,9 @@ function openDepthNote(trigger, note) {
         const fold = document.createElement("details");
         fold.className = "depth-note-panel";
         const label = document.createElement("summary");
-        const readings = cell.judges.length === 1
-          ? "The judge's reading" : `The ${cell.judges.length} judges' readings`;
+        const readings = cell.provisional ? "The reading of one model"
+          : cell.judges.length === 1
+            ? "The judge's reading" : `The ${cell.judges.length} judges' readings`;
         label.textContent = cell.manual ? `${readings} and the figure set by hand` : readings;
         fold.append(label, ...details);
         body.append(fold);
@@ -1609,6 +1611,16 @@ function depthScaleNote(behaviours) {
  * their rationales, and the seat a recorded substitute sat in. A cell nobody
  * judged says that in a sentence rather than opening on nothing, because an
  * empty popover reads as a broken one. */
+/* What a cell one model read in session says of itself (session_seat.py), or
+ * "" for a cell the panel judged. The model is named, because a provisional
+ * reading is one model's and a reader must be able to see whose. */
+function provisionalSentence(mark) {
+  if (!mark) return "";
+  const name = { "opus-5.5": "Claude Opus 5.5" }[mark.seat] || mark.seat;
+  return `Provisional: the passages were marked, and this figure given, by one model, ${name}, `
+    + "reading in one session. The panel of three judges has not read this document yet.";
+}
+
 function depthCellNote(behaviour, doc) {
   const depth = panelDepth(behaviour, doc.id);
   const recorded = behaviour?.coverage?.[doc.id]?.substitutions;
@@ -1633,6 +1645,9 @@ function depthCellNote(behaviour, doc) {
           ? `; the judges' mean was ${depth.judgesMean.toFixed(1)}.` : ".")
         + ` ${endedSentence(depth.manual.rationale)}`
       : "",
+    /* One model's reading in place of the panel's, said above the summary
+     * rather than folded: it changes what every figure in the note is. */
+    provisional: provisionalSentence(behaviour?.coverage?.[doc.id]?.provisional),
     /* The reading that explains the figure, in one voice rather than three
      * named ones. Empty where none has been written, and the note then shows
      * the judges as it always did rather than an empty heading. */
@@ -3640,6 +3655,9 @@ const DOCUMENT_CONTEXT = {
          + "lab, not by the teams that build the Qwen models, and the only model we found publicly "
          + "built to it is Oyster-II, a research model. As of September 2026, nothing public ties it to "
          + "a model in production.",
+  microsoft: "A draft published on 14 September 2026 for public consultation. Microsoft AI says "
+           + "it is not yet using it to train its models, and that a revised version will follow "
+           + "toward the end of 2026 to guide its model development from 2027.",
 };
 
 const documentContext = id => DOCUMENT_CONTEXT[String(id).split("--")[0]] || "";

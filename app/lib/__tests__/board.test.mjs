@@ -30,8 +30,8 @@ test("the rank rule takes whatever tiebreak its view has, and takes none as a ti
   assert.deepEqual(rankBy(items, onSecond).map(one => one.rank), [2, 1]);
 });
 
-test("nine ordinals, so a board of nine labs can say which place is shared", () => {
-  assert.equal(ORDINALS.length, 9);
+test("ten ordinals, so a board of ten labs can say which place is shared", () => {
+  assert.equal(ORDINALS.length, 10);
   assert.equal(ORDINALS[0], "first");
 });
 
