@@ -596,14 +596,16 @@ function drawLegend() {
   const { grid } = state.overview;
   const legend = document.createDocumentFragment();
   if (state.mode === "absolute") {
-    legend.append(element("span", "", "none (0)"), view.swatches([0, 2.5, 5, 7.5, 10], TEN),
-      element("span", "", "all (10)"));
+    legend.append(element("span", "", "None (0)"), view.swatches([0, 2.5, 5, 7.5, 10], TEN),
+      element("span", "", "All (10)"));
   } else {
     grid.tiers.forEach((tier, index) => {
       legend.append(view.swatches([tierValue(index, grid.tiers.length)], TEN),
         element("span", "", tier.name));
     });
-    legend.append(view.swatches([0], TEN), element("span", "", "nothing"));
+    // The word an empty cell of the grid says, so the scale and the cells agree.
+    const zero = grid.groups[0]?.final?.zero || "None";
+    legend.append(view.swatches([0], TEN), element("span", "", zero));
   }
   byId("ovw-legend").replaceChildren(legend);
 }
