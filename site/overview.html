@@ -52,10 +52,14 @@
        publication, so they cannot disagree with the Index. -->
   <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint" id="ovw-mode-note"></p>
+    <div class="ovw-controls">
+    <!-- The colour scale of the mode shown, beside the switch between modes. -->
+    <div class="gov-legend ovw-top-legend" id="ovw-legend" aria-hidden="true"></div>
     <div class="ovw-mode" role="group" aria-label="Show the figures">
       <button type="button" class="gov-button" data-mode="relative" aria-pressed="true">Relative<span
         class="row-mark" aria-hidden="true">1</span></button>
       <button type="button" class="gov-button" data-mode="absolute" aria-pressed="false">Absolute</button>
+    </div>
     </div>
   </div>
   <div class="matrix-wrap" id="ovw-chart" data-menu="How companies stand" hidden data-needs-board>
@@ -66,7 +70,6 @@
     </table>
   </div>
   <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
-  <div class="gov-legend" id="ovw-legend" aria-hidden="true" hidden data-needs-board></div>
   <!-- What the letters beside the companies' names point to: facts about a
        company a reader of the grid would otherwise assume the other way. -->
   <ol class="gov-notes ovw-name-notes" id="ovw-name-notes" hidden data-needs-board></ol>

@@ -89,27 +89,27 @@
  "takeaways": [
   {
    "title": "Four of ten companies publish a constitution",
-   "text": "OpenAI, Anthropic, Alibaba and Microsoft AI publish one, Microsoft AI's as a draft open for public comment that its models are not yet trained on. Google DeepMind, Meta, xAI, Mistral AI, Moonshot AI and DeepSeek do not, so none of them publishes a document that sets out, in general, how the models it offers today should behave. Some publish fragments of one, such as the principles and prohibitions Google sets out for the Gemini app across several pages, the safety prompts xAI published for Grok models it has since retired, or the system prompts of Mistral AI's coding agent. The governance view counts such system prompts as a partial constitution, and with them xAI reaches the middle tier on what is published and on the final governance score. A fuller document may exist inside a company without being released, and Meta says it evaluates its Muse Spark model against one."
+   "text": "OpenAI, Anthropic, Alibaba and Microsoft AI publish one, Microsoft AI's as a draft open for public comment that its models are not yet trained on. Google DeepMind, Meta, xAI, Mistral AI, Moonshot AI and DeepSeek publish no document setting out how their models should behave. Such a document may exist inside a company without being released: Meta says it evaluates its Muse Spark model against one."
   },
   {
    "title": "Almost every company is weak on change",
-   "text": "In our reading, no company's public change log says in full what it covers and how soon a change is recorded, and even the best falls well short of it. We found no company that commits to warn the public before weakening one of the things its model must never do, and every weakening we found went out without notice. In August 2026 OpenAI changed a root-level rule so that every scope of autonomous action \"must include an ending condition\" where it had required \"a shutdown timer\", and its change log does not mention it. xAI in June 2026 and Meta in April 2026 loosened what their risk frameworks require before a model is developed or released, and in February 2026 Microsoft's framework stopped repeating its deeper capability assessments of a deployed model at least every six months, repeating them only when the model's risk profile changes materially."
+   "text": "No company's public change log says in full what it covers and how soon a change is recorded. None commits to warn the public before weakening a rule its model must never break, and every weakening we found went out without notice. In August 2026 OpenAI replaced a root-level requirement for \"a shutdown timer\" with \"an ending condition\", and its change log does not mention it."
   },
   {
    "title": "No company says which rules apply to governments and armed forces",
-   "text": "We found no company that publishes the rules its models follow once they are deployed for governments or defence. Anthropic writes that some models built for specialised uses do not fully fit its constitution, and a spokesperson has said its military models may not be trained on it. OpenAI's Model Spec distinguishes kinds of deployment, and OpenAI's post on its agreement with the Department of War says that deployment gets safety-trained models behind a safety stack OpenAI runs, without naming the Model Spec. xAI's risk framework says the full functionality of its models may be available only to trusted parties, partners and government agencies, and xAI agreed to the Pentagon's \"all lawful use\" standard for Grok, as Axios reported. Google confirmed in April 2026 an agreement letting the Pentagon use Gemini on classified networks. Neither has published the rules its models follow there. Microsoft AI's draft Code sends national security uses to a separate review without saying what rules apply there, and the model Microsoft offers in its Secret and Top Secret government clouds is OpenAI's GPT-5.2, which the Code does not cover. Meta opened its Llama models to NATO while their acceptable use policy still forbids military uses, and Mistral AI's usage policy does not apply to models run on a customer's own infrastructure."
+   "text": "We found no company that publishes the rules its models follow when they are deployed for governments or defence. Anthropic writes that some models built for specialised uses do not fully fit its constitution, and a spokesperson has said its military models may not be trained on it. xAI agreed to the Pentagon's \"all lawful use\" standard for Grok, as Axios reported."
   },
   {
    "title": "Three companies have agreed to write this document for a regulator, and not for the public",
-   "text": "For any model that carries systemic risk, Measure 7.1 of the EU's General-Purpose AI Code of Practice asks the provider to give the EU AI Office a report setting out the principles the model is meant to follow, how it ranks principles and instructions, the topics it refuses and its system prompt. Three companies that publish no constitution have signed up to it: Google and Mistral AI the whole Code, and xAI its Safety and Security chapter, where Measure 7.1 sits. Microsoft has signed the whole Code as well, and has also published a draft constitution for its MAI models. The report itself is not public: the Code asks only for summaries to be published where needed, and sets no date. Mistral AI classifies none of its current models as carrying systemic risk, so on its own reading the Code asks it for no such report today. These asks belong in regulation as well as in voluntary commitments."
+   "text": "Google, Mistral AI and xAI publish no constitution and have signed the part of the EU's General-Purpose AI Code of Practice that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public. These asks belong in regulation as well as in voluntary commitments."
   },
   {
    "title": "OpenAI and Anthropic stand out, and still fall short on governance",
-   "text": "OpenAI and Anthropic are best in class on every figure. They lead every other company on how their constitutions are governed, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on the three figures of what the constitutions say, second to OpenAI on the document as a whole, but its constitution names none of the models it governs and Alibaba is behind on all three governance figures. Microsoft AI is in the middle tier on every figure, third on governance on the strength of its absolute constraints and its open consultation, for a Code of Conduct that is still a draft its models are not trained on."
+   "text": "OpenAI and Anthropic are best in class on every figure, yet neither reaches the minimum our proposal asks of a company. Alibaba is best in class on what the constitutions say, but its constitution names none of the models it governs and Alibaba is behind on governance. Microsoft AI is in the middle tier throughout, for a Code of Conduct that is still a draft."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",
-   "text": "They reward a document that states its rules explicitly and a company that shows its work. Anthropic's lower standing on the document as a whole reflects its choice to weigh its ranked values as a whole, and settings it has no rules for, such as images, audio and video. A clearer document is not proof of a better model. Microsoft AI's figures on what its constitution says are one model's provisional reading until the panel reads its Code. There is no agreed standard yet for a good constitution. This index is a first attempt at one, and we want to hear where it is wrong."
+   "text": "They reward a document that states its rules explicitly and a company that shows its work, and a clearer document is not proof of a better model. Microsoft AI's figures on what its constitution says are one model's provisional reading until the panel reads its Code. There is no agreed standard yet for a good constitution, and we want to hear where this first attempt is wrong."
   }
  ],
  "summaries": {
@@ -198,10 +198,10 @@
    {
     "id": "capability",
     "name": "Most capable model",
-    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin. \"Open weights\" under it means anyone can download that model and run it where the company cannot see how it is used.",
+    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
-    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. \"Open weights\" under it means anyone can download that model and run it where the company cannot see how it is used.",
+    "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates.",
     "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months come from Epoch's finding that, since reasoning models arrived in September 2024, the frontier has gained about 14 points a year on its index.",
     "links": [
      {
@@ -264,8 +264,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT.",
-     "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/"
+     "signals": [
+      {
+       "text": "OpenAI said on 6 August 2026 that 1 billion people a week use ChatGPT.",
+       "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt/"
+      },
+      {
+       "text": "Sensor Tower counted more than 1.1 billion monthly users of ChatGPT's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 44% of American adults said they use ChatGPT.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 15.0% of the tokens and 17.9% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model gpt-oss-20b was downloaded 6.8 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/openai/gpt-oss-20b"
+      }
+     ]
     }
    },
    "anthropic": {
@@ -287,8 +307,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Anthropic states no count of the people who use Claude. Its chief product officer said in March 2026 that more than a million people were signing up for Claude every day, and its models had the fourth largest share of developer traffic on OpenRouter in September 2026, 3.9%.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "Anthropic states no count of the people who use Claude. It said in May 2026 that its revenue was running at more than $47 billion a year.",
+       "url": "https://www.anthropic.com/news/series-h"
+      },
+      {
+       "text": "Sensor Tower counted 245 million monthly users of Claude's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "Similarweb counted 157 million monthly users of the Claude app and 950 million visits to claude.ai in August 2026.",
+       "url": "https://ppc.land/claude-gains-540-in-visits-with-0-46-from-paid-traffic-similarweb-finds/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 6% of American adults said they use Claude.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 3.9% of the tokens and 2.7% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "alibaba": {
@@ -301,8 +341,8 @@
       159.0
      ],
      "released": "2026-08-02",
-     "open_weights": false,
-     "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
+     "open_weights": true,
+     "text": "Qwen 3.8 Max, released on 2 August 2026, scores 156.7 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Epoch lists it as served through an API, but the model behind it was published for anyone to download on 12 August 2026. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
@@ -310,8 +350,24 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Alibaba said in its annual report of 20 May 2026 that consumer-facing Qwen passed 295 million monthly active users in March 2026.",
-     "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm"
+     "signals": [
+      {
+       "text": "Alibaba said in its annual report of 20 May 2026 that consumer-facing Qwen passed 295 million monthly active users across all platforms in March 2026.",
+       "url": "https://www.sec.gov/Archives/edgar/data/1577552/000119312526231755/baba-20260331.htm"
+      },
+      {
+       "text": "QuestMobile counted 167 million monthly active users of the Qwen app in China alone in June 2026.",
+       "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
+      },
+      {
+       "text": "Its open Qwen models are the most downloaded of any company on Hugging Face: about 276 million downloads across its hundred most downloaded models in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/Qwen"
+      },
+      {
+       "text": "Its models took 1.7% of the tokens and 6.4% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "microsoft": {
@@ -325,7 +381,16 @@
     "usage": {
      "shown": "-",
      "level": "-",
-     "text": "Microsoft AI's own models are barely deployed yet. It states no count for them, and the Copilot assistants Microsoft counts run mostly on models it licenses rather than builds."
+     "signals": [
+      {
+       "text": "Microsoft AI states no count for its own models, which are barely deployed yet. The Copilot assistants Microsoft counts, 150 million monthly users in October 2025, run mostly on models Microsoft licenses rather than builds.",
+       "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1"
+      },
+      {
+       "text": "No language model of Microsoft AI is offered on OpenRouter.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "google": {
@@ -347,8 +412,28 @@
     "usage": {
      "shown": "+++",
      "level": "+++",
-     "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
-     "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/"
+     "signals": [
+      {
+       "text": "Google said on 11 August 2026 that the Gemini app had passed 1 billion monthly users.",
+       "url": "https://blog.google/innovation-and-ai/products/gemini-app/one-billion-monthly-users/"
+      },
+      {
+       "text": "Sensor Tower counted 662 million monthly users of Gemini's app and website together in May 2026, as TechCrunch reported.",
+       "url": "https://techcrunch.com/2026/06/16/chatgpts-market-share-slips-below-50-for-first-time/"
+      },
+      {
+       "text": "In a Pew survey of February 2026, 24% of American adults said they use Gemini.",
+       "url": "https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-2026-chatbots-smart-devices-and-views-on-impact/"
+      },
+      {
+       "text": "Its models took 5.6% of the tokens and 20.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Gemma 4 26B was downloaded 12.1 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/google/gemma-4-26B-A4B-it"
+      }
+     ]
     }
    },
    "mistral": {
@@ -370,8 +455,20 @@
     "usage": {
      "shown": "+",
      "level": "+",
-     "text": "Mistral AI states no count of its users. Its app passed a million downloads in February 2025, and its models took 0.2% of developer traffic on OpenRouter in September 2026.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "Mistral AI states no count of its users. It announced in February 2025 that its app had passed a million downloads, as a press report relayed.",
+       "url": "https://www.maddyness.com/2025/02/20/plus-dun-million-de-telechargements-pour-le-chat-de-mistral-ai/"
+      },
+      {
+       "text": "Its models took 0.2% of the tokens and 2.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Mistral 7B Instruct was downloaded 2.2 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3"
+      }
+     ]
     }
    },
    "meta": {
@@ -391,10 +488,26 @@
      "short": "8 months"
     },
     "usage": {
-     "shown": "+++",
-     "level": "+++",
-     "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger. The figure is old, and Meta has given none since.",
-     "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf"
+     "shown": "++",
+     "level": "++",
+     "signals": [
+      {
+       "text": "Meta said on 29 October 2025 that more than a billion monthly actives use Meta AI, which runs inside Facebook, Instagram, WhatsApp and Messenger, without saying what counts as active or which of its models answers. It has given no count since.",
+       "url": "https://s21.q4cdn.com/399680738/files/doc_financials/2025/q3/META-Q3-2025-Earnings-Call-Transcript.pdf"
+      },
+      {
+       "text": "In an Ipsos survey of March 2026, 8% of American adults had used Meta AI in the past week.",
+       "url": "https://www.ipsos.com/en-us/half-americans-report-using-ai-services-information-and-productivity-leading-use-cases"
+      },
+      {
+       "text": "Its models took 1.7% of the tokens and 2.5% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Llama 3.2 1B was downloaded 7.3 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct"
+      }
+     ]
     }
    },
    "xai": {
@@ -416,8 +529,16 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, in a prospectus that counts Grok used inside X.",
-     "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm"
+     "signals": [
+      {
+       "text": "About 117 million monthly active users used Grok's AI features on 31 March 2026, according to a prospectus filed on 12 June 2026 that counts Grok used inside X.",
+       "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm"
+      },
+      {
+       "text": "Its models took 0.5% of the tokens and 0.6% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      }
+     ]
     }
    },
    "moonshot": {
@@ -439,8 +560,20 @@
     "usage": {
      "shown": "+",
      "level": "+",
-     "text": "Moonshot AI last stated a count in 2024, 36 million monthly users of Kimi. Its models took 1.5% of developer traffic on OpenRouter in September 2026.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "Moonshot AI's founder said in November 2024, as a press report quoted him, that Kimi had passed 36 million monthly active users in October. Nothing has been published since.",
+       "url": "https://www.gelonghui.com/live/1761006"
+      },
+      {
+       "text": "Its models took 1.5% of the tokens and 0.7% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model Kimi K3 was downloaded 1.5 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/moonshotai/Kimi-K3"
+      }
+     ]
     }
    },
    "deepseek": {
@@ -462,8 +595,28 @@
     "usage": {
      "shown": "++",
      "level": "++",
-     "text": "DeepSeek states no count of the people who use its assistant. Its models had the largest share of developer traffic on OpenRouter in September 2026, 21.4%, and its open models are among the most downloaded.",
-     "url": "https://openrouter.ai/rankings"
+     "signals": [
+      {
+       "text": "DeepSeek states no count of the people who use its assistant.",
+       "url": "https://api-docs.deepseek.com/updates/"
+      },
+      {
+       "text": "QuestMobile counted 129 million monthly active users of the DeepSeek app in China alone in June 2026.",
+       "url": "https://www.questmobile.com.cn/research/report/2076954943839809537/"
+      },
+      {
+       "text": "Similarweb counted 354 million visits to deepseek.com in August 2026, half of them from China.",
+       "url": "https://www.similarweb.com/website/deepseek.com/"
+      },
+      {
+       "text": "Its models took 21.4% of the tokens and 24.4% of the requests sent through OpenRouter, a service developers use to reach many models, in September 2026.",
+       "url": "https://openrouter.ai/rankings"
+      },
+      {
+       "text": "Its open model DeepSeek V4 Flash was downloaded 4.4 million times from Hugging Face in the 30 days to 28 September 2026, a count of files rather than people.",
+       "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731"
+      }
+     ]
     }
    }
   }

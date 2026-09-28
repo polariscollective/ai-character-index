@@ -25,7 +25,6 @@ import { renderMenu } from "./page-menu.js";
 
 const TEN = 10;
 const MODE_KEY = "aci-overview-mode";
-const CONTEXT_KEY = "aci-overview-context";
 
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
@@ -160,6 +159,11 @@ function leadTo(content, href, text) {
   const line = element("p", "ovw-pop-link");
   const link = element("a", "", text);
   link.href = href;
+  // A source elsewhere opens in its own tab, so the page stays where it was.
+  if (/^https?:/.test(href)) {
+    link.target = "_blank";
+    link.rel = "noopener";
+  }
   line.append(link);
   content.append(line);
 }
@@ -205,16 +209,49 @@ function aboutFinal(content, company, group, value, best) {
     : `${grid.tiers[tier].name}: the best score on this row is ${shown(best)} out of ${TEN}.`));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
-  content.append(view.h3("What it is made of"), figureList(group.rows.map(row =>
-    ({ value: company.figures[row.board][row.figure] ?? 0, name: row.name,
-       cell: { lab: company.id, row: row.figure }, open: cellOpener(company, group, row, false) }))));
+  content.append(view.h3("What it is made of"), partsOpening(company, group));
   if (final.board === "constitutions") caveatOf(content, company);
   leadTo(content, group.href, "See every part of this score in the Index");
+}
+
+/* A final score's parts, each opening in place: its figure and name, then the
+ * overview's words about it and the parts it is made of in turn, each leading
+ * to its cell in the Index. Nothing opens a second popover. */
+function partsOpening(company, group) {
+  const list = element("div", "ovw-parts");
+  group.rows.forEach(row => {
+    const value = company.figures[row.board][row.figure] ?? 0;
+    const fold = element("details", "ovw-part");
+    const head = element("summary");
+    head.append(view.chip(value, TEN, shown(value)), element("span", "", row.name));
+    fold.append(head);
+    const reason = summaryOf(company, row.figure, row.board);
+    const body = element("div", "ovw-part-body");
+    if (reason) renderMarkup(body, reason);
+    const parts = company.parts[row.figure] || [];
+    if (parts.length && value > 0) {
+      body.append(figureList(parts.map(part =>
+        ({ ...part, href: part.row ? indexCell(company, row, part) : null }))));
+    }
+    const note = company.summary.notes?.[row.figure];
+    if (note) body.append(element("p", "subtitle", note));
+    fold.append(body);
+    list.append(fold);
+  });
+  return list;
 }
 
 function aboutGroup(content, group) {
   view.titled(content, group.name);
   content.append(element("p", "", group.final.plain));
+  // The two parts the score is made of, each with what it measures, since the
+  // grid no longer shows them as rows.
+  content.append(view.h3("What it is made of"));
+  group.rows.forEach(row => {
+    const part = element("p", "");
+    part.append(element("strong", "", `${row.name}. `), document.createTextNode(row.plain));
+    content.append(part);
+  });
   leadTo(content, group.href, "See every company's score in the Index");
 }
 
@@ -244,6 +281,46 @@ function aboutCompany(content, company) {
     "See its figures on what the constitutions say");
   leadTo(content, `/index?view=governance&company=${company.id}`,
     "See its figures on how constitutions are governed");
+}
+
+/* A row's name on the overview, the same for a score and for a view in
+ * preparation: plain text that opens what the row is, and no more than that. */
+function rowTitle(name, build, label) {
+  const button = element("button", "ovw-row-name", name);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", label);
+  button.addEventListener("click", () => view.openPopover(button, build));
+  return button;
+}
+
+/* ---- The views in preparation ------------------------------------------- */
+
+function aboutComing(content, item) {
+  view.titled(content, item.name, "In preparation");
+  content.append(element("p", "", item.plain));
+}
+
+/* A view the index does not carry yet: its name, which opens what it will be,
+ * and a quiet "In preparation" in every company's cell. */
+function comingRow(item) {
+  const tr = element("tr", "total-row outside-row coming-row");
+  tr.dataset.row = `coming-${item.id}`;
+  // The same head as a score's row, with no fold's space before the name, so
+  // the four names start at one edge.
+  const head = element("th");
+  head.scope = "row";
+  const line = element("div", "row-head");
+  line.append(rowTitle(item.name, content => aboutComing(content, item),
+    `${item.name}: in preparation`));
+  head.append(line);
+  tr.append(head);
+  const cell = element("td", "cell");
+  cell.colSpan = state.companies.length;
+  cell.append(element("span", "cell-coming", "In preparation"));
+  tr.append(cell);
+  return tr;
 }
 
 /* ---- The context --------------------------------------------------------- */
@@ -300,7 +377,23 @@ function aboutContextCell(content, context, row, company, entry) {
                 document.createTextNode(" on the Epoch Capabilities Index"));
     content.append(line);
   }
-  content.append(element("p", "", entry.text));
+  if (entry.text) content.append(element("p", "", entry.text));
+  // Every signal the estimate rests on, each with where it comes from.
+  if (entry.signals?.length) {
+    const list = element("ul", "usage-signals");
+    entry.signals.forEach(signal => {
+      const item = element("li", "", `${signal.text} `);
+      if (signal.url) {
+        const link = element("a", "", "Source");
+        link.href = signal.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        item.append(link);
+      }
+      list.append(item);
+    });
+    content.append(list);
+  }
   if (entry.quote) {
     const said = element("blockquote", "ovw-quote", `“${entry.quote}”`);
     content.append(said);
@@ -308,7 +401,7 @@ function aboutContextCell(content, context, row, company, entry) {
   }
   if (entry.downloads) content.append(element("p", "subtitle", entry.downloads));
   content.append(element("p", "subtitle", row.plain));
-  if (entry.url) leadTo(content, entry.url, "Where the company said it");
+  if (entry.url) leadTo(content, entry.url, "Source");
   else if (row.url) leadTo(content, row.url, row.source || row.url);
 }
 
@@ -320,40 +413,9 @@ function aboutContextCell(content, context, row, company, entry) {
 function contextRows(noteNumber) {
   const context = state.overview.context;
   if (!context?.rows?.length) return [];
-  const head = element("tr", "context-head");
-  const title = element("th");
-  title.scope = "rowgroup";
-  title.colSpan = state.companies.length + 1;
-  // One line under the scores. At the left, "Hide" in small underlined type
-  // and the context's name, or when hidden a single "Show context" button; at
-  // the board's right edge, the grid's colour scale.
-  const line = element("div", "context-line");
-  const left = element("div", "context-left");
-  if (state.showContext) {
-    const hide = element("button", "context-hide", "Hide");
-    hide.type = "button";
-    hide.setAttribute("aria-label", "Hide the context");
-    hide.addEventListener("click", () => setContext(false));
-    left.append(hide, element("span", "context-title", context.name));
-    if (noteNumber) {
-      const mark = element("span", "row-mark", String(noteNumber));
-      mark.setAttribute("aria-hidden", "true");
-      left.append(mark);
-    }
-  } else {
-    const show = element("button", "context-hide", "Show context");
-    show.type = "button";
-    show.addEventListener("click", () => setContext(true));
-    left.append(show);
-  }
-  line.append(left);
-  const legend = byId("ovw-legend");
-  if (legend) line.append(legend);
-  title.append(line);
-  head.append(title);
-  if (!state.showContext) return [head];
-  return [head, ...context.rows.map(row => {
-    const tr = element("tr", "context-row");
+  // No heading: a rule like the one at the top of the grid, then the rows.
+  return context.rows.map((row, index) => {
+    const tr = element("tr", index === 0 ? "context-row context-first" : "context-row");
     tr.dataset.row = `context-${row.id}`;
     // A name that opens what the row is, in plain text until pointed at: it
     // explains the row and is no figure of the index.
@@ -366,8 +428,20 @@ function contextRows(noteNumber) {
       view.openPopover(name, content => aboutContextRow(content, context, row)));
     const label = element("span", "context-label");
     label.append(name);
+    if (index === 0 && noteNumber) {
+      const mark = element("span", "row-mark", String(noteNumber));
+      mark.setAttribute("aria-hidden", "true");
+      name.append(mark);
+    }
     if (row.sub) label.append(element("span", "context-sub", row.sub));
-    tr.append(view.rowHead(null, label));
+    // No fold's space before the name, so it starts at the same edge as the
+    // rows above.
+    const head = element("th");
+    head.scope = "row";
+    const line = element("div", "row-head");
+    line.append(label);
+    head.append(line);
+    tr.append(head);
     state.companies.forEach(company => {
       const entry = context.companies?.[company.id]?.[row.id];
       if (!entry) {
@@ -376,7 +450,7 @@ function contextRows(noteNumber) {
       }
       const words = [entry.level ? `${entry.level === "-" ? 0 : entry.level.length} of 3`
                      : entry.shown === "-" ? "none" : entry.shown, entry.behind,
-                     entry.open_weights ? "open weights" : null,
+                     entry.level && company.openWeights ? "open weights" : null,
                      entry.band ? `${entry.band} a month` : null].filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
@@ -386,19 +460,20 @@ function contextRows(noteNumber) {
         // The model at the top and how far it trails the frontier at the
         // bottom, so both lines sit level across the row; a model at the
         // frontier is said in bold.
-        // A third line says whether that model's weights can be downloaded;
-        // it keeps its place when empty, so every line sits level across the row.
-        const open = element("span", "cell-context-sub", entry.open_weights ? "Open weights" : "\u00a0");
-        if (!entry.open_weights) open.setAttribute("aria-hidden", "true");
         button.append(element("span", "cell-context-words", entry.shown),
           element("span", entry.months_behind === 0 ? "cell-context-sub cell-context-lead"
-            : "cell-context-sub", entry.short), open);
+            : "cell-context-sub", entry.short));
       } else if (Number.isFinite(entry.share)) {
         button.append(element("span", "cell-context-band", entry.shown));
       } else if (entry.level) {
         // Our rough estimate as three squares, filled one per step, all three
         // empty where there is nothing to go on.
-        button.append(usageMeter(entry.level));
+        // Under the squares, whether anyone can download the company's
+        // flagship model, as the governance board records it; the line keeps
+        // its place when empty, so the squares sit level across the row.
+        const open = element("span", "cell-context-open", company.openWeights ? "Open weights" : "\u00a0");
+        if (!company.openWeights) open.setAttribute("aria-hidden", "true");
+        button.append(usageMeter(entry.level), open);
       } else if (entry.band) {
         // A step of ten, in the data face, on one line.
         button.append(element("span", "cell-context-band", entry.band));
@@ -411,7 +486,7 @@ function contextRows(noteNumber) {
       tr.append(cell);
     });
     return tr;
-  })];
+  });
 }
 
 /* ---- The table ----------------------------------------------------------- */
@@ -484,8 +559,8 @@ function figureRow(group, row, final) {
     const head = element("th");
     head.scope = "row";
     const line = element("div", "row-head");
-    line.append(view.rowName(group.name, null,
-      content => aboutGroup(content, group), `${group.name}: what it measures`));
+    line.append(rowTitle(group.name, content => aboutGroup(content, group),
+      `${group.name}: what it measures`));
     head.append(line);
     tr.append(head);
   } else {
@@ -560,17 +635,23 @@ function draw() {
     renderInline(item, text);
     return item;
   }));
+  // In the order their marks come down the page: the file's own notes, the
+  // relative mode's on its button above the grid, then the context's under it.
   const notes = [...(grid.notes || []),
-                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : []),
-                 { title: "Relative", text: grid.relative_note }];
-  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
+                 { title: "Relative", text: grid.relative_note },
+                 ...(shownContext?.note ? [{ title: context.name, text: context.note }] : [])];
+  const relativeNote = (grid.notes || []).length + 1;
+  const contextNote = shownContext?.note ? relativeNote + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
-  view.nodes.table.tBodies[0].replaceChildren(...grid.groups.flatMap(group =>
-    [figureRow(group, group.final, true), ...group.rows.map(row => figureRow(group, row, false))]),
+  // Only the final scores of the two boards, each opening what it is made of,
+  // then the views still in preparation, then the context.
+  view.nodes.table.tBodies[0].replaceChildren(
+    ...grid.groups.map(group => figureRow(group, group.final, true)),
+    ...(grid.coming || []).map(comingRow),
     ...contextRows(contextNote));
   byId("ovw-mode-note").textContent = grid.hint;
   const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
-  if (relativeMark) relativeMark.textContent = String(notes.length);
+  if (relativeMark) relativeMark.textContent = String(relativeNote);
   byId("ovw-notes").replaceChildren(...notes.map(({ title, text }, index) => {
     const item = element("li");
     item.id = `ovw-note-${index + 1}`;
@@ -589,22 +670,6 @@ function setMode(mode) {
   state.mode = mode;
   try { localStorage.setItem(MODE_KEY, mode); } catch { /* the default stands */ }
   draw();
-}
-
-function setContext(show) {
-  if (view.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
-  state.showContext = show;
-  try { localStorage.setItem(CONTEXT_KEY, show ? "shown" : "hidden"); } catch { /* the default stands */ }
-  draw();
-}
-
-/* Shown unless this browser chose to hide it. */
-function savedContext() {
-  try {
-    return localStorage.getItem(CONTEXT_KEY) !== "hidden";
-  } catch {
-    return true;
-  }
 }
 
 function savedMode() {
@@ -641,7 +706,7 @@ export async function initializeOverview() {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
     state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode(),
-              showContext: savedContext() };
+              showContext: true };
     draw();
     drawTakeaways(overview.takeaways || []);
     renderMenu(document.getElementById("view-overview"));
