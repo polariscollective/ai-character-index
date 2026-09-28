@@ -1353,6 +1353,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    row: two lines' room for the model's name, which starts at the top of every
    cell, then the months, starting at the same height whatever the name takes. */
 .ovw-board .cell-context > .cell-context-words { align-self: start; }
+/* In a usage cell the squares take the first band, centred in it. */
+.ovw-board .cell-context > .usage-meter { align-self: center; }
 .ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
 /* A row's name, and under it in small type what its cells say. */
 .ovw-board .context-label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }

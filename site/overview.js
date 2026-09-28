@@ -434,6 +434,7 @@ function contextRows(noteNumber) {
       }
       const words = [entry.level ? `${entry.level === "-" ? 0 : entry.level.length} of 3`
                      : entry.shown === "-" ? "none" : entry.shown, entry.behind,
+                     entry.level && company.openWeights ? "open weights" : null,
                      entry.band ? `${entry.band} a month` : null].filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
         `${company.name}, ${row.name.toLowerCase()}: ${words.join(", ")}`,
@@ -451,7 +452,12 @@ function contextRows(noteNumber) {
       } else if (entry.level) {
         // Our rough estimate as three squares, filled one per step, all three
         // empty where there is nothing to go on.
-        button.append(usageMeter(entry.level));
+        // Under the squares, whether anyone can download the company's
+        // flagship model, as the governance board records it; the line keeps
+        // its place when empty, so the squares sit level across the row.
+        const open = element("span", "cell-context-sub", company.openWeights ? "Open weights" : "\u00a0");
+        if (!company.openWeights) open.setAttribute("aria-hidden", "true");
+        button.append(usageMeter(entry.level), open);
       } else if (entry.band) {
         // A step of ten, in the data face, on one line.
         button.append(element("span", "cell-context-band", entry.band));
