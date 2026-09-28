@@ -340,7 +340,8 @@ function contextRows(noteNumber) {
         tr.append(element("td", "cell"));
         return;
       }
-      const words = [entry.shown === "-" ? "none" : entry.shown, entry.behind,
+      const words = [entry.level ? `${entry.level === "-" ? 0 : entry.level.length} of 3`
+                     : entry.shown === "-" ? "none" : entry.shown, entry.behind,
                      entry.open_weights ? "open weights" : null,
                      entry.band ? `${entry.band} a month` : null].filter(Boolean);
       const { cell, button } = view.cellButton({ lab: company.id, row: `context-${row.id}` },
@@ -360,9 +361,16 @@ function contextRows(noteNumber) {
             : "cell-context-sub", entry.short), open);
       } else if (Number.isFinite(entry.share)) {
         button.append(element("span", "cell-context-band", entry.shown));
-      } else if (entry.level && entry.level !== "-") {
-        // Our rough estimate, in the data face, on one line.
-        button.append(element("span", "cell-context-band", entry.level));
+      } else if (entry.level) {
+        // Our rough estimate as three squares, filled one per step, all three
+        // empty where there is nothing to go on.
+        const filled = entry.level === "-" ? 0 : entry.level.length;
+        const meter = element("span", "usage-meter");
+        meter.setAttribute("aria-hidden", "true");
+        for (let step = 0; step < 3; step += 1) {
+          meter.append(element("span", step < filled ? "usage-step usage-step-on" : "usage-step"));
+        }
+        button.append(meter);
       } else if (entry.band) {
         // A step of ten, in the data face, on one line.
         button.append(element("span", "cell-context-band", entry.band));
