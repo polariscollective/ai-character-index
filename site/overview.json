@@ -223,7 +223,7 @@
     "sub": "Our rough estimate",
     "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate, pieced together from chat assistants, API use and downloads of open models, and gives only an idea.",
     "what": "A rough idea of how widely each company's models are used.",
-    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For people, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Each cell lists the signals behind it.",
+    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For people, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Where a company's only count covers one country, we also weigh its web traffic and its share of developer use. Each cell lists the signals behind it.",
     "limits": "It is shaky, and gives only an idea of scale. Much of what it would need is not public. Most companies publish no comparable count of users, and the few figures for use through an API are counted in different ways. A chat assistant, a model called through an API and an open model downloaded and run elsewhere are different kinds of use with no common measure, so placing them on one scale is our judgement. Two careful readers could place several companies a step apart.",
     "scale": [
      {
