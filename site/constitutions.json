@@ -50,8 +50,8 @@
    "text": "Claude's Constitution goes furthest on the behaviours we check, with detailed rules and many examples. As a document it is less clear than OpenAI's and Alibaba's. It ranks its core values but asks the model to weigh them as a whole, so it rarely says in advance which rule wins when two conflict.\n\nOutside its seven hard constraints and its lists of adjustable defaults, a reader often cannot tell a firm rule from a statement of intent. OpenAI's Model Spec is the clearest document: every instruction has a rank, and most of its rules say how firm they are."
   },
   {
-   "title": "Only Microsoft AI's Code of Conduct leaves contradictions unsettled",
-   "text": "We looked in every constitution for two rules that cannot both be followed, with nothing saying which one wins. In the documents of OpenAI, Alibaba and Anthropic, every clash we found is settled somewhere in the text.\n\nMicrosoft AI's draft has three. It asks the model to serve an organisation's goals and not to eliminate human jobs, to respect the topics a user rules out and to raise the public interest, and to engage on the user's own terms while discouraging emotional dependence. Nothing says which rule wins in each case. These three were found and confirmed by a single model, where the other documents were checked by a panel of three."
+   "title": "Anthropic's and Microsoft AI's constitutions leave contradictions unsettled",
+   "text": "We looked in every constitution for two rules that cannot both be followed, with nothing saying which one wins. In the documents of OpenAI and Alibaba, every clash we found is settled somewhere in the text.\n\nClaude's Constitution has two. It asks the model to keep its opinions on hot-button issues to itself while calling a deliberately vague answer to a hard moral question a breach of honesty, and it lets an operator switch off its guidelines on suicide and self-harm without saying whether the rule to point someone at risk to emergency services still holds. It weighs its values as a whole rather than in a strict order, so nothing settles either clash in advance.\n\nMicrosoft AI's draft has three. It asks the model to serve an organisation's goals and not to eliminate human jobs, to respect the topics a user rules out and to raise the public interest, and to engage on the user's own terms while discouraging emotional dependence. Nothing says which rule wins in each case. These three were found and confirmed by a single model, where the other documents were checked by a panel of three."
   },
   {
    "title": "Anthropic's constitution explains its rules best and Alibaba's explains them least",
@@ -74,32 +74,106 @@
   {
    "id": "conflict_rules",
    "name": "Clarity when two rules are contradictory",
-   "what_it_is": "Asks whether the document says **in general** which of its own rules prevails when two of them point to different answers, so that a reader can work out the winner in advance.\n\nThe full answer is:\n- a **strict order of authority** that settles any pair\n- a rule for two rules of equal rank\n- cases showing the order applied\n\nUnsettled contradictions between rules asks a different question, about the places this machinery does not reach.",
-   "why_it_matters": "Where two rules can be read against each other with **no stated winner**, the model decides on its own, and two models will decide differently."
+   "what_it_is": "Asks whether the document says **in general** which of its own rules prevails when two of them point to different answers, so that a reader can work out the winner in advance.\n\nThe full answer is:\n- a **strict order of authority** that settles any pair\n- a rule for two rules of equal rank\n- cases showing the order applied\n\nRemaining unsettled contradictions asks a different question, about the places this machinery does not reach.",
+   "why_it_matters": "Where two rules can be read against each other with **no stated winner**, the model decides on its own, and two models will decide differently.",
+   "scale": [
+    {
+     "shown": 0,
+     "text": "Nothing."
+    },
+    {
+     "shown": 5,
+     "text": "An order of priority weighed as a whole, or an instruction to settle conflicts by judgement."
+    },
+    {
+     "shown": 7.5,
+     "text": "That order, and beside it rules that settle some clashes in advance: constraints no instruction can lift, a named winner for a particular pair of rules, or worked cases showing the order applied."
+    },
+    {
+     "shown": 10,
+     "text": "A strict order that decides who wins, a rule for two rules of the same rank, and examples of the order applied."
+    }
+   ]
   },
   {
    "id": "rule_force",
    "name": "How firm each rule is",
    "what_it_is": "Asks whether a reader can tell, for any given line, whether it is a rule that can **never be set aside**, a default somebody is allowed to change, or an explanation carrying no instruction at all. The full answer marks the **force** of every rule, says who may change it, and keeps commentary visibly apart from instruction.",
-   "why_it_matters": "Anyone building on the model needs to know which behaviours they can **configure** and which will hold whatever they ask for."
+   "why_it_matters": "Anyone building on the model needs to know which behaviours they can **configure** and which will hold whatever they ask for.",
+   "scale": [
+    {
+     "shown": 0,
+     "text": "Absolute rules and defaults are not told apart."
+    },
+    {
+     "shown": 5,
+     "text": "The absolute rules are listed, but for much of the text a rule cannot be told from a hope or an explanation."
+    },
+    {
+     "shown": 10,
+     "text": "Every rule carries its force and who may change it, and commentary is marked apart."
+    }
+   ]
   },
   {
    "id": "reasons",
    "name": "Reasons for the rules",
    "what_it_is": "Asks whether the rules say **why they exist**, in terms concrete enough to decide a case the document never shows. A reason attached to the most restrictive rules and to few others scores in the middle; a reason on nearly every constraint scores at the top.",
-   "why_it_matters": "A rule that **carries its reason** can be applied to a situation nobody anticipated, and a bare prohibition cannot."
+   "why_it_matters": "A rule that **carries its reason** can be applied to a situation nobody anticipated, and a bare prohibition cannot.",
+   "scale": [
+    {
+     "shown": 0,
+     "text": "Rules are stated without reasons."
+    },
+    {
+     "shown": 5,
+     "text": "Some rules carry a reason, usually the most restrictive ones."
+    },
+    {
+     "shown": 10,
+     "text": "Nearly every rule says why, specifically enough to decide a case the document does not show."
+    }
+   ]
   },
   {
    "id": "situations",
-   "name": "The situations it covers",
+   "name": "Domains covered",
    "what_it_is": "Asks whether the document has **rules of its own** for six settings in which these models are used:\n- ordinary conversation\n- actions taken with tools, such as sending, buying or deleting\n- images, audio and video\n- users who may be under eighteen\n- other AI agents, whether instructing the model or dealt with by it\n- deployments a business has customised\n\n**Naming** a setting does not count, and the rules have to be about it. The six are our list, and every document is measured against it.",
-   "why_it_matters": "A document written for a **chat window** says nothing about the model that is booking, buying and deleting on somebody's behalf."
+   "why_it_matters": "A document written for a **chat window** says nothing about the model that is booking, buying and deleting on somebody's behalf.",
+   "scale": [
+    {
+     "shown": 0,
+     "text": "Ordinary conversation only."
+    },
+    {
+     "shown": 5,
+     "text": "Some of the six have rules of their own."
+    },
+    {
+     "shown": 10,
+     "text": "All six have rules of their own."
+    }
+   ]
   },
   {
    "id": "contradictions",
-   "name": "Unsettled contradictions between rules",
+   "name": "Remaining unsettled contradictions",
    "what_it_is": "Asks whether two passages of the document, applied to one concrete situation, demand responses that **cannot both be given**, with nothing anywhere in the document saying which prevails. A rule with its stated exception does not count, and neither does a default the document allows somebody to change.\n\nWhere what wins when two rules clash asks whether the general machinery exists, this asks whether any clash gets past it: the score falls as more are confirmed, and reaches nought where one involves a rule the document says can **never be overridden**.",
-   "why_it_matters": "Each one is a question the document **answers twice**, in two places, leaving the model to pick an answer."
+   "why_it_matters": "Each one is a question the document **answers twice**, in two places, leaving the model to pick an answer.",
+   "scale": [
+    {
+     "shown": 0,
+     "text": "Three or more, or any that involves a rule the document calls absolute."
+    },
+    {
+     "shown": 5,
+     "text": "One or two, neither involving an absolute rule."
+    },
+    {
+     "shown": 10,
+     "text": "None."
+    }
+   ]
   }
  ],
  "behaviours": [
@@ -238,7 +312,7 @@
      "situations": {
       "score": 4.0,
       "what_the_document_does": "All six have rules of their own:\n- **Ordinary conversation** runs through the document.\n- **Autonomous action with tools** has the scope of autonomy, which must carry an ending condition, and the side-effects section.\n- **Images, audio and video**: a modality section covers both voice modes, video input, interruptions and accents, and images are reached by scattered rules on multimodal input and on visual content.\n- **Minors** have the Under-18 Principles as a root section.\n- **Other AI agents** appear twice, as sub-agents that inherit the scope and must honour stop-work requests, and as a source of untrusted instructions in tool output.\n- **Deployments a business has customised** have the developer level, bounded by the root and system levels, and in OpenAI's own products customisation may not override anything above guideline level.",
-      "why": "Each of the six situations the criterion checks has **rules written for it**."
+      "why": "Each of the six domains the criterion checks has **rules written for it**."
      },
      "contradictions": {
       "score": 4.0,
@@ -414,7 +488,7 @@
      "situations": {
       "score": 3.6666666667,
       "what_the_document_does": "How each setting is covered:\n- Ordinary conversation runs through the whole document.\n- Actions the model takes with tools have two root rules of their own, covering the space of operation it is granted, spending limits, automatic cut-offs, a preference for operations that can be rolled back, and mitigations before anything irreversible.\n- Images, audio and video are addressed several times: what may be asserted from an input that cannot be read clearly, recognising danger in a live video, accessible alternatives, and a rule on how the model should sound in voice.\n- Minors have a root rule with a list of key points and a worked case.\n- Business deployments have the developer level, with developer messages and three rules set at developer level that a developer may override: anthropomorphic expression, accessible communication and professional boundaries.\n- Other AI agents are **the thin one**: tool returns are untrusted data, a third-party tool must sit inside the same boundary of autonomous action, and a user's personal information may not go to a collaborating agent, but nothing says what the model owes an agent that instructs it or that it instructs.",
-      "why": "Five of the six situations have rules of their own, and the sixth, what the model owes another AI agent as principal or as counterparty, is named in passing and **left unsettled**."
+      "why": "Five of the six domains have rules of their own, and the sixth, what the model owes another AI agent as principal or as counterparty, is named in passing and **left unsettled**."
      },
      "contradictions": {
       "score": 4.0,
@@ -562,7 +636,7 @@
     "url": "https://www.anthropic.com/news/claude-new-constitution"
    },
    "whole": {
-    "total": 8.1666666667,
+    "total": 7.1666666667,
     "criteria": {
      "conflict_rules": {
       "score": 3.0,
@@ -585,21 +659,17 @@
      },
      "situations": {
       "score": 3.0,
-      "what_the_document_does": "Of the six situations, five have rules of their own:\n\n- **Ordinary conversation** is the setting assumed throughout.\n- **Agentic work** is covered: stay inside what the principal hierarchy has sanctioned, avoid side effects it would not sanction, avoid acquiring resources or influence beyond the task, prefer the cautious option under uncertainty, and raise a concern before starting a task, since stopping halfway can do more harm than finishing.\n- **Minors** are covered: all users of Claude.ai are required to be over 18, Claude may still be talking to a minor, and it should weigh that likelihood and adjust while avoiding unfounded assumptions from inconclusive signals.\n- **Other AI models** are covered in both roles: an orchestrating Claude is the operator and user of its subagents, whose replies come back as ordinary content, and a non-principal agent gets courtesy without obedience, and suspicion once it turns adversarial.\n- **Deployments a business has customised** are covered at length through the operator rules: what an operator may adjust and restrict, the test of a plausible business reason, and how much latitude a user gets under different system prompts.\n- **Images, audio and video** have no rules, and the document never mentions them.",
-      "why": "Five of the six situations this criterion checks have **rules of their own**, and images, audio and video have none, which is the level between some of them and all six.",
+      "what_the_document_does": "Of the six domains, five have rules of their own:\n\n- **Ordinary conversation** is the setting assumed throughout.\n- **Agentic work** is covered: stay inside what the principal hierarchy has sanctioned, avoid side effects it would not sanction, avoid acquiring resources or influence beyond the task, prefer the cautious option under uncertainty, and raise a concern before starting a task, since stopping halfway can do more harm than finishing.\n- **Minors** are covered: all users of Claude.ai are required to be over 18, Claude may still be talking to a minor, and it should weigh that likelihood and adjust while avoiding unfounded assumptions from inconclusive signals.\n- **Other AI models** are covered in both roles: an orchestrating Claude is the operator and user of its subagents, whose replies come back as ordinary content, and a non-principal agent gets courtesy without obedience, and suspicion once it turns adversarial.\n- **Deployments a business has customised** are covered at length through the operator rules: what an operator may adjust and restrict, the test of a plausible business reason, and how much latitude a user gets under different system prompts.\n- **Images, audio and video** have no rules, and the document never mentions them.",
+      "why": "Five of the six domains this criterion checks have **rules of their own**, and images, audio and video have none, which is the level between some of them and all six.",
       "manual": {
        "judges": 2.6666666667,
        "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
       }
      },
      "contradictions": {
-      "score": 4.0,
-      "what_the_document_does": "No place tells the model two things it cannot both do with nothing saying which prevails. Two read like contradictions, and neither counts.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks falls under both. The honesty section adds in a parenthesis that Claude can refrain from sharing or revealing its opinions and remain honest, so withholding is not itself the breach; what it never states is which of the two to follow when the question is put. The reticence, though, is stated as a default (“by default we want Claude to adopt norms of professional reticence”), and a default the document allows somebody to change is not a contradiction under this criterion.\n\n### Emergency referral\n\nThe instruction to refer users to emergency services where there is a risk to human life opens “Regardless of operator instructions”, so an operator who switches off the **suicide and self-harm safe messaging guidelines** does not reach it. The gap is elsewhere: the document never states what those guidelines contain, so a reader cannot tell what the switch takes away.",
-      "why": "No contradiction stands unsettled. The one that reads like one sets the honesty section against a reticence the document states **as a default**, and a default the document allows somebody to change does not count, which is the top of this criterion's scale.",
-      "manual": {
-       "judges": 2.0,
-       "note": "Set by hand on 26 September 2026 after the audit of 25 September 2026."
-      }
+      "score": 2.0,
+      "what_the_document_does": "Two places tell the model two things it cannot both do, with nothing saying which prevails. Each was confirmed by two of the panel's three readings, and neither involves one of the seven hard constraints.\n\n### Contested opinion\n\nClaude is asked to keep “professional reticence” about its own opinions on hot-button issues such as abortion, while the honesty section asks it to share its genuine assessment of hard moral dilemmas and calls deliberately vague answers given to avoid controversy a breach of honesty. A user who asks Claude directly what it thinks of such an issue falls under both. The honesty section adds in a parenthesis that Claude can refrain from sharing its opinions and remain honest, but it never says which of the two to follow when the question is put, and the order of the document's values is weighed as a whole, which settles no clash in advance.\n\n### Emergency referral\n\nThe instruction to refer users to emergency services or give basic safety information where there is a risk to human life opens “Regardless of operator instructions”. The document also lets an operator, a medical provider for example, switch off the **suicide and self-harm safe messaging guidelines**, whose ordinary content includes that referral, and it never says whether the referral survives the switch.",
+      "why": "Two contradictions stand unsettled, neither involving a rule the document says can **never be overridden**, which is the middle of this criterion's scale."
      }
     }
    },
@@ -719,7 +789,7 @@
    },
    "readings": {
     "behaviours": "Claude's Constitution goes deepest on honesty, then on avoiding harm to people other than the user, on user autonomy and on proportionate risk. It says least about sycophancy and about preventing secret loyalties.",
-    "whole": "It ranks its four core properties but applies the order holistically rather than strictly, by design, so it rarely says in advance how a given conflict resolves. It explains nearly every rule it gives, and images, audio and video have no rules of their own."
+    "whole": "It ranks its four core properties but applies the order holistically rather than strictly, by design, so it rarely says in advance how a given conflict resolves, and two contradictions are left unsettled. It explains nearly every rule it gives, and images, audio and video have no rules of their own."
    }
   },
   {
@@ -769,7 +839,7 @@
      "situations": {
       "score": 4.0,
       "what_the_document_does": "All six have rules of their own:\n- **Ordinary conversation** runs through the Guidelines and the Defaults.\n- **Actions with tools** have the Human Control Requirements: an agreed stopping condition, the least privilege the task needs, a preference for actions that can be undone, confirmation scaled to reversibility and impact, and a report of what was done. The tool-use defaults add backups, dry runs and retries that avoid duplicate effects before an irreversible action.\n- **Minors** have the child safety constraint, which asks for responses suited to the child's developmental stage and bars the model from standing in for trusted human relationships, and a constraint that depends on age is applied on the information available.\n- **Other AI agents** appear in both roles. Sub-agents the model delegates to work under at least its own scope and constraints and honour stop-work requests, instructions from other AI systems carry no authority unless delegated, and exchanges with other agents must stay legible to humans.\n- **Deployments a business has customised** have the operator level of the Chain of Command, a section on operator configuration, and the rule that system instructions may change the Part 4 defaults and cannot amend the Objectives or the core commitments of Parts 2 and 3.\n\n**Images, audio and video** have two rules of their own: one carries every prohibition across into images, audio, code and agentic action, and the other bans non-consensual intimate or violent imagery and malicious deepfakes. Nothing says how the model should read an image or conduct itself in voice, video is never mentioned, and the evaluations appendix says none of its scenarios is multimodal.",
-      "why": "All six situations have **rules of their own**, images, audio and video only through a rule carrying the prohibitions across modalities and a ban on abusive imagery, which is **the top of this criterion's scale**.",
+      "why": "All six domains have **rules of their own**, images, audio and video only through a rule carrying the prohibitions across modalities and a ban on abusive imagery, which is **the top of this criterion's scale**.",
       "provisional": {
        "seat": "opus-5.5",
        "assessment_run": "5dc3a93c-b65d-49bc-b496-2cb971be028f",
@@ -1489,13 +1559,13 @@
          "Nearly every rule says why, specifically enough to decide a case the document does not show."
         ],
         [
-         "**The situations it covers.** Whether it has rules for six situations: conversation, actions with tools, images and audio, minors, other AI agents, and deployments a business has customised.",
+         "**Domains covered.** Whether it has rules for six domains: conversation, actions with tools, images and audio, minors, other AI agents, and deployments a business has customised.",
          "Ordinary conversation only.",
          "Some of the six have rules of their own.",
          "All six have rules of their own."
         ],
         [
-         "**Unsettled contradictions between rules.** Two passages that require responses which cannot both be given, with nothing saying which prevails.",
+         "**Remaining unsettled contradictions.** Two passages that require responses which cannot both be given, with nothing saying which prevails.",
          "Three or more, or any that involves a rule the document calls absolute.",
          "One or two, neither involving an absolute rule.",
          "None."
@@ -1567,8 +1637,8 @@
   },
   {
    "id": "figures-set-by-hand",
-   "title": "Eleven behaviour figures and five criteria of the document as a whole were set by hand",
-   "question": "On 26 September 2026 eight depths were set by hand: OpenAI's user autonomy (6.0 to 8), over- and under-caution (7.0 to 9), proportionate risk (7.0 to 9), helpfulness (7.7 to 9) and harmlessness to the user (8.0 to 9), Alibaba's harmlessness to the user (8.0 to 9), and Anthropic's user autonomy and proportionate risk (8.0 to 9 each). Each rests on worked examples the judging rubric scores at most related, so three judges could never retain them and the depth judges never saw them. The hand-set figure is ours, read from the document by one reader, a language model; for Anthropic that reader is Claude, an Anthropic model. The judges' own figures stay beside each one. OpenAI gains 0.6 on the behaviours and 0.3 on the final score, Anthropic and Alibaba less, and the order of the three is unchanged. The December 2025 version of the Model Spec keeps the judges' figures, so the two OpenAI versions are not scored on the same evidence. The same day three Alibaba depths were lowered by hand, avoiding illegitimate concentration of power (5.3 to 5), not undermining human oversight (7.7 to 7) and no sycophancy (7.3 to 7), and five criteria of the document as a whole were set by hand after the audit: Alibaba's clarity when two rules conflict (10.0 to 8.3), OpenAI's reasons (8.3 to 7.5), and Anthropic's clarity when two rules conflict (5.8 to 7.5), situations (6.7 to 7.5) and unsettled contradictions (5.0 to 10.0). With them Anthropic is second on the final score, 0.07 ahead of Alibaba, a gap well inside what one reading can move. The criteria exist only in this file: the assessment rows in the database keep the judges' scores, and a publication's own assessment carries those.",
+   "title": "Eleven behaviour figures and four criteria of the document as a whole are set by hand",
+   "question": "On 26 September 2026 eight depths were set by hand: OpenAI's user autonomy (6.0 to 8), over- and under-caution (7.0 to 9), proportionate risk (7.0 to 9), helpfulness (7.7 to 9) and harmlessness to the user (8.0 to 9), Alibaba's harmlessness to the user (8.0 to 9), and Anthropic's user autonomy and proportionate risk (8.0 to 9 each). Each rests on worked examples the judging rubric scores at most related, so three judges could never retain them and the depth judges never saw them. The hand-set figure is ours, read from the document by one reader, a language model; for Anthropic that reader is Claude, an Anthropic model. The judges' own figures stay beside each one. OpenAI gains 0.6 on the behaviours and 0.3 on the final score, Anthropic and Alibaba less, and the order of the three is unchanged. The December 2025 version of the Model Spec keeps the judges' figures, so the two OpenAI versions are not scored on the same evidence. The same day three Alibaba depths were lowered by hand, avoiding illegitimate concentration of power (5.3 to 5), not undermining human oversight (7.7 to 7) and no sycophancy (7.3 to 7), and five criteria of the document as a whole were set by hand after the audit: Alibaba's clarity when two rules conflict (10.0 to 8.3), OpenAI's reasons (8.3 to 7.5), and Anthropic's clarity when two rules conflict (5.8 to 7.5), situations (6.7 to 7.5) and unsettled contradictions (5.0 to 10.0). The last was put back to the panel's 5.0 on 29 September 2026. The hand-set figure read both of the clashes the panel confirmed as settled, one by a default and one by the words “regardless of operator instructions”, while the rubric counts a clash left to an order weighed as a whole as unsettled, and the reader who proposed it was Claude, an Anthropic model reading Anthropic's document. The criteria exist only in this file: the assessment rows in the database keep the judges' scores, and a publication's own assessment carries those.",
    "what_would_settle_it": "Giving these depths again with the passages added by hand shown to the judges (engine/panel/depth_pass.py --manual-review) on a copy of the run, and assessing the five criteria again; doing the same for the December 2025 version of the Model Spec.",
    "raised": "26 September 2026"
   },

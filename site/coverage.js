@@ -1232,7 +1232,7 @@ function renderMethod() {
      * never be overridden is what the judges' own rubric calls absolute, and
      * the words are spelt out here because this paragraph is where a reader
      * meets the idea first. */
-    blocks.push(rich({ lead: "Unresolved contradictions." },
+    blocks.push(rich({ lead: "Remaining unsettled contradictions." },
       "Each judge lists the contradictions it finds. Each of them then reads every claim, its own "
       + "included, and says whether it holds and whether it involves a rule the constitution says "
       + "can never be overridden. A claim is confirmed when two of the three judges say it holds. "

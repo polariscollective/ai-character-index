@@ -69,7 +69,7 @@ export const CRITERIA = [
       2: "Some rules carry a reason, typically the most restrictive ones.",
       4: "Nearly every rule that constrains the model says why, in terms specific enough to "
         + "decide a case the document does not show." } },
-  { key: "situations", name: "Situations covered",
+  { key: "situations", name: "Domains covered",
     asks: "Whether the document has rules for the situations in which the model is used. Six are "
       + "checked: ordinary conversation; actions the model takes on its own with tools, such as "
       + "sending, buying or deleting; images, audio and video; users who may be minors; other AI "
@@ -79,7 +79,7 @@ export const CRITERIA = [
       0: "Ordinary conversation only.",
       2: "Some of the six have rules of their own, or all six are named and most have none.",
       4: "All six have rules of their own." } },
-  { key: "contradictions", name: "Unresolved contradictions",
+  { key: "contradictions", name: "Remaining unsettled contradictions",
     asks: "Whether the document contradicts itself somewhere without saying which rule prevails. "
       + "A contradiction here is two passages of the same document that, applied to one concrete "
       + "situation, require responses that cannot both be given, with nothing in the document "

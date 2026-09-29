@@ -16,10 +16,10 @@
  * claims about a document.
  *
  * The table, the folds, the popover and the colours are site/board.js, which the
- * governance board and the coverage board draw from too. The two scales are
- * explained once under the table and never again inside a popover: a reader
- * learns what a figure means in one place, and a popover is then short enough to
- * read where it opens.
+ * governance board and the coverage board draw from too. The behaviours' scale
+ * is explained once under the table. A criterion's scale is also given where
+ * the criterion is described, from the file, because a reader asked what a
+ * criterion means also needs to know what its figures mean.
  *
  * The file's sentences carry a light markup, which this file turns into real
  * elements: paragraphs, bold inside a sentence, bullets and a small heading. It
@@ -413,6 +413,7 @@ function aboutWhole(content) {
     fold.append(summary);
     renderMarkup(fold, criterion.what_it_is);
     renderMarkup(fold, criterion.why_it_matters);
+    scaleOf(fold, criterion);
     content.append(fold);
   });
   content.append(board.showInTable("whole", "the criteria"));
@@ -444,6 +445,23 @@ function aboutCriterion(content, criterion) {
     `One of the ${state.data.criteria.length} criteria on the document as a whole, given out of `
     + `${CRITERION_SCALE} and shown out of ${TEN}.`);
   sentences(content, criterion.what_it_is, criterion.why_it_matters);
+  scaleOf(content, criterion);
+}
+
+/* What each figure of a criterion means, out of 10 as the board shows it, in
+ * the file's words. The owner asked for the scale where a criterion is
+ * described, so a reader need not go to the scoring section under the table to
+ * learn what a 5 is. */
+function scaleOf(content, criterion) {
+  if (!criterion.scale?.length) return;
+  content.append(board.h3("The scale"));
+  const list = element("ul", "check-list");
+  criterion.scale.forEach(({ shown: at, text }) => {
+    const item = element("li");
+    item.append(board.chip(at, TEN, shown(at)), element("span", "", text));
+    list.append(item);
+  });
+  content.append(list);
 }
 
 /* What the criterion asks, in the tone the subtitles carry, then what this
@@ -459,6 +477,7 @@ function criterionScore(content, company, criterion) {
       + `scale of 0 to ${CRITERION_SCALE}.`));
   renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
+  scaleOf(content, criterion);
 }
 
 function aboutBehaviours(content) {

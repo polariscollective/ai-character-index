@@ -62,8 +62,8 @@ test("the five criteria are the builder's four in its order, with the contradict
   assert.deepEqual(CRITERIA.map(one => one.key),
     ["conflict_rules", "rule_force", "reasons", "situations", "contradictions"]);
   assert.deepEqual(CRITERIA.map(one => one.name),
-    ["Conflict rules", "Force of each rule", "Reasons given", "Situations covered",
-     "Unresolved contradictions"]);
+    ["Conflict rules", "Force of each rule", "Reasons given", "Domains covered",
+     "Remaining unsettled contradictions"]);
   assert.deepEqual([CRITERION_MAX, SHOWN_MAX, WHOLE_MAX, FINAL_MAX], [4, 2, 10, 20]);
 });
 
