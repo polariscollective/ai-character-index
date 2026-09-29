@@ -516,95 +516,58 @@ class TheProseAgreesWithTheData(unittest.TestCase):
                 self.assertEqual(sum(stated), sum(scored), where)
 
     def test_the_first_finding_quotes_the_combined_minimum(self):
-        # "OpenAI has the best pair, 2.7 on the constitution and 2.3 on the
-        # change log. Anthropic ... scores 3.0 and 1.0."
+        # "OpenAI and Anthropic come closest ... on that record even the best
+        # company reaches only 5.8 out of 10."
         combined = {lab: totals(lab)[0]["1"] + totals(lab)[0]["2"] for lab in ORDER}
-        self.assertEqual(max(combined.values()), combined["openai"])
+        closest = sorted(ORDER, key=combined.get, reverse=True)[:2]
+        self.assertEqual(set(closest), {"openai", "anthropic"})
         first = bare(DATA["findings"][0]["text"])
-        openai, anthropic = totals("openai")[0], totals("anthropic")[0]
-        self.assertIn(f"OpenAI has the best pair, {shown(on_ten(openai['1']))} on the "
-                      f"constitution and {shown(on_ten(openai['2']))} on the change log", first)
-        self.assertIn(f"scores {shown(on_ten(anthropic['1']))} and "
-                      f"{shown(on_ten(anthropic['2']))}.", first)
-        # The minimum is the first two questions, and the finding says what
-        # meeting it means on the board's own scale.
+        self.assertIn("OpenAI and Anthropic come closest", first)
+        # The minimum is the first two questions, and no company meets it.
         self.assertEqual([q["id"] for q in DATA["questions"] if q.get("minimum")], ["1", "2"])
-        self.assertIn("10 out of 10 on both questions", first)
-        # "across all ten, the best score on it is 5.8 out of 10"
+        self.assertTrue(all(combined[lab] < 8 for lab in ORDER))
+        self.assertIn("No company does both", first)
         best_log = max(totals(lab)[0]["2"] for lab in ORDER)
-        self.assertIn(f"the best score on it is {shown(on_ten(best_log))} out of 10", first)
+        self.assertIn(f"even the best company reaches only {shown(on_ten(best_log))} out of 10", first)
 
-    def test_the_finding_on_meta_quotes_both_of_its_figures(self):
-        # "It scores 0.5 out of 10 on what is published ... and 2.5 out of 10 on
-        # what it engages, behind only OpenAI and Anthropic."
+    def test_the_finding_on_meta_says_it_publishes_no_constitution(self):
+        # "Meta publishes no constitution." The constitutions board says the same.
         text = next(bare(f["text"]) for f in DATA["findings"] if "Muse Spark" in f["text"])
-        _, columns = totals("meta")
-        self.assertIn(f"{shown(columns['published'])} out of 10 on what is published", text)
-        self.assertIn(f"{shown(columns['engages'])} out of 10 on what it engages", text)
-        # Meta is fifth on the figure it names, level with xAI, and eighth on
-        # the other, with no company level with it there.
-        engages = sorted((totals(lab)[1]["engages"] for lab in ORDER), reverse=True)
-        self.assertEqual(engages.index(columns["engages"]), 4)
-        self.assertEqual(columns["engages"], totals("xai")[1]["engages"])
-        self.assertIn("fifth of the ten and level with xAI", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("meta"), 7)
-        self.assertEqual([lab for lab in ORDER if published(lab) == columns["published"]], ["meta"])
-        self.assertIn("on what is published, eighth of the ten", text)
-        # "which puts it seventh on the final score with 2.0 out of 10"
-        self.assertIn(f"seventh on the final score with {shown(ranking('meta'))} out of 10", text)
-        self.assertEqual(rank("meta"), 7)
+        self.assertIn("Meta publishes no constitution", text)
+        boards = json.loads((ROOT / "site" / "constitutions.json").read_text(encoding="utf-8"))
+        meta = next(c for c in boards["companies"] if c["id"] == "meta")
+        self.assertFalse(meta["has_constitution"])
 
-    def test_the_open_weights_finding_quotes_what_is_published(self):
-        # "Moonshot AI's 0.9 and DeepSeek's 0.7 are the two lowest scores, and
-        # Mistral AI's 3.4 is fifth", with Alibaba named as the one open-weight
-        # company that is not near the bottom.
-        text = next(bare(f["text"]) for f in DATA["findings"] if "Moonshot AI's" in f["text"])
-        for lab, label in (("mistral", "Mistral AI's"), ("moonshot", "Moonshot AI's"),
-                           ("deepseek", "DeepSeek's")):
-            self.assertIn(f"{label} {shown(published(lab))}", text, lab)
-        self.assertIn(f"sixth on what is published with {shown(published('alibaba'))}", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("alibaba"), 5)
-        # Two of the three it names hold the two lowest scores on that figure,
-        # and the third is fifth on it.
-        self.assertEqual(set(sorted(ORDER, key=published)[:2]), {"moonshot", "deepseek"})
-        self.assertIn("are the two lowest scores", text)
-        self.assertEqual(sorted(ORDER, key=published, reverse=True).index("mistral"), 4)
-        self.assertIn(f"Mistral AI's {shown(published('mistral'))} is fifth", text)
-        # The three are the last three on the final score, with the figures the
-        # finding quotes.
-        self.assertIn("Three of them take the last three places on the final score", text)
+    def test_the_open_weights_finding_names_the_four_and_the_bottom_three(self):
+        # "Four companies release their main model for anyone to download and
+        # run: Alibaba, DeepSeek, Mistral AI and Moonshot AI. Three of them are
+        # at the bottom of this board."
+        text = next(bare(f["text"]) for f in DATA["findings"] if "download" in f["title"])
+        open_weights = {lab["id"] for lab in DATA["labs"] if lab.get("open_weights")}
+        self.assertEqual(open_weights, {"alibaba", "deepseek", "mistral", "moonshot"})
+        self.assertIn("Alibaba, DeepSeek, Mistral AI and Moonshot AI", text)
         self.assertEqual(set(ORDER[-3:]), {"mistral", "moonshot", "deepseek"})
-        self.assertIn(f"Mistral AI with {shown(ranking('mistral'))}, DeepSeek with "
-                      f"{shown(ranking('deepseek'))} and Moonshot AI with "
-                      f"{shown(ranking('moonshot'))}", text)
+        self.assertIn("Three of them are at the bottom of this board", text)
 
     def test_the_findings_on_whole_columns_hold(self):
-        # "On the check that asks for a comment window, three companies score
-        # anything at all. Microsoft AI scores 7.5 out of 10 ... OpenAI scores
-        # 5.0 out of 10 ... and Anthropic 2.5."
+        # "Microsoft AI comes closest" to a commitment to hear the public before
+        # a change: the highest score on the comment window, alone there.
         window = {lab: DATA["scores"][lab]["4.2"] for lab in ORDER}
         self.assertEqual({lab for lab, score in window.items() if score},
                          {"openai", "anthropic", "microsoft"})
         self.assertEqual(window["microsoft"], 3)
         self.assertEqual(window["openai"], 2)
         self.assertEqual(window["anthropic"], 1)
-        notice = next(bare(f["text"]) for f in DATA["findings"] if "comment window" in f["text"])
-        self.assertIn("three companies score anything at all", notice)
-        self.assertIn(f"Microsoft AI scores {shown(on_ten(3))} out of 10", notice)
-        self.assertIn(f"OpenAI scores {shown(on_ten(2))} out of 10", notice)
-        self.assertIn(f"and Anthropic {shown(on_ten(1))}.", notice)
-        # On special deployments, "Anthropic, Microsoft AI, OpenAI and xAI score
-        # 5.0 out of 10 each, and the other six nothing at all."
+        notice = next(bare(f["text"]) for f in DATA["findings"] if "warn the public" in f["text"])
+        self.assertIn("Microsoft AI comes closest", notice)
+        # On special deployments no company publishes the rules, and only four
+        # say anything at all.
         special = {lab: DATA["scores"][lab]["1.3"] for lab in ORDER}
-        self.assertEqual(special["anthropic"], 2)
-        self.assertEqual(special["microsoft"], 2)
-        self.assertEqual(special["openai"], 2)
-        self.assertEqual(special["xai"], 2)
         self.assertEqual({lab for lab, score in special.items() if score},
                          {"openai", "anthropic", "microsoft", "xai"})
+        self.assertTrue(all(score < 4 for score in special.values()))
         gap = next(bare(f["text"]) for f in DATA["findings"] if "armed forces" in f["title"])
-        self.assertIn(f"Anthropic, Microsoft AI, OpenAI and xAI score {shown(on_ten(2))} out of 10 "
-                      f"each, and the other six nothing at all", gap)
+        self.assertIn("No company publishes the rules its models follow", gap)
 
     def test_there_are_eight_findings(self):
         self.assertEqual(len(DATA["findings"]), 8)

@@ -1018,7 +1018,11 @@ function renderFindings() {
   const list = document.createDocumentFragment();
   (board.data.findings || []).forEach(finding => {
     const block = element("div", "finding");
-    block.append(element("h3", "", finding.title), prose("p", "", finding.text));
+    block.append(element("h3", "", finding.title));
+    // A finding reads like a short article: a paragraph wherever the text has
+    // a blank line.
+    String(finding.text || "").split(/\n\s*\n/).forEach(paragraph =>
+      block.append(prose("p", "", paragraph.trim())));
     list.append(block);
   });
   board.nodes.findings.replaceChildren(list);
