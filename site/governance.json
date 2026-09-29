@@ -24,6 +24,7 @@
    "id": "published",
    "name": "What is published",
    "out_of": 10,
+   "hide_row_weights": true,
    "plain": "The rules anyone can read: whether a constitution exists and which models it covers, whether every change to the rules can be seen, which filters run around the models, what the model must never do, whether the public can comment before one of those is weakened, and whether the published text may be reused. It is half of the final score.",
    "about": "This column is the part of governance a reader can check without being let in. Every row is a document, or something a document says: it exists or it does not, it names the models it governs or it does not, it records its changes or it does not. Eleven rows carry it, the ten checks of the five questions and the licence on the published text. Every row counts the same, so a question with three checks counts for three elevenths of the figure and one with a single check for one eleventh.",
    "prose": "practices_published",

@@ -81,6 +81,12 @@ const share = value => {
   return value.toFixed(2);
 };
 const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
+/* The line under a row inside a column, saying what it counts for, unless the
+ * column asks for none. What is published asks for none: every one of its rows
+ * counts the same, which its popover says once, and eleven lines saying 1/11
+ * crowded out the names. */
+const rowWeight = (column, fraction, figure) =>
+  (column.hide_row_weights ? null : weightLine(fraction, figure));
 /* One decimal at most, and none where the figure is whole: a score reaching a
  * sentence is read, not computed with. */
 const onItsScale = (value, max) =>
@@ -787,7 +793,7 @@ function practiceRow(column, id, parent) {
   const practice = practiceOf(board.data, id);
   const company = onlyTheCompany(board.data, id);
   const name = view.rowName(practice.short,
-    weightLine(frac(1, rowsOf(column)), column.name.toLowerCase()),
+    rowWeight(column, frac(1, rowsOf(column)), column.name.toLowerCase()),
     company ? content => aboutDisclosedPractice(content, practice)
       : content => aboutPractice(content, practice, column),
     `${practice.short}: what its scores mean`, [paperNote(practice)]);
@@ -883,7 +889,7 @@ function renderTable() {
       row.append(view.rowHead(
         view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
           { parts: "checks", name: question.name }),
-        view.rowName(question.name, weightLine(frac(question.checks.length, rows), figure),
+        view.rowName(question.name, rowWeight(column, frac(question.checks.length, rows), figure),
           content => aboutQuestion(content, question),
           `${question.name}${question.minimum ? ", part of the minimum" : ""}: what it asks`,
           question.minimum ? [NOTE.minimum, paperNote(question)] : [paperNote(question)])));
@@ -898,7 +904,7 @@ function renderTable() {
 
       question.checks.forEach(check => {
         const sub = view.subRow(rowId(check.id), question.id,
-          view.rowName(check.short, weightLine(frac(1, rows), figure),
+          view.rowName(check.short, rowWeight(column, frac(1, rows), figure),
             content => aboutCheck(content, question, check),
             `${check.short}: what its scores mean`));
         sub.dataset.level = "3";
@@ -935,7 +941,7 @@ function renderTable() {
       row.append(view.rowHead(
         view.rowToggle(groupKey(group), members.map(practiceRowId),
           { parts: "practices", name: group.name }),
-        view.rowName(group.name, weightLine(frac(group.practices.length, rows), figure),
+        view.rowName(group.name, rowWeight(column, frac(group.practices.length, rows), figure),
           content => aboutGroup(content, group, column), `${group.name}: what it gathers`)));
       board.labs.forEach(lab => {
         const value = groupAverage(lab.id, group);
