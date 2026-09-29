@@ -905,7 +905,7 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "scale it is on and what it means, for every constitution or for one "
     + "company. Reach for it to answer how far a constitution goes, or how two of "
     + "them compare.",
-    "  governance_board: ten companies scored on four questions about how they "
+    "  governance_board: ten companies scored on five questions about how they "
     + "govern the rules their models follow. Those figures were given by hand "
     + "from public documents rather than judged by the panel. The board is the "
     + "one the publication froze, and carries its own as-of date.",

@@ -225,7 +225,7 @@ class TheData(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_a_question_runs_from_0_to_4_and_a_figure_from_0_to_10(self):
-        self.assertEqual([len(q["checks"]) for q in DATA["questions"]], [3, 3, 2, 2])
+        self.assertEqual([len(q["checks"]) for q in DATA["questions"]], [3, 3, 2, 1, 1])
         for lab in ORDER:
             by_question, by_column = totals(lab)
             self.assertTrue(all(0 <= value <= SCALE for value in by_question.values()), lab)
@@ -472,7 +472,9 @@ class ThePapersBehindEachRow(unittest.TestCase):
                 self.assertTrue(paper.get(field, "").strip(), field)
 
     def test_every_row_has_a_reading_and_the_passages_behind_it(self):
-        self.assertEqual(len(self.ROWS), 24)
+        # Five questions since 29 September 2026, when the ask on hard
+        # constraints was split into hard constraints and public input.
+        self.assertEqual(len(self.ROWS), 25)
         for row in self.ROWS:
             self.assertTrue(row.get("reading", "").strip(), row["id"])
             self.assertTrue(row.get("quotes"), row["id"])
@@ -552,7 +554,7 @@ class TheProseAgreesWithTheData(unittest.TestCase):
     def test_the_findings_on_whole_columns_hold(self):
         # "Microsoft AI comes closest" to a commitment to hear the public before
         # a change: the highest score on the comment window, alone there.
-        window = {lab: DATA["scores"][lab]["4.2"] for lab in ORDER}
+        window = {lab: DATA["scores"][lab]["5.1"] for lab in ORDER}
         self.assertEqual({lab for lab, score in window.items() if score},
                          {"openai", "anthropic", "microsoft"})
         self.assertEqual(window["microsoft"], 3)

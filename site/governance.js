@@ -6,8 +6,8 @@
  * is made of under it.
  *
  * "What is published" is what a reader can check without being let in: the ten
- * checks of the four asks, which open under their questions, and the licence on
- * the published text. "What it engages" is whether the document binds the
+ * checks of the five questions, which open under their questions, and the
+ * licence on the published text, under Public access. "What it engages" is whether the document binds the
  * models: eight practices, scored on what each company publishes about its
  * own. The final score is their sum, and it is what the companies are ranked
  * by. Its practices fold into the groups governance.json gives

@@ -84,11 +84,11 @@ test("the board of governance answers the ten companies in the board's own order
   }
   const finals = answer.companies.map(company => company.final_score);
   assert.deepEqual(finals, [...finals].sort((a, b) => b - a));
-  assert.equal(answer.measures.questions.length, 4);
+  assert.equal(answer.measures.questions.length, 5);
   for (const question of answer.measures.questions) {
     assert.ok(question.means, question.id);
     assert.equal(question.from, "Polaris Collective", question.id);
-    assert.ok(question.checks.length >= 2, question.id);
+    assert.ok(question.checks.length >= 1, question.id);
     assert.ok(question.checks.every(check => check.anchors["4"]), question.id);
   }
   // Every practice says which paper it comes from, and the one no figure counts
