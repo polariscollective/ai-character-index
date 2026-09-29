@@ -25,9 +25,10 @@ import { callerAddress, recentFrom, sourceHash } from "./submissions.mjs";
 export const TABLE = "aci_page_feedback";
 export const BUCKET = "aci-page-feedback";
 
-/* One source, one hour. The proposal form's number rather than the note
- * dialog's thirty, because every one of these carries a file. */
-export const PER_HOUR = 10;
+/* One source, one hour. A hundred, so that someone reporting fault after
+ * fault in one sitting is not refused, while one address still cannot fill
+ * the bucket with files. */
+export const PER_HOUR = 100;
 
 /* What a whole request may weigh, read from Content-Length before the body is
  * buffered. Under Vercel's own ceiling for a serverless request, with room over
