@@ -192,13 +192,13 @@
  },
  "context": {
   "name": "For context",
-  "plain": "Two facts about each company that no figure of the index counts: how capable its most capable model is, and how many people the company says use it. They are here to show what is at stake, and they change nothing above.",
-  "note": "These rows show how capable each company's best model is and roughly how widely its models are used. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
+  "plain": "Two things about each company that no figure of the index counts: how capable its most capable model rated by Epoch AI is, and our rough estimate of how widely its models are used. They are here to show what is at stake, and they change nothing above.",
+  "note": "These rows show how capable each company's best model rated by Epoch AI is and roughly how widely its models are used. A published, well-governed constitution matters more as both grow. They count towards no score, and each cell says where its figure comes from.",
   "rows": [
    {
     "id": "capability",
     "name": "Most capable model",
-    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within the index's own margin.",
+    "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within Epoch's margin of error.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
     "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates.",
@@ -213,25 +213,25 @@
       "url": "https://epoch.ai/data-insights/eci-frontier-trend"
      }
     ],
-    "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Reading a gap in points as months is ours, and models a few months apart are within the index's own margin. Epoch rates only the models it has tested, which leaves out Microsoft AI's.",
+    "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Reading a gap in points as months is ours. Epoch measures a lag as the time the frontier took to reach a model's score, which gives a few weeks to a month less for most companies. Models a few months apart are within Epoch's margin of error, so the order of the companies between 8 and 10 months behind means little. Epoch rates a model some weeks after its release and only the models it has tested, which leaves out Microsoft AI's.",
     "sub": "Months behind the frontier"
    },
    {
     "id": "usage",
     "name": "Usage",
     "sub": "Our rough estimate",
-    "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate and very subjective.",
+    "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate, pieced together from chat assistants, API use and downloads of open models, and gives only an idea.",
     "what": "A rough idea of how widely each company's models are used.",
-    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. Each cell lists the signals behind it.",
-    "limits": "It is very subjective. No source counts every company the same way, most companies publish no comparable figure, and two careful readers could place several companies a step apart. It gives an idea of scale and should be read that way.",
+    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For people, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Each cell lists the signals behind it.",
+    "limits": "It is shaky, and gives only an idea of scale. Much of what it would need is not public. Most companies publish no comparable count of users, and the few figures for use through an API are counted in different ways. A chat assistant, a model called through an API and an open model downloaded and run elsewhere are different kinds of use with no common measure, so placing them on one scale is our judgement. Two careful readers could place several companies a step apart.",
     "scale": [
      {
       "level": "+++",
-      "text": "Hundreds of millions of people a month"
+      "text": "About 200 million people a month or more"
      },
      {
       "level": "++",
-      "text": "Tens of millions, or a large place among developers"
+      "text": "20 to 200 million people a month, or a large place among developers"
      },
      {
       "level": "+",
@@ -256,7 +256,7 @@
      ],
      "released": "2026-09-03",
      "open_weights": false,
-     "text": "GPT-6 Astra, released on 3 September 2026, scores 166.6 on the Epoch Capabilities Index, within an interval of 163.0 to 172.0. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than the index's own margin.",
+     "text": "GPT-6 Astra, released on 3 September 2026, scores 166.6 on the Epoch Capabilities Index, within an interval of 163.0 to 172.0. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than Epoch's margin of error.",
      "behind": "At the frontier",
      "months_behind": 0,
      "short": "Frontier"
@@ -299,7 +299,7 @@
      ],
      "released": "2026-09-01",
      "open_weights": false,
-     "text": "Claude Fable 5.1, released on 1 September 2026, scores 165.0 on the Epoch Capabilities Index, within an interval of 161.6 to 169.6. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than the index's own margin.",
+     "text": "Claude Fable 5.1, released on 1 September 2026, scores 165.0 on the Epoch Capabilities Index, within an interval of 161.6 to 169.6. Its weights cannot be downloaded. That puts it at the frontier: no model Epoch rates is ahead of it by more than Epoch's margin of error.",
      "behind": "At the frontier",
      "months_behind": 0,
      "short": "Frontier"
@@ -521,7 +521,7 @@
      ],
      "released": "2026-08-12",
      "open_weights": false,
-     "text": "Grok 4.6, released on 12 August 2026, scores 156.5 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 9 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
+     "text": "Grok 4.6, released on 12 August 2026, scores 156.5 on the Epoch Capabilities Index, within an interval of 154.6 to 159.0. Its weights cannot be downloaded. That is about 9 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year. xAI released Grok 4.7 on 21 September 2026, and Epoch has not rated it yet.",
      "behind": "9 months behind",
      "months_behind": 9,
      "short": "9 months"
@@ -552,7 +552,7 @@
      ],
      "released": "2026-07-16",
      "open_weights": true,
-     "text": "Kimi K3, released on 16 July 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.1 to 160.7. Its weights can be downloaded, for non-commercial use. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
+     "text": "Kimi K3, released on 16 July 2026, scores 157.7 on the Epoch Capabilities Index, within an interval of 155.1 to 160.7. Its weights can be downloaded, and its licence allows commercial use, asking only large businesses that host it as a service for a separate agreement. That is about 8 months behind the most capable model Epoch rates, reading Epoch's finding that the frontier has gained about 14 points a year.",
      "behind": "8 months behind",
      "months_behind": 8,
      "short": "8 months"
