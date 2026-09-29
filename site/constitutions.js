@@ -810,7 +810,11 @@ function renderTakeaways(takeaways) {
   node.closest("section").hidden = takeaways.length === 0;
   node.replaceChildren(...takeaways.map(({ title, text }) => {
     const block = element("div", "finding");
-    block.append(element("h3", "", title), element("p", "", text));
+    block.append(element("h3", "", title));
+    // A takeaway reads like a short article: a paragraph wherever the text has
+    // a blank line.
+    String(text || "").split(/\n\s*\n/).forEach(paragraph =>
+      block.append(element("p", "", paragraph.trim())));
     return block;
   }));
 }
