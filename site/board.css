@@ -1392,8 +1392,10 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   width: 1px;
   background: rgb(92 107 60 / .2);
 }
-/* A model at the frontier: its words in bold and in ink. */
-.ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); }
+/* A model at the frontier: its words in bold and in ink, and larger than the
+   months under the other models, as large as the second band's 15px allows, so
+   the one word that matters most on the row is seen first. */
+.ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); font-size: 13px; line-height: 15px; }
 .ovw-board .cell-context-band { font-family: var(--mono); font-size: 13px; line-height: 1.2; }
 /* The usage estimate: three small squares in grey, filled one per step, the
    empty ones drawn as an outline. Grey rather than a colour of the boards, since

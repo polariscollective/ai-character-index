@@ -56,9 +56,9 @@
     <!-- The colour scale of the mode shown, beside the switch between modes. -->
     <div class="gov-legend ovw-top-legend" id="ovw-legend" aria-hidden="true"></div>
     <div class="ovw-mode" role="group" aria-label="Show the figures">
-      <button type="button" class="gov-button" data-mode="relative" aria-pressed="true">Relative<span
+      <button type="button" class="gov-button" data-mode="absolute" aria-pressed="true">Absolute</button>
+      <button type="button" class="gov-button" data-mode="relative" aria-pressed="false">Relative<span
         class="row-mark" aria-hidden="true">1</span></button>
-      <button type="button" class="gov-button" data-mode="absolute" aria-pressed="false">Absolute</button>
     </div>
     </div>
   </div>
@@ -73,9 +73,6 @@
   <!-- What the letters beside the companies' names point to: facts about a
        company a reader of the grid would otherwise assume the other way. -->
   <ol class="gov-notes ovw-name-notes" id="ovw-name-notes" hidden data-needs-board></ol>
-  <!-- The notes the marks above point to, as the boards of the Index number
-       their own. -->
-  <ol class="gov-notes" id="ovw-notes" hidden data-needs-board></ol>
 
   <!-- One popover for the grid, filled with whatever was pressed. -->
   <div class="gov-pop" id="ovw-pop" popover role="dialog" aria-labelledby="ovw-pop-title" tabindex="-1"></div>
@@ -85,6 +82,10 @@
     <h2 id="ovw-takeaways-title">Main takeaways</h2>
     <div class="ovw-takeaway-list" id="ovw-takeaways"></div>
   </section>
+  <!-- The notes the marks above point to, as the boards of the Index number
+       their own. Under the takeaways, so the findings come straight after the
+       grid and the notes close the page. -->
+  <ol class="gov-notes" id="ovw-notes" hidden data-needs-board></ol>
   <div id="ovw-sections"></div>
   </section>
 </div>

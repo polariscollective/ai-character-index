@@ -9,9 +9,9 @@
  *
  * The grid is drawn by board.js, the code that draws the boards of the Index, so
  * its cells, its popover and its layout on a phone are theirs. It shows each
- * figure relative to the best on its row by default, which is the reading a
- * newcomer needs, or as the score out of 10 the Index gives. A cell opens what
- * the figure means and leads to the board that explains it.
+ * figure as the score out of 10 the Index gives by default, or relative to the
+ * best on its row. A cell opens what the figure means and leads to the board
+ * that explains it.
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
@@ -127,10 +127,9 @@ function rowFigures(row) {
 /* What a press on one cell of this table opens. */
 function cellOpener(company, group, row, final) {
   const value = company.figures[row.board][row.figure] ?? 0;
-  const { best } = rowFigures(row);
   return final
-    ? content => aboutFinal(content, company, group, value, best)
-    : content => aboutCell(content, company, group, row, value, best);
+    ? content => aboutFinal(content, company, group, value)
+    : content => aboutCell(content, company, group, row, value);
 }
 
 /* Where in the Index a part of one of this table's figures lives. */
@@ -170,14 +169,9 @@ function leadTo(content, href, text) {
 
 /* The same popover the cell of the Index opens, in short: the figure, why the
  * company stands there, and what the figure is made of. */
-function aboutCell(content, company, group, row, value, best) {
-  const { grid } = state.overview;
-  const tier = tierOf(value, best, grid.tiers);
+function aboutCell(content, company, group, row, value) {
   view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, row.plain);
   content.append(view.figure(shown(value), ` out of ${TEN}`));
-  content.append(element("p", "subtitle", tier === null
-    ? "Nothing to score on this row."
-    : `${grid.tiers[tier].name}: the best score on this row is ${shown(best)} out of ${TEN}.`));
   // What everything under this figure adds up to, in the overview's own words.
   const reason = summaryOf(company, row.figure, row.board);
   if (reason) renderMarkup(content, reason);
@@ -198,15 +192,10 @@ function aboutCell(content, company, group, row, value, best) {
 
 /* A final score: the figure, what everything under it adds up to, and its two
  * halves. One press, the whole picture. */
-function aboutFinal(content, company, group, value, best) {
-  const { grid } = state.overview;
+function aboutFinal(content, company, group, value) {
   const final = group.final;
-  const tier = tierOf(value, best, grid.tiers);
   view.titled(content, `${company.name}: ${group.name.toLowerCase()}`, final.plain);
   content.append(view.figure(shown(value), ` out of ${TEN}`));
-  content.append(element("p", "subtitle", tier === null
-    ? "Nothing to score on this row."
-    : `${grid.tiers[tier].name}: the best score on this row is ${shown(best)} out of ${TEN}.`));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
   content.append(view.h3("What it is made of"), partsOpening(company, group));
@@ -241,9 +230,20 @@ function partsOpening(company, group) {
   return list;
 }
 
+/* What a score out of 10 means, in the file's words, where a row says what it
+ * measures: a reader asking what a figure is also needs to know what it is out
+ * of. */
+function scaleOf(content) {
+  const { scale } = state.overview.grid;
+  if (!scale) return;
+  content.append(view.h3("The scale"));
+  renderMarkup(content, scale);
+}
+
 function aboutGroup(content, group) {
   view.titled(content, group.name);
   content.append(element("p", "", group.final.plain));
+  scaleOf(content);
   // The two parts the score is made of, each with what it measures, since the
   // grid no longer shows them as rows.
   content.append(view.h3("What it is made of"));
@@ -258,6 +258,7 @@ function aboutGroup(content, group) {
 function aboutRow(content, group, row) {
   view.titled(content, row.name, group.name);
   content.append(element("p", "", row.plain));
+  scaleOf(content);
   content.append(element("p", "subtitle", state.overview.grid.relative_note));
   leadTo(content, group.href, `See every company's score in the Index`);
 }
@@ -571,8 +572,8 @@ function figureRow(group, row, final) {
   state.companies.forEach((company, index) => {
     const value = values[index];
     const build = final
-      ? content => aboutFinal(content, company, group, value, best)
-      : content => aboutCell(content, company, group, row, value, best);
+      ? content => aboutFinal(content, company, group, value)
+      : content => aboutCell(content, company, group, row, value);
     const dataset = { lab: company.id, row: row.figure };
     const tier = tierOf(value, best, grid.tiers);
     const label = final ? group.name : row.name;
@@ -676,9 +677,9 @@ function setMode(mode) {
 
 function savedMode() {
   try {
-    return localStorage.getItem(MODE_KEY) === "absolute" ? "absolute" : "relative";
+    return localStorage.getItem(MODE_KEY) === "relative" ? "relative" : "absolute";
   } catch {
-    return "relative";
+    return "absolute";
   }
 }
 
