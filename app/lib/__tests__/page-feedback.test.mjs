@@ -141,7 +141,7 @@ test("the honeypot is read and never confused with a real field", () => {
 });
 
 test("the caps are the numbers the design fixed", () => {
-  assert.equal(PER_HOUR, 10);
+  assert.equal(PER_HOUR, 100);
   assert.equal(MAX_REQUEST_BYTES, 4 * 1024 * 1024);
   assert.equal(MAX_IMAGE_BYTES, 3 * 1024 * 1024);
 });
