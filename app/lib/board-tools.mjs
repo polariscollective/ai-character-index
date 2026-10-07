@@ -355,15 +355,19 @@ export function governanceBoard(snapshot, args = {}) {
  *
  * Each row of the grid names a figure of one of the two boards, and each figure
  * here is read from the same answer constitutions_board and governance_board
- * give, so the three tools cannot disagree. Beside each figure is its letter,
- * read against the thresholds the file gives by the function the page uses
- * (site/grades.js), so the page and this answer cannot disagree either. A
- * publication frozen before the letters carries no thresholds and is not
- * drawn, as the page does not draw it.
+ * give, so the three tools cannot disagree. The two final scores are
+ * graded, each with its letter, read against the thresholds the file gives by
+ * the function the page uses (site/grades.js), so the page and this answer
+ * cannot disagree either; a final score of nought answers the row's own word
+ * for it, None, as the page shows. The four parts are figures out of 10 and
+ * carry no letter, as on the page. A publication frozen before the letters
+ * carries no thresholds, or an empty list of them, and is not drawn, as the
+ * page does not draw it.
  */
 export function overviewBoard(snapshot, args = {}) {
   const overview = snapshot?.overview;
-  if (!overview?.grid?.groups?.length || !Array.isArray(overview.grid.grades)) {
+  if (!overview?.grid?.groups?.length || !Array.isArray(overview.grid.grades)
+      || !overview.grid.grades.length) {
     throw new ToolError(INCOMPATIBLE);
   }
   const boards = {
@@ -385,7 +389,7 @@ export function overviewBoard(snapshot, args = {}) {
   const rows = overview.grid.groups.flatMap(group => [
     ...group.rows.map(row => ({ group: group.name, ...row })),
     ...(group.final ? [{ group: group.name, name: `${group.name}, final score`,
-                         ...group.final }] : []),
+                         ...group.final, final: true }] : []),
   ]);
   const ids = (snapshot.governance?.labs || []).map(lab => ({ id: lab.id, name: lab.name }));
   const chosen = ids.filter(company => matches(company.name, args.company));
@@ -397,8 +401,9 @@ export function overviewBoard(snapshot, args = {}) {
     publication: snapshot.publication,
     introduction: overview.page?.intro ?? null,
     measures: {
-      rows: rows.map(({ group, name, plain, board, figure }) =>
-        ({ group, name, means: plain, from_board: board, figure, max: 10 })),
+      rows: rows.map(({ group, name, plain, board, figure, final }) =>
+        ({ group, name, means: plain, from_board: board, figure, max: 10,
+           final_score: Boolean(final) })),
       grades: grades.map(({ letter, from }) => ({ letter, from })),
       scale: overview.grid.scale ?? null,
     },
@@ -409,7 +414,9 @@ export function overviewBoard(snapshot, args = {}) {
       summary: overview.summaries?.[id] ?? null,
       figures: rows.map(row => {
         const value = figureOf(row.board, row.figure, id);
-        return { row: row.name, figure: value, max: 10, grade: gradeOf(value, grades) };
+        const figure = { row: row.name, figure: value, max: 10 };
+        if (row.final) figure.grade = gradeOf(value, grades) ?? (row.zero || "None");
+        return figure;
       }),
     })),
     notes: overview.grid.notes ?? [],

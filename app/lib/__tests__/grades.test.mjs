@@ -29,6 +29,11 @@ test("the letter is read from the figure as the page prints it", () => {
   assert.equal(gradeOf(8.96, GRADES), "A");
   assert.equal(gradeOf(8.94, GRADES), "B");
   assert.equal(gradeOf(5.96, GRADES), "D");
+  assert.equal(gradeOf(7.96, GRADES), "B");
+  assert.equal(gradeOf(6.96, GRADES), "C");
+  // 0.05 prints as 0.1, so it earns a letter.
+  assert.equal(asShown(0.05), 0.1);
+  assert.equal(gradeOf(0.05, GRADES), "F");
 });
 
 test("a figure that prints as nought earns no letter", () => {

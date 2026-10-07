@@ -1,6 +1,6 @@
 # The overview grades companies with letters, and drops the relative mode
 
-Date: 7 October 2026. Status: approved in conversation, to be planned.
+Date: 7 October 2026. Status: approved in conversation, implemented on feat/overview-letter-grades.
 
 ## Why
 
@@ -100,10 +100,13 @@ of 10.
 
 ## The MCP server
 
-`overviewBoard` in `app/lib/board-tools.mjs` answers each figure with its
-`grade` (the letter, or null at 0) beside `figure` and `max`, and `measures`
-carries `grades` (the thresholds) and the scale text in place of `tiers` and
-`tiers_mean`. It reads the thresholds from the frozen overview, and reads the
+`overviewBoard` in `app/lib/board-tools.mjs` answers each of the two final
+scores with its `grade` (the letter, or "None" at 0, as the page shows) beside
+`figure` and `max`. A part row (the document as a whole, the behaviours covered,
+what is published, what it engages) carries no `grade` at all, because the page
+grades only the final scores, and `measures.rows` says which rows are graded
+with `final_score`. `measures` carries `grades` (the thresholds) and the scale
+text in place of `tiers` and `tiers_mean`. It reads the thresholds from the frozen overview, and reads the
 letter through the same function the page uses: `gradeOf(value, grades)` in a
 new `site/grades.js`, which `board-tools.mjs` imports the way it already imports
 `site/governance.js`. One function, so the page and the MCP cannot give a figure

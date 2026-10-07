@@ -242,9 +242,9 @@ function partsOpening(company, group) {
   return list;
 }
 
-/* What a score out of 10 means, in the file's words, where a row says what it
- * measures: a reader asking what a figure is also needs to know what it is out
- * of. */
+/* What the letters mean and where they come from, in the file's words, where a
+ * row says what it measures: a reader asking what a letter is also needs to know
+ * the figure out of 10 it is read from, and the thresholds. */
 function scaleOf(content) {
   const { scale } = state.overview.grid;
   if (!scale) return;
@@ -585,14 +585,15 @@ function figureRow(group, row, final) {
       : content => aboutCell(content, company, group, row, value);
     const letter = letterOf(value);
     const label = final ? group.name : row.name;
+    const zero = row.zero || noneWord();
     // The letter alone in the cell; its figure is in the accessible name and in
     // the popover the cell opens.
     const { cell, button } = view.cellButton({ lab: company.id, row: row.figure },
-      `${company.name}, ${label.toLowerCase()}: ${letter ?? row.zero}, `
+      `${company.name}, ${label.toLowerCase()}: ${letter ?? zero}, `
       + `${shown(value)} out of ${TEN}`, build,
       letter ? "cell-button cell-grade" : "cell-button cell-grade cell-na");
     if (letter) view.paint(button, gradeValue(letter), TEN);
-    button.append(element("span", "cell-figure", letter ?? row.zero));
+    button.append(element("span", "cell-figure", letter ?? zero));
     tr.append(cell);
   });
   return tr;
@@ -676,6 +677,7 @@ export async function initializeOverview() {
   // A publication frozen before the letters carries no thresholds, and is not
   // drawn rather than drawn with letters it was never built with.
   if (overview?.format !== FORMAT || !overview.page || !Array.isArray(overview.grid?.grades)
+      || !overview.grid.grades.length
       || !constitutions?.companies || !governance?.labs) {
     status.textContent = INCOMPATIBLE;
     return;

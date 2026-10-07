@@ -166,14 +166,29 @@ test("the overview answers each company's figures from the two boards, with its 
     if (final && fromBoard) assert.equal(final.figure, fromBoard.final_score, company.name);
     for (const figure of company.figures) {
       assert.equal(figure.max, 10);
-      // The letter the page shows, by the same function; none where the figure
-      // prints as nought.
-      assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades),
-                   `${company.name} ${figure.row}`);
-      if (asShown(figure.figure) > 0) assert.ok(figure.grade, `${company.name} ${figure.row}`);
-      else assert.equal(figure.grade, null, `${company.name} ${figure.row}`);
+      const measured = answer.measures.rows.find(row => row.name === figure.row);
+      if (measured.final_score) {
+        // The letter the page shows, by the same function; the row's own word
+        // where the figure prints as nought.
+        assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades) ?? "None",
+                     `${company.name} ${figure.row}`);
+        if (asShown(figure.figure) > 0) assert.notEqual(figure.grade, "None");
+        else assert.equal(figure.grade, "None", `${company.name} ${figure.row}`);
+      } else {
+        // The four parts are figures out of 10 and carry no letter, as on the page.
+        assert.ok(!("grade" in figure), `${company.name} ${figure.row}`);
+      }
     }
   }
+  // Two final scores are graded, and four parts are not.
+  assert.deepEqual(answer.measures.rows.filter(row => row.final_score).map(row => row.name),
+    ["What the constitutions say, final score", "How constitutions are governed, final score"]);
+  assert.equal(answer.measures.rows.filter(row => !row.final_score).length, 4);
+  // OpenAI's document as a whole is the highest part there is, and it is no A here.
+  const openai = answer.companies.find(company => company.id === "openai");
+  const whole = openai.figures.find(one => one.row === "Document as a whole");
+  assert.ok(whole.figure >= 9, "the figure the review found");
+  assert.ok(!("grade" in whole));
   assert.deepEqual(answer.takeaways, overview.takeaways);
   assert.throws(() => overviewBoard({ ...snapshot(), overview: null }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
@@ -181,6 +196,10 @@ test("the overview answers each company's figures from the two boards, with its 
   // drawn, as the page does not draw it.
   const { grades, ...withoutGrades } = overview.grid;
   assert.throws(() => overviewBoard({ ...snapshot(), overview: { ...overview, grid: withoutGrades } }),
+                error => error instanceof ToolError && error.message === INCOMPATIBLE);
+  // An empty list would read every cell None, which claims nothing meets the row.
+  assert.throws(() => overviewBoard({ ...snapshot(),
+                                      overview: { ...overview, grid: { ...overview.grid, grades: [] } } }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });
 

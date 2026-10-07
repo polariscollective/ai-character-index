@@ -68,7 +68,7 @@
    { "letter": "D", "from": 6 },
    { "letter": "F", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9, B from 8, C from 7, D from 6, and F below 6**. These are the thresholds of American school grades. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9, B from 8, C from 7, D from 6, F above 0 and below 6, and None at 0**. These are the thresholds of American school grades. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
   "hint": "Press a cell to see the score behind it.",
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
