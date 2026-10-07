@@ -97,7 +97,7 @@
    "text": "Google, Mistral AI and xAI publish no constitution and [have signed](https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai) the part of the EU's General-Purpose AI Code of Practice ([Measure 7.1 of its Safety and Security chapter](https://code-of-practice.ai/)) that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public. These asks belong in regulation as well as in voluntary commitments."
   },
   {
-   "title": "OpenAI and Anthropic stand out, and still fall short on governance",
+   "title": "Only OpenAI and Anthropic avoid an F, and both fall short on governance",
    "text": "OpenAI's constitution gets a B and Anthropic's a C, and both get a D on governance, the highest grade any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an F on governance."
   },
   {
@@ -139,7 +139,7 @@
   },
   "microsoft": {
    "profile": "Microsoft AI publishes a constitution for its MAI models, the Humanist AI Code of Conduct, as a draft open for public comment that it says its models are not yet trained on. The Code puts safety and human control above its other objectives and lists ten constraints nobody can override. Around it little is published: no change log, no licence, and tests of one model against the company's own safety policies rather than against the Code.",
-   "constitutions": "A middle figure on both counts, from a provisional reading by one model. The Code says which rules come first, safety and human control, and leaves clashes below that to judgement, three of which stand unsettled. It covers honesty in depth and gives most behaviours quotable rules with one worked case or none.",
+   "constitutions": "A D, from a provisional reading by one model. The Code says which rules come first, safety and human control, and leaves clashes below that to judgement, three of which stand unsettled. It covers honesty in depth and gives most behaviours quotable rules with one worked case or none.",
    "whole": "Clear on which rules come first and on the force of each part, with reasons for most sections and rules for every situation checked, images, audio and video only thinly. It loses most on contradictions: three clashes between guidelines of the same rank have nothing to say which prevails, which puts that criterion at zero.",
    "behaviours": "Deepest on honesty, with rules and worked cases. Most other behaviours have quotable rules and one worked case or none, and preventing secret loyalties and avoiding concentrations of power are only named, in rules about other things.",
    "governance": "Below half marks. The Code is public, lists its absolute constraints and was opened for comment with a promise to consult on new versions. It is a draft not yet in force, with no change log and no licence, and one of its models is tested against the company's own safety policies rather than against the Code.",
