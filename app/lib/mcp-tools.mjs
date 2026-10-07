@@ -910,8 +910,8 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "from public documents rather than judged by the panel. The board is the "
     + "one the publication froze, and carries its own as-of date.",
     "  overview_board: the grid the site opens on, the summary figures of both "
-    + "boards for each company with its tier against the best on each row, the "
-    + "overview's takeaways and a written summary of each company.",
+    + "boards for each company, each with the letter from A to F the site grades "
+    + "it with, the overview's takeaways and a written summary of each company.",
     "  compare_documents: everything one run found between two documents on one "
     + "behaviour, passage by passage. Its full answer runs to hundreds of "
     + "thousands of characters, so pass detail counts first.",

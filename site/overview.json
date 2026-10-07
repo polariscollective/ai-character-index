@@ -6,7 +6,7 @@
   "sections": []
  },
  "grid": {
-  "caption": "Four figures and two final scores of the index for ten companies, each shown against the other companies or as a score out of 10",
+  "caption": "The two final scores of the index for ten companies, each shown as a letter from A to F, or None where there is nothing to score",
   "groups": [
    {
     "name": "What the constitutions say",
@@ -75,7 +75,14 @@
     "from": 0
    }
   ],
-  "scale": "Every figure is **out of 10**. A 0 means nothing the company publishes meets what the row measures, and a 10 means it meets all of it. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown as its share of that scale.",
+  "grades": [
+   { "letter": "A", "from": 9 },
+   { "letter": "B", "from": 8 },
+   { "letter": "C", "from": 7 },
+   { "letter": "D", "from": 6 },
+   { "letter": "F", "from": 0 }
+  ],
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9, B from 8, C from 7, D from 6, and F below 6**. These are the thresholds of American school grades. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
  "relative_note": "Each company against the best score on the same row. Best in class is within 15% of that score, middle tier within half of it, and behind is further off.",
   "hint": "Press a cell to see the score behind it.",
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
@@ -106,7 +113,7 @@
   },
   {
    "title": "OpenAI and Anthropic stand out, and still fall short on governance",
-   "text": "OpenAI and Anthropic are best in class on every figure, yet their governance is still weak. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba is best in class on what the constitutions say, but its constitution names none of the models it governs and Alibaba is behind on governance. Microsoft AI is in the middle tier throughout, for a Code of Conduct that is still a draft."
+   "text": "OpenAI's constitution gets a B and Anthropic's a C, and both get a D on governance, the highest grade any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an F on governance."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",

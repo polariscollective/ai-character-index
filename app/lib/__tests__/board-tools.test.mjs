@@ -9,6 +9,7 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { constitutionsBoard, governanceBoard, overviewBoard, INCOMPATIBLE } from "../board-tools.mjs";
 import { ToolError } from "../mcp-tools.mjs";
+import { gradeOf, asShown } from "../../../site/grades.js";
 
 /* A publication as the MCP server reads it, carrying both boards as they are
  * frozen: the site's own files. */
@@ -149,12 +150,15 @@ test("the route registers both", async () => {
   assert.match(route, /registerTool\("governance_board"/);
 });
 
-test("the overview answers each company's figures from the two boards, with its tier", async () => {
+test("the overview answers each company's figures from the two boards, with its letter", async () => {
   const overview = JSON.parse(await readFile(
     new URL("../../../site/overview.json", import.meta.url), "utf8"));
   const answer = overviewBoard({ ...snapshot(), overview });
   const constitutionsAnswer = constitutionsBoard(snapshot());
   assert.ok(answer.measures.rows.length >= 4);
+  assert.deepEqual(answer.measures.grades, overview.grid.grades);
+  assert.equal(answer.measures.scale, overview.grid.scale);
+  assert.equal(answer.measures.tiers, undefined);
   assert.equal(answer.companies.length, governance.labs.length);
   for (const company of answer.companies) {
     const final = company.figures.find(one => one.row === "What the constitutions say, final score");
@@ -162,12 +166,31 @@ test("the overview answers each company's figures from the two boards, with its 
     if (final && fromBoard) assert.equal(final.figure, fromBoard.final_score, company.name);
     for (const figure of company.figures) {
       assert.equal(figure.max, 10);
-      if (figure.figure) assert.ok(figure.tier, `${company.name} ${figure.row}`);
+      // The letter the page shows, by the same function; none where the figure
+      // prints as nought.
+      assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades),
+                   `${company.name} ${figure.row}`);
+      if (asShown(figure.figure) > 0) assert.ok(figure.grade, `${company.name} ${figure.row}`);
+      else assert.equal(figure.grade, null, `${company.name} ${figure.row}`);
     }
   }
   assert.deepEqual(answer.takeaways, overview.takeaways);
   assert.throws(() => overviewBoard({ ...snapshot(), overview: null }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
+  // A publication frozen before the letters carries no thresholds, and is not
+  // drawn, as the page does not draw it.
+  const { grades, ...withoutGrades } = overview.grid;
+  assert.throws(() => overviewBoard({ ...snapshot(), overview: { ...overview, grid: withoutGrades } }),
+                error => error instanceof ToolError && error.message === INCOMPATIBLE);
+});
+
+test("the overview's own file carries the American school thresholds", async () => {
+  const overview = JSON.parse(await readFile(
+    new URL("../../../site/overview.json", import.meta.url), "utf8"));
+  assert.deepEqual(overview.grid.grades, [
+    { letter: "A", from: 9 }, { letter: "B", from: 8 }, { letter: "C", from: 7 },
+    { letter: "D", from: 6 }, { letter: "F", from: 0 },
+  ]);
 });
 
 test("a figure one model gave in session says so, and a panel's figure carries no key", () => {

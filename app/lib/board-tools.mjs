@@ -13,6 +13,7 @@
  */
 import { ranked as rankedCompanies } from "../../site/governance.js";
 import { CITATION } from "../../site/markup.js";
+import { gradeOf } from "../../site/grades.js";
 import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
@@ -354,13 +355,15 @@ export function governanceBoard(snapshot, args = {}) {
  *
  * Each row of the grid names a figure of one of the two boards, and each figure
  * here is read from the same answer constitutions_board and governance_board
- * give, so the three tools cannot disagree. Beside each figure is its tier as
- * the page shows it by default: the company against the best score on the same
- * row, with the thresholds the file gives.
+ * give, so the three tools cannot disagree. Beside each figure is its letter,
+ * read against the thresholds the file gives by the function the page uses
+ * (site/grades.js), so the page and this answer cannot disagree either. A
+ * publication frozen before the letters carries no thresholds and is not
+ * drawn, as the page does not draw it.
  */
 export function overviewBoard(snapshot, args = {}) {
   const overview = snapshot?.overview;
-  if (!overview?.grid?.groups?.length || !Array.isArray(overview.grid.tiers)) {
+  if (!overview?.grid?.groups?.length || !Array.isArray(overview.grid.grades)) {
     throw new ToolError(INCOMPATIBLE);
   }
   const boards = {
@@ -378,17 +381,13 @@ export function overviewBoard(snapshot, args = {}) {
     if (figure === "total") return company.final_score ?? null;
     return company.figures?.find(one => one.id === figure)?.figure ?? null;
   };
-  const tiers = [...overview.grid.tiers].sort((a, b) => b.from - a.from);
-  const tierOf = (value, best) => (!value || !best ? null
-    : tiers.find(tier => value / best >= tier.from - 1e-9)?.name ?? null);
+  const { grades } = overview.grid;
   const rows = overview.grid.groups.flatMap(group => [
     ...group.rows.map(row => ({ group: group.name, ...row })),
     ...(group.final ? [{ group: group.name, name: `${group.name}, final score`,
                          ...group.final }] : []),
   ]);
   const ids = (snapshot.governance?.labs || []).map(lab => ({ id: lab.id, name: lab.name }));
-  const best = rows.map(row => Math.max(0, ...ids.map(({ id }) =>
-    figureOf(row.board, row.figure, id) ?? 0)));
   const chosen = ids.filter(company => matches(company.name, args.company));
   if (!chosen.length) {
     throw new ToolError(`no company called ${args.company}. This overview carries: `
@@ -400,17 +399,17 @@ export function overviewBoard(snapshot, args = {}) {
     measures: {
       rows: rows.map(({ group, name, plain, board, figure }) =>
         ({ group, name, means: plain, from_board: board, figure, max: 10 })),
-      tiers: tiers.map(({ name, from }) => ({ name, from_share_of_best: from })),
-      tiers_mean: overview.grid.relative_note ?? null,
+      grades: grades.map(({ letter, from }) => ({ letter, from })),
+      scale: overview.grid.scale ?? null,
     },
     takeaways: overview.takeaways ?? [],
     companies: chosen.map(({ id, name }) => ({
       id,
       name,
       summary: overview.summaries?.[id] ?? null,
-      figures: rows.map((row, index) => {
+      figures: rows.map(row => {
         const value = figureOf(row.board, row.figure, id);
-        return { row: row.name, figure: value, max: 10, tier: tierOf(value, best[index]) };
+        return { row: row.name, figure: value, max: 10, grade: gradeOf(value, grades) };
       }),
     })),
     notes: overview.grid.notes ?? [],
