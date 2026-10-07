@@ -9,9 +9,10 @@
  *
  * The grid is drawn by board.js, the code that draws the boards of the Index, so
  * its cells, its popover and its layout on a phone are theirs. It shows each
- * figure as the score out of 10 the Index gives by default, or relative to the
- * best on its row. A cell opens what the figure means and leads to the board
- * that explains it.
+ * final score as a letter, read from the figure out of 10 the Index gives
+ * against the thresholds the file names (site/grades.js). A cell opens the
+ * figure behind its letter, what the figure means, and the board that explains
+ * it.
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
@@ -22,9 +23,9 @@ import { figuresOf, partsOf as constitutionParts } from "./constitutions.js";
 import { totalsFor, partsOf as governanceParts } from "./governance.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
+import { gradeOf } from "./grades.js";
 
 const TEN = 10;
-const MODE_KEY = "aci-overview-mode";
 
 const byId = id => document.getElementById(id);
 const needed = () => document.querySelectorAll("#view-overview [data-needs-board]");
@@ -91,15 +92,15 @@ function caveatOf(content, company) {
   content.append(note);
 }
 
-/* A list of figures, each a chip and a name. */
 /* A list of figures, each a chip and a name. A figure this table carries opens
  * its cell here (`cell` and `open`); a figure only the Index carries leads to its
- * cell there (`href`). */
+ * cell there (`href`). A final score (`graded`) wears its letter on the chip and
+ * says its figure after the name; a part wears its figure out of 10. */
 function figureList(items) {
   const list = element("ul", "check-list");
-  items.forEach(({ value, name, cell, open, href }) => {
+  items.forEach(({ value, name, cell, open, href, graded }) => {
     const item = element("li");
-    item.append(view.chip(value, TEN, shown(value)));
+    item.append(graded ? gradeChip(value) : view.chip(value, TEN, shown(value)));
     if (cell) {
       const button = element("button", "inline-button", name);
       button.type = "button";
@@ -113,15 +114,10 @@ function figureList(items) {
     } else {
       item.append(element("span", "", name));
     }
+    if (graded) item.append(document.createTextNode(`, ${shown(value)} out of ${TEN}`));
     list.append(item);
   });
   return list;
-}
-
-/* Every figure on one row of this table, and the best of them. */
-function rowFigures(row) {
-  const values = state.companies.map(company => company.figures[row.board][row.figure] ?? 0);
-  return { values, best: Math.max(...values) };
 }
 
 /* What a press on one cell of this table opens. */
@@ -137,17 +133,31 @@ const indexCell = (company, row, part) => (row.board === "governance"
   ? `/index?view=governance&company=${company.id}&cell=${encodeURIComponent(part.row)}`
   : `/index?company=${company.id}&cell=${encodeURIComponent(part.row)}`);
 
-/* A figure's tier: its share of the best figure on its row, against the
- * thresholds the file gives, highest first. A zero has no tier; it has the
- * row's own word for nothing. */
-function tierOf(value, best, tiers) {
-  if (value <= 0 || best <= 0) return null;
-  return tiers.findIndex(tier => value / best >= tier.from - 1e-9);
+/* The row's own word for a figure that earns no letter, as the file gives it. */
+const noneWord = () => state.overview.grid.groups[0]?.final?.zero || "None";
+
+/* A figure's letter, or null where it prints as nought. */
+const letterOf = value => gradeOf(value, state.overview.grid.grades);
+
+/* Where a letter sits on the boards' colour ramp: the best letter at its top,
+ * the others spread evenly below, and no letter at its foot. */
+function gradeValue(letter) {
+  const ordered = [...state.overview.grid.grades].sort((a, b) => b.from - a.from);
+  const index = ordered.findIndex(grade => grade.letter === letter);
+  return index < 0 ? 0 : TEN * (1 - index / ordered.length);
 }
 
-/* Where a tier sits on the boards' colour ramp: the best at its top, the others
- * spread evenly below, so the two modes speak one colour language. */
-const tierValue = (index, count) => TEN * (1 - index / count);
+/* A final score's letter as a chip, painted where the grid paints it. */
+function gradeChip(value) {
+  const letter = letterOf(value);
+  const chip = element("span", "chip", letter ?? noneWord());
+  view.paint(chip, gradeValue(letter), TEN);
+  return chip;
+}
+
+/* The letter large, and the figure behind it, at the head of a popover. */
+const gradeFigure = value =>
+  view.figure(letterOf(value) ?? noneWord(), `, ${shown(value)} out of ${TEN}`);
 
 let view = null;
 let state = null;
@@ -195,7 +205,7 @@ function aboutCell(content, company, group, row, value) {
 function aboutFinal(content, company, group, value) {
   const final = group.final;
   view.titled(content, `${company.name}: ${group.name.toLowerCase()}`, final.plain);
-  content.append(view.figure(shown(value), ` out of ${TEN}`));
+  content.append(gradeFigure(value));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
   content.append(view.h3("What it is made of"), partsOpening(company, group));
@@ -259,7 +269,6 @@ function aboutRow(content, group, row) {
   view.titled(content, row.name, group.name);
   content.append(element("p", "", row.plain));
   scaleOf(content);
-  content.append(element("p", "subtitle", state.overview.grid.relative_note));
   leadTo(content, group.href, `See every company's score in the Index`);
 }
 
@@ -272,7 +281,7 @@ function aboutCompany(content, company) {
   content.append(view.h3("Its final scores"), figureList(state.overview.grid.groups.map(group =>
     ({ value: company.figures[group.final.board][group.final.figure] ?? 0, name: group.name,
        cell: { lab: company.id, row: group.final.figure },
-       open: cellOpener(company, group, group.final, true) }))));
+       open: cellOpener(company, group, group.final, true), graded: true }))));
   caveatOf(content, company);
   if (company.document) {
     leadTo(content, `/doc-reader/?spec=${encodeURIComponent(company.document.id)}`,
@@ -511,7 +520,7 @@ function headRow() {
   const corner = element("th", "row-col");
   corner.scope = "col";
   corner.append(
-    element("span", "head-name", state.mode === "absolute" ? "Score (out of 10)" : "Standing"),
+    element("span", "head-name", "Grade"),
     element("span", "head-sub", "companies in alphabetical order"));
   row.append(corner);
   state.companies.forEach(company => {
@@ -552,7 +561,6 @@ function headRow() {
  * fold. There is nothing to fold here, so the space alone shows which figures a
  * final score is made of. */
 function figureRow(group, row, final) {
-  const { grid } = state.overview;
   const tr = element("tr", final ? "total-row outside-row half-row" : "question-row");
   tr.dataset.level = final ? "1" : "2";
   tr.dataset.row = row.figure;
@@ -568,46 +576,32 @@ function figureRow(group, row, final) {
     tr.append(view.rowHead(null, view.rowName(row.name, null,
       content => aboutRow(content, group, row), `${row.name}: what it measures`)));
   }
-  const { values, best } = rowFigures(row);
-  state.companies.forEach((company, index) => {
-    const value = values[index];
+  state.companies.forEach(company => {
+    const value = company.figures[row.board][row.figure] ?? 0;
     const build = final
       ? content => aboutFinal(content, company, group, value)
       : content => aboutCell(content, company, group, row, value);
-    const dataset = { lab: company.id, row: row.figure };
-    const tier = tierOf(value, best, grid.tiers);
+    const letter = letterOf(value);
     const label = final ? group.name : row.name;
-    if (state.mode === "absolute") {
-      tr.append(view.scoreCell({ name: company.name, rowLabel: label.toLowerCase(), value,
-        max: TEN, text: shown(value), build, dataset, showMax: false }));
-      return;
-    }
-    const words = tier === null ? row.zero : grid.tiers[tier].name;
-    const { cell, button } = view.cellButton(dataset,
-      `${company.name}, ${label.toLowerCase()}: ${words.toLowerCase()}, `
-      + `${shown(value)} out of ${TEN}`, build, "cell-button cell-tier");
-    view.paint(button, tier === null ? 0 : tierValue(tier, grid.tiers.length), TEN);
-    button.append(element("span", "cell-words", words));
+    // The letter alone in the cell; its figure is in the accessible name and in
+    // the popover the cell opens.
+    const { cell, button } = view.cellButton({ lab: company.id, row: row.figure },
+      `${company.name}, ${label.toLowerCase()}: ${letter ?? row.zero}, `
+      + `${shown(value)} out of ${TEN}`, build, "cell-button cell-grade");
+    view.paint(button, gradeValue(letter), TEN);
+    button.append(element("span", "cell-figure", letter ?? row.zero));
     tr.append(cell);
   });
   return tr;
 }
 
 function drawLegend() {
-  const { grid } = state.overview;
   const legend = document.createDocumentFragment();
-  if (state.mode === "absolute") {
-    legend.append(element("span", "", "None (0)"), view.swatches([0, 2.5, 5, 7.5, 10], TEN),
-      element("span", "", "All (10)"));
-  } else {
-    grid.tiers.forEach((tier, index) => {
-      legend.append(view.swatches([tierValue(index, grid.tiers.length)], TEN),
-        element("span", "", tier.name));
-    });
-    // The word an empty cell of the grid says, so the scale and the cells agree.
-    const zero = grid.groups[0]?.final?.zero || "None";
-    legend.append(view.swatches([0], TEN), element("span", "", zero));
-  }
+  [...state.overview.grid.grades].sort((a, b) => b.from - a.from).forEach(({ letter }) => {
+    legend.append(view.swatches([gradeValue(letter)], TEN), element("span", "", letter));
+  });
+  // The word an empty cell of the grid says, so the scale and the cells agree.
+  legend.append(view.swatches([0], TEN), element("span", "", noneWord()));
   byId("ovw-legend").replaceChildren(legend);
 }
 
@@ -615,9 +609,8 @@ function draw() {
   const { grid } = state.overview;
   byId("ovw-caption").textContent = grid.caption;
   // The numbered notes the marks on the page point to, in the order the marks
-  // come: the file's own notes, which the introduction points to, the
-  // context's sources, then the relative mode's, whose mark is on its button
-  // below them.
+  // come: the file's own notes, which the introduction points to, then the
+  // context's sources.
   const context = state.overview.context;
   const shownContext = state.showContext ? context : null;
   // The notes the names point to, lettered rather than numbered so they are not
@@ -638,13 +631,11 @@ function draw() {
     renderInline(item, text);
     return item;
   }));
-  // In the order their marks come down the page: the file's own notes, the
-  // relative mode's on its button above the grid, then the context's under it.
+  // In the order their marks come down the page: the file's own notes, then
+  // the context's under the grid.
   const notes = [...(grid.notes || []),
-                 { title: "Relative", text: grid.relative_note },
                  ...(shownContext?.note ? [{ title: context.name, text: context.note }] : [])];
-  const relativeNote = (grid.notes || []).length + 1;
-  const contextNote = shownContext?.note ? relativeNote + 1 : null;
+  const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
   // Only the final scores of the two boards, each opening what it is made of,
   // then the views still in preparation, then the context.
@@ -652,9 +643,7 @@ function draw() {
     ...grid.groups.map(group => figureRow(group, group.final, true)),
     ...(grid.coming || []).map(comingRow),
     ...contextRows(contextNote));
-  byId("ovw-mode-note").textContent = grid.hint;
-  const relativeMark = document.querySelector('.ovw-mode [data-mode="relative"] .row-mark');
-  if (relativeMark) relativeMark.textContent = String(relativeNote);
+  byId("ovw-hint").textContent = grid.hint;
   byId("ovw-notes").replaceChildren(...notes.map(({ title, text }, index) => {
     const item = element("li");
     item.id = `ovw-note-${index + 1}`;
@@ -662,25 +651,7 @@ function draw() {
     renderInline(item, text);
     return item;
   }));
-  document.querySelectorAll(".ovw-mode button").forEach(button => {
-    button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
-  });
   drawLegend();
-}
-
-function setMode(mode) {
-  if (view.nodes.pop.matches(":popover-open")) view.nodes.pop.hidePopover();
-  state.mode = mode;
-  try { localStorage.setItem(MODE_KEY, mode); } catch { /* the default stands */ }
-  draw();
-}
-
-function savedMode() {
-  try {
-    return localStorage.getItem(MODE_KEY) === "relative" ? "relative" : "absolute";
-  } catch {
-    return "absolute";
-  }
 }
 
 function drawTakeaways(takeaways) {
@@ -696,7 +667,9 @@ export async function initializeOverview() {
   const status = byId("ovw-status");
   const [overview, constitutions, governance] = await Promise.all(
     ["overview", "constitutions", "governance"].map(loadBoard));
-  if (overview?.format !== FORMAT || !overview.page || !overview.grid
+  // A publication frozen before the letters carries no thresholds, and is not
+  // drawn rather than drawn with letters it was never built with.
+  if (overview?.format !== FORMAT || !overview.page || !Array.isArray(overview.grid?.grades)
       || !constitutions?.companies || !governance?.labs) {
     status.textContent = INCOMPATIBLE;
     return;
@@ -708,7 +681,7 @@ export async function initializeOverview() {
   try {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
-    state = { overview, companies: companiesOf(constitutions, governance, overview), mode: savedMode(),
+    state = { overview, companies: companiesOf(constitutions, governance, overview),
               showContext: true };
     draw();
     drawTakeaways(overview.takeaways || []);
@@ -720,9 +693,6 @@ export async function initializeOverview() {
     return;
   }
   view.wirePopover([byId("ovw-chart")]);
-  document.querySelectorAll(".ovw-mode button").forEach(button => {
-    button.addEventListener("click", () => setMode(button.dataset.mode));
-  });
 
   status.textContent = "";
 }

@@ -1224,31 +1224,12 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* ---------- the overview ----------
  *
  * Its grid is a board like the Index's, drawn by board.js with the same cells,
- * so only what the overview adds is here: the pair of buttons that choose how
- * the figures are shown, the words a cell carries in the relative mode, and the
- * takeaways under it. */
-.ovw-mode { display: inline-flex; gap: 6px; }
-/* The note mark on a button takes the button's own ink, pressed or not. */
-.ovw-mode .row-mark { color: inherit; }
+ * so only what the overview adds is here: its letters and the takeaways under
+ * it. */
 
-
-/* A cell is the same size in both modes, whatever it carries: a figure on one
-   line or a tier over two. The heights are fixed rather than minimums, and a
-   tier's words are set small enough to fit two lines inside them. */
+/* Every cell of a row is one height, whether it carries a letter or None. */
 .ovw-board tr[data-level="1"] .cell-button { height: 54px; min-height: 54px; }
 .ovw-board tr[data-level="2"] .cell-button { height: 44px; min-height: 44px; }
-/* Two lines of a tier inside a cell of the lower row: its padding gives way. */
-.ovw-board tr[data-level="2"] .cell-tier { padding-top: 4px; padding-bottom: 4px; }
-.board .cell-tier .cell-words {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-}
-.ovw-board tr[data-level="2"] .cell-tier .cell-words { font-size: 11px; }
-@media (max-width: 560px) {
-  .board .cell-tier .cell-words { font-size: 11px; }
-}
 .ovw-pop-link { margin-top: 12px; }
 /* The overview's row names, the scores' and the views in preparation's alike:
    plain text a little smaller than the Index's, on two lines if they need them,
@@ -1275,7 +1256,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .total-row { border-bottom: 1px solid rgb(92 107 60 / .2); }
 /* A view in preparation: no figure and no colour, the words quiet in the
    middle of the one cell that spans the companies. */
-/* The scale beside the modes at the top. */
+/* The scale at the top. */
 .ovw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
 .ovw-top-legend { margin: 0; }
 /* A final score's parts in its popover, each opening in place. */
