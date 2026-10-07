@@ -7,8 +7,8 @@ where the company stands beside another, never names another company, and never
 ranks ("the best", "the lowest of the three", "level with", "unlike"). A
 comparison belongs only where the owner asks for one explicitly, or in a place
 whose title says it compares: the fold "How it stands beside the other
-constitutions" in a behaviour's popover, the relative mode of the overview's
-grid, and the takeaways, which are findings across companies.
+constitutions" in a behaviour's popover, and the takeaways, which are findings
+across companies.
 `tests/test_company_texts_are_absolute.py` fails when a per-company text names
 another company. It cannot catch a ranking word with no name in it, so read for
 those too. This was said more than once before it was written here.
