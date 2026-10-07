@@ -699,6 +699,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .gov-legend .swatches { display: flex; gap: 2px; }
 .gov-legend .swatch { width: 26px; height: 12px; border-radius: 2px; }
+.gov-legend .swatch-na { border: 1px dashed var(--muted); background: transparent; box-sizing: border-box; }
 .gov-foot { margin: 10px 0 0; max-width: 90ch; color: var(--muted); font-size: 13px; }
 .gov-foot:empty { display: none; }
 .gov-foot a {

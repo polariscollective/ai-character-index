@@ -139,20 +139,22 @@ const noneWord = () => state.overview.grid.groups[0]?.final?.zero || "None";
 /* A figure's letter, or null where it prints as nought. */
 const letterOf = value => gradeOf(value, state.overview.grid.grades);
 
-/* Where a letter sits on the boards' colour ramp: the best letter at its top,
- * the others spread evenly below, and no letter at its foot. */
+/* Where a letter sits on the boards' colour ramp: at its own threshold, so it
+ * wears the colour that figure wears in the Index. Spread evenly, F fell at
+ * 3.93:1 text contrast on the ramp, below WCAG AA; at these five thresholds
+ * every letter passes. None has no place on the ramp: it is left unpainted. */
 function gradeValue(letter) {
-  const ordered = [...state.overview.grid.grades].sort((a, b) => b.from - a.from);
-  const index = ordered.findIndex(grade => grade.letter === letter);
-  return index < 0 ? 0 : TEN * (1 - index / ordered.length);
+  const grade = state.overview.grid.grades.find(candidate => candidate.letter === letter);
+  return grade ? grade.from : 0;
 }
 
-/* A final score's letter as a chip, painted where the grid paints it. */
+/* A final score's letter as a chip, painted where the grid paints it; a figure
+ * with no letter is the unpainted chip of a figure not assessed. */
 function gradeChip(value) {
   const letter = letterOf(value);
-  const chip = element("span", "chip", letter ?? noneWord());
-  view.paint(chip, gradeValue(letter), TEN);
-  return chip;
+  return letter
+    ? view.chip(gradeValue(letter), TEN, letter)
+    : element("span", "chip chip-na", noneWord());
 }
 
 /* The letter large, and the figure behind it, at the head of a popover. */
@@ -417,7 +419,7 @@ function aboutContextCell(content, context, row, company, entry) {
 
 /* The rows under the grid that no score counts: a quiet heading across the
  * table, then one row per fact, named in plain text rather than as a button, so
- * nothing here reads as one more figure of the index. No colour and no tier,
+ * nothing here reads as one more figure of the index. No colour and no letter,
  * since nothing here is ranked; each cell opens where its fact comes from, and
  * the note under the grid says what the rows are. */
 function contextRows(noteNumber) {
@@ -587,8 +589,9 @@ function figureRow(group, row, final) {
     // the popover the cell opens.
     const { cell, button } = view.cellButton({ lab: company.id, row: row.figure },
       `${company.name}, ${label.toLowerCase()}: ${letter ?? row.zero}, `
-      + `${shown(value)} out of ${TEN}`, build, "cell-button cell-grade");
-    view.paint(button, gradeValue(letter), TEN);
+      + `${shown(value)} out of ${TEN}`, build,
+      letter ? "cell-button cell-grade" : "cell-button cell-grade cell-na");
+    if (letter) view.paint(button, gradeValue(letter), TEN);
     button.append(element("span", "cell-figure", letter ?? row.zero));
     tr.append(cell);
   });
@@ -600,8 +603,11 @@ function drawLegend() {
   [...state.overview.grid.grades].sort((a, b) => b.from - a.from).forEach(({ letter }) => {
     legend.append(view.swatches([gradeValue(letter)], TEN), element("span", "", letter));
   });
-  // The word an empty cell of the grid says, so the scale and the cells agree.
-  legend.append(view.swatches([0], TEN), element("span", "", noneWord()));
+  // The word an empty cell of the grid says, so the scale and the cells agree,
+  // and its swatch is as unpainted as the cell.
+  const none = element("span", "swatches");
+  none.append(element("span", "swatch swatch-na"));
+  legend.append(none, element("span", "", noneWord()));
   byId("ovw-legend").replaceChildren(legend);
 }
 

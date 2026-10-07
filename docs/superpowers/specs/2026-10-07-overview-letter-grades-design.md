@@ -61,8 +61,10 @@ the same letter, and the difference is read only by opening the cell.
   swatches: A, B, C, D, F and None.
 - The grid's corner reads "Grade" over "companies in alphabetical order", in
   place of "Score (out of 10)".
-- A cell shows its letter alone, painted on the boards' colour ramp by grade: A
-  at the top, then B, C, D and F evenly below, None unpainted. Its accessible
+- A cell shows its letter alone, painted on the boards' colour ramp where its
+  threshold sits on the ramp the Index uses (A at 9, B at 8, C at 7, D at 6, F
+  at 0), so every letter's text passes WCAG AA; an even spread put F at 3.93:1.
+  None is unpainted, with the dashed edge of a cell not assessed. Its accessible
   name carries the letter and the figure: "OpenAI, what the constitutions say:
   B, 8.6 out of 10".
 - A cell's popover shows the letter large with "8.6 out of 10" beside it. The
