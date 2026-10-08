@@ -1614,3 +1614,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .gov-pop .ovw-tree-all { margin: 2px 0 4px; }
 /* The mark beside an overall grade held at F, pointing to its note. */
 .ovw-board .ovw-overall-mark { margin-left: 1px; font-size: 13px; vertical-align: super; color: var(--muted); }
+/* The overview's introduction in the body ink, as its takeaways are, with its
+   few bold words at the weight the takeaways' titles use. */
+#ovw-lede, #ovw-lede p { color: var(--ink); }
+#ovw-lede strong { font-weight: 600; color: var(--ink); }
