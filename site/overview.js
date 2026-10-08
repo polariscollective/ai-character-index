@@ -116,46 +116,6 @@ function caveatOf(content, company) {
   content.append(note);
 }
 
-/* A list of figures, each a chip and a name. A figure this table carries opens
- * its cell here (`cell` and `open`); a figure only the Index carries leads to its
- * cell there (`href`). A final score (`graded`) wears its letter on the chip and
- * says its figure after the name; a part wears its figure out of 10. */
-function figureList(items) {
-  const list = element("ul", "check-list");
-  items.forEach(({ value, name, cell, open, href, graded }) => {
-    const item = element("li");
-    item.append(graded ? gradeChip(value) : view.chip(value, TEN, shown(value)));
-    if (cell) {
-      const button = element("button", "inline-button", name);
-      button.type = "button";
-      button.addEventListener("click", () => view.follow(cell, open));
-      item.append(button);
-    } else if (href) {
-      const link = element("a", "inline-link", name);
-      link.href = href;
-      link.title = "Opens this figure in the Index";
-      item.append(link);
-    } else {
-      item.append(element("span", "", name));
-    }
-    if (graded) item.append(document.createTextNode(`, ${shown(value)} out of ${TEN}`));
-    list.append(item);
-  });
-  return list;
-}
-
-/* What a press on one final score's cell opens. */
-function cellOpener(company, group) {
-  const { board, figure } = group.final;
-  const value = company.figures[board][figure] ?? 0;
-  return content => aboutFinal(content, company, group, value);
-}
-
-/* Where in the Index a part of one of this table's figures lives. */
-const indexCell = (company, row, part) => (row.board === "governance"
-  ? `/index?view=governance&company=${company.id}&cell=${encodeURIComponent(part.row)}`
-  : `/index?company=${company.id}&cell=${encodeURIComponent(part.row)}`);
-
 /* A figure's letter: 0.0 is a G, and only a figure nobody gave has none. */
 const letterOf = value => gradeOf(value, state.overview.grid.grades);
 
@@ -213,72 +173,67 @@ function aboutFinal(content, company, group, value) {
   content.append(gradeFigure(value));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
-  content.append(view.h3("What it is made of"), partsOpening(company, group));
+  content.append(view.h3("What it is made of"), everyScore(content),
+                 scoreTree(company, foldOf(group)));
   if (final.board === "constitutions") caveatOf(content, company);
-  leadTo(content, group.href, "See every part of this score in the Index");
 }
 
-/* A final score's parts, each opening in place: its figure and name, then the
- * overview's words about it and the parts it is made of in turn, each leading
- * to its cell in the Index. Nothing opens a second popover. */
-function partsOpening(company, group) {
-  const list = element("div", "ovw-parts");
-  group.rows.forEach(row => {
-    const value = company.figures[row.board][row.figure] ?? 0;
-    const fold = element("details", "ovw-part");
-    const head = element("summary");
-    head.append(view.chip(value, TEN, shown(value)), element("span", "", row.name));
-    fold.append(head);
-    const reason = summaryOf(company, row.figure, row.board);
-    const body = element("div", "ovw-part-body");
-    if (reason) renderMarkup(body, reason);
-    const parts = company.parts[row.figure] || [];
-    if (parts.length && value > 0) {
-      body.append(figureList(parts.map(part =>
-        ({ ...part, href: part.row ? indexCell(company, row, part) : null }))));
-    }
-    const note = company.summary.notes?.[row.figure];
-    if (note) body.append(element("p", "subtitle", note));
-    fold.append(body);
-    list.append(fold);
-  });
+/* A company's scores under one fold of the grid, as a tree a popover opens in
+ * place: read from the grid's own rows and cells, so the popover shows the very
+ * letters and figures the grid does, and every level the grid opens to. */
+function scoreTree(company, fold) {
+  const list = element("ul", "ovw-tree");
+  [...view.nodes.table.tBodies[0].rows]
+    .filter(row => row.dataset.parent === fold)
+    .forEach(row => list.append(treeItem(company, row)));
   return list;
 }
 
-/* What the letters mean and where they come from, in the file's words, where a
- * row says what it measures: a reader asking what a letter is also needs to know
- * the figure out of 10 it is read from, and the thresholds. */
-function scaleOf(content) {
-  const { scale } = state.overview.grid;
-  if (!scale) return;
-  content.append(view.h3("The scale"));
-  renderMarkup(content, scale);
+/* One row of the grid as a branch of a company's tree: its chip, its name, its
+ * scale, and the rows under it folded, if it has any. */
+function treeItem(company, row) {
+  const cell = [...row.querySelectorAll(".cell-button")].find(one => one.dataset.lab === company.id);
+  const head = element("span", "ovw-tree-head");
+  head.append(treeChip(cell),
+    element("span", "ovw-tree-name", row.querySelector(".head-name")?.textContent || ""));
+  const scale = row.querySelector(".row-scale")?.textContent;
+  if (scale) head.append(element("span", "row-scale", scale));
+  const item = element("li");
+  const own = row.querySelector(".row-toggle")?.dataset.question;
+  if (!own) {
+    item.append(head);
+    return item;
+  }
+  const branch = element("details", "ovw-tree-fold");
+  const summary = element("summary");
+  summary.append(head);
+  branch.append(summary, scoreTree(company, own));
+  item.append(branch);
+  return item;
 }
 
-/* The whole scale, opened from the key: every letter with the figures out
- * of 10 it covers. A letter is read from the figure as it is shown, to one
- * decimal, so a band runs from its threshold to a tenth below the next one up,
- * and G runs from 0.0. */
-function aboutScale(content) {
-  const words = state.overview.grid.grade_scale || {};
-  view.titled(content, words.title || "The grading scale");
-  if (words.text) renderMarkup(content, words.text);
-  const list = element("ul", "check-list ovw-scale-list");
-  let next = null;
-  orderedGrades().forEach(({ letter, from }) => {
-    const low = Math.max(from, 0);
-    const high = next === null ? TEN : next - 0.1;
-    const item = element("li");
-    item.append(view.chip(gradeValue(letter), TEN, letter),
-                element("span", "ovw-scale-range", `${low.toFixed(1)} to ${high.toFixed(1)}`));
-    // What a plain letter means, beside its range: the key under the grid
-    // shows only the letters, and this is where their words are read.
-    const meaning = (state.overview.grid.grade_words || {})[letter];
-    if (meaning) item.append(element("span", "ovw-scale-words", meaning));
-    list.append(item);
-    next = from;
+/* A cell's letter or figure as a chip in its own colour: copied from the cell,
+ * so the tree and the grid cannot differ. */
+function treeChip(cell) {
+  const text = cell?.querySelector(".cell-figure")?.textContent ?? cell?.textContent?.trim() ?? "";
+  const chip = element("span", "chip ovw-tree-chip", text);
+  if (cell?.classList.contains("cell-na")) chip.classList.add("chip-na");
+  else if (cell) {
+    chip.style.background = cell.style.background;
+    chip.style.color = cell.style.color;
+  }
+  return chip;
+}
+
+/* A button that opens or shuts every branch of the trees in one popover. */
+function everyScore(content) {
+  const button = view.popButton("Show every score", () => {
+    const open = button.textContent === "Show every score";
+    content.querySelectorAll("details.ovw-tree-fold").forEach(branch => { branch.open = open; });
+    button.textContent = open ? "Hide every score" : "Show every score";
   });
-  content.append(list);
+  button.classList.add("ovw-tree-all");
+  return button;
 }
 
 function aboutGroup(content, group) {
@@ -293,7 +248,6 @@ function aboutGroup(content, group) {
     part.append(element("strong", "", `${row.name}. `), document.createTextNode(row.plain));
     content.append(part);
   });
-  leadTo(content, group.href, "See every company's score in the Index");
 }
 
 /* A company: the whole picture in a few sentences, its two final scores, and
@@ -303,19 +257,20 @@ function aboutCompany(content, company) {
   content.append(overallLine(company));
   const profile = company.summary.profile;
   if (profile) renderMarkup(content, profile);
-  content.append(view.h3("Its final scores"), figureList(state.overview.grid.groups.map(group =>
-    ({ value: company.figures[group.final.board][group.final.figure] ?? 0, name: group.name,
-       cell: { lab: company.id, row: group.final.figure },
-       open: cellOpener(company, group), graded: true }))));
+  // Its two final scores, each opening into every score under it, as the grid
+  // does.
+  const scores = element("ul", "ovw-tree");
+  state.overview.grid.groups.forEach(group => {
+    const row = [...view.nodes.table.tBodies[0].rows]
+      .find(one => one.dataset.level === "0" && one.dataset.row === group.final.figure);
+    if (row) scores.append(treeItem(company, row));
+  });
+  content.append(view.h3("Its scores"), everyScore(content), scores);
   caveatOf(content, company);
   if (company.document) {
     leadTo(content, `/doc-reader/?spec=${encodeURIComponent(company.document.id)}`,
       `Read ${company.document.title} in the Doc reader`);
   }
-  leadTo(content, `/index?view=governance&company=${company.id}`,
-    "See its figures on process");
-  leadTo(content, `/index?company=${company.id}`,
-    "See its figures on content");
 }
 
 /* A row's name on the overview, the same for a score and for a view in

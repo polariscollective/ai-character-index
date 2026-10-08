@@ -522,8 +522,7 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    ever marks "/4": "/10" is wider, and touched the figure. The coverage
    board and the overview's grid, which borrows its rows, and not the governance
    view, so no cell of that moves. */
-#board .check-row .cell-button,
-#ovw-grid .check-row .cell-button { padding-right: 20px; }
+#board .check-row .cell-button { padding-right: 20px; }
 .board .check-row .cell-figure { font-size: 14px; }
 .board .check-row { background: rgb(92 107 60 / .05); }
 
@@ -1601,3 +1600,15 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   color: var(--faint);
   white-space: nowrap;
 }
+/* The scores of a popover, as a tree: each level a step in, each score a chip
+   in the grid's colour with its name after it and its scale after that. */
+.gov-pop .ovw-tree { list-style: none; margin: 6px 0 10px; padding-left: 0; }
+.gov-pop .ovw-tree .ovw-tree { margin: 2px 0 4px; padding-left: 18px; }
+.gov-pop .ovw-tree li { margin: 3px 0; }
+.gov-pop .ovw-tree-head { display: inline-flex; align-items: center; gap: 8px; }
+.gov-pop .ovw-tree li > .ovw-tree-head { margin-left: 14px; }
+.gov-pop .ovw-tree-fold > summary { display: flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; }
+.gov-pop .ovw-tree-fold > summary::-webkit-details-marker { display: none; }
+.gov-pop .ovw-tree-chip { min-width: 30px; text-align: center; font-size: 12px; }
+.gov-pop .ovw-tree-name { font-size: 14px; }
+.gov-pop .ovw-tree-all { margin: 2px 0 4px; }
