@@ -353,9 +353,10 @@ function overallRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", `${company.name}, overall grade: ${letter}, `
       + `${shown(value)} out of ${TEN}`);
-    button.append(element("span", "ovw-overall-letter", letter));
+    button.append(element("span", "ovw-overall-letter", letter),
+                  element("span", "ovw-overall-figure", `(${shown(value)})`));
     // An F the average alone would not give carries the mark of the note
-    // saying why, seen beside the letter and said in the button's name.
+    // saying why, seen after the figure and said in the button's name.
     const held = heldAtF(company) && state.nameNoteNumbers?.capped;
     if (held) {
       const mark = element("span", "row-mark ovw-overall-mark", held);
@@ -364,7 +365,6 @@ function overallRow() {
       button.setAttribute("aria-label", `${button.getAttribute("aria-label")}, held at F `
         + "because one of its two scores is an F or a G");
     }
-    button.append(element("span", "ovw-overall-figure", `(${shown(value)})`));
     button.addEventListener("click", () =>
       view.openPopover(button, content => aboutCompany(content, company)));
     cell.append(button);
