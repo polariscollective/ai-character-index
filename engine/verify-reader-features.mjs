@@ -2505,10 +2505,8 @@ console.log("== Index: the constitutions board ==");
   check(board.names.join(" | ") === expectedRows.join(" | ") && board.folded,
     "the final score leads, the clarity of the document follows with its criteria, then the "
     + "categories with their behaviours, every group folded", JSON.stringify(board.names));
-  check(board.subs[0] === "" && board.subs[1] === "1/2 of the final score"
-      && board.subs[2] === `1/${file.criteria.length} of the document`,
-    "the final score carries no weight line, the clarity of the document says it is half of it, "
-    + "and a criterion says its share of the document", JSON.stringify(board.subs.slice(0, 2)));
+  check(board.subs.every(sub => sub === ""),
+    "no row carries a weight line under its name", JSON.stringify(board.subs.slice(0, 3)));
   check(board.figures.length > 0 && board.figures.every(one => !one.na && one.text !== "NA"),
     "no cell of the board reads NA",
     JSON.stringify(board.figures.filter(one => one.na || one.text === "NA")));

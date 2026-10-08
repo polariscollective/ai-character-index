@@ -293,7 +293,7 @@ class TheTwoFigures(unittest.TestCase):
 
     def test_the_final_score_averages_the_two(self):
         # Out of 10 like every figure on the board, and the average of the two
-        # with weights that add to one, each weight said on the row it weighs.
+        # with weights that add to one.
         total = DATA["total"]
         self.assertEqual(total["out_of"], 10)
         self.assertEqual(sorted(total["weights"]), sorted(COLUMNS))

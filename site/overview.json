@@ -16,7 +16,7 @@
       "board": "governance",
       "figure": "published",
       "name": "What is published",
-      "plain": "Whether the company publishes a constitution for its models, how transparently it records its changes, and its guardrails and hard constraints.",
+      "plain": "Whether the company publishes a constitution for its models, how transparently it records its changes, its guardrails and hard constraints, whether the public can comment on it before it changes, and whether its licence lets anyone reuse it.",
       "zero": "None"
      },
      {

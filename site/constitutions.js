@@ -9,11 +9,10 @@
  *
  * What is written here rather than in the file is the shape of the board: that
  * every figure is shown out of 10, that a criterion given out of 4 is shown as
- * its share of that scale, that a row above others is their weighted average
- * and says under its name how much it counts for, that the final score is the
- * average of the two halves the file weighs, that companies are ranked by it and
- * that level companies share a place. Those are properties of the table, not
- * claims about a document.
+ * its share of that scale, that a row above others is their weighted average,
+ * that the final score is the average of the two halves the file weighs, that
+ * companies are ranked by it and that level companies share a place. Those are
+ * properties of the table, not claims about a document.
  *
  * The table, the folds, the popover and the colours are site/board.js, which the
  * governance board and the coverage board draw from too. The behaviours' scale
@@ -60,9 +59,6 @@ const shownMax = () => TEN;
 const wholeMax = () => TEN;
 const finalMax = () => TEN;
 
-/* What a row counts for, said under its name. A behaviour says what it counts
- * for in the behaviours rather than in its category, because every behaviour
- * counts the same there. */
 /* The numbers of the notes under the board, which site/overview.html writes. */
 const NOTE = { final: "1", whole: "2", behaviours: "3", categories: "4" };
 
@@ -76,7 +72,6 @@ const share = value => {
   }
   return value.toFixed(2);
 };
-const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
 
 const shown = value => value.toFixed(1);
 
@@ -488,14 +483,12 @@ function aboutBehaviours(content) {
     + "final score.");
   const list = element("ul", "check-list");
   state.categories.forEach(({ name, members }) => list.append(element("li", "",
-    `${name}: ${members.length} ${members.length === 1 ? "behaviour" : "behaviours"}, `
-    + `${frac(members.length, every)} of the behaviours`)));
+    `${name}: ${members.length} ${members.length === 1 ? "behaviour" : "behaviours"}`)));
   content.append(list);
 }
 
 function behavioursScore(content, company) {
   const value = behavioursFigure(company);
-  const every = state.data.behaviours.length;
   board.titled(content, `${company.name}: the behaviours`, documentLine(company));
   content.append(board.figure(shown(value), ` out of ${depthMax()}`));
   cellSentences(content, company, company.readings?.behaviours);
@@ -504,8 +497,7 @@ function behavioursScore(content, company) {
   state.categories.forEach(category => {
     const figure = categoryFigure(company, category.members);
     if (figure === null) return;
-    list.append(figureItem(figure, depthMax(),
-      `${category.name}, ${frac(category.members.length, every)}`,
+    list.append(figureItem(figure, depthMax(), category.name,
       `${category.name}, ${shown(figure)} out of ${depthMax()}`,
       rest => categoryScore(rest, company, category), { lab: company.id, row: category.id }));
   });
@@ -701,8 +693,6 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
     tr.hidden = true;
     top.push(id);
   };
-  const weights = state.data.weights;
-  const everyBehaviour = state.data.behaviours.length;
 
   /* The document as a whole: the average of its criteria on the group row, the
    * criteria folded under it. */
@@ -714,8 +704,8 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
   wholeRow.append(board.rowHead(
     board.rowToggle("whole", state.data.criteria.map((criterion, index) => rowId("whole", index)),
       { parts: "criteria", name: "Clarity of the document" }),
-    board.rowName("Clarity of the document", weightLine(share(weights.whole), "the final score"),
-      aboutWhole, "Clarity of the document: what it measures", marked([NOTE.whole]))));
+    board.rowName("Clarity of the document", null, aboutWhole,
+      "Clarity of the document: what it measures", marked([NOTE.whole]))));
   companies.forEach(company => {
     wholeRow.append(cell(company, { kind: "total", rowLabel: "the clarity of the document",
       row: "whole", value: wholeTotal(company), build: content => wholeScore(content, company) }));
@@ -724,8 +714,7 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
 
   state.data.criteria.forEach((criterion, index) => {
     const sub = board.subRow(rowId("whole", index), "whole",
-      board.rowName(criterion.name,
-        weightLine(frac(1, state.data.criteria.length), "the document"),
+      board.rowName(criterion.name, null,
         content => aboutCriterion(content, criterion), `${criterion.name}: what it asks`));
     sub.dataset.level = "2";
     companies.forEach(company => {
@@ -747,8 +736,7 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
   behavioursRow.append(board.rowHead(
     board.rowToggle("behaviours", state.categories.map(category => `board-row-${category.id}`),
       { parts: "categories", name: "The behaviours" }),
-    board.rowName("The behaviours",
-    weightLine(share(weights.behaviours), "the final score"), aboutBehaviours,
+    board.rowName("The behaviours", null, aboutBehaviours,
     "The behaviours: how they are averaged", marked([NOTE.behaviours]))));
   companies.forEach(company => {
     behavioursRow.append(cell(company, { kind: "total", rowLabel: "the behaviours",
@@ -767,7 +755,7 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
     row.append(board.rowHead(
       board.rowToggle(id, members.map((member, index) => rowId(id, index)),
         { parts: "behaviours", name }),
-      board.rowName(name, weightLine(frac(members.length, everyBehaviour), "the behaviours"),
+      board.rowName(name, null,
         content => aboutCategory(content, category), `${name}: what it measures`,
         marked([NOTE.categories]))));
     companies.forEach(company => {
@@ -779,7 +767,7 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
 
     members.forEach((behaviour, index) => {
       const sub = board.subRow(rowId(id, index), id,
-        board.rowName(behaviour.name, weightLine(frac(1, everyBehaviour), "the behaviours"),
+        board.rowName(behaviour.name, null,
           content => aboutBehaviour(content, behaviour),
           `${behaviour.name}: what it covers`));
       sub.dataset.level = "3";

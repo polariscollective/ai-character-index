@@ -66,27 +66,6 @@ const average = values => values.reduce((sum, value) => sum + value, 0) / values
  * given on is said in the popover that opens on them. */
 const TEN = 10;
 const onTen = (value, max) => value / max * TEN;
-/* What a row counts for, said under its name. A row inside a figure says what
- * it counts for in that figure rather than in the row just above it: every
- * check and every practice counts the same there, and "9.1% of what is
- * published" says so where "33.3% of published constitution" would not. */
-/* A weight as the count it is: "3/11" says three of eleven rows, which a
- * percentage rounds away. A weight the file gives as a share is written as
- * the smallest fraction it is. */
-const frac = (count, of) => `${count}/${of}`;
-const share = value => {
-  for (let of = 1; of <= 20; of += 1) {
-    if (Math.abs(value * of - Math.round(value * of)) < 1e-9) return frac(Math.round(value * of), of);
-  }
-  return value.toFixed(2);
-};
-const weightLine = (fraction, parent) => `${fraction} of ${parent}`;
-/* The line under a row inside a column, saying what it counts for, unless the
- * column asks for none. What is published asks for none: every one of its rows
- * counts the same, which its popover says once, and eleven lines saying 1/11
- * crowded out the names. */
-const rowWeight = (column, fraction, figure) =>
-  (column.hide_row_weights ? null : weightLine(fraction, figure));
 /* One decimal at most, and none where the figure is whole: a score reaching a
  * sentence is read, not computed with. */
 const onItsScale = (value, max) =>
@@ -106,9 +85,6 @@ const onlyTheCompany = (data, id) => data.internal.some(practice => practice.id 
 const practiceScoreOf = (data, labId, id) => (onlyTheCompany(data, id)
   ? data.internal_scores[labId][id] : data.supporting_scores[labId][id]);
 const columnOf = (data, id) => data.columns.find(column => column.practices.includes(id));
-/* Which working paper a row comes from, in two words, for the line under its
- * name. Said on the row itself because the two papers sit in one column. */
-const creditOf = (data, row) => data.papers[row.paper].credit;
 
 /* A column's figure: the mean of its rows' shares of their own maximum, times
  * ten, every row counting the same. A check out of 4 and a practice out of 2
@@ -401,11 +377,10 @@ function profile(content, lab, open) {
   const total = board.data.total;
   content.append(view.h3(total.name),
     view.figure(shown(lab.total), ` out of ${total.out_of}, the figure it is ranked by`));
-  const half = column => weightLine(share(total.weights[column.id]), "the final score");
   board.data.columns.forEach(column => {
     const figure = lab.byColumn[column.id];
     content.append(view.h3(column.name),
-      view.figure(shown(figure), ` out of ${column.out_of}, ${half(column)}`));
+      view.figure(shown(figure), ` out of ${column.out_of}`));
     column.questions.forEach(id => {
       const question = questionOf(id);
       const fold = element("details");
@@ -483,7 +458,7 @@ function checkScore(content, lab, question, check) {
   const value = board.data.scores[lab.id][check.id];
   view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.label}.`);
   content.append(view.figure(shown(onTen(value, SCALE)), ` out of ${TEN}`),
-    element("p", "subtitle", `${onItsScale(value, SCALE)} ${fromLine(question, `check ${check.id}`)}`),
+    element("p", "subtitle", onItsScale(value, SCALE)),
     element("p", "", meansAt(check.anchors, value)));
   content.append(view.h3("What each score means"), anchorsList(check, value));
   content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
@@ -498,7 +473,7 @@ function practiceScore(content, lab, practice) {
   const column = columnOf(board.data, practice.id);
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
   content.append(view.figure(shown(onTen(value, PRACTICE)), ` out of ${TEN}`),
-    element("p", "subtitle", `${onItsScale(value, PRACTICE)} ${fromLine(practice, practice.id)}`),
+    element("p", "subtitle", onItsScale(value, PRACTICE)),
     element("p", "", meansAt(board.data.supporting_scale, value)));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
@@ -517,7 +492,7 @@ function disclosedScore(content, lab, practice) {
   const found = board.data.internal_evidence[lab.id][practice.id];
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
   content.append(view.figure(shown(onTen(value, PRACTICE)), ` out of ${TEN}`),
-    element("p", "subtitle", `${onItsScale(value, PRACTICE)} ${fromLine(practice, practice.id)}`),
+    element("p", "subtitle", onItsScale(value, PRACTICE)),
     element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
   if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
   if (found.sources.length) {
@@ -545,22 +520,18 @@ function aboutColumn(content, column) {
   content.append(element("p", "", column.about));
   content.append(view.h3("The rows it is made of"));
   const list = element("ul", "check-list");
-  const rows = rowsOf(column);
   column.questions.forEach(id => {
     const question = questionOf(id);
     const item = element("li");
     item.append(element("span", "check-id", `${id} `),
-      element("span", "", `${question.name}, ${question.checks.length} checks, `
-        + `${frac(question.checks.length, rows)} of the figure. `
-        + `${question.plain} From ${creditOf(board.data, question)}.`));
+      element("span", "", `${question.name}, ${question.checks.length} checks. `
+        + question.plain));
     list.append(item);
   });
   column.practices.forEach(id => {
     const practice = practiceOf(board.data, id);
     const item = element("li");
-    item.append(element("span", "check-id", id),
-      element("span", "", `${practice.label} ${frac(1, rows)} of the figure. `
-        + `From ${creditOf(board.data, practice)}.`));
+    item.append(element("span", "check-id", id), element("span", "", practice.label));
     list.append(item);
   });
   content.append(list);
@@ -607,8 +578,7 @@ function aboutQuestion(content, question) {
   content.append(view.h3("How it is scored"));
   content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4 and `
     + "shown out of 10. The question's figure is their average, and each check counts on its own "
-    + "towards what is published. Open a check to see what earns each score."),
-  element("p", "subtitle", fromLine(question, `ask ${question.id}`)));
+    + "towards what is published. Open a check to see what earns each score."));
   question.checks.forEach(check => {
     const fold = element("details");
     const summary = element("summary");
@@ -626,7 +596,7 @@ function aboutCheck(content, question, check) {
   view.titled(content, check.short, `${check.label}.`);
   content.append(element("p", "subtitle",
     `One of the checks on the ${question.name.toLowerCase()} question, scored from 0 to 4 and `
-    + "shown out of 10."), element("p", "subtitle", fromLine(question, `check ${check.id}`)));
+    + "shown out of 10."));
   content.append(view.h3("What each score means"), anchorsList(check, null),
     element("p", "subtitle", "A score of 1 or 3 falls between the descriptions either side of it."),
     paperFold(check));
@@ -636,7 +606,7 @@ function aboutPractice(content, practice, column) {
   view.titled(content, practice.short, practice.label);
   content.append(element("p", "subtitle",
     `A best practice, scored 0, 1 or 2 and shown out of 10, counted in `
-    + `${column.name.toLowerCase()}.`), element("p", "subtitle", fromLine(practice, practice.id)),
+    + `${column.name.toLowerCase()}.`),
   view.h3("What each score means"), scaleList(null),
   element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
 }
@@ -645,7 +615,7 @@ function aboutDisclosedPractice(content, practice) {
   view.titled(content, practice.short, practice.label);
   content.append(
     element("p", "subtitle", "A best practice only the company can show, scored 0, 1 or 2 on what "
-      + "it publishes and shown out of 10."), element("p", "subtitle", fromLine(practice, practice.id)),
+      + "it publishes and shown out of 10."),
     view.h3("What each score means"), scaleList(null, practice.anchors),
     element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
 }
@@ -654,7 +624,6 @@ function aboutUnscoredPractice(content, practice) {
   view.titled(content, practice.short, practice.label);
   content.append(
     element("p", "subtitle", "Not assessed for any company, because no internal audit has been done."),
-    element("p", "subtitle", fromLine(practice, practice.id)),
     element("p", "", board.data.internal_note),
     view.h3("What an audit would look at"), element("p", "", practice.audit),
     paperFold(practice));
@@ -777,17 +746,9 @@ const columnChildren = column => [
 const practiceRowId = id => `gov-practice-${id}`;
 const groupAverage = (labId, group) => average(group.practices
   .map(id => onTen(practiceScoreOf(board.data, labId, id), PRACTICE)));
-/* How many rows a column's figure averages, every check and practice counting
- * the same, and the group a practice is folded into, if any. */
-const rowsOf = column => column.questions
-  .reduce((sum, id) => sum + questionOf(id).checks.length, 0) + column.practices.length;
+/* The group a practice is folded into, if any. */
 const groupOf = (column, id) => (column.groups || [])
   .find(group => group.practices.includes(id) || (group.unscored || []).includes(id));
-
-/* Where a row comes from, said in the popover it opens rather than on the row:
- * the paper, and the row's number in it. */
-const fromLine = (row, id) => `From ${board.data.papers[row.paper].by}, "${
-  board.data.papers[row.paper].title}", ${id}.`;
 
 /* The numbered notes under the table, in the order they are listed. A row
  * carries the number of every note that applies to it beside its name; the
@@ -803,8 +764,7 @@ const paperNote = row => NOTE[row.paper];
 function practiceRow(column, id, parent, { labs, cell, marked }) {
   const practice = practiceOf(board.data, id);
   const company = onlyTheCompany(board.data, id);
-  const name = view.rowName(practice.short,
-    rowWeight(column, frac(1, rowsOf(column)), column.name.toLowerCase()),
+  const name = view.rowName(practice.short, null,
     company ? content => aboutDisclosedPractice(content, practice)
       : content => aboutPractice(content, practice, column),
     `${practice.short}: what its scores mean`, marked([paperNote(practice)]));
@@ -875,11 +835,9 @@ function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
   const draw = { labs, cell, marked };
   const rows = [];
   const top = [];
-  const total = board.data.total;
 
   board.data.columns.forEach(column => {
     const figure = column.name.toLowerCase();
-    const count = rowsOf(column);
     // The head of a column: its own figure, in the size the board gives a
     // headline, with a rule above it so the two read as two figures rather than
     // one column of rows.
@@ -897,8 +855,7 @@ function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
     head.append(view.rowHead(
       view.rowToggle(columnKey(column), columnChildren(column),
         { parts: "rows", name: column.name }),
-      view.rowName(column.name,
-      weightLine(share(total.weights[column.id]), "the final score"),
+      view.rowName(column.name, null,
       content => aboutColumn(content, column), `${column.name}: what it covers`,
       marked([NOTE[column.id]]))));
     labs.forEach(lab => head.append(cell(lab, { kind: "total", rowLabel: figure, row: column.id,
@@ -915,7 +872,7 @@ function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
       row.append(view.rowHead(
         view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
           { parts: "checks", name: question.name }),
-        view.rowName(question.name, rowWeight(column, frac(question.checks.length, count), figure),
+        view.rowName(question.name, null,
           content => aboutQuestion(content, question),
           `${question.name}${question.minimum ? ", part of the minimum" : ""}: what it asks`,
           marked(question.minimum ? [NOTE.minimum, paperNote(question)] : [paperNote(question)]))));
@@ -928,7 +885,7 @@ function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
 
       question.checks.forEach(check => {
         const sub = view.subRow(rowId(check.id), question.id,
-          view.rowName(check.short, rowWeight(column, frac(1, count), figure),
+          view.rowName(check.short, null,
             content => aboutCheck(content, question, check),
             `${check.short}: what its scores mean`));
         sub.dataset.level = "3";
@@ -964,7 +921,7 @@ function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
       row.append(view.rowHead(
         view.rowToggle(groupKey(group), members.map(practiceRowId),
           { parts: "practices", name: group.name }),
-        view.rowName(group.name, rowWeight(column, frac(group.practices.length, count), figure),
+        view.rowName(group.name, null,
           content => aboutGroup(content, group, column), `${group.name}: what it gathers`)));
       labs.forEach(lab => {
         row.append(cell(lab, { kind: "total", rowLabel: group.name.toLowerCase(),
@@ -1023,8 +980,7 @@ function renderColumns() {
   const paper = id => `${data.papers[id].by}, "${data.papers[id].title}", `
     + `${data.papers[id].status}. ${data.papers[id].purpose}`;
   const notes = [
-    [NOTE.final, data.total.name, `${data.total.plain} Every figure on the board is out of 10, and `
-      + "each row says under its name how much it counts for in the figure it belongs to."],
+    [NOTE.final, data.total.name, `${data.total.plain} Every figure on the board is out of 10.`],
     [NOTE.published, published.name, published.plain],
     [NOTE.engages, engages.name, engages.plain],
     [NOTE.minimum, "Part of the minimum", data.minimum_note],
