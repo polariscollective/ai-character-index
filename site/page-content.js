@@ -10,7 +10,8 @@
  * A section's `blocks` are drawn in order. A string is light markup (markup.js);
  * `{table}` is a table whose first column names its rows; `{slot}` is an empty
  * element the board's own script fills, such as the governance view's scoring
- * tables, which it builds from the same file.
+ * tables, which it builds from the same file; `{kind: "fold"}` is a part of the
+ * section that opens and shuts under its own heading.
  *
  * Nothing is built with innerHTML.
  */
@@ -70,8 +71,26 @@ function blocksInto(parent, blocks) {
       const slot = element(block.tag || "div", block.class || "");
       slot.id = block.slot;
       parent.append(slot);
+      return;
     }
+    if (block.kind === "fold") parent.append(part(block));
   });
+}
+
+/* A part of a section that opens and shuts on its own, under a heading a level
+ * below the section's: `{ "kind": "fold", "title": "...", "blocks": [...] }`.
+ * It is for a long section whose parts a reader opens one at a time, and any
+ * page's section may use it. It takes the section's own fold, so it carries the
+ * same chevron, and it is shut until opened. Its blocks are any of the kinds
+ * above. */
+function part({ title, blocks }) {
+  const fold = element("details", "section-fold");
+  const summary = element("summary");
+  summary.append(element("h3", "", title));
+  const body = element("div");
+  blocksInto(body, blocks);
+  fold.append(summary, body);
+  return fold;
 }
 
 /* A section under the board: its heading with the chartreuse rule, folded shut,
