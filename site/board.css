@@ -1260,6 +1260,28 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The scale at the top. */
 .ovw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
 .ovw-top-legend { margin: 0; }
+/* The scale is a button that opens the whole scale: it keeps the legend's look,
+   underlines its letters when pointed at, and takes the focus ring every
+   control has. */
+.ovw-scale {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ovw-scale > span:not(.swatches) {
+  text-decoration: underline 1px transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms;
+}
+.ovw-scale:hover > span:not(.swatches) { text-decoration-color: currentColor; }
+.ovw-scale:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+/* In the scale it opens, each letter's figures are data. */
+.ovw-scale-list .ovw-scale-range { font-family: var(--mono); font-size: 13px; }
 /* A final score's parts in its popover, each opening in place. */
 .gov-pop .ovw-part { border-top: 1px solid rgb(92 107 60 / .2); padding: 6px 0; }
 .gov-pop .ovw-part summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }

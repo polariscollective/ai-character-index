@@ -139,10 +139,14 @@ const noneWord = () => state.overview.grid.groups[0]?.final?.zero || "None";
 /* A figure's letter, or null where it prints as nought. */
 const letterOf = value => gradeOf(value, state.overview.grid.grades);
 
+/* The file's grades, highest threshold first. */
+const orderedGrades = () => [...state.overview.grid.grades].sort((a, b) => b.from - a.from);
+
 /* Where a letter sits on the boards' colour ramp: at its own threshold, so it
  * wears the colour that figure wears in the Index. Spread evenly, F fell at
- * 3.93:1 text contrast on the ramp, below WCAG AA; at these five thresholds
- * every letter passes. None has no place on the ramp: it is left unpainted. */
+ * 3.93:1 text contrast on the ramp, below WCAG AA; at the thresholds, from 6.0
+ * up and F at 0, every letter passes. None has no place on the ramp: it is left
+ * unpainted. */
 function gradeValue(letter) {
   const grade = state.overview.grid.grades.find(candidate => candidate.letter === letter);
   return grade ? grade.from : 0;
@@ -250,6 +254,32 @@ function scaleOf(content) {
   if (!scale) return;
   content.append(view.h3("The scale"));
   renderMarkup(content, scale);
+}
+
+/* The whole scale, opened from the legend: every letter with the figures out
+ * of 10 it covers, then None. A letter is read from the figure as it is shown,
+ * to one decimal, so a band runs from its threshold to a tenth below the next
+ * one up, and F starts at the first figure that does not show as 0.0. */
+function aboutScale(content) {
+  const words = state.overview.grid.grade_scale || {};
+  view.titled(content, words.title || "The grading scale");
+  if (words.text) renderMarkup(content, words.text);
+  const list = element("ul", "check-list ovw-scale-list");
+  let next = null;
+  orderedGrades().forEach(({ letter, from }) => {
+    const low = from > 0 ? from : 0.1;
+    const high = next === null ? TEN : next - 0.1;
+    const item = element("li");
+    item.append(view.chip(gradeValue(letter), TEN, letter),
+                element("span", "ovw-scale-range", `${low.toFixed(1)} to ${high.toFixed(1)}`));
+    list.append(item);
+    next = from;
+  });
+  const none = element("li");
+  none.append(element("span", "chip chip-na", noneWord()),
+              element("span", "ovw-scale-range", (0).toFixed(1)));
+  list.append(none);
+  content.append(list);
 }
 
 function aboutGroup(content, group) {
@@ -599,9 +629,11 @@ function figureRow(group, row, final) {
   return tr;
 }
 
+/* The legend above the grid: one swatch per plain letter, A to F, so the strip
+ * stays short; the pluses and minuses are in the scale it opens. */
 function drawLegend() {
   const legend = document.createDocumentFragment();
-  [...state.overview.grid.grades].sort((a, b) => b.from - a.from).forEach(({ letter }) => {
+  orderedGrades().filter(({ letter }) => letter.length === 1).forEach(({ letter }) => {
     legend.append(view.swatches([gradeValue(letter)], TEN), element("span", "", letter));
   });
   // The word an empty cell of the grid says, so the scale and the cells agree,
@@ -701,6 +733,9 @@ export async function initializeOverview() {
     return;
   }
   view.wirePopover([byId("ovw-chart")]);
+  // The legend is drawn again with the grid, and keeps its one listener.
+  const legend = byId("ovw-legend");
+  legend.addEventListener("click", () => view.openPopover(legend, aboutScale));
 
   status.textContent = "";
 }

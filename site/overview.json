@@ -62,14 +62,25 @@
    }
   ],
   "grades": [
-   { "letter": "A", "from": 9 },
-   { "letter": "B", "from": 8 },
-   { "letter": "C", "from": 7 },
-   { "letter": "D", "from": 6 },
+   { "letter": "A", "from": 9.3 },
+   { "letter": "A-", "from": 9 },
+   { "letter": "B+", "from": 8.7 },
+   { "letter": "B", "from": 8.3 },
+   { "letter": "B-", "from": 8 },
+   { "letter": "C+", "from": 7.7 },
+   { "letter": "C", "from": 7.3 },
+   { "letter": "C-", "from": 7 },
+   { "letter": "D+", "from": 6.7 },
+   { "letter": "D", "from": 6.3 },
+   { "letter": "D-", "from": 6 },
    { "letter": "F", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9, B from 8, C from 7, D from 6, F above 0 and below 6, and None at 0**. These are the thresholds of American school grades. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
-  "hint": "Press a cell to see the score behind it.",
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives, on the thresholds of American school grades: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3, F above 0 and below 6.0, and None at 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. F carries neither. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
+  "hint": "Press a cell to see the score behind it, or the scale to see what each letter covers.",
+  "grade_scale": {
+   "title": "The grading scale",
+   "text": "Each letter covers the figures out of 10 beside it, on the thresholds of American school grades. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures."
+  },
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
    {
@@ -98,7 +109,7 @@
   },
   {
    "title": "Only OpenAI and Anthropic avoid an F, and both fall short on governance",
-   "text": "OpenAI's constitution gets a B and Anthropic's a C, and both get a D on governance, the highest grade any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an F on governance."
+   "text": "OpenAI's constitution gets a B and Anthropic's a C, and on governance OpenAI gets a D and Anthropic a D-, the highest grades any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B-, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an F on governance."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",

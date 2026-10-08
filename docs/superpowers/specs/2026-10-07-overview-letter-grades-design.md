@@ -21,13 +21,13 @@ against absolute standards, not against each other.
 Each final score on the overview is a letter, read from the figure out of 10 the
 Index gives:
 
-| letter | from |
-|---|---|
-| A | 9 |
-| B | 8 |
-| C | 7 |
-| D | 6 |
-| F | above 0 |
+| letter | from | letter | from | letter | from |
+|---|---|---|---|---|---|
+| A | 9.3 | A- | 9.0 | | |
+| B+ | 8.7 | B | 8.3 | B- | 8.0 |
+| C+ | 7.7 | C | 7.3 | C- | 7.0 |
+| D+ | 6.7 | D | 6.3 | D- | 6.0 |
+| F | above 0 | | | | |
 
 A figure of 0 shows the row's own word for nothing, "None", as the relative mode
 already did: a company that publishes no constitution has nothing to grade, and
@@ -35,20 +35,27 @@ an F would put it level with a weak document.
 
 These are the thresholds of American school grades, chosen because a reader
 knows them without being told, and because they are strict: as of October 2026
-no company reaches A on either board, and eight of ten get F on governance. No
-plus or minus: the figures underneath are partly set by hand and partly read by
-one model, and do not carry that precision.
+no company reaches A on either board, and eight of ten get F on governance.
+
+The first version had no plus or minus, on the argument that figures partly set
+by hand and partly read by one model do not carry that precision. On 8 October
+2026 the owner asked for them, on the American scale exactly: a minus in the
+bottom three tenths of a band, a plus in its top three, A with no plus and F
+with neither. As of that day they move two letters, Alibaba's constitution to
+B- (8.0) and Anthropic's governance to D- (6.2), and give nobody a plus. The
+cost was said before the decision: the governance minus rests on 0.1 of hand-set
+figures beside OpenAI's D (6.3).
 
 The letter is read from the figure **rounded to one decimal**, the figure the
 page shows. Otherwise 8.96 would show "9.0" beside a B.
 
-As of the repository files on 7 October 2026:
+As of the repository files on 8 October 2026, with plus and minus:
 
 | company | constitutions | governance |
 |---|---|---|
 | OpenAI | B (8.6) | D (6.3) |
-| Alibaba | B (8.0) | F (2.5) |
-| Anthropic | C (7.6) | D (6.2) |
+| Alibaba | B- (8.0) | F (2.5) |
+| Anthropic | C (7.6) | D- (6.2) |
 | Microsoft AI | D (6.3) | F (4.2) |
 | Google DeepMind, xAI, Meta, Mistral AI, DeepSeek, Moonshot AI | None | F (0.8 to 3.4) |
 
@@ -58,12 +65,16 @@ the same letter, and the difference is read only by opening the cell.
 ## What the reader sees
 
 - The toolbar loses the Absolute and Relative buttons. The legend shows six
-  swatches: A, B, C, D, F and None.
+  swatches, one per plain letter: A, B, C, D, F and None. It is a button: it
+  opens the whole scale, every letter with the figures out of 10 it covers
+  ("9.3 to 10.0", "9.0 to 9.2", down to "0.1 to 5.9" for F and "0.0" for
+  None), under a title and a sentence from `grid.grade_scale` in the file.
 - The grid's corner reads "Grade" over "companies in alphabetical order", in
   place of "Score (out of 10)".
 - A cell shows its letter alone, painted on the boards' colour ramp where its
-  threshold sits on the ramp the Index uses (A at 9, B at 8, C at 7, D at 6, F
-  at 0), so every letter's text passes WCAG AA; an even spread put F at 3.93:1.
+  threshold sits on the ramp the Index uses (A at 9.3, A- at 9.0, and so on down
+  to D- at 6.0, F at 0), so every letter's text passes WCAG AA, which the ramp
+  does everywhere from 3 up and at 0; an even spread put F at 3.93:1.
   None is unpainted, with the dashed edge of a cell not assessed. Its accessible
   name carries the letter and the figure: "OpenAI, what the constitutions say:
   B, 8.6 out of 10".

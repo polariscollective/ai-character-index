@@ -53,8 +53,11 @@
   <div class="gov-toolbar" hidden data-needs-board>
     <p class="gov-hint" id="ovw-hint"></p>
     <div class="ovw-controls">
-    <!-- The colour scale: each letter, and the word for nothing. -->
-    <div class="gov-legend ovw-top-legend" id="ovw-legend" aria-hidden="true"></div>
+    <!-- The colour scale: each letter, and the word for nothing. Pressed, it
+         opens the whole scale, every letter with the figures it covers. -->
+    <button type="button" class="gov-legend ovw-top-legend ovw-scale" id="ovw-legend"
+      aria-haspopup="dialog" aria-expanded="false"
+      aria-label="The grading scale: what each letter covers"></button>
     </div>
   </div>
   <div class="matrix-wrap" id="ovw-chart" data-menu="How companies stand" hidden data-needs-board>
