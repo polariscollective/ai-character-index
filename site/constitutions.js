@@ -602,6 +602,22 @@ function behaviourCell(content, company, behaviour) {
   content.append(fold);
 }
 
+/* The board's own reading of its file: each company's final score, the
+ * companies ranked by it with only their newest document, and the behaviours
+ * by category. The board's initialiser runs it, and so does rowsFor for a page
+ * that draws these rows without this board. */
+function prepare(data) {
+  state.data = data;
+  data.companies.forEach(company => { company.final = finalOf(data, company); });
+  state.companies = ranked(currentPerCompany(data.companies));
+
+  /* Grouped by first appearance rather than alphabetically, so the file's own
+   * order decides which category leads. An id of its own for each group: a
+   * category's name is a sentence, and the board addresses a group inside a CSS
+   * selector. */
+  state.categories = categoriesOf(data);
+}
+
 /* ---- The table -------------------------------------------------------------- */
 
 const rowId = (groupId, index) => `board-row-${groupId}-${index}`;
@@ -650,25 +666,43 @@ function headRow() {
   return row;
 }
 
-function renderTable() {
-  const body = document.createDocumentFragment();
-  const companies = state.companies;
+/* How the Index draws a cell of these rows: every figure out of 10. */
+const indexCell = (company, { rowLabel, row, value, build }) =>
+  cellFor(company, rowLabel, row, { value, max: TEN, text: shown(value), build });
 
+/* The rows under the final score: the document as a whole and its criteria,
+ * the behaviours, their categories and the behaviours themselves. The Index
+ * draws them under its own final score and the overview under its own, through
+ * this one function, so the two pages cannot show these rows two ways.
+ *
+ * `cell(company, row)` draws one cell. `row.kind` is "total" for a row that
+ * averages others and "scored" for a criterion or a behaviour; `row.value` is
+ * its figure out of 10; `row.scored`, on a scored row, is its figure as given
+ * and the scale it was given on; `row.rowLabel` and `row.row` name and address
+ * the cell; `row.build` fills its popover. `columns` orders the companies'
+ * cells by id, the board's own ranking when absent. `parent` is the fold the
+ * two top rows sit in, none on the Index. `marks` false leaves out the signs
+ * pointing to the Index's numbered notes, which only the Index carries. */
+function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
+  const companies = columns ? columns.map(id => {
+    const company = state.companies.find(one => one.id === id);
+    if (!company) throw new Error(`The constitutions board has no company ${id}.`);
+    return company;
+  }) : state.companies;
+  const marked = list => (marks ? list : []);
+  const rows = [];
+  const top = [];
+  // On another page the two top rows fold under that page's own final score,
+  // shut until it is opened, with ids its fold can name.
+  const foldUnder = (tr, id) => {
+    if (!parent) return;
+    tr.id = id;
+    tr.dataset.parent = parent;
+    tr.hidden = true;
+    top.push(id);
+  };
   const weights = state.data.weights;
   const everyBehaviour = state.data.behaviours.length;
-
-  /* The final score, one row above every group, as the governance board's total. */
-  const total = element("tr", "total-row outside-row");
-  total.dataset.level = "0";
-  total.append(board.rowHead(null, board.rowName("Final score", null, aboutFinal,
-    `Final score, out of ${finalMax()}: how it is worked out`, [NOTE.final])));
-  companies.forEach(company => {
-    total.append(cellFor(company, "final score", "final", {
-      value: company.final, max: TEN, text: shown(company.final),
-      build: content => finalScore(content, company),
-    }));
-  });
-  body.append(total);
 
   /* The document as a whole: the average of its criteria on the group row, the
    * criteria folded under it. */
@@ -676,19 +710,17 @@ function renderTable() {
   // rank, each opening into what it averages.
   const wholeRow = element("tr", "total-row outside-row half-row");
   wholeRow.dataset.level = "1";
+  foldUnder(wholeRow, "cov-row-whole");
   wholeRow.append(board.rowHead(
     board.rowToggle("whole", state.data.criteria.map((criterion, index) => rowId("whole", index)),
       { parts: "criteria", name: "The document as a whole" }),
     board.rowName("The document as a whole", weightLine(share(weights.whole), "the final score"),
-      aboutWhole, "The document as a whole: what it measures", [NOTE.whole])));
+      aboutWhole, "The document as a whole: what it measures", marked([NOTE.whole]))));
   companies.forEach(company => {
-    const whole = wholeTotal(company);
-    wholeRow.append(cellFor(company, "the document as a whole", "whole", {
-      value: whole, max: TEN, text: shown(whole),
-      build: content => wholeScore(content, company),
-    }));
+    wholeRow.append(cell(company, { kind: "total", rowLabel: "the document as a whole",
+      row: "whole", value: wholeTotal(company), build: content => wholeScore(content, company) }));
   });
-  body.append(wholeRow);
+  rows.push(wholeRow);
 
   state.data.criteria.forEach((criterion, index) => {
     const sub = board.subRow(rowId("whole", index), "whole",
@@ -697,13 +729,12 @@ function renderTable() {
         content => aboutCriterion(content, criterion), `${criterion.name}: what it asks`));
     sub.dataset.level = "2";
     companies.forEach(company => {
-      const part = criterionPart(company, criterion);
-      sub.append(cellFor(company, lowerFirst(criterion.name), criterion.id, {
-        value: part, max: TEN, text: shown(part),
-        build: content => criterionScore(content, company, criterion),
-      }));
+      sub.append(cell(company, { kind: "scored", rowLabel: lowerFirst(criterion.name),
+        row: criterion.id, value: criterionPart(company, criterion),
+        scored: { value: criterionScore10(company, criterion), max: CRITERION_SCALE },
+        build: content => criterionScore(content, company, criterion) }));
     });
-    body.append(sub);
+    rows.push(sub);
   });
 
   /* The behaviours: every behaviour's depth averaged, which is the other half of
@@ -712,20 +743,19 @@ function renderTable() {
    * the mean of every behaviour amounts to. */
   const behavioursRow = element("tr", "total-row outside-row half-row");
   behavioursRow.dataset.level = "1";
+  foldUnder(behavioursRow, "cov-row-behaviours");
   behavioursRow.append(board.rowHead(
     board.rowToggle("behaviours", state.categories.map(category => `board-row-${category.id}`),
       { parts: "categories", name: "The behaviours" }),
     board.rowName("The behaviours",
     weightLine(share(weights.behaviours), "the final score"), aboutBehaviours,
-    "The behaviours: how they are averaged", [NOTE.behaviours])));
+    "The behaviours: how they are averaged", marked([NOTE.behaviours]))));
   companies.forEach(company => {
-    const value = behavioursFigure(company);
-    behavioursRow.append(cellFor(company, "the behaviours", "behaviours", {
-      value, max: TEN, text: shown(value),
-      build: content => behavioursScore(content, company),
-    }));
+    behavioursRow.append(cell(company, { kind: "total", rowLabel: "the behaviours",
+      row: "behaviours", value: behavioursFigure(company),
+      build: content => behavioursScore(content, company) }));
   });
-  body.append(behavioursRow);
+  rows.push(behavioursRow);
 
   state.categories.forEach(category => {
     const { id, name, members } = category;
@@ -739,15 +769,13 @@ function renderTable() {
         { parts: "behaviours", name }),
       board.rowName(name, weightLine(frac(members.length, everyBehaviour), "the behaviours"),
         content => aboutCategory(content, category), `${name}: what it measures`,
-        [NOTE.categories])));
+        marked([NOTE.categories]))));
     companies.forEach(company => {
-      const value = categoryFigure(company, members);
-      row.append(cellFor(company, lowerFirst(name), id, {
-        value, max: TEN, text: shown(value),
-        build: content => categoryScore(content, company, category),
-      }));
+      row.append(cell(company, { kind: "total", rowLabel: lowerFirst(name), row: id,
+        value: categoryFigure(company, members),
+        build: content => categoryScore(content, company, category) }));
     });
-    body.append(row);
+    rows.push(row);
 
     members.forEach((behaviour, index) => {
       const sub = board.subRow(rowId(id, index), id,
@@ -757,14 +785,34 @@ function renderTable() {
       sub.dataset.level = "3";
       companies.forEach(company => {
         const score = depthOf(company, behaviour);
-        sub.append(cellFor(company, lowerFirst(behaviour.name), behaviour.slug, {
-          value: score, max: TEN, text: shown(score),
-          build: content => behaviourCell(content, company, behaviour),
-        }));
+        sub.append(cell(company, { kind: "scored", rowLabel: lowerFirst(behaviour.name),
+          row: behaviour.slug, value: score, scored: { value: score, max: depthMax() },
+          build: content => behaviourCell(content, company, behaviour) }));
       });
-      body.append(sub);
+      rows.push(sub);
     });
   });
+
+  return { rows, top };
+}
+
+function renderTable() {
+  const body = document.createDocumentFragment();
+  const companies = state.companies;
+
+  /* The final score, one row above every group, as the governance board's total. */
+  const total = element("tr", "total-row outside-row");
+  total.dataset.level = "0";
+  total.append(board.rowHead(null, board.rowName("Final score", null, aboutFinal,
+    `Final score, out of ${finalMax()}: how it is worked out`, [NOTE.final])));
+  companies.forEach(company => {
+    total.append(cellFor(company, "final score", "final", {
+      value: company.final, max: TEN, text: shown(company.final),
+      build: content => finalScore(content, company),
+    }));
+  });
+  body.append(total);
+  body.append(...rowsBelowFinal({ cell: indexCell }).rows);
 
   board.nodes.table.tHead.replaceChildren(headRow());
   board.nodes.table.tBodies[0].replaceChildren(body);
@@ -862,6 +910,17 @@ async function showPublishedAt(publication) {
 
 /* ---- Loading ---------------------------------------------------------------- */
 
+/* The rows under the final score, drawn by another page's board: the overview
+ * calls this with its own board, its own order of columns and its own way of
+ * drawing a cell, and the popovers of these rows then open on that page. That
+ * page never runs this board's initialiser, so the module's state is read from
+ * the file given here. */
+export function rowsFor(view, data, options) {
+  board = view;
+  prepare(data);
+  return rowsBelowFinal(options);
+}
+
 /* Open one cell of this board as a press on it would, unfolding the rows above
  * it. The Index opens a cell the address names this way. */
 export const openCell = (lab, row) => Boolean(board?.pressCell({ lab, row }));
@@ -898,15 +957,7 @@ export async function initializeConstitutions() {
     renderPage("cov", data.page);
     renderNotes(byId("board-notes"), data.page.notes);
     byId("cov-notes").hidden = !(data.page.notes || []).length;
-    state.data = data;
-    data.companies.forEach(company => { company.final = finalOf(data, company); });
-    state.companies = ranked(currentPerCompany(data.companies));
-
-    /* Grouped by first appearance rather than alphabetically, so the file's own
-     * order decides which category leads. An id of its own for each group: a
-     * category's name is a sentence, and the board addresses a group inside a CSS
-     * selector. */
-    state.categories = categoriesOf(data);
+    prepare(data);
 
     renderTable();
     // The behaviours open by default, each category shut: the categories are what
