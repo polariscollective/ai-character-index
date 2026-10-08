@@ -1266,11 +1266,13 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* The letters in a light weight: the colour already carries the grade. */
 .ovw-board .cell-grade .cell-figure { font-weight: 400; }
 /* Each level under a final score starts further in than the one above it, so
-   the names read as a tree: a row with a fold steps in by 12px a level, and a
-   row with none sits under its parent's name. */
-.ovw-board tr[data-level="1"] > th { padding-left: 12px; }
-.ovw-board tr[data-level="2"] > th { padding-left: 24px; }
-.ovw-board tr[data-level="3"] > th { padding-left: 70px; }
+   the names read as a tree: a row's fold sits under its parent's name, 20px a
+   level, and a row with no fold sits 20px in from its parent's name. The names'
+   column is a little wider here to hold the deepest names. */
+.ovw-board thead th.row-col { width: 26%; }
+.ovw-board tr[data-level="1"] > th { padding-left: 20px; }
+.ovw-board tr[data-level="2"] > th { padding-left: 40px; }
+.ovw-board tr[data-level="3"] > th { padding-left: 94px; }
 /* Where the names are held at the left while the companies slide under them,
    they stay above a cell raised by a pointer or a popover. */
 @media (max-width: 1180px) {
