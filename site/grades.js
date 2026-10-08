@@ -1,7 +1,7 @@
-/* The letter a final score earns on the overview.
+/* The letter a total earns on the overview.
  *
- * The overview shows each final score as a letter rather than a figure out of
- * 10. The thresholds are not here: they are in site/overview.json, which a
+ * The overview shows each total as a letter rather than a figure out of 10.
+ * The thresholds are not here: they are in site/overview.json, which a
  * publication freezes, so a pinned publication keeps the letters it was built
  * with. This module only reads a figure against them, for the page and for the
  * MCP server alike, so the two cannot give one figure two letters.

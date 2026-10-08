@@ -6,7 +6,7 @@
   "sections": []
  },
  "grid": {
-  "caption": "The two final scores of the index for ten companies, each shown as a letter from A to F, or None where there is nothing to score",
+  "caption": "The two final scores of the index for ten companies, each a letter from A to G, or None where there is nothing to score, each opening into the rows it is made of",
   "groups": [
    {
     "name": "How constitutions are governed",

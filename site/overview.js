@@ -51,28 +51,32 @@ function companiesOf(constitutions, governance, overview) {
   const order = governanceRanked(governance).map(lab => lab.id);
   return governance.labs.map(lab => {
     const written = constitutions.companies.find(company => company.id === lab.id);
-    const said = written ? figuresOf(constitutions, written) : { final: 0, whole: 0, behaviours: 0 };
+    // A company the constitutions board does not carry is a publication this
+    // page cannot draw, as the board's own rowsFor finds it: the reader is told
+    // so by the not-compatible sentence, for this one reason.
+    if (!written) throw new Error(`The constitutions board has no company ${lab.id}.`);
+    const said = figuresOf(constitutions, written);
     const governed = totalsFor(governance, lab.id);
     return {
       id: lab.id,
       name: lab.name,
-      mark: lab.mark ?? written?.mark,
+      mark: lab.mark ?? written.mark,
       // What each figure is made of, by the functions the boards list it with.
       parts: {
-        whole: written ? constitutionParts(constitutions, written, "whole") : [],
-        behaviours: written ? constitutionParts(constitutions, written, "behaviours") : [],
+        whole: constitutionParts(constitutions, written, "whole"),
+        behaviours: constitutionParts(constitutions, written, "behaviours"),
         published: governanceParts(governance, lab.id, "published"),
         engages: governanceParts(governance, lab.id, "engages"),
       },
       // The overview's own words about this company: a summary of everything
       // under each figure, written for this page and not copied from the Index.
       summary: overview.summaries?.[lab.id] || {},
-      publishes: Boolean(written?.document),
-      document: written?.document || null,
+      publishes: Boolean(written.document),
+      document: written.document || null,
       // What a reader should know under the name, as the two boards say it:
       // the constitutions board's note on the document, and whether anyone can
       // download the flagship model.
-      note: written?.note || null,
+      note: written.note || null,
       openWeights: Boolean(lab.open_weights),
       figures: {
         constitutions: { final: said.final ?? 0, whole: said.whole, behaviours: said.behaviours },
@@ -129,12 +133,11 @@ function figureList(items) {
   return list;
 }
 
-/* What a press on one cell of this table opens. */
-function cellOpener(company, group, row, final) {
-  const value = company.figures[row.board][row.figure] ?? 0;
-  return final
-    ? content => aboutFinal(content, company, group, value)
-    : content => aboutCell(content, company, group, row, value);
+/* What a press on one final score's cell opens. */
+function cellOpener(company, group) {
+  const { board, figure } = group.final;
+  const value = company.figures[board][figure] ?? 0;
+  return content => aboutFinal(content, company, group, value);
 }
 
 /* Where in the Index a part of one of this table's figures lives. */
@@ -189,29 +192,6 @@ function leadTo(content, href, text) {
   }
   line.append(link);
   content.append(line);
-}
-
-/* The same popover the cell of the Index opens, in short: the figure, why the
- * company stands there, and what the figure is made of. */
-function aboutCell(content, company, group, row, value) {
-  view.titled(content, `${company.name}: ${row.name.toLowerCase()}`, row.plain);
-  content.append(view.figure(shown(value), ` out of ${TEN}`));
-  // What everything under this figure adds up to, in the overview's own words.
-  const reason = summaryOf(company, row.figure, row.board);
-  if (reason) renderMarkup(content, reason);
-  const parts = company.parts[row.figure] || [];
-  if (parts.length && value > 0) {
-    content.append(view.h3("What it is made of"), figureList(parts.map(part =>
-      ({ ...part, href: part.row ? indexCell(company, row, part) : null }))));
-  }
-  // A note on this one figure, where a reader will ask why it is what it is.
-  const note = company.summary.notes?.[row.figure];
-  if (note) {
-    const said = element("p", "subtitle ovw-caveat");
-    said.append(element("strong", "", "A note on this figure. "), document.createTextNode(note));
-    content.append(said);
-  }
-  leadTo(content, group.href, "See every part of this score in the Index");
 }
 
 /* A final score: the figure, what everything under it adds up to, and its two
@@ -294,8 +274,8 @@ function aboutGroup(content, group) {
   view.titled(content, group.name);
   content.append(element("p", "", group.final.plain));
   scaleOf(content);
-  // The two parts the score is made of, each with what it measures, since the
-  // grid no longer shows them as rows.
+  // The two parts the score is made of, each with what it measures: the grid
+  // shows them as rows under the fold.
   content.append(view.h3("What it is made of"));
   group.rows.forEach(row => {
     const part = element("p", "");
@@ -303,13 +283,6 @@ function aboutGroup(content, group) {
     content.append(part);
   });
   leadTo(content, group.href, "See every company's score in the Index");
-}
-
-function aboutRow(content, group, row) {
-  view.titled(content, row.name, group.name);
-  content.append(element("p", "", row.plain));
-  scaleOf(content);
-  leadTo(content, group.href, `See every company's score in the Index`);
 }
 
 /* A company: the whole picture in a few sentences, its two final scores, and
@@ -321,16 +294,16 @@ function aboutCompany(content, company) {
   content.append(view.h3("Its final scores"), figureList(state.overview.grid.groups.map(group =>
     ({ value: company.figures[group.final.board][group.final.figure] ?? 0, name: group.name,
        cell: { lab: company.id, row: group.final.figure },
-       open: cellOpener(company, group, group.final, true), graded: true }))));
+       open: cellOpener(company, group), graded: true }))));
   caveatOf(content, company);
   if (company.document) {
     leadTo(content, `/doc-reader/?spec=${encodeURIComponent(company.document.id)}`,
       `Read ${company.document.title} in the Doc reader`);
   }
-  leadTo(content, `/index?company=${company.id}`,
-    "See its figures on what the constitutions say");
   leadTo(content, `/index?view=governance&company=${company.id}`,
     "See its figures on how constitutions are governed");
+  leadTo(content, `/index?company=${company.id}`,
+    "See its figures on what the constitutions say");
 }
 
 /* A row's name on the overview, the same for a score and for a view in
@@ -357,8 +330,8 @@ function aboutComing(content, item) {
 function comingRow(item) {
   const tr = element("tr", "total-row outside-row coming-row");
   tr.dataset.row = `coming-${item.id}`;
-  // The same head as a score's row, with no fold's space before the name, so
-  // the four names start at one edge.
+  // The same head as a score's row, without a fold's button or its spacer
+  // before the name, so the name starts where that button would.
   const head = element("th");
   head.scope = "row";
   const line = element("div", "row-head");
@@ -484,8 +457,8 @@ function contextRows(noteNumber) {
       name.append(mark);
     }
     if (row.sub) label.append(element("span", "context-sub", row.sub));
-    // No fold's space before the name, so it starts at the same edge as the
-    // rows above.
+    // Without a fold's button or its spacer before the name, so it starts
+    // where a score's fold button would.
     const head = element("th");
     head.scope = "row";
     const line = element("div", "row-head");
@@ -631,11 +604,12 @@ function borrowedCell(company, row) {
  * drawing a cell. The note marks stay on the Index, where their notes are. */
 function borrowedRows() {
   const columns = state.companies.map(company => company.id);
-  const options = board => ({ cell: borrowedCell, columns, parent: `ovw-${board}`, marks: false });
-  return {
-    constitutions: constitutionRows(view, state.boards.constitutions, options("constitutions")),
-    governance: governanceRows(view, state.boards.governance, options("governance")),
-  };
+  const builders = { constitutions: constitutionRows, governance: governanceRows };
+  return Object.fromEntries(state.overview.grid.groups.map(group => [
+    group.final.board,
+    builders[group.final.board](view, state.boards[group.final.board],
+      { cell: borrowedCell, columns, parent: foldOf(group), marks: false }),
+  ]));
 }
 
 /* A final score's row, drawn as the Index draws its own final score: its fold
@@ -658,7 +632,7 @@ function figureRow(group, borrowed) {
   return tr;
 }
 
-/* The legend above the grid: one swatch per plain letter, A to F, so the strip
+/* The legend above the grid: one swatch per plain letter, A to G, so the strip
  * stays short; the pluses and minuses are in the scale it opens. */
 function drawLegend() {
   const legend = document.createDocumentFragment();
@@ -773,13 +747,20 @@ export async function initializeOverview() {
   view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
   // A source code in a popover borrowed from the governance board names an
   // entry under that board's "Sources reviewed", which the overview does not
-  // carry: it opens there, in a new tab, which the Index scrolls to and marks.
-  byId("ovw-pop").addEventListener("click", event => {
-    const link = event.target.closest?.('a[href^="#src-"]');
-    if (!link) return;
-    event.preventDefault();
-    window.open(`/index?view=governance${link.getAttribute("href")}`, "_blank", "noopener");
-  });
+  // carry. Each such link is rewritten once it appears, to open there in a new
+  // tab (the Index scrolls to the entry and marks it), so a middle-click or a
+  // copied link goes to the Index as well, and not to a "#src-" that is nowhere
+  // on this page.
+  const pop = byId("ovw-pop");
+  new MutationObserver(() => {
+    pop.querySelectorAll('a[href^="#src-"]').forEach(link => {
+      const spoken = link.getAttribute("aria-label") || link.textContent;
+      link.setAttribute("aria-label", `${spoken}, in the Index, in a new tab`);
+      link.href = `/index?view=governance${link.getAttribute("href")}`;
+      link.target = "_blank";
+      link.rel = "noopener";
+    });
+  }).observe(pop, { childList: true, subtree: true });
 
   status.textContent = "";
 }

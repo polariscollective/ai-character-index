@@ -519,9 +519,11 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .board .check-row .cell-button { width: 80%; margin-left: 20%; }
 .board .check-row .cell-button { min-height: 36px; padding: 6px 8px; }
 /* A little more room on the right than the governance view needs, which only
-   ever marks "/4": "/10" is wider, and touched the figure. The coverage board
-   alone, so no cell of the other moves. */
-#board .check-row .cell-button { padding-right: 20px; }
+   ever marks "/4": "/10" is wider, and touched the figure. The coverage
+   board and the overview's grid, which borrows its rows, and not the governance
+   view, so no cell of that moves. */
+#board .check-row .cell-button,
+#ovw-grid .check-row .cell-button { padding-right: 20px; }
 .board .check-row .cell-figure { font-size: 14px; }
 .board .check-row { background: rgb(92 107 60 / .05); }
 
@@ -1232,9 +1234,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    The rows under it are the Index's, and keep the Index's sizes. */
 .ovw-board tr[data-level="0"] .cell-button { height: 54px; min-height: 54px; }
 .ovw-pop-link { margin-top: 12px; }
-/* The overview's row names, the scores' and the views in preparation's alike:
-   plain text a little smaller than the Index's, on two lines if they need them,
-   underlined only when pointed at. */
+/* The row names of the views in preparation: plain text a little smaller than
+   the Index's, on two lines if they need them, underlined only when pointed
+   at. */
 .ovw-board .ovw-row-name {
   padding: 0;
   border: 0;

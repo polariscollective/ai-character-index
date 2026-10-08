@@ -167,28 +167,28 @@ test("the overview answers each company's figures from the two boards, with its 
     for (const figure of company.figures) {
       assert.equal(figure.max, 10);
       const measured = answer.measures.rows.find(row => row.name === figure.row);
-      if (measured.final_score) {
-        // The letter the page shows, by the same function; the row's own word
-        // where the figure prints as nought.
-        assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades) ?? "None",
-                     `${company.name} ${figure.row}`);
-        if (asShown(figure.figure) > 0) assert.notEqual(figure.grade, "None");
-        else assert.equal(figure.grade, "None", `${company.name} ${figure.row}`);
-      } else {
-        // The four parts are figures out of 10 and carry no letter, as on the page.
-        assert.ok(!("grade" in figure), `${company.name} ${figure.row}`);
-      }
+      assert.ok(measured, figure.row);
+      // Every row is a total and the page shows each as a letter: the letter by
+      // the same function, the row's own word where the figure prints as nought.
+      assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades) ?? "None",
+                   `${company.name} ${figure.row}`);
+      if (asShown(figure.figure) > 0) assert.notEqual(figure.grade, "None");
+      else assert.equal(figure.grade, "None", `${company.name} ${figure.row}`);
     }
   }
-  // Two final scores are graded, and four parts are not.
+  // Two final scores and four parts: six rows, and the two final scores are the
+  // ones flagged as such.
   assert.deepEqual(answer.measures.rows.filter(row => row.final_score).map(row => row.name),
     ["How constitutions are governed, final score", "What the constitutions say, final score"]);
   assert.equal(answer.measures.rows.filter(row => !row.final_score).length, 4);
-  // OpenAI's document as a whole is the highest part there is, and it is no A here.
+  // The companies come in the governance ranking, as the page lists them.
+  assert.deepEqual(answer.companies.map(company => company.id),
+                   governanceBoard(snapshot()).companies.map(company => company.id));
+  // OpenAI's document as a whole is the highest part there is, and it earns an A.
   const openai = answer.companies.find(company => company.id === "openai");
   const whole = openai.figures.find(one => one.row === "Document as a whole");
   assert.ok(whole.figure >= 9, "the figure the review found");
-  assert.ok(!("grade" in whole));
+  assert.equal(whole.grade, "A");
   assert.deepEqual(answer.takeaways, overview.takeaways);
   assert.throws(() => overviewBoard({ ...snapshot(), overview: null }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
