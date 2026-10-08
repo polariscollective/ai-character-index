@@ -701,19 +701,20 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
    tone at rest and the ink when pointed at. It is the same mark the page's own
    folding sections carry, so one sign means "opens" everywhere. The button
    around it keeps its size, which is the reach of a press, and its focus ring. */
-/* A row opens on a plus and shuts on a minus, in the faint tone at rest and the
-   ink when pointed at: the sign of a table that folds, quieter than an arrow. */
+/* A row's fold is a small chevron, thin and pale at rest and the ink when
+   pointed at: it points right when the row is shut and down when it is open. */
 .row-toggle::before {
-  content: "+";
-  font-family: var(--ui);
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1;
-  color: var(--faint);
-  transition: color .15s ease;
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1px solid var(--faint);
+  border-bottom: 1px solid var(--faint);
+  opacity: .7;
+  transform: rotate(-45deg);
+  transition: transform .15s ease, border-color .15s ease, opacity .15s ease;
 }
-.row-toggle[aria-expanded="true"]::before { content: "\2212"; }
-.row-toggle:hover::before { color: var(--ink); }
+.row-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
+.row-toggle:hover::before { border-color: var(--ink); opacity: 1; }
 /* The folds inside a popover keep their chevron. */
 .gov-pop summary::before {
   content: "";
