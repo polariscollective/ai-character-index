@@ -829,6 +829,19 @@ export async function initializeOverview() {
   const legend = byId("ovw-legend");
   legend.addEventListener("click", () => view.openPopover(legend, aboutScale));
   view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
+  // A link in the page to a folded section, such as "How we score" in the
+  // introduction, opens the section as the side menu does, rather than
+  // scrolling to it shut.
+  byId("view-overview").addEventListener("click", event => {
+    const link = event.target.closest?.('a[href^="#"]');
+    const target = link && document.getElementById(link.getAttribute("href").slice(1));
+    const fold = target && (target.tagName === "DETAILS" ? target
+      : target.querySelector(":scope > details.section-fold"));
+    if (!fold) return;
+    event.preventDefault();
+    fold.open = true;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   // A source code in a popover borrowed from the governance board names an
   // entry under that board's "Sources reviewed", which the overview does not
   // carry. Each such link is rewritten once it appears, to open there in a new
