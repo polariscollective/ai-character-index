@@ -13,7 +13,7 @@
  */
 import { ranked as rankedCompanies } from "../../site/governance.js";
 import { CITATION } from "../../site/markup.js";
-import { gradeOf } from "../../site/grades.js";
+import { gradeOf, overallOf } from "../../site/grades.js";
 import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
@@ -349,6 +349,13 @@ export function governanceBoard(snapshot, args = {}) {
   });
 }
 
+/* One company's overall grade as an answer: the figure out of 10 and its
+ * letter, null where the figure prints as 0.0. */
+function overallAnswer(finals, grades) {
+  const { value, letter } = overallOf(finals, grades);
+  return { figure: value, max: 10, grade: letter };
+}
+
 /**
  * The overview: the grid the site opens on, from the publication's frozen
  * overview (site/overview.json as it stood when the publication was built).
@@ -363,6 +370,11 @@ export function governanceBoard(snapshot, args = {}) {
  * page shows. The companies come in the governance ranking, as the page lists
  * them. A publication frozen before the letters carries no thresholds, or an
  * empty list of them, and is not drawn, as the page does not draw it.
+ *
+ * Where the file names an overall grade, each company carries it as `overall`:
+ * the average of its final scores, graded on the same scale and no higher than
+ * F where either final score is an F, a G or 0.0, by the function the page
+ * draws its first row with (overallOf in site/grades.js).
  */
 export function overviewBoard(snapshot, args = {}) {
   const overview = snapshot?.overview;
@@ -398,10 +410,14 @@ export function overviewBoard(snapshot, args = {}) {
     throw new ToolError(`no company called ${args.company}. This overview carries: `
       + `${ids.map(company => company.name).join(", ")}`);
   }
+  const { overall } = overview.grid;
   return {
     publication: snapshot.publication,
     introduction: overview.page?.intro ?? null,
     measures: {
+      ...(overall ? { overall: { name: overall.name, means: overall.plain, max: 10,
+                                 averages: rows.filter(row => row.final).map(row => row.name) } }
+        : {}),
       rows: rows.map(({ group, name, plain, board, figure, final }) =>
         ({ group, name, means: plain, from_board: board, figure, max: 10,
            final_score: Boolean(final) })),
@@ -413,6 +429,8 @@ export function overviewBoard(snapshot, args = {}) {
       id,
       name,
       summary: overview.summaries?.[id] ?? null,
+      ...(overall ? { overall: overallAnswer(rows.filter(row => row.final)
+        .map(row => figureOf(row.board, row.figure, id)), grades) } : {}),
       figures: rows.map(row => {
         const value = figureOf(row.board, row.figure, id);
         const figure = { row: row.name, figure: value, max: 10 };

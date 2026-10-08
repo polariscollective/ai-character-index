@@ -23,6 +23,28 @@ export function gradeOf(value, grades) {
   return ordered.find(grade => shown >= grade.from)?.letter ?? null;
 }
 
+/* The overall grade: the average of `values`, each a figure out of 10, read on
+ * the same scale as every other letter, and no higher than `cap` when any one
+ * of them earns `cap` or a letter below it, or prints as 0.0. A company that
+ * fails one of the two final scores cannot make up for it with the other. The
+ * lower of the average's letter and `cap` is kept, so an average that already
+ * reads below `cap` keeps its own letter. A scale with no `cap` letter caps
+ * nothing. */
+export function overallOf(values, grades, cap = "F") {
+  const figures = values.map(value => value ?? 0);
+  const value = figures.length
+    ? figures.reduce((sum, figure) => sum + figure, 0) / figures.length : 0;
+  const letter = gradeOf(value, grades);
+  const ceiling = grades.find(grade => grade.letter === cap);
+  if (!letter || !ceiling) return { value, letter };
+  const fromOf = earned => grades.find(grade => grade.letter === earned).from;
+  const fails = figures.some(figure => {
+    const earned = gradeOf(figure, grades);
+    return earned === null || fromOf(earned) <= ceiling.from;
+  });
+  return { value, letter: fails && fromOf(letter) > ceiling.from ? cap : letter };
+}
+
 /* WCAG AA for text the size of a letter in a cell. */
 const AA = 4.5;
 const rgbOf = hex => [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16));

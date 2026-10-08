@@ -18,6 +18,10 @@
  * it, built by that board's own code (rowsFor), so a row and its popover are
  * the Index's; only the drawing of a cell is the overview's (overview-rows.js).
  * How constitutions are governed leads, and orders the companies.
+ *
+ * Above the two final scores, where the file names it, the overall grade: their
+ * average on the same scale, capped at F where either fails (overallOf in
+ * site/grades.js, which the MCP server answers with too).
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
@@ -30,7 +34,7 @@ import { totalsFor, partsOf as governanceParts, rowsFor as governanceRows,
 import { cellShape } from "./overview-rows.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
-import { gradeOf, paintAt } from "./grades.js";
+import { gradeOf, paintAt, overallOf } from "./grades.js";
 
 const TEN = 10;
 
@@ -171,6 +175,12 @@ function gradeChip(value) {
     ? view.chip(gradeValue(letter), TEN, letter)
     : element("span", "chip chip-na", noneWord());
 }
+
+/* A company's overall grade: the average of its final scores, no higher than F
+ * where either fails (overallOf in grades.js). */
+const overallFor = company => overallOf(
+  state.overview.grid.groups.map(group => company.figures[group.final.board][group.final.figure] ?? 0),
+  state.overview.grid.grades);
 
 /* The letter large, and the figure behind it, at the head of a popover. */
 const gradeFigure = value =>
@@ -316,6 +326,42 @@ function rowTitle(name, build, label) {
   button.setAttribute("aria-label", label);
   button.addEventListener("click", () => view.openPopover(button, build));
   return button;
+}
+
+/* ---- The overall grade --------------------------------------------------- */
+
+/* How the overall grade is worked out, in the file's words. */
+function aboutOverall(content) {
+  const { overall } = state.overview.grid;
+  view.titled(content, overall.name);
+  renderMarkup(content, overall.plain);
+}
+
+/* The overall grade, the first row of the grid: a quiet band rather than a row
+ * of painted cells, since it is read from the two letters under it and adds no
+ * figure of its own. Each cell is the letter with its figure beside it, small;
+ * a figure that prints as 0.0 earns no letter and shows as it is. Nothing folds
+ * under it, and only its name opens a popover. */
+function overallRow() {
+  const { overall } = state.overview.grid;
+  const tr = element("tr", "ovw-overall-row");
+  tr.dataset.row = "overall";
+  tr.append(view.rowHead(null, view.rowName(overall.name, null, aboutOverall,
+    `${overall.name}: how it is worked out`)));
+  state.companies.forEach(company => {
+    const { value, letter } = overallFor(company);
+    const cell = element("td", "cell ovw-overall-cell");
+    cell.dataset.lab = company.id;
+    // Seen as "C+ (7.5)", heard as "C+, 7.5 out of 10".
+    const seen = element("span", "ovw-overall-seen");
+    seen.setAttribute("aria-hidden", "true");
+    seen.append(element("span", "ovw-overall-letter", letter ?? shown(value)));
+    if (letter) seen.append(element("span", "ovw-overall-figure", `(${shown(value)})`));
+    cell.append(seen, element("span", "visually-hidden",
+      `${letter ? `${letter}, ` : ""}${shown(value)} out of ${TEN}`));
+    tr.append(cell);
+  });
+  return tr;
 }
 
 /* ---- The views in preparation ------------------------------------------- */
@@ -679,10 +725,11 @@ function draw() {
                  ...(shownContext?.note ? [{ title: context.name, text: context.note }] : [])];
   const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
-  // Each final score, then the rows its board of the Index shows under it, then
-  // the views in preparation and the context.
+  // The overall grade, then each final score and the rows its board of the
+  // Index shows under it, then the views in preparation and the context.
   const borrowed = borrowedRows();
   view.nodes.table.tBodies[0].replaceChildren(
+    ...(grid.overall ? [overallRow()] : []),
     ...grid.groups.flatMap(group => [figureRow(group, borrowed[group.final.board]),
                                      ...borrowed[group.final.board].rows]),
     ...(grid.coming || []).map(comingRow),

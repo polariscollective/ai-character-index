@@ -6,7 +6,11 @@
   "sections": []
  },
  "grid": {
-  "caption": "The two final scores of the index for ten companies, each a letter from A to G, or None where there is nothing to score, each opening into the rows it is made of",
+  "caption": "The overall grade of ten companies and the two final scores of the index it averages, each a letter from A to G, or None where there is nothing to score, each final score opening into the rows it is made of",
+  "overall": {
+   "name": "Overall grade",
+   "plain": "The average of the two final scores, Process and Content, each a figure out of 10, read on the same scale as every other letter. A company with an F, a G or 0.0 on either cannot get more than F."
+  },
   "groups": [
    {
     "name": "Process",

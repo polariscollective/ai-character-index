@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { gradeOf, asShown, paintAt } from "../../../site/grades.js";
+import { gradeOf, asShown, paintAt, overallOf } from "../../../site/grades.js";
 
 const GRADES = [
   { letter: "A", from: 9 }, { letter: "B", from: 8 }, { letter: "C", from: 7 },
@@ -68,4 +68,56 @@ test("a letter is painted at its threshold, or just above where its text would f
   // is painted at the first tenth above that passes.
   assert.equal(paintAt(2), 2.8);
   assert.equal(paintAt(0), 0);
+});
+
+/* The overall grade, on the overview's own scale. */
+const scale = async () => JSON.parse(await readFile(
+  new URL("../../../site/overview.json", import.meta.url), "utf8")).grid.grades;
+
+test("the overall grade is the average of the two scores, on the same scale", async () => {
+  const grades = await scale();
+  // 7.8 and 7.6 average 7.7, a C+, and neither score fails.
+  const even = overallOf([7.8, 7.6], grades);
+  assert.ok(Math.abs(even.value - 7.7) < 1e-9);
+  assert.equal(even.letter, "C+");
+  // An E on one side is no failure: 4.2 and 9.0 average 6.6, a D.
+  const { value, letter } = overallOf([4.2, 9], grades);
+  assert.ok(Math.abs(value - 6.6) < 1e-9);
+  assert.equal(letter, "D");
+});
+
+test("an F on either score caps the overall grade at F", async () => {
+  const grades = await scale();
+  // 8.6 and 2.5 average 5.55, an E, but 2.5 is an F.
+  const capped = overallOf([8.6, 2.5], grades);
+  assert.ok(Math.abs(capped.value - 5.55) < 1e-9);
+  assert.equal(gradeOf(capped.value, grades), "E");
+  assert.equal(capped.letter, "F");
+  assert.equal(overallOf([2.5, 8.6], grades).letter, "F");
+});
+
+test("a G on either score caps the overall grade at F", async () => {
+  const grades = await scale();
+  // 9.5 and 1.5 average 5.5, an E, but 1.5 is a G.
+  assert.equal(overallOf([9.5, 1.5], grades).letter, "F");
+  // The lower letter is kept: 3.4 and 0.6 average 2.0, an F, and stay an F;
+  // 3 and 0.4 average 1.7, a G, and stay a G.
+  assert.equal(overallOf([3.4, 0.6], grades).letter, "F");
+  assert.equal(overallOf([3, 0.4], grades).letter, "G");
+});
+
+test("a score of 0 on either side caps the overall grade at F", async () => {
+  const grades = await scale();
+  // 9.5 and 0 average 4.75, an E, but 0 earns no letter at all.
+  assert.deepEqual(overallOf([9.5, 0], grades), { value: 4.75, letter: "F" });
+  // A figure that prints as 0.0 counts as 0, and so does one that is missing.
+  assert.equal(overallOf([9.9, 0.04], grades).letter, "F");
+  assert.equal(overallOf([9.9, null], grades).letter, "F");
+  // Nought on both sides is 0.0 overall, with no letter.
+  assert.deepEqual(overallOf([0, 0], grades), { value: 0, letter: null });
+});
+
+test("a scale with no F caps nothing", () => {
+  const plain = [{ letter: "A", from: 9 }, { letter: "B", from: 5 }, { letter: "C", from: 0 }];
+  assert.equal(overallOf([9.5, 1], plain).letter, "B");
 });

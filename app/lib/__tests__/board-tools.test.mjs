@@ -9,7 +9,7 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { constitutionsBoard, governanceBoard, overviewBoard, INCOMPATIBLE } from "../board-tools.mjs";
 import { ToolError } from "../mcp-tools.mjs";
-import { gradeOf, asShown } from "../../../site/grades.js";
+import { gradeOf, asShown, overallOf } from "../../../site/grades.js";
 
 /* A publication as the MCP server reads it, carrying both boards as they are
  * frozen: the site's own files. */
@@ -201,6 +201,43 @@ test("the overview answers each company's figures from the two boards, with its 
   assert.throws(() => overviewBoard({ ...snapshot(),
                                       overview: { ...overview, grid: { ...overview.grid, grades: [] } } }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
+});
+
+test("the overview answers each company's overall grade, by the function the page uses", async () => {
+  const overview = JSON.parse(await readFile(
+    new URL("../../../site/overview.json", import.meta.url), "utf8"));
+  const answer = overviewBoard({ ...snapshot(), overview });
+  const { grades } = overview.grid;
+  assert.equal(answer.measures.overall.name, overview.grid.overall.name);
+  assert.equal(answer.measures.overall.max, 10);
+  assert.deepEqual(answer.measures.overall.averages, ["Process, final score", "Content, final score"]);
+  let capped = 0;
+  for (const company of answer.companies) {
+    const finals = ["Process, final score", "Content, final score"]
+      .map(row => company.figures.find(one => one.row === row).figure);
+    const mean = (finals[0] + finals[1]) / 2;
+    assert.ok(Math.abs(company.overall.figure - mean) < 1e-9, company.name);
+    assert.equal(company.overall.max, 10);
+    assert.equal(company.overall.grade, overallOf(finals, grades).letter, company.name);
+    // Either final score an F, a G or 0.0, and the overall grade is no higher
+    // than F; otherwise it is the average's own letter.
+    const fails = finals.some(figure => ["F", "G", null].includes(gradeOf(figure, grades)));
+    const own = gradeOf(mean, grades);
+    const from = letter => grades.find(grade => grade.letter === letter)?.from ?? -1;
+    if (fails) {
+      assert.ok(from(company.overall.grade) <= from("F"), company.name);
+      if (from(own) > from("F")) capped += 1;
+    } else {
+      assert.equal(company.overall.grade, own, company.name);
+    }
+  }
+  // The file's own figures carry at least one company the cap moves down.
+  assert.ok(capped >= 1, "a company whose average alone would read above F");
+  // A file that names no overall grade answers none, as the page draws none.
+  const { overall, ...withoutOverall } = overview.grid;
+  const bare = overviewBoard({ ...snapshot(), overview: { ...overview, grid: withoutOverall } });
+  assert.equal(bare.measures.overall, undefined);
+  assert.ok(bare.companies.every(company => !("overall" in company)));
 });
 
 test("the overview's own file carries the American school thresholds with plus and minus, and E, F and G below D", async () => {
