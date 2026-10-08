@@ -1612,3 +1612,5 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .gov-pop .ovw-tree-chip { min-width: 30px; text-align: center; font-size: 12px; }
 .gov-pop .ovw-tree-name { font-size: 14px; }
 .gov-pop .ovw-tree-all { margin: 2px 0 4px; }
+/* The mark beside an overall grade held at F, pointing to its note. */
+.ovw-board .ovw-overall-mark { margin-left: 1px; font-size: 13px; vertical-align: super; color: var(--muted); }

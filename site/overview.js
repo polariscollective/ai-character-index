@@ -287,6 +287,13 @@ function rowTitle(name, build, label) {
 
 /* ---- The overall grade --------------------------------------------------- */
 
+/* Whether a company's overall grade is held at F by an F or a G on one of its
+ * two scores, below the letter its average alone would earn. */
+function heldAtF(company) {
+  const { value, letter } = overallFor(company);
+  return letter !== letterOf(value);
+}
+
 /* One line on a company's overall grade, at the head of its popover: the letter,
  * the figure, and the two scores it averages; and, where an F or a G on either
  * holds it at F, which score does and what the average alone would have been. */
@@ -346,8 +353,18 @@ function overallRow() {
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", `${company.name}, overall grade: ${letter}, `
       + `${shown(value)} out of ${TEN}`);
-    button.append(element("span", "ovw-overall-letter", letter),
-                  element("span", "ovw-overall-figure", `(${shown(value)})`));
+    button.append(element("span", "ovw-overall-letter", letter));
+    // An F the average alone would not give carries the mark of the note
+    // saying why, seen beside the letter and said in the button's name.
+    const held = heldAtF(company) && state.nameNoteNumbers?.capped;
+    if (held) {
+      const mark = element("span", "row-mark ovw-overall-mark", held);
+      mark.setAttribute("aria-hidden", "true");
+      button.append(mark);
+      button.setAttribute("aria-label", `${button.getAttribute("aria-label")}, held at F `
+        + "because one of its two scores is an F or a G");
+    }
+    button.append(element("span", "ovw-overall-figure", `(${shown(value)})`));
     button.addEventListener("click", () =>
       view.openPopover(button, content => aboutCompany(content, company)));
     cell.append(button);
@@ -721,9 +738,11 @@ function draw() {
   // The notes the names point to, lettered rather than numbered so they are not
   // taken for the page's own notes, and only those some company carries.
   const every = grid.name_notes || [];
+  // "capped" is the note an overall grade held at F points to.
   const carried = every.filter(note => state.companies.some(company =>
     [!company.publishes ? "no_constitution" : null,
-     company.openWeights ? "open_weights" : null, company.id].includes(note.id)));
+     company.openWeights ? "open_weights" : null, company.id,
+     heldAtF(company) ? "capped" : null].includes(note.id)));
   // A note may name its own sign, such as an asterisk; the others are lettered.
   state.nameNoteNumbers = Object.fromEntries(carried.map((note, index) =>
     [note.id, note.mark || String.fromCharCode(97 + index)]));

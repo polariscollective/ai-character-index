@@ -98,7 +98,9 @@
     "text": "We are working on two more views. How constitutions are regulated will follow how far laws and regulators refer to these documents and ask companies to keep them. Adherence of models to constitutions will carry the results of independent organisations testing whether a model actually behaves as its constitution says."
    }
   ],
-  "name_notes": []
+  "name_notes": [
+   { "id": "capped", "mark": "*", "title": "Held at F", "text": "A company with an F or a G on either of its two scores gets no more than F overall, whatever the average of the two." }
+  ]
  },
  "takeaways": [
   {
