@@ -34,7 +34,7 @@ import { totalsFor, partsOf as governanceParts, rowsFor as governanceRows,
 import { cellShape } from "./overview-rows.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
-import { gradeOf, paintAt, overallOf } from "./grades.js";
+import { gradeOf, paintAt, overallOf, overallOrder } from "./grades.js";
 
 const TEN = 10;
 
@@ -53,7 +53,7 @@ const lowerFirst = text =>
  * tiebreak, so the overview and that board order them alike. */
 function companiesOf(constitutions, governance, overview) {
   const order = governanceRanked(governance).map(lab => lab.id);
-  return governance.labs.map(lab => {
+  const companies = governance.labs.map(lab => {
     const written = constitutions.companies.find(company => company.id === lab.id);
     // A company the constitutions board does not carry is a publication this
     // page cannot draw, as the board's own rowsFor finds it: the reader is told
@@ -87,7 +87,14 @@ function companiesOf(constitutions, governance, overview) {
         governance: { total: governed.total, ...governed.byColumn },
       },
     };
-  }).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  });
+  // Ordered by the overall grade, the higher letter first and then the higher
+  // figure, and by the governance ranking where two are level.
+  const { groups, grades } = overview.grid;
+  const overall = company => overallOf(groups.map(group =>
+    company.figures[group.final.board][group.final.figure] ?? 0), grades);
+  return companies.sort((a, b) => overallOrder(overall(a), overall(b), grades)
+    || order.indexOf(a.id) - order.indexOf(b.id));
 }
 
 /* The overview's summary of one figure for one company. A company with no
@@ -264,6 +271,10 @@ function aboutScale(content) {
     const item = element("li");
     item.append(view.chip(gradeValue(letter), TEN, letter),
                 element("span", "ovw-scale-range", `${low.toFixed(1)} to ${high.toFixed(1)}`));
+    // What a plain letter means, beside its range: the key under the grid
+    // shows only the letters, and this is where their words are read.
+    const meaning = (state.overview.grid.grade_words || {})[letter];
+    if (meaning) item.append(element("span", "ovw-scale-words", meaning));
     list.append(item);
     next = from;
   });
@@ -568,7 +579,7 @@ function headRow() {
   corner.scope = "col";
   corner.append(
     element("span", "head-name", "Grade"),
-    element("span", "head-sub", "companies by how their constitution is governed"));
+    element("span", "head-sub", "companies by overall grade"));
   row.append(corner);
   state.companies.forEach(company => {
     const cell = element("th");
@@ -682,7 +693,6 @@ function drawLegend() {
     const bar = element("span", "ovw-key-bar", letter);
     view.paint(bar, gradeValue(letter), TEN);
     item.append(bar);
-    if (words[letter]) item.append(element("span", "ovw-key-words", words[letter]));
     list.append(item);
   });
   const spoken = element("span", "visually-hidden", letters

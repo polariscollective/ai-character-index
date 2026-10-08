@@ -67,3 +67,12 @@ export function paintAt(from) {
   while (value < 10 && !readable(value)) value = Math.round(value * 10 + 1) / 10;
   return value;
 }
+
+/* Two overall grades, as `overallOf` gives them, in the order the overview
+ * lists companies: the higher letter first, and within one letter the higher
+ * figure. A capped grade sorts with its letter, under every company that earned
+ * a better one. */
+export function overallOrder(a, b, grades) {
+  const fromOf = letter => grades.find(grade => grade.letter === letter)?.from ?? -1;
+  return (fromOf(b.letter) - fromOf(a.letter)) || (b.value - a.value);
+}

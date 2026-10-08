@@ -641,9 +641,12 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
   text-align: left;
   cursor: pointer;
 }
-.row-name .head-name { font-weight: 600; text-decoration: underline 2px var(--energy); text-underline-offset: 3px; }
+.row-name .head-name { font-weight: 600; }
 .check-row .row-name .head-name { font-weight: 400; text-decoration-thickness: 1px; }
-.row-name:hover .head-name, .row-name:focus-visible .head-name,
+/* A row's name is never underlined or highlighted: a pointer turns it olive,
+   and the focus ring says where the keyboard is. */
+.row-name .head-name { transition: color .15s ease; }
+.row-name:hover .head-name, .row-name:focus-visible .head-name { color: var(--muted); }
 .company-button:hover .company-name, .company-button:focus-visible .company-name { background: var(--energy); }
 .row-name:focus-visible, .company-button:focus-visible, .row-toggle:focus-visible {
   outline: 2px solid var(--energy);
@@ -1253,40 +1256,21 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    row of separate buttons. */
 .ovw-board tr[data-level="0"] .cell-button { border: 1px solid transparent; }
 
-/* The figures as one block of colour. The painted cells touch, across a row
-   and down a column, with no gap and no rule between them, and only the
-   block's outer corners are rounded: the first and the last rows on screen
-   that carry figures, the first and the last company. A row opened under a
-   final score keeps its step into the column, so the block takes the rows
-   under a score as a step in, not a gap. The overall grade above it is not
-   painted and stays a band of its own; a practice nobody scored keeps its
-   dashed NA inside the block, since an unpainted tile among painted ones is
-   what NA is meant to look like. On the overview only: the Index keeps its
-   separate tiles. */
+/* The figures with a small gap between cells, a pixel each side, and a small
+   rounding of each: the eye reads a block of colour, and each cell still reads
+   as one. No border. */
 .ovw-board tbody tr[data-level] { border-bottom: 0; }
 .ovw-board tbody tr[data-level] > th { border-bottom: 1px solid var(--line-light); }
-.ovw-board tbody tr[data-level] > td.cell { padding: 0; }
-.ovw-board tbody tr[data-level] .cell-button { border-radius: 0; }
-.ovw-board tbody tr:nth-child(1 of [data-level]:not([hidden])) > td.cell { padding-top: 8px; }
-.ovw-board tbody tr:nth-last-child(1 of [data-level]:not([hidden])) > td.cell { padding-bottom: 8px; }
-.ovw-board tbody tr:nth-child(1 of [data-level]:not([hidden])) > td.cell:first-of-type .cell-button {
-  border-top-left-radius: 4px;
-}
-.ovw-board tbody tr:nth-child(1 of [data-level]:not([hidden])) > td.cell:last-child .cell-button {
-  border-top-right-radius: 4px;
-}
-.ovw-board tbody tr:nth-last-child(1 of [data-level]:not([hidden])) > td.cell:first-of-type .cell-button {
-  border-bottom-left-radius: 4px;
-}
-.ovw-board tbody tr:nth-last-child(1 of [data-level]:not([hidden])) > td.cell:last-child .cell-button {
-  border-bottom-right-radius: 4px;
-}
-/* With no gap around a cell, an outline drawn outside it would fall on its
-   neighbours and under the next one painted. It is drawn inside instead, and
-   the cell pointed at, open or focused rides above the rest. */
-.ovw-board tbody tr[data-level] .cell-button:hover { outline-offset: -2px; z-index: 1; }
-.ovw-board tbody tr[data-level] .cell-button.is-open { outline-offset: -3px; z-index: 1; }
-.ovw-board tbody tr[data-level] .cell-button:focus-visible { outline-offset: -2px; z-index: 1; }
+.ovw-board tbody tr[data-level] > td.cell { padding: 1px; }
+.ovw-board tbody tr[data-level] .cell-button { border-radius: 3px; }
+/* The letters in a light weight: the colour already carries the grade. */
+.ovw-board .cell-grade .cell-figure { font-weight: 400; }
+/* Each level under a final score starts further in than the one above it, so
+   the names read as a tree: a row with a fold steps in by 12px a level, and a
+   row with none sits under its parent's name. */
+.ovw-board tr[data-level="1"] > th { padding-left: 12px; }
+.ovw-board tr[data-level="2"] > th { padding-left: 24px; }
+.ovw-board tr[data-level="3"] > th { padding-left: 70px; }
 /* Where the names are held at the left while the companies slide under them,
    they stay above a cell raised by a pointer or a popover. */
 @media (max-width: 1180px) {
@@ -1304,7 +1288,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 }
 .ovw-board .ovw-overall-cell { height: 54px; text-align: center; vertical-align: middle; }
 .ovw-overall-letter {
-  font-family: var(--mono); font-size: 18px; font-weight: 600;
+  font-family: var(--mono); font-size: 18px; font-weight: 400;
   font-variant-numeric: tabular-nums; color: var(--ink);
 }
 .ovw-overall-figure {
@@ -1326,11 +1310,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   color: var(--ink);
   text-align: left;
   cursor: pointer;
-  text-decoration: underline 1px transparent;
-  text-underline-offset: 3px;
-  transition: text-decoration-color 150ms;
+  transition: color 150ms;
 }
-.ovw-board .ovw-row-name:hover { text-decoration-color: currentColor; }
+.ovw-board .ovw-row-name:hover { color: var(--muted); }
 .ovw-board .ovw-row-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 /* A view in preparation: no figure and no colour, the words quiet in the
    middle of the one cell that spans the companies. */
@@ -1358,18 +1340,19 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-key-list {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px 8px;
+  gap: 3px;
+  max-width: 420px;
 }
 .ovw-key-item { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .ovw-key-bar {
   display: block;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 3px;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 2px;
   font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 22px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
 }
 .ovw-key-words {
   font-size: 12px;
@@ -1379,7 +1362,7 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 }
 .ovw-key:hover .ovw-key-words { color: var(--ink); }
 @media (max-width: 760px) {
-  .ovw-key-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ovw-key-list { max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ovw-key-words { transition: none; }
@@ -1438,12 +1421,10 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
   color: var(--muted);
   text-align: left;
   cursor: pointer;
-  text-decoration: underline 1px transparent;
-  text-underline-offset: 3px;
-  transition: text-decoration-color 150ms;
+  transition: color 150ms;
 }
 .ovw-board .context-name:hover,
-.ovw-board .context-name:focus-visible { text-decoration-color: currentColor; outline: none; }
+.ovw-board .context-name:focus-visible { color: var(--ink); outline: none; }
 .ovw-board .context-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 .ovw-board .cell-context {
   display: grid;
@@ -1562,3 +1543,5 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 @media (max-width: 880px) {
   .ovw-takeaway-list { grid-template-columns: 1fr; }
 }
+/* In the scale the key opens, a plain letter's words, after its figures. */
+.ovw-scale-list .ovw-scale-words { color: var(--muted); font-size: 13px; }

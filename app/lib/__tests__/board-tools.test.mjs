@@ -9,7 +9,7 @@ import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import { constitutionsBoard, governanceBoard, overviewBoard, INCOMPATIBLE } from "../board-tools.mjs";
 import { ToolError } from "../mcp-tools.mjs";
-import { gradeOf, asShown, overallOf } from "../../../site/grades.js";
+import { gradeOf, asShown, overallOrder, overallOf } from "../../../site/grades.js";
 
 /* A publication as the MCP server reads it, carrying both boards as they are
  * frozen: the site's own files. */
@@ -181,9 +181,12 @@ test("the overview answers each company's figures from the two boards, with its 
   assert.deepEqual(answer.measures.rows.filter(row => row.final_score).map(row => row.name),
     ["Process, final score", "Content, final score"]);
   assert.equal(answer.measures.rows.filter(row => !row.final_score).length, 4);
-  // The companies come in the governance ranking, as the page lists them.
-  assert.deepEqual(answer.companies.map(company => company.id),
-                   governanceBoard(snapshot()).companies.map(company => company.id));
+  // The companies come in the order of their overall grade, as the page lists
+  // them: the higher letter first, then the higher figure.
+  const overalls = answer.companies.map(company => company.overall);
+  assert.deepEqual(overalls, [...overalls].sort((a, b) =>
+    overallOrder({ value: a.figure, letter: a.grade }, { value: b.figure, letter: b.grade },
+                 overview.grid.grades)));
   // OpenAI's document as a whole is the highest part there is, and it earns an A.
   const openai = answer.companies.find(company => company.id === "openai");
   const whole = openai.figures.find(one => one.row === "Clarity of the document");

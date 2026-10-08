@@ -82,11 +82,11 @@
    "text": "Each letter covers the figures out of 10 beside it. Down to D, a minus marks the bottom of a band and a plus its top; below D, E, F and G are three bands of 2 with neither. The letter is read from the figure as it is shown, to one decimal."
   },
   "grade_words": {
-   "A": "Meets almost all of what the row asks",
-   "B": "Meets most of it",
-   "C": "Meets much of it, with clear gaps",
-   "D": "Meets more than half, with large gaps",
-   "E": "Meets part of it",
+   "A": "Meets nearly all of what the row asks",
+   "B": "Meets most of it, with gaps",
+   "C": "Falls short in places",
+   "D": "Falls well short",
+   "E": "Meets about half at best",
    "F": "Meets little of it",
    "G": "Meets almost nothing, or nothing published"
   },
@@ -120,10 +120,6 @@
   {
    "title": "OpenAI and Anthropic lead on governance, and still fall short there",
    "text": "OpenAI's constitution gets a B and Anthropic's a C, and on governance OpenAI gets a D and Anthropic a D-, the highest grades any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B-, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an E on governance."
-  },
-  {
-   "title": "The scores measure clarity and openness, not how good a model is",
-   "text": "The scoring rewards a document that states its rules explicitly and a company that shows its work, but a good score on what a constitution says or on how it is governed does not necessarily mean that the models abide by it. There is no agreed standard yet for a good constitution, and we want to hear where this first attempt is wrong."
   }
  ],
  "summaries": {

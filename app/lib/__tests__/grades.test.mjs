@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { gradeOf, asShown, paintAt, overallOf } from "../../../site/grades.js";
+import { gradeOf, asShown, paintAt, overallOf, overallOrder } from "../../../site/grades.js";
 
 const GRADES = [
   { letter: "A", from: 9 }, { letter: "B", from: 8 }, { letter: "C", from: 7 },
@@ -121,4 +121,15 @@ test("a score of 0 on either side, a G, caps the overall grade at F", async () =
 test("a scale with no F caps nothing", () => {
   const plain = [{ letter: "A", from: 9 }, { letter: "B", from: 5 }, { letter: "C", from: 0 }];
   assert.equal(overallOf([9.5, 1], plain).letter, "B");
+});
+
+test("overall grades sort by letter first, then by figure within a letter", async () => {
+  const grades = await scale();
+  const sorted = [overallOf([9.5, 0], grades), overallOf([4.2, 4.6], grades),
+                  overallOf([3, 3.2], grades), overallOf([8.6, 6.3], grades)]
+    .sort((a, b) => overallOrder(a, b, grades));
+  // 7.45 shows as 7.5, a C; 4.4 is an E; 4.75 is capped at F and sorts under the E it would
+  // have been; 3.1 is an F with a lower figure.
+  assert.deepEqual(sorted.map(one => one.letter), ["C", "E", "F", "F"]);
+  assert.deepEqual(sorted.map(one => Math.round(one.value * 100) / 100), [7.45, 4.4, 4.75, 3.1]);
 });

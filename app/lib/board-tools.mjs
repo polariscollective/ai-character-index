@@ -13,7 +13,7 @@
  */
 import { ranked as rankedCompanies } from "../../site/governance.js";
 import { CITATION } from "../../site/markup.js";
-import { gradeOf, overallOf } from "../../site/grades.js";
+import { gradeOf, overallOf, overallOrder } from "../../site/grades.js";
 import { ToolError } from "./mcp-tools.mjs";
 
 /* The second board's own maxima: 4 for a question and each of its checks, 2 for
@@ -367,7 +367,8 @@ function overallAnswer(finals, grades) {
  * its letter, read against the thresholds the file gives by the function the
  * page uses (site/grades.js), so the page and this answer cannot disagree
  * either; a total of 0.0 is a G, as the page shows it. The companies come in
- * the governance ranking, as the page lists them. A publication frozen before the
+ * the order of their overall grade, the governance ranking where two are level,
+ * as the page lists them. A publication frozen before the
  * letters carries no thresholds, or an empty list of them, and is not drawn, as
  * the page does not draw it.
  *
@@ -403,8 +404,12 @@ export function overviewBoard(snapshot, args = {}) {
     ...(group.final ? [{ group: group.name, name: `${group.name}, final score`,
                          ...group.final, final: true }] : []),
   ]);
-  // The governance ranking, as governance_board lists the companies.
-  const ids = boards.governance.map(company => ({ id: company.id, name: company.name }));
+  // The order of the overall grade, as the page lists the companies, and the
+  // governance ranking (governance_board's order) where two are level.
+  const finals = overview.grid.groups.map(group => group.final);
+  const overallFor = id => overallOf(finals.map(final => figureOf(final.board, final.figure, id)), grades);
+  const ids = boards.governance.map(company => ({ id: company.id, name: company.name }))
+    .sort((a, b) => overallOrder(overallFor(a.id), overallFor(b.id), grades));
   const chosen = ids.filter(company => matches(company.name, args.company));
   if (!chosen.length) {
     throw new ToolError(`no company called ${args.company}. This overview carries: `
