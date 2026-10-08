@@ -1334,29 +1334,56 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .ovw-row-name:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
 /* A view in preparation: no figure and no colour, the words quiet in the
    middle of the one cell that spans the companies. */
-/* The scale at the top. */
+/* The controls above the grid. */
 .ovw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
-.ovw-top-legend { margin: 0; }
-/* The scale is a button that opens the whole scale: it keeps the legend's look,
-   underlines its letters when pointed at, and takes the focus ring every
-   control has. */
-.ovw-scale {
-  padding: 2px 4px;
+/* The key to the letters, under the grid and the width of it: one bar per
+   letter, painted as the grid paints that letter and carrying it, with what it
+   means under it, seven across on a screen that holds them and four on a phone.
+   The whole key is one button that opens the scale, so it takes the focus ring
+   every control has, and a pointer turns its words to ink. */
+.ovw-key {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 0;
   border: 0;
   border-radius: 4px;
   background: none;
-  font: inherit;
-  font-size: 12px;
   color: var(--muted);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
-.ovw-scale > span:not(.swatches) {
-  text-decoration: underline 1px transparent;
-  text-underline-offset: 3px;
-  transition: text-decoration-color 150ms;
+.ovw-key:focus-visible { outline: 2px solid var(--energy); outline-offset: 4px; }
+.ovw-key-list {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px 8px;
 }
-.ovw-scale:hover > span:not(.swatches) { text-decoration-color: currentColor; }
-.ovw-scale:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.ovw-key-item { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ovw-key-bar {
+  display: block;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.ovw-key-words {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  transition: color .15s ease;
+}
+.ovw-key:hover .ovw-key-words { color: var(--ink); }
+@media (max-width: 760px) {
+  .ovw-key-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ovw-key-words { transition: none; }
+}
 /* In the scale it opens, each letter's figures are data. */
 .ovw-scale-list .ovw-scale-range { font-family: var(--mono); font-size: 13px; }
 /* A final score's parts in its popover, each opening in place. */

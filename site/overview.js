@@ -248,7 +248,7 @@ function scaleOf(content) {
   renderMarkup(content, scale);
 }
 
-/* The whole scale, opened from the legend: every letter with the figures out
+/* The whole scale, opened from the key: every letter with the figures out
  * of 10 it covers. A letter is read from the figure as it is shown, to one
  * decimal, so a band runs from its threshold to a tenth below the next one up,
  * and G runs from 0.0. */
@@ -666,14 +666,30 @@ function figureRow(group, borrowed) {
   return tr;
 }
 
-/* The legend above the grid: one swatch per plain letter, A to G, so the strip
- * stays short; the pluses and minuses are in the scale it opens. */
+/* The key under the grid: one bar per plain letter, A to G, painted where the
+ * grid paints that letter, with the letter on it and the file's few words on
+ * what it means under it (grid.grade_words). The pluses and minuses, and the
+ * figures each letter covers, are in the scale it opens. The bars are seen; the
+ * same words are its description, so a screen reader hears them after the
+ * button's name. */
 function drawLegend() {
-  const legend = document.createDocumentFragment();
-  orderedGrades().filter(({ letter }) => letter.length === 1).forEach(({ letter }) => {
-    legend.append(view.swatches([gradeValue(letter)], TEN), element("span", "", letter));
+  const words = state.overview.grid.grade_words || {};
+  const letters = orderedGrades().filter(({ letter }) => letter.length === 1);
+  const list = element("span", "ovw-key-list");
+  list.setAttribute("aria-hidden", "true");
+  letters.forEach(({ letter }) => {
+    const item = element("span", "ovw-key-item");
+    const bar = element("span", "ovw-key-bar", letter);
+    view.paint(bar, gradeValue(letter), TEN);
+    item.append(bar);
+    if (words[letter]) item.append(element("span", "ovw-key-words", words[letter]));
+    list.append(item);
   });
-  byId("ovw-legend").replaceChildren(legend);
+  const spoken = element("span", "visually-hidden", letters
+    .map(({ letter }) => (words[letter] ? `${letter}, ${lowerFirst(words[letter])}` : letter))
+    .join("; "));
+  spoken.id = "ovw-legend-words";
+  byId("ovw-legend").replaceChildren(list, spoken);
 }
 
 function draw() {

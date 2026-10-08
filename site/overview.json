@@ -75,11 +75,20 @@
    { "letter": "F", "from": 2 },
    { "letter": "G", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, then **E from 4.0, F from 2.0 and G from 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the scale runs in three bands of 2, because most scores fall there, and E, F and G carry no plus or minus. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. A cell, once opened, shows the figure out of 10 behind its letter. Opened, a score shows the rows it is made of: a row that adds up others is a letter on the same scale, and a row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice.",
-  "hint": "Press a cell to see the score behind it, or the scale to see what each letter covers.",
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, then **E from 4.0, F from 2.0 and G from 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the scale runs in three bands of 2, because most scores fall there, and E, F and G carry no plus or minus. Press the key under the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. A cell, once opened, shows the figure out of 10 behind its letter. Opened, a score shows the rows it is made of: a row that adds up others is a letter on the same scale, and a row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice.",
+  "hint": "Press a cell to see the score behind it, or the key under the grid to see the figures each letter covers.",
   "grade_scale": {
    "title": "The grading scale",
    "text": "Each letter covers the figures out of 10 beside it. Down to D, a minus marks the bottom of a band and a plus its top; below D, E, F and G are three bands of 2 with neither. The letter is read from the figure as it is shown, to one decimal."
+  },
+  "grade_words": {
+   "A": "Meets almost all of what the row asks",
+   "B": "Meets most of it",
+   "C": "Meets much of it, with clear gaps",
+   "D": "Meets more than half, with large gaps",
+   "E": "Meets part of it",
+   "F": "Meets little of it",
+   "G": "Meets almost nothing, or nothing published"
   },
   "every_row": { "show": "Show every row", "hide": "Hide every row" },
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",

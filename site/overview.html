@@ -55,11 +55,6 @@
     <p class="gov-hint" id="ovw-hint"></p>
     <div class="ovw-controls">
     <button type="button" class="gov-button" id="ovw-expand-all" aria-pressed="false"></button>
-    <!-- The colour scale: each letter, and the word for nothing. Pressed, it
-         opens the whole scale, every letter with the figures it covers. -->
-    <button type="button" class="gov-legend ovw-top-legend ovw-scale" id="ovw-legend"
-      aria-haspopup="dialog" aria-expanded="false"
-      aria-label="The grading scale: what each letter covers"></button>
     </div>
   </div>
   <div class="matrix-wrap" id="ovw-chart" data-menu="How companies stand" hidden data-needs-board>
@@ -69,6 +64,14 @@
       <tbody></tbody>
     </table>
   </div>
+  <!-- The key to the letters, under the grid: one bar per letter, painted as
+       the grid paints it, with what the letter means. Pressed, it opens the
+       whole scale, every letter with the figures it covers. Its name says
+       what it opens; the words of the bars are its description, so a screen
+       reader hears them too. -->
+  <button type="button" class="ovw-key" id="ovw-legend" hidden data-needs-board
+    aria-haspopup="dialog" aria-expanded="false" aria-describedby="ovw-legend-words"
+    aria-label="The grading scale: what each letter covers"></button>
   <p class="grid-note slides-note" hidden data-needs-board>The board slides sideways to reach the other companies.</p>
   <!-- What the letters beside the companies' names point to: facts about a
        company a reader of the grid would otherwise assume the other way. -->
