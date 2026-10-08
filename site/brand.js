@@ -549,12 +549,13 @@ function followHeight(header) {
   wrapped.addEventListener("change", write);
 }
 
-/* The views of the index, in the order the About page names them. The two the
- * index is still building are listed so a reader sees where it is going, and
- * cannot be chosen. */
+/* The views of the index, how constitutions are governed first, as the
+ * overview leads with it. The addresses are unchanged: /index is still what the
+ * constitutions say. The two the index is still building are listed so a
+ * reader sees where it is going, and cannot be chosen. */
 const VIEWS = [
-  { title: "What the constitutions say", view: null },
   { title: "How constitutions are governed", view: "governance" },
+  { title: "What the constitutions say", view: null },
   { title: "How constitutions are regulated", coming: true },
   { title: "Adherence of models to constitutions", coming: true },
 ];

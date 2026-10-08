@@ -2315,7 +2315,7 @@ console.log("== Index: the governance view ==");
       .map(node => node.firstChild.textContent),
   }));
   check(!closedAtRest && openOnHover
-      && listed.choices.join(" | ") === "What the constitutions say | How constitutions are governed"
+      && listed.choices.join(" | ") === "How constitutions are governed | What the constitutions say"
       && listed.coming.length === 2,
     "resting on Index opens its views, the two to come listed and not choosable",
     JSON.stringify({ closedAtRest, openOnHover, ...listed }));
