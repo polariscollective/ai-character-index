@@ -2315,12 +2315,12 @@ console.log("== Index: the governance view ==");
       .map(node => node.firstChild.textContent),
   }));
   check(!closedAtRest && openOnHover
-      && listed.choices.join(" | ") === "How constitutions are governed | What the constitutions say"
+      && listed.choices.join(" | ") === "Process | Content"
       && listed.coming.length === 2,
     "resting on Index opens its views, the two to come listed and not choosable",
     JSON.stringify({ closedAtRest, openOnHover, ...listed }));
 
-  await page.locator(".index-list a", { hasText: "What the constitutions say" }).click();
+  await page.locator(".index-list a", { hasText: "Content" }).click();
   await page.waitForLoadState("networkidle");
   const back = await page.evaluate(() => ({
     coverageShown: !document.querySelector("#view-coverage").hidden,
@@ -2497,17 +2497,17 @@ console.log("== Index: the constitutions board ==");
     "every column carries a mark above its name, hidden from assistive technology, on both "
     + "boards", JSON.stringify(board.heads.map(head => [head.id, head.mark])));
 
-  const expectedRows = ["Final score", "The document as a whole",
+  const expectedRows = ["Final score", "Clarity of the document",
     ...file.criteria.map(criterion => criterion.name), "The behaviours",
     ...categories.flatMap(category => [category,
       ...file.behaviours.filter(behaviour => behaviour.category === category)
         .map(behaviour => behaviour.name)])];
   check(board.names.join(" | ") === expectedRows.join(" | ") && board.folded,
-    "the final score leads, the document as a whole follows with its criteria, then the "
+    "the final score leads, the clarity of the document follows with its criteria, then the "
     + "categories with their behaviours, every group folded", JSON.stringify(board.names));
   check(board.subs[0] === "" && board.subs[1] === "1/2 of the final score"
       && board.subs[2] === `1/${file.criteria.length} of the document`,
-    "the final score carries no weight line, the document as a whole says it is half of it, "
+    "the final score carries no weight line, the clarity of the document says it is half of it, "
     + "and a criterion says its share of the document", JSON.stringify(board.subs.slice(0, 2)));
   check(board.figures.length > 0 && board.figures.every(one => !one.na && one.text !== "NA"),
     "no cell of the board reads NA",
@@ -2800,13 +2800,13 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
   }));
   check(headline.title === "Each constitution scored, with the passages behind every figure"
       && headline.lede.includes("scores each one twice, out of 10 each")
-      && headline.parts.join(" | ") === "The document as a whole. | The behaviours."
+      && headline.parts.join(" | ") === "Clarity of the document. | The behaviours."
       && headline.asterisk === "/about#why",
     "the coverage board's title says what it carries that the front board does not, and the "
     + "lede says what its two halves are", JSON.stringify(headline));
   const four = await readBoard();
-  check(!four.names.includes("Final score") && !four.names.includes("The document as a whole"),
-    "a publication of four has no final score and no document as a whole",
+  check(!four.names.includes("Final score") && !four.names.includes("Clarity of the document"),
+    "a publication of four has no final score and no clarity of the document",
     JSON.stringify(four.names));
   check(four.names[0] === "Behaviours under test" && four.subs[0] === "out of 4, 2 behaviours"
       && four.folded,
@@ -2834,12 +2834,12 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
   // ---- the publication of ten
   await openBoard(`?publication=${TEN_PUBLICATION}`);
   const ten = await readBoard();
-  check(ten.names.slice(0, 2).join(" | ") === "Final score | The document as a whole"
+  check(ten.names.slice(0, 2).join(" | ") === "Final score | Clarity of the document"
       && ten.subs.slice(0, 2).join(" | ") === "out of 20 | out of 10, five criteria"
       && ten.folded,
-    "the final score leads, the document as a whole follows, and every group starts folded",
+    "the final score leads, the clarity of the document follows, and every group starts folded",
     JSON.stringify([ten.names, ten.subs, ten.folded]));
-  check(ten.caption === "Each company's final score, its document as a whole and its behaviours "
+  check(ten.caption === "Each company's final score, the clarity of its document and its behaviours "
       + "by category, with each group's rows available to open",
     "the caption names the two rows a publication of ten adds", ten.caption);
   /* Two documents are assessed and they are level, so the ranking is walked
@@ -2853,22 +2853,22 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
   check(final.text === "11.8" && final.max === "/20"
       && final.label === "Acme, final score: 11.8 out of 20"
       && final.background === "rgb(195, 162, 46)",
-    "the final score is the behaviours plus the document as a whole, marked out of 20",
+    "the final score is the behaviours plus the clarity of the document, marked out of 20",
     JSON.stringify(final));
   /* The corner mark takes the figure's ink and stands back by its opacity. It is
    * decorative and aria-hidden, and it was paper on every cell until the figure
    * stopped being paper, which would have left it invisible on this amber. */
   check(final.ink === "rgb(35, 40, 27)" && final.cornerInk === "rgb(35, 40, 27)",
     "the /20 in the corner follows the figure's ink", JSON.stringify(final));
-  const whole = await cellOf("The document as a whole", 0);
+  const whole = await cellOf("Clarity of the document", 0);
   check(whole.text === "6.0" && whole.max === "/10" && whole.background === "rgb(193, 162, 47)",
-    "the document as a whole is its five criteria, out of 10", JSON.stringify(whole));
+    "the clarity of the document is its five criteria, out of 10", JSON.stringify(whole));
   const na = await page.evaluate(() => {
     const rows = [...document.querySelectorAll("#board tbody tr")];
     const cells = name => [...rows.find(tr => tr.querySelector(".head-name")?.textContent === name)
       .querySelectorAll("td .cell-button")].map(b => ({ text: b.textContent,
         na: b.classList.contains("cell-na"), label: b.getAttribute("aria-label") }));
-    return { final: cells("Final score"), whole: cells("The document as a whole") };
+    return { final: cells("Final score"), whole: cells("Clarity of the document") };
   });
   check(na.final.filter(one => one.na).length === 7 && na.whole.filter(one => one.na).length === 7
       && na.final.every(one => one.na === (one.text === "NA"))
@@ -2971,7 +2971,7 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
     "a cell with no depth in a document that has others is a dash, and a document the payload "
     + "knows nothing about is left blank", JSON.stringify(dashes));
 
-  await fold("The document as a whole");
+  await fold("Clarity of the document");
   const criterion = await cellOf("Unresolved contradictions", 0);
   check(criterion.text === "1.0" && criterion.max === "/2",
     "each criterion is shown out of 2", JSON.stringify(criterion));
@@ -3750,7 +3750,7 @@ console.log("== Every page: the feedback bubble ==");
   const openedTheSheet = await page.evaluate(() => {
     const rowOf = name => [...document.querySelectorAll("#board tbody tr")]
       .find(tr => tr.querySelector(".head-name")?.textContent === name);
-    rowOf("The document as a whole")?.querySelector(".row-toggle")?.click();
+    rowOf("Clarity of the document")?.querySelector(".row-toggle")?.click();
     rowOf("Unresolved contradictions")?.querySelector("td .cell-button")?.click();
     const read = [...document.querySelectorAll("#grid-pop .gov-button")]
       .find(button => button.textContent === "Read the contradictions");

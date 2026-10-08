@@ -75,7 +75,7 @@ class CompanyTextsAreAbsolute(unittest.TestCase):
         for entry in constitutions["companies"]:
             company = entry["id"].split("-")[0]
             self.check("constitutions profile", company, entry.get("profile"))
-            self.check("constitutions document as a whole", company, entry.get("whole"))
+            self.check("constitutions clarity of the document", company, entry.get("whole"))
             # A behaviour's `same` and `differs` are the fold that compares, by
             # its title; what the document says and why it scores so are not.
             for slug, reading in (entry.get("behaviours") or {}).items():

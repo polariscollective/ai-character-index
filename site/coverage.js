@@ -405,7 +405,7 @@ function finalScore(content, column, final) {
   parts.append(
     part(final.behaviours.value,
       `Behaviours, the plain mean of its ${final.behaviours.count} behaviour cells`),
-    part(final.whole, "The document as a whole, the total of its five criteria"));
+    part(final.whole, "Clarity of the document, the total of its five criteria"));
   content.append(parts);
   const arithmetic = element("p");
   arithmetic.append(mono(`${shown(final.behaviours.value)} + ${shown(final.whole)} `
@@ -451,8 +451,8 @@ function profile(content, column) {
     const summary = element("summary");
     summary.append(total === null ? board.naChip() : board.chip(total, WHOLE_MAX, shown(total)),
       element("span", "", total === null
-        ? "The document as a whole, no total: a criterion carries no score"
-        : `The document as a whole, ${shown(total)} out of ${WHOLE_MAX}`));
+        ? "Clarity of the document, no total: a criterion carries no score"
+        : `Clarity of the document, ${shown(total)} out of ${WHOLE_MAX}`));
     const criteria = element("ul", "check-list");
     CRITERIA.forEach((criterion, index) => {
       const item = element("li");
@@ -556,7 +556,7 @@ function unscored(assessment) {
 function noFigure(content, column, row, assessment, more) {
   board.titled(content, `${column.lab}: ${lowerFirst(row)}`, documentLine(column));
   content.append(board.figure("NA", ", no figure"),
-    element("p", "", `No judge scored ${unscored(assessment)}, so the document as a whole cannot `
+    element("p", "", `No judge scored ${unscored(assessment)}, so the clarity of the document cannot `
       + `be totalled.${more ? ` ${more}` : ""}`));
 }
 
@@ -565,7 +565,7 @@ function criterionNotScored(content, column, criterion) {
   board.titled(content, `${column.lab}: ${lowerFirst(criterion.name)}`,
     CRITERIA_PLAIN[criterion.key].what);
   content.append(board.figure("NA", ", not scored"),
-    element("p", "", "No judge of this document scored this criterion, so the document as a whole "
+    element("p", "", "No judge of this document scored this criterion, so the clarity of the document "
       + "has no total and this company has no final score."),
     board.h3("What each figure means"), plainBands(criterion.key));
   detail(content, fold => {
@@ -575,7 +575,7 @@ function criterionNotScored(content, column, criterion) {
 }
 
 function aboutWhole(content) {
-  board.titled(content, "The document as a whole",
+  board.titled(content, "Clarity of the document",
     `Five criteria, each out of ${SHOWN_MAX}, adding up to a total out of ${WHOLE_MAX}.`);
   plainly(content, WHOLE.what, null);
   content.append(board.h3("How it is scored"));
@@ -604,7 +604,7 @@ function aboutWhole(content) {
  * The contradictions are too long for a popover and open in the sheet. */
 function wholeScore(content, column, assessment) {
   const { parts, total } = wholeFigures(assessment);
-  board.titled(content, `${column.lab}: the document as a whole`, documentLine(column));
+  board.titled(content, `${column.lab}: clarity of the document`, documentLine(column));
   content.append(total === null
     ? board.figure("NA", ", no total")
     : board.figure(shown(total), ` out of ${WHOLE_MAX}`));
@@ -646,7 +646,7 @@ function wholeScore(content, column, assessment) {
 function aboutCriterion(content, criterion) {
   board.titled(content, criterion.name, CRITERIA_PLAIN[criterion.key].what);
   content.append(element("p", "subtitle",
-    `One of the five criteria on the document as a whole, out of ${SHOWN_MAX}.`));
+    `One of the five criteria on the clarity of the document, out of ${SHOWN_MAX}.`));
   content.append(board.h3("What each figure means"), plainBands(criterion.key));
   detail(content, fold => {
     fold.append(board.h3("What the judges were asked"), paragraph(criterion.asks),
@@ -961,7 +961,7 @@ function renderTable() {
    * conditional string on this page. A publication of four carries no
    * assessment, so it has neither of the two rows the other caption names. */
   board.nodes.table.caption.textContent = state.assessment
-    ? "Each company's final score, its document as a whole and its behaviours by category, with "
+    ? "Each company's final score, the clarity of its document and its behaviours by category, with "
       + "each group's rows available to open"
     : "Each company's behaviours by category, with each group's rows available to open";
 
@@ -997,22 +997,22 @@ function renderTable() {
     const wholeRow = element("tr", "question-row");
     wholeRow.append(board.rowHead(
       board.rowToggle("whole", CRITERIA.map((criterion, index) => rowId("whole", index)),
-        { parts: "criteria", name: "The document as a whole" }),
-      board.rowName("The document as a whole", `out of ${WHOLE_MAX}, five criteria`, aboutWhole,
-        "The document as a whole: what it measures")));
+        { parts: "criteria", name: "Clarity of the document" }),
+      board.rowName("Clarity of the document", `out of ${WHOLE_MAX}, five criteria`, aboutWhole,
+        "Clarity of the document: what it measures")));
     columns.forEach(column => {
       if (!hasFigures(column)) { wholeRow.append(empty()); return; }
       const assessment = assessmentOf(column);
       if (!assessment) {
-        wholeRow.append(naFor(column, "the document as a whole", "whole",
-          content => notAssessed(content, column, "The document as a whole")));
+        wholeRow.append(naFor(column, "the clarity of the document", "whole",
+          content => notAssessed(content, column, "Clarity of the document")));
         return;
       }
       const whole = wholeFigures(assessment).total;
       wholeRow.append(whole === null
-        ? naFor(column, "the document as a whole", "whole",
+        ? naFor(column, "the clarity of the document", "whole",
           content => wholeScore(content, column, assessment))
-        : cellFor(column, "the document as a whole", "whole", {
+        : cellFor(column, "the clarity of the document", "whole", {
           value: whole, max: WHOLE_MAX, text: shown(whole),
           build: content => wholeScore(content, column, assessment),
         }));
@@ -1201,7 +1201,7 @@ function renderMethod() {
   const blocks = [];
   if (state.assessment) {
     blocks.push(rich({ lead: `The score at the top, out of ${FINAL_MAX}.` },
-      "The two halves of the board added together: the document as a whole, out of ",
+      "The two halves of the board added together: the clarity of the document, out of ",
       { mono: WHOLE_MAX }, ", and the behaviours, out of ", { mono: WHOLE_MAX },
       ". Companies are ranked by it, and companies level on it share a place."));
   }
@@ -1223,7 +1223,7 @@ function renderMethod() {
       ? ["; ", ...substituted(facts.depthSubstitutions, { one: "figure", many: "figures" }), "."]
       : ["."])));
   if (state.assessment) {
-    blocks.push(rich({ lead: `The document as a whole, out of ${WHOLE_MAX}.` },
+    blocks.push(rich({ lead: `Clarity of the document, out of ${WHOLE_MAX}.` },
       "Five criteria. Four of them are read on the whole document and scored from ", { mono: 0 },
       " to ", { mono: CRITERION_MAX }, "; the fifth is the contradictions, scored from the list "
       + "the next paragraph describes. Each is halved so the five add up to ", { mono: WHOLE_MAX },

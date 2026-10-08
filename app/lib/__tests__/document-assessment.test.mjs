@@ -111,7 +111,7 @@ test("a category's figure is the plain mean of its behaviours, and a lab with no
   assert.equal(categoryFigure(first, ABSENT), 0);
 });
 
-test("the final score is the behaviours out of 10 plus the document as a whole out of 10", () => {
+test("the final score is the behaviours out of 10 plus the clarity of the document out of 10", () => {
   const final = finalFigure(BEHAVIOURS, ASSESSED, CORPUS_COLUMN);
   assert.deepEqual([final.behaviours.value, final.whole, final.value], [7.8, 6, 13.8]);
 });

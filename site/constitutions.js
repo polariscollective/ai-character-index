@@ -269,7 +269,7 @@ function figureItem(value, max, name, label, open, cell) {
 function aboutFinal(content) {
   const weights = state.data.weights;
   board.titled(content, `Final score, out of ${finalMax()}`,
-    `The average of two halves, each out of ${TEN}: the document as a whole, counting for `
+    `The average of two halves, each out of ${TEN}: the clarity of the document, counting for `
     + `${share(weights.whole)}, and the behaviours, counting for ${share(weights.behaviours)}.`);
   const table = element("table", "readings figures");
   const headRow = element("tr");
@@ -308,7 +308,7 @@ function finalScore(content, company) {
   // The two halves, each with why it stands where it does: one press gives the
   // whole picture, and each half opens on its own parts.
   const halves = [
-    { name: "The document as a whole", value: wholeTotal(company), max: wholeMax(),
+    { name: "Clarity of the document", value: wholeTotal(company), max: wholeMax(),
       reading: company.readings?.whole, open: rest => wholeScore(rest, company), row: "whole" },
     { name: "The behaviours", value: behavioursFigure(company), max: depthMax(),
       reading: company.readings?.behaviours, open: rest => behavioursScore(rest, company),
@@ -339,7 +339,7 @@ function profile(content, company) {
     const fold = element("details");
     const summary = element("summary");
     summary.append(board.chip(whole, wholeMax(), shown(whole)),
-      element("span", "", `The document as a whole, ${shown(whole)} out of ${wholeMax()}`));
+      element("span", "", `Clarity of the document, ${shown(whole)} out of ${wholeMax()}`));
     const list = element("ul", "check-list");
     state.data.criteria.forEach(criterion => {
       const part = criterionPart(company, criterion);
@@ -402,7 +402,7 @@ function profile(content, company) {
 }
 
 function aboutWhole(content) {
-  board.titled(content, "The document as a whole",
+  board.titled(content, "Clarity of the document",
     `${state.data.criteria.length} criteria, each given out of ${CRITERION_SCALE} and shown out of `
     + `${TEN}. The figure is their average, each counting for `
     + `${frac(1, state.data.criteria.length)}.`);
@@ -421,7 +421,7 @@ function aboutWhole(content) {
 
 function wholeScore(content, company) {
   const total = wholeTotal(company);
-  board.titled(content, `${company.name}: the document as a whole`, documentLine(company));
+  board.titled(content, `${company.name}: clarity of the document`, documentLine(company));
   content.append(board.figure(shown(total), ` out of ${wholeMax()}`));
   // Why the document stands where it does, in the file's words; the overview
   // shows the same reading for this cell.
@@ -442,7 +442,7 @@ function wholeScore(content, company) {
 
 function aboutCriterion(content, criterion) {
   board.titled(content, criterion.name,
-    `One of the ${state.data.criteria.length} criteria on the document as a whole, given out of `
+    `One of the ${state.data.criteria.length} criteria on the clarity of the document, given out of `
     + `${CRITERION_SCALE} and shown out of ${TEN}.`);
   sentences(content, criterion.what_it_is, criterion.why_it_matters);
   scaleOf(content, criterion);
@@ -713,11 +713,11 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
   foldUnder(wholeRow, "cov-row-whole");
   wholeRow.append(board.rowHead(
     board.rowToggle("whole", state.data.criteria.map((criterion, index) => rowId("whole", index)),
-      { parts: "criteria", name: "The document as a whole" }),
-    board.rowName("The document as a whole", weightLine(share(weights.whole), "the final score"),
-      aboutWhole, "The document as a whole: what it measures", marked([NOTE.whole]))));
+      { parts: "criteria", name: "Clarity of the document" }),
+    board.rowName("Clarity of the document", weightLine(share(weights.whole), "the final score"),
+      aboutWhole, "Clarity of the document: what it measures", marked([NOTE.whole]))));
   companies.forEach(company => {
-    wholeRow.append(cell(company, { kind: "total", rowLabel: "the document as a whole",
+    wholeRow.append(cell(company, { kind: "total", rowLabel: "the clarity of the document",
       row: "whole", value: wholeTotal(company), build: content => wholeScore(content, company) }));
   });
   rows.push(wholeRow);

@@ -89,7 +89,7 @@ export function constitutionsBoard(snapshot, args = {}) {
     measures: {
       final_score: {
         max: TEN,
-        means: "The average of the document as a whole and the behaviours. It ranks the "
+        means: "The average of the clarity of the document and the behaviours. It ranks the "
           + "companies.",
         weights: board.weights,
       },

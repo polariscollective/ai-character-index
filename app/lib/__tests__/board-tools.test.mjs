@@ -161,7 +161,7 @@ test("the overview answers each company's figures from the two boards, with its 
   assert.equal(answer.measures.tiers, undefined);
   assert.equal(answer.companies.length, governance.labs.length);
   for (const company of answer.companies) {
-    const final = company.figures.find(one => one.row === "What the constitutions say, final score");
+    const final = company.figures.find(one => one.row === "Content, final score");
     const fromBoard = constitutionsAnswer.companies.find(one => one.id === company.id);
     if (final && fromBoard) assert.equal(final.figure, fromBoard.final_score, company.name);
     for (const figure of company.figures) {
@@ -179,14 +179,14 @@ test("the overview answers each company's figures from the two boards, with its 
   // Two final scores and four parts: six rows, and the two final scores are the
   // ones flagged as such.
   assert.deepEqual(answer.measures.rows.filter(row => row.final_score).map(row => row.name),
-    ["How constitutions are governed, final score", "What the constitutions say, final score"]);
+    ["Process, final score", "Content, final score"]);
   assert.equal(answer.measures.rows.filter(row => !row.final_score).length, 4);
   // The companies come in the governance ranking, as the page lists them.
   assert.deepEqual(answer.companies.map(company => company.id),
                    governanceBoard(snapshot()).companies.map(company => company.id));
   // OpenAI's document as a whole is the highest part there is, and it earns an A.
   const openai = answer.companies.find(company => company.id === "openai");
-  const whole = openai.figures.find(one => one.row === "Document as a whole");
+  const whole = openai.figures.find(one => one.row === "Clarity of the document");
   assert.ok(whole.figure >= 9, "the figure the review found");
   assert.equal(whole.grade, "A");
   assert.deepEqual(answer.takeaways, overview.takeaways);

@@ -23,8 +23,8 @@ import { renderMenu as renderSections } from "./page-menu.js";
  * pointing where it did. */
 const VIEWS = ["coverage", "governance"];
 const TITLES = {
-  coverage: "What the constitutions say",
-  governance: "How constitutions are governed",
+  coverage: "Content",
+  governance: "Process",
 };
 
 function viewFromAddress() {

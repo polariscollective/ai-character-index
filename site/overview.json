@@ -2,14 +2,14 @@
  "format": 2,
  "page": {
   "title": "Overview",
-  "intro": "Some AI companies write down how their models should behave, in a document we call an **AI constitution**. As such, it is the nearest thing to a **rulebook** of model behaviour accessible to the public, which enables third parties to review it and test the adherence of the models to these publicly stated principles. We think **every company** that builds these models should publish one, answer for what it says, and govern it properly. [More on why it matters](/about#why).\n\nWe have gathered every constitution published as of October 2026, and you can read each in full in the [doc reader](/doc-reader/), passage by passage, with guidance to identify specific model behaviours. [What the constitutions say](/index) looks at **the document**: how clearly it settles conflicts between its own rules, and how deeply it covers the behaviours a model should follow. [How constitutions are governed](/index?view=governance) looks at **the company**: what it publishes about its constitution, and how far it holds its models to it.[1](#ovw-note-1)",
+  "intro": "Some AI companies write down how their models should behave, in a document we call an **AI constitution**. As such, it is the nearest thing to a **rulebook** of model behaviour accessible to the public, which enables third parties to review it and test the adherence of the models to these publicly stated principles. We think **every company** that builds these models should publish one, answer for what it says, and govern it properly. [More on why it matters](/about#why).\n\nWe have gathered every constitution published as of October 2026, and you can read each in full in the [doc reader](/doc-reader/), passage by passage, with guidance to identify specific model behaviours. [Content](/index) looks at **the document**: how clearly it settles conflicts between its own rules, and how deeply it covers the behaviours a model should follow. [Process](/index?view=governance) looks at **the company**: what it publishes about its constitution, and how far it holds its models to it.[1](#ovw-note-1)",
   "sections": []
  },
  "grid": {
   "caption": "The two final scores of the index for ten companies, each a letter from A to G, or None where there is nothing to score, each opening into the rows it is made of",
   "groups": [
    {
-    "name": "How constitutions are governed",
+    "name": "Process",
     "href": "/index?view=governance#gov-chart",
     "rows": [
      {
@@ -35,13 +35,13 @@
     }
    },
    {
-    "name": "What the constitutions say",
+    "name": "Content",
     "href": "/index#cov-chart",
     "rows": [
      {
       "board": "constitutions",
       "figure": "whole",
-      "name": "Document as a whole",
+      "name": "Clarity of the document",
       "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, whether its rules give the rationale behind them, which specific domains have context-specific rules of their own, and whether the document contradicts itself.",
       "zero": "None"
      },
@@ -56,7 +56,7 @@
     "final": {
      "board": "constitutions",
      "figure": "final",
-     "plain": "The document as a whole and the behaviours it covers.",
+     "plain": "The clarity of the document and the behaviours it covers.",
      "zero": "None"
     }
    }

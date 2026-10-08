@@ -301,9 +301,9 @@ function aboutCompany(content, company) {
       `Read ${company.document.title} in the Doc reader`);
   }
   leadTo(content, `/index?view=governance&company=${company.id}`,
-    "See its figures on how constitutions are governed");
+    "See its figures on process");
   leadTo(content, `/index?company=${company.id}`,
-    "See its figures on what the constitutions say");
+    "See its figures on content");
 }
 
 /* A row's name on the overview, the same for a score and for a view in

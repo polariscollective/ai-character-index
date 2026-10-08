@@ -148,7 +148,7 @@ const handler = createMcpHandler(
         + "says so.\n\n"
         + "Each company answers with a final score out of 10, the average of two "
         + "halves, each counting for half, and is ranked by it.\n\n"
-        + "The document as a whole, out of 10, is the average of five criteria, each "
+        + "The clarity of the document, out of 10, is the average of five criteria, each "
         + "given from 0 to 4 and shown out of 10: clarity when two rules are "
         + "contradictory, how firm each rule is and who may lift it, whether the "
         + "rules say why they exist, which of the situations a model is used in "
@@ -236,7 +236,7 @@ const handler = createMcpHandler(
       description:
         "The grid the index's site opens on: for each of ten AI companies, "
         + "the few figures that sum up the two boards, what its constitution "
-        + "says (the document as a whole, the behaviours it covers, and their "
+        + "says (the clarity of the document, the behaviours it covers, and their "
         + "final score) and how it governs it (what it publishes, what it "
         + "engages, and their final score), each out of 10, and each figure "
         + "graded with a letter from A to G against fixed thresholds the answer "

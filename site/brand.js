@@ -554,8 +554,8 @@ function followHeight(header) {
  * constitutions say. The two the index is still building are listed so a
  * reader sees where it is going, and cannot be chosen. */
 const VIEWS = [
-  { title: "How constitutions are governed", view: "governance" },
-  { title: "What the constitutions say", view: null },
+  { title: "Process", view: "governance" },
+  { title: "Content", view: null },
   { title: "How constitutions are regulated", coming: true },
   { title: "Adherence of models to constitutions", coming: true },
 ];

@@ -8099,7 +8099,7 @@
   "about": "Every figure on the board is out of 10. A score given against a scale of its own, a check out of 4 or a practice out of 2, is shown as its share of that scale, and the scale it was given on is in the panel that opens on it. A row above others is their weighted average, and each row says under its name how much it counts for. The final score is the average of the two figures, each counting for half. They measure different things: what a company has published, which anyone can check, and what it says about its own practice, which nobody outside can. Companies level on the final score share a place."
  },
  "page": {
-  "title": "How constitutions are governed",
+  "title": "Process",
   "intro": "Some AI companies publish a constitution, a document setting out how their models should[*](/about#why) behave. This view scores ten companies, as of September 2026, on two things: how transparent they are about the constitutions they publish, and the extent to which those constitutions are actually made to bind the models. The final score is the average of the two, and it ranks the companies.",
   "sections": [
    {
