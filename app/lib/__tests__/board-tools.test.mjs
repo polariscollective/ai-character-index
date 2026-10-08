@@ -105,7 +105,7 @@ test("a company argument narrows the governance board too", () => {
   assert.equal(answer.companies[0].name, "Anthropic");
   const [published, engages] = answer.companies[0].figures;
   assert.ok(published.questions[0].found.length > 0, "the paragraph we wrote is there");
-  assert.ok(engages.found.length > 0, "and one for what it engages");
+  assert.ok(engages.found.length > 0, "and one for applicability");
   // Every row a company is scored on belongs to one figure and no other.
   const rows = answer.companies[0].figures
     .flatMap(figure => [...figure.questions.map(one => one.id),

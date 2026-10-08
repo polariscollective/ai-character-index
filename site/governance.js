@@ -5,9 +5,9 @@
  * twenty, then the two figures it adds, each out of ten, each with the rows it
  * is made of under it.
  *
- * "What is published" is what a reader can check without being let in: the ten
+ * "Transparency" is what a reader can check without being let in: the ten
  * checks of the five questions, which open under their questions, and the
- * licence on the published text, under Public access. "What it engages" is whether the document binds the
+ * licence on the published text, under Public access. "Applicability" is whether the document binds the
  * models: eight practices, scored on what each company publishes about its
  * own. The final score is their sum, and it is what the companies are ranked
  * by. Its practices fold into the groups governance.json gives
@@ -578,7 +578,7 @@ function aboutQuestion(content, question) {
   content.append(view.h3("How it is scored"));
   content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4 and `
     + "shown out of 10. The question's figure is their average, and each check counts on its own "
-    + "towards what is published. Open a check to see what earns each score."));
+    + "towards transparency. Open a check to see what earns each score."));
   question.checks.forEach(check => {
     const fold = element("details");
     const summary = element("summary");

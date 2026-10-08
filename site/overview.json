@@ -19,13 +19,13 @@
      {
       "board": "governance",
       "figure": "published",
-      "name": "What is published",
+      "name": "Transparency",
       "plain": "Whether the company publishes a constitution for its models, how transparently it records its changes, its guardrails and hard constraints, whether the public can comment on it before it changes, and whether its licence lets anyone reuse it."
      },
      {
       "board": "governance",
       "figure": "engages",
-      "name": "What it engages",
+      "name": "Applicability",
       "plain": "What the company says about training its models on the constitution, testing them against it and controlling changes to it."
      }
     ],

@@ -2046,8 +2046,8 @@ const inkReport = cells => {
 
 // =============================================================================
 /* The index's second view, how each company governs its rules: one table with
- * the companies across and two figures down, what is published and what it
- * engages, each question opening into its checks, and a popover beside whatever
+ * the companies across and two figures down, transparency and
+ * applicability, each question opening into its checks, and a popover beside whatever
  * was pressed. Its numbers and words are site/governance.json, and
  * tests/test_governance_tab.py holds the two together; what only a browser can
  * show is that the header's menu, the address, the folds and the popover join
@@ -2097,16 +2097,16 @@ console.log("== Index: the governance view ==");
       + "figures, every cell out of 10 with no mark in its corner, the open-weight ones marked",
     `${seen.companies.join(", ")} / ${seen.total.join(",")} / ${seen.published.join(",")} / `
       + `${seen.engages.join(",")}`);
-  /* The final score first, then the two figures it adds: what is published,
-   * through its four questions and the licence practice, then what it engages,
+  /* The final score first, then the two figures it adds: transparency,
+   * through its four questions and the licence practice, then applicability,
    * through the three groups its practices fold into. */
-  check(seen.rows.join(", ") === "Final score, What is published, Published constitution, Change log, "
-        + "Guardrails, Hard constraints, Open licence, What it engages, Testing adherence, "
+  check(seen.rows.join(", ") === "Final score, Transparency, Published constitution, Change log, "
+        + "Guardrails, Hard constraints, Open licence, Applicability, Testing adherence, "
         + "Change control, Training and use"
       && seen.findings === 8 && seen.findingsFolded === 0,
     "the rows run down from the final score and the two figures, the checks folded, the eight findings open under the "
       + "table", JSON.stringify(seen.rows));
-  check(seen.columnNotes.join(" | ") === "Final score. | What is published. | What it engages. "
+  check(seen.columnNotes.join(" | ") === "Final score. | Transparency. | Applicability. "
         + "| Part of the minimum. | Polaris Collective working paper. | Kembery et al. working paper. "
         + "| Not scored. | Open weights.",
     "the numbered notes say what each figure means, where the rows come from and what the "
@@ -2166,7 +2166,7 @@ console.log("== Index: the governance view ==");
   await page.waitForTimeout(100);
 
   // A question opens into its checks. Hiding every row shut the two figures'
-  // own folds as well, so what is published is opened again first.
+  // own folds as well, so transparency is opened again first.
   await page.locator('.row-toggle[data-question="column-published"]').click();
   await page.waitForTimeout(100);
   await page.locator('.row-toggle[data-question="2"]').click();
@@ -2181,8 +2181,8 @@ console.log("== Index: the governance view ==");
     "the change log opens into its three checks", JSON.stringify(opened));
 
   // The best practices are rows of the two figures rather than a group of their
-  // own: the licence under what is published, the other eight under what it
-  // engages, folded into three groups there, and the one only an internal audit
+  // own: the licence under transparency, the other eight under
+  // applicability, folded into three groups there, and the one only an internal audit
   // could score NA for everyone, inside the group on change control.
   const practices = await page.evaluate(() => {
     const openai = id => document.querySelector(`.cell-button[data-lab="openai"][data-row="${id}"]`);

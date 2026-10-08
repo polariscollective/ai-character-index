@@ -11,7 +11,7 @@ holds them to the scores.
 It also holds the file to the research note it was transcribed from (Notion,
 "Spec governance ranking", second pass of 18 September 2026, nine labs), and to
 the change made since: one overall score out of 16 became two figures out of 10
-side by side, what is published and what it engages, which are never added
+side by side, transparency and applicability, which are never added
 together.
 
 No network, no keys. Run: python3 -m unittest discover -s tests
@@ -28,8 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = json.loads((ROOT / "site" / "governance.json").read_text(encoding="utf-8"))
 PAGE = (ROOT / "site" / "boards.html").read_text(encoding="utf-8")
 
-# The board's order: companies are ranked on the final score, the sum of what is
-# published and what it engages. Until 24 September 2026 they were ranked on the
+# The board's order: companies are ranked on the final score, the sum of
+# transparency and applicability. Until 24 September 2026 they were ranked on the
 # first figure alone, which was the research note's own order. Six check scores
 # were corrected the same day, which swapped the first two places and moved Meta
 # and Mistral AI. A second audit then took Meta's practice on change approval to
@@ -241,7 +241,7 @@ class TheTwoFigures(unittest.TestCase):
     def test_the_figures_are_the_two_the_page_names(self):
         self.assertEqual([column["id"] for column in DATA["columns"]], ["published", "engages"])
         self.assertEqual([column["name"] for column in DATA["columns"]],
-                         ["What is published", "What it engages"])
+                         ["Transparency", "Applicability"])
         for column in DATA["columns"]:
             for field in ("name", "plain", "about", "prose"):
                 self.assertTrue(column.get(field, "").strip(), f"{column['id']} {field}")
@@ -256,7 +256,7 @@ class TheTwoFigures(unittest.TestCase):
         self.assertEqual(sorted(practices),
                          sorted([p["id"] for p in DATA["supporting"]] + [p["id"] for p in ASKED]))
         self.assertEqual(len(practices), len(set(practices)))
-        # Eleven rows carry what is published, eight what it engages.
+        # Eleven rows carry transparency, eight applicability.
         published, engages = DATA["columns"]
         self.assertEqual(len(CHECKS) + len(published["practices"]), 11)
         self.assertEqual(len(engages["practices"]), 8)
