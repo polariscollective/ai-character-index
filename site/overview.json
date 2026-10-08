@@ -73,13 +73,15 @@
    { "letter": "D+", "from": 6.7 },
    { "letter": "D", "from": 6.3 },
    { "letter": "D-", "from": 6 },
-   { "letter": "F", "from": 0 }
+   { "letter": "E", "from": 4 },
+   { "letter": "F", "from": 2 },
+   { "letter": "G", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives, on the thresholds of American school grades: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3, F above 0 and below 6.0, and None at 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. F carries neither. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, the thresholds of American school grades, then **E from 4.0, F from 2.0 and G above 0**, and **None at 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the American scale has a single F; the index splits it into three bands of 2, as an energy label runs from A to G, because most scores fall there. E, F and G carry no plus or minus. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
   "hint": "Press a cell to see the score behind it, or the scale to see what each letter covers.",
   "grade_scale": {
    "title": "The grading scale",
-   "text": "Each letter covers the figures out of 10 beside it, on the thresholds of American school grades. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures."
+   "text": "Each letter covers the figures out of 10 beside it, on the thresholds of American school grades down to D, and in three bands of 2 below it, E, F and G, where the American scale has a single F. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures."
   },
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
@@ -108,8 +110,8 @@
    "text": "Google, Mistral AI and xAI publish no constitution and [have signed](https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai) the part of the EU's General-Purpose AI Code of Practice ([Measure 7.1 of its Safety and Security chapter](https://code-of-practice.ai/)) that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public. These asks belong in regulation as well as in voluntary commitments."
   },
   {
-   "title": "Only OpenAI and Anthropic avoid an F, and both fall short on governance",
-   "text": "OpenAI's constitution gets a B and Anthropic's a C, and on governance OpenAI gets a D and Anthropic a D-, the highest grades any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B-, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an F on governance."
+   "title": "OpenAI and Anthropic lead on governance, and still fall short there",
+   "text": "OpenAI's constitution gets a B and Anthropic's a C, and on governance OpenAI gets a D and Anthropic a D-, the highest grades any company gets there. Neither keeps a complete public record of what changes in its constitution and when, neither publishes a full account of how its models are tested against it, and neither sets a bar a model must clear on it before release. Alibaba's constitution gets a B-, but it names none of the models it governs, and Alibaba gets an F on governance. Microsoft AI gets a D on its constitution, a Code of Conduct that is still a draft, and an E on governance."
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",

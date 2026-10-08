@@ -23,7 +23,7 @@ import { figuresOf, partsOf as constitutionParts } from "./constitutions.js";
 import { totalsFor, partsOf as governanceParts } from "./governance.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
-import { gradeOf } from "./grades.js";
+import { gradeOf, paintAt } from "./grades.js";
 
 const TEN = 10;
 
@@ -143,13 +143,12 @@ const letterOf = value => gradeOf(value, state.overview.grid.grades);
 const orderedGrades = () => [...state.overview.grid.grades].sort((a, b) => b.from - a.from);
 
 /* Where a letter sits on the boards' colour ramp: at its own threshold, so it
- * wears the colour that figure wears in the Index. Spread evenly, F fell at
- * 3.93:1 text contrast on the ramp, below WCAG AA; at the thresholds, from 6.0
- * up and F at 0, every letter passes. None has no place on the ramp: it is left
- * unpainted. */
+ * wears the colour that figure wears in the Index, unless its text would fall
+ * below WCAG AA there (paintAt in grades.js). None has no place on the ramp: it
+ * is left unpainted. */
 function gradeValue(letter) {
   const grade = state.overview.grid.grades.find(candidate => candidate.letter === letter);
-  return grade ? grade.from : 0;
+  return grade ? paintAt(grade.from) : 0;
 }
 
 /* A final score's letter as a chip, painted where the grid paints it; a figure

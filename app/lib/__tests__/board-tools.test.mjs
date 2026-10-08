@@ -203,7 +203,7 @@ test("the overview answers each company's figures from the two boards, with its 
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
 });
 
-test("the overview's own file carries the American school thresholds, with plus and minus", async () => {
+test("the overview's own file carries the American school thresholds with plus and minus, and E, F and G below D", async () => {
   const overview = JSON.parse(await readFile(
     new URL("../../../site/overview.json", import.meta.url), "utf8"));
   assert.deepEqual(overview.grid.grades, [
@@ -211,7 +211,7 @@ test("the overview's own file carries the American school thresholds, with plus 
     { letter: "B+", from: 8.7 }, { letter: "B", from: 8.3 }, { letter: "B-", from: 8 },
     { letter: "C+", from: 7.7 }, { letter: "C", from: 7.3 }, { letter: "C-", from: 7 },
     { letter: "D+", from: 6.7 }, { letter: "D", from: 6.3 }, { letter: "D-", from: 6 },
-    { letter: "F", from: 0 },
+    { letter: "E", from: 4 }, { letter: "F", from: 2 }, { letter: "G", from: 0 },
   ]);
 });
 

@@ -27,7 +27,7 @@ Index gives:
 | B+ | 8.7 | B | 8.3 | B- | 8.0 |
 | C+ | 7.7 | C | 7.3 | C- | 7.0 |
 | D+ | 6.7 | D | 6.3 | D- | 6.0 |
-| F | above 0 | | | | |
+| E | 4.0 | F | 2.0 | G | above 0 |
 
 A figure of 0 shows the row's own word for nothing, "None", as the relative mode
 already did: a company that publishes no constitution has nothing to grade, and
@@ -45,6 +45,21 @@ with neither. As of that day they move two letters, Alibaba's constitution to
 B- (8.0) and Anthropic's governance to D- (6.2), and give nobody a plus. The
 cost was said before the decision: the governance minus rests on 0.1 of hand-set
 figures beside OpenAI's D (6.3).
+
+On 8 October 2026 the owner asked again, because eight companies of ten were F
+on governance, from 0.8 to 4.2. The American scale has one F for everything
+below 6; the index splits it into three bands of 2, E from 4.0, F from 2.0 and G
+above 0, as an energy label runs from A to G. The top, A to D- with their
+pluses and minuses, is unchanged. As of that day governance reads OpenAI D,
+Anthropic D-, Microsoft AI E, xAI, Google DeepMind, Alibaba and Meta F, and
+Mistral AI, DeepSeek and Moonshot AI G. Other scales were weighed:
+InfluenceMap's, which carries plus and minus down to E- and F below 25 per
+cent, gives A- at 8.5, which the owner had ruled out at the top.
+
+A letter is painted at its own threshold on the ramp, unless its text would fall
+below WCAG AA there; then it takes the first tenth above that passes (`paintAt`
+in `site/grades.js`). The ramp fails from 0.5 to 2.7, so F is painted at 2.8 and
+every other letter at its threshold.
 
 The letter is read from the figure **rounded to one decimal**, the figure the
 page shows. Otherwise 8.96 would show "9.0" beside a B.
