@@ -688,9 +688,13 @@ function groupScore(content, lab, group) {
 /* A group with no company in front of it: what it gathers and how it is read. */
 function aboutGroup(content, group, column) {
   view.titled(content, group.name, group.plain);
-  content.append(element("p", "", `${group.practices.length} `
-    + `practice${group.practices.length === 1 ? "" : "s"}, each scored 0, 1 or 2. The group shows `
-    + `their average, and each counts on its own towards ${column.name.toLowerCase()}.`));
+  // One practice is said in the singular: "each" and "their average" read as
+  // nonsense over a group of one.
+  const towards = column.name.toLowerCase();
+  content.append(element("p", "", group.practices.length === 1
+    ? `One practice, scored 0, 1 or 2. The group shows its score, which counts towards ${towards}.`
+    : `${group.practices.length} practices, each scored 0, 1 or 2. The group shows their average, `
+      + `and each counts on its own towards ${towards}.`));
   content.append(practiceLabels(group.practices));
   if (group.practices.some(id => onlyTheCompany(board.data, id))) {
     content.append(view.h3("Scored on what the company publishes"),

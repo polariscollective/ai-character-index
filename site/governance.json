@@ -8334,7 +8334,7 @@
    "engages": "Just over half marks. It says it trains its models on the constitution, uses the same text inside and monitors models in use, and outside evaluators have tested its models for other risks.[^AN1][^AN6][^AN11][^AN12][^AN13][^AN14][^AN16][^AN17][^AN19][^CO3] It publishes a claim of adherence with no method, and no threshold a model must pass before release.[^AN11]"
   },
   "alibaba": {
-   "published": "It publishes a constitution and names its hard constraints, though some are set by policy documents it does not publish, and it says the text is open source without naming a licence.[^AL1] It implies without stating that the document covers its production models, keeps no change log, and lists by category the guardrails of its own model platform.[^AL1][^AL2][^AL3]",
+   "published": "It publishes a constitution and names its hard constraints, though some are set by other policy documents it does not publish, and it says the text is open source without naming a licence.[^AL1] It implies without stating that the document covers its production models, keeps no change log, and lists by category the guardrails of its own model platform.[^AL1][^AL2][^AL3]",
    "engages": "Low. There is some sign that models are trained on the document, and it says the public text matches its internal behaviour standards, and its AAIG lab has published scores against the document for two Qwen models that stop before the current line.[^AL1][^AL4] Nothing is published on monitoring."
   },
   "google": {

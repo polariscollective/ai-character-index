@@ -2,7 +2,7 @@
  "format": 2,
  "page": {
   "title": "Overview",
-  "intro": "Some AI companies write down how their models should behave, in a document we call a **constitution**. It is the nearest thing to a **rulebook** the public can see. For it to mean anything, it has to be **published** and **clear** enough for an independent organisation to test a model against it, and the company has to show that it trains its models on these rules and that they actually follow them. We think **every company** that builds these models should publish one, answer for what it says, and govern it properly. [More on why it matters](/about#why).\n\nYou can read every published constitution in full in the [doc reader](/doc-reader/), passage by passage, with the parts that bear on each behaviour marked. [What the constitutions say](/index) looks at **the document**: how clearly it settles conflicts between its own rules, and how deeply it covers the behaviours a model should show, a list that is not exhaustive and that we are still adding to. [How constitutions are governed](/index?view=governance) looks at **the company**: what it publishes about its constitution, and how far it holds its models to it.[1](#ovw-note-1)",
+  "intro": "Some AI companies write down how their models should behave, in a document we call an **AI constitution**. As such, it is the nearest thing to a **rulebook** of model behaviour accessible to the public, which enables third parties to review it and test the adherence of the models to these publicly stated principles. We think **every company** that builds these models should publish one, answer for what it says, and govern it properly. [More on why it matters](/about#why).\n\nWe have gathered every constitution published as of October 2026, and you can read each in full in the [doc reader](/doc-reader/), passage by passage, with guidance to identify specific model behaviours. [What the constitutions say](/index) looks at **the document**: how clearly it settles conflicts between its own rules, and how deeply it covers the behaviours a model should follow. [How constitutions are governed](/index?view=governance) looks at **the company**: what it publishes about its constitution, and how far it holds its models to it.[1](#ovw-note-1)",
   "sections": []
  },
  "grid": {
@@ -16,21 +16,21 @@
       "board": "governance",
       "figure": "published",
       "name": "What is published",
-      "plain": "Whether the company publishes a constitution for its models, a log of its changes, and its guardrails and hard constraints.",
+      "plain": "Whether the company publishes a constitution for its models, how transparently it records its changes, and its guardrails and hard constraints.",
       "zero": "None"
      },
      {
       "board": "governance",
       "figure": "engages",
       "name": "What it engages",
-      "plain": "What the company says about training its models on the constitution, testing them against it and controlling its changes.",
+      "plain": "What the company says about training its models on the constitution, testing them against it and controlling changes to it.",
       "zero": "None"
      }
     ],
     "final": {
      "board": "governance",
      "figure": "total",
-     "plain": "What the company publishes about its constitution and how far it binds its models to it, together.",
+     "plain": "What the company publishes about its constitution and how far it binds its models to it.",
      "zero": "None"
     }
    },
@@ -42,21 +42,21 @@
       "board": "constitutions",
       "figure": "whole",
       "name": "Document as a whole",
-      "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, whether its rules give their reasons, which domains a model is used in have rules of their own, and whether it contradicts itself.",
+      "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, whether its rules give the rationale behind them, which specific domains have context-specific rules of their own, and whether the document contradicts itself.",
       "zero": "None"
      },
      {
       "board": "constitutions",
       "figure": "behaviours",
       "name": "Behaviours covered",
-      "plain": "How deeply the constitution addresses fourteen behaviours a model should show.",
+      "plain": "How deeply the constitution addresses fourteen behaviours a model should follow.",
       "zero": "None"
      }
     ],
     "final": {
      "board": "constitutions",
      "figure": "final",
-     "plain": "The document as a whole and the behaviours it covers, together.",
+     "plain": "The document as a whole and the behaviours it covers.",
      "zero": "None"
     }
    }
@@ -96,19 +96,19 @@
  "takeaways": [
   {
    "title": "Four of ten companies publish a constitution",
-   "text": "OpenAI, Anthropic, Alibaba and Microsoft AI publish one, Microsoft AI's as a draft open for public comment that its models are not yet trained on. Google DeepMind, Meta, xAI, Mistral AI, Moonshot AI and DeepSeek publish no document setting out how their models should behave. Such a document may exist inside a company without being released: Meta says it evaluates its Muse Spark model against one."
+   "text": "OpenAI, Anthropic, Alibaba and Microsoft AI publish one, and Microsoft AI published its Code of Conduct as a draft open for public comment that its models are not yet trained on. Google DeepMind, Meta, xAI, Mistral AI, Moonshot AI and DeepSeek publish no document setting out how their models should behave. However, such a document may exist internally without being released: Meta says it evaluates its Muse Spark model against one."
   },
   {
    "title": "Almost every company is weak on transparency to changes in their constitution",
-   "text": "No company's public change log says in full what it covers and how soon a change is recorded. None commits to warn the public before weakening a rule its model must never break, and every weakening we found went out without notice. In August 2026 OpenAI replaced a root-level requirement for \"a shutdown timer\" with \"an ending condition\", and its change log does not mention it."
+   "text": "No company's public change log says in full what it covers and how soon a change is recorded. None commits to warn the public before weakening a rule its model must never break, and every weakening we found went out without notice. For instance, in August 2026 OpenAI replaced a root-level requirement for \"a shutdown timer\" with \"an ending condition\", and its change log does not mention it."
   },
   {
-   "title": "No company says which rules apply to governments and armed forces",
+   "title": "No company says which rules apply to governments and in military contexts",
    "text": "We found no company that publishes the rules its models follow when they are deployed for governments or defence. Anthropic writes that [some models built for specialised uses do not fully fit its constitution](https://www.anthropic.com/constitution), and [a spokesperson told TIME](https://time.com/7354738/claude-constitution-ai-alignment/) that its military models may not be trained on it. xAI agreed to the Pentagon's \"all lawful use\" standard for Grok, [as Axios reported](https://www.axios.com/2026/02/23/ai-defense-department-deal-musk-xai-grok)."
   },
   {
    "title": "Three companies have agreed to write this document for a regulator, and not for the public",
-   "text": "Google, Mistral AI and xAI publish no constitution and [have signed](https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai) the part of the EU's General-Purpose AI Code of Practice ([Measure 7.1 of its Safety and Security chapter](https://code-of-practice.ai/)) that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public. These asks belong in regulation as well as in voluntary commitments."
+   "text": "Google, Mistral AI and xAI publish no constitution even though they [have signed](https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai) the part of the EU's General-Purpose AI Code of Practice ([Measure 7.1 of its Safety and Security chapter](https://code-of-practice.ai/)) that asks, for models with systemic risk, for a report on the principles a model follows, how it ranks instructions and what it refuses. That report goes to the EU AI Office and is not public."
   },
   {
    "title": "OpenAI and Anthropic lead on governance, and still fall short there",
@@ -116,7 +116,7 @@
   },
   {
    "title": "The scores measure clarity and openness, not how good a model is",
-   "text": "They reward a document that states its rules explicitly and a company that shows its work, and a clearer document is not proof of a better model. Microsoft AI's figures on what its constitution says are one model's provisional reading until the panel reads its Code. There is no agreed standard yet for a good constitution, and we want to hear where this first attempt is wrong."
+   "text": "The scoring rewards a document that states its rules explicitly and a company that shows its work, but a good score on what a constitution says or on how it is governed does not necessarily mean that the models abide by it. There is no agreed standard yet for a good constitution, and we want to hear where this first attempt is wrong."
   }
  ],
  "summaries": {
@@ -146,8 +146,8 @@
    "constitutions": "A strong document. It is explicit about which rule wins between levels, its rules are firm and no contradiction is left unsettled, and it covers helpfulness and honesty well. Its gaps are reasons, which are brief and missing from its hard prohibitions, and autonomy and oversight, especially secret loyalties.",
    "whole": "Clear about which rule wins between levels and how firm each rule is, with rules for nearly every situation checked and no unsettled contradiction. Reasons are its weak point: most rules give one in a single clause, and its hard prohibitions give none.",
    "behaviours": "Deep on helpfulness and judgement, and good on honesty and on harm and safety. Autonomy and oversight is its weakest category, with very little on secret loyalties.",
-   "governance": "Low. The document is public and lists its hard constraints, though some are set by policy documents it does not publish. It names no model it covers, though it implies that it governs Alibaba's production models, has no change log, and says it is open source without naming a licence. The guardrails of its own model platform are listed by category. Its lab has published scores against it for two Qwen models that stop before the current line, and nothing is published on who approves a change.",
-   "published": "The constitution is public and lists its hard constraints, though some are set by policy documents it does not publish. It names no model it covers, though it implies that it governs Alibaba's production models, keeps no change log and says it is open source without naming a licence. The guardrails of its own model platform are listed by category, with no list for its apps.",
+   "governance": "Low. The document is public and lists its hard constraints, though some are set by other policy documents it does not publish. It names no model it covers, though it implies that it governs Alibaba's production models, has no change log, and says it is open source without naming a licence. The guardrails of its own model platform are listed by category. Its lab has published scores against it for two Qwen models that stop before the current line, and nothing is published on who approves a change.",
+   "published": "The constitution is public and lists its hard constraints, though some are set by other policy documents it does not publish. It names no model it covers, though it implies that it governs Alibaba's production models, keeps no change log and says it is open source without naming a licence. The guardrails of its own model platform are listed by category, with no list for its apps.",
    "engages": "A little on training and testing. The document says Alibaba is training its models towards it, and that its values match internal standards though the public text leaves out detail. Its lab has published scores against it for two Qwen models that stop before the current line. Nothing is published on monitoring or on who approves a change.",
    "caveat": "It was published in Alibaba's name on the site of its AI governance laboratory (AAIG). It says Alibaba is training its models towards it and names none of them. As of September 2026, the only model we found publicly built on it is Oyster-II, a research model built on Qwen3-14B, and the same release scores Qwen3-Max and Qwen3.5-397B against it."
   },
@@ -204,7 +204,7 @@
   "rows": [
    {
     "id": "capability",
-    "name": "Most capable model",
+    "name": "Capabilities",
     "plain": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. Epoch finds that the frontier has gained about 14 points a year on its index since reasoning models arrived, so we read a gap in points as that much time. It measures capability, not danger, and a gap of a few months is within Epoch's margin of error.",
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
@@ -220,17 +220,17 @@
       "url": "https://epoch.ai/data-insights/eci-frontier-trend"
      }
     ],
-    "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Reading a gap in points as months is ours. Epoch measures a lag as the time the frontier took to reach a model's score, which gives a few weeks to a month less for most companies. Models a few months apart are within Epoch's margin of error, so the order of the companies between 8 and 10 months behind means little. Epoch rates a model some weeks after its release and only the models it has tested, which leaves out Microsoft AI's.",
+    "limits": "It measures capability on benchmarks. It says nothing about how a model behaves or how dangerous it is. Epoch measures a lag as the time the frontier took to reach a model's score, which gives a few weeks to a month less for most companies. Models a few months apart are within Epoch's margin of error, so the order of the companies between 8 and 10 months behind should not be seen as significant. Epoch rates a model some weeks after its release and only the models it has tested, which for instance leaves out Microsoft AI's models.",
     "sub": "Months behind the frontier"
    },
    {
     "id": "usage",
-    "name": "Usage",
+    "name": "Model usage",
     "sub": "Our rough estimate",
     "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate, pieced together from chat assistants, API use and downloads of open models, and gives only an idea.",
     "what": "A rough idea of how widely each company's models are used.",
-    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For people, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Where a company's only count covers one country, we also weigh its web traffic and its share of developer use. Each cell lists the signals behind it.",
-    "limits": "It is shaky, and gives only an idea of scale. Much of what it would need is not public. Most companies publish no comparable count of users, and the few figures for use through an API are counted in different ways. A chat assistant, a model called through an API and an open model downloaded and run elsewhere are different kinds of use with no common measure, so placing them on one scale is our judgement. Two careful readers could place several companies a step apart.",
+    "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For the number of people who use its models, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Where a company's only count covers one country, we also weigh its web traffic and its share of developer use. Each cell lists the signals behind it.",
+    "limits": "It gives only a limited idea of model usage. Much of what it would need to be a robust scale is not public. Most companies publish no comparable count of users, and the few figures for use through an API are counted in different ways. A chat assistant, a model called through an API and an open model downloaded and run elsewhere are different kinds of use with no common measure, so they may not be fully comparable on one scale.",
     "scale": [
      {
       "level": "+++",
