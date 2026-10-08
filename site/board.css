@@ -1592,3 +1592,12 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .ovw-board .ovw-overall-button:focus-visible { outline: 2px solid var(--energy); outline-offset: -2px; }
 /* The line on the overall grade at the head of a company's popover. */
 .gov-pop .ovw-overall-line { margin: 0 0 10px; }
+/* A scored row's scale after its name, in the data face, small and faint. */
+.ovw-board .row-scale {
+  margin-left: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--faint);
+  white-space: nowrap;
+}

@@ -676,11 +676,26 @@ function borrowedCell(company, row) {
     return view.naCell({ name: company.name, rowLabel: row.rowLabel, dataset, build: row.build });
   }
   if (shape.kind === "scored") {
+    // The scale is said once, after the row's name (scaleAfterName), not in
+    // every cell; the cell's accessible name still says it.
     return view.scoreCell({ name: company.name, rowLabel: row.rowLabel, value: shape.value,
-      max: shape.max, text: shape.text, build: row.build, dataset });
+      max: shape.max, text: shape.text, build: row.build, dataset, showMax: false });
   }
   return letterCell(company, { rowLabel: row.rowLabel, row: row.row, value: row.value,
     build: row.build });
+}
+
+/* A scored row's scale, "/4", "/2" or "/10", small and quiet on the line of its
+ * name, after it: read from the cells the row carries, which hold it whether
+ * or not they show it. A row of letters carries none. It is seen only; each
+ * cell's accessible name already says what the figure is out of. */
+function scaleAfterName(tr) {
+  const max = tr.querySelector(".cell-button[data-max]")?.dataset.max;
+  const line = tr.querySelector(".head-line");
+  if (!max || !line) return;
+  const mark = element("span", "row-scale", `/${max}`);
+  mark.setAttribute("aria-hidden", "true");
+  line.append(mark);
 }
 
 /* The rows each board of the Index shows under its final score, built by that
@@ -775,6 +790,7 @@ function draw() {
   // The overall grade, then each final score and the rows its board of the
   // Index shows under it, then the views in preparation and the context.
   const borrowed = borrowedRows();
+  Object.values(borrowed).forEach(({ rows }) => rows.forEach(scaleAfterName));
   view.nodes.table.tBodies[0].replaceChildren(
     ...(grid.overall ? [overallRow()] : []),
     ...grid.groups.flatMap(group => [figureRow(group, borrowed[group.final.board]),
