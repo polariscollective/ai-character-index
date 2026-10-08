@@ -704,6 +704,13 @@ function aboutGroup(content, group, column) {
   content.append(view.showInTable(groupKey(group), "its practices"));
 }
 
+/* The board's own reading of its file: the data and the companies ranked by
+ * their final score. The initialiser runs it, and so does rowsFor. */
+function prepare(data) {
+  board.data = data;
+  board.labs = ranked(data);
+}
+
 /* ---- The table --------------------------------------------------------------- */
 
 /* One cell of a company's column: the board wants the company's name for the
@@ -789,14 +796,14 @@ const NOTE = {
 const paperNote = row => NOTE[row.paper];
 
 /* One practice's row: under its column, or folded under its group. */
-function practiceRow(column, id, parent) {
+function practiceRow(column, id, parent, { labs, cell, marked }) {
   const practice = practiceOf(board.data, id);
   const company = onlyTheCompany(board.data, id);
   const name = view.rowName(practice.short,
     rowWeight(column, frac(1, rowsOf(column)), column.name.toLowerCase()),
     company ? content => aboutDisclosedPractice(content, practice)
       : content => aboutPractice(content, practice, column),
-    `${practice.short}: what its scores mean`, [paperNote(practice)]);
+    `${practice.short}: what its scores mean`, marked([paperNote(practice)]));
   const row = parent ? view.subRow(practiceRowId(id), parent, name) : element("tr");
   if (!parent) {
     row.id = practiceRowId(id);
@@ -806,24 +813,23 @@ function practiceRow(column, id, parent) {
   row.classList.add("practice-row");
   row.dataset.practice = id;
   row.dataset.level = parent ? "3" : "2";
-  board.labs.forEach(lab => {
-    const value = onTen(practiceScoreOf(board.data, lab.id, id), PRACTICE);
-    row.append(cellFor(lab, practice.short.toLowerCase(), id, {
-      value, max: TEN, text: shown(value),
+  labs.forEach(lab => {
+    const given = practiceScoreOf(board.data, lab.id, id);
+    row.append(cell(lab, { kind: "scored", rowLabel: practice.short.toLowerCase(), row: id,
+      value: onTen(given, PRACTICE), scored: { value: given, max: PRACTICE },
       build: company ? content => disclosedScore(content, lab, practice)
-        : content => practiceScore(content, lab, practice),
-    }));
+        : content => practiceScore(content, lab, practice) }));
   });
   return row;
 }
 
 /* The practice nobody could score: NA for every company, in neither figure. */
-function unscoredRow(id, parent, column) {
+function unscoredRow(id, parent, column, { labs, marked }) {
   const practice = practiceOf(board.data, id);
   const name = view.rowName(practice.short, null,
     content => aboutUnscoredPractice(content, practice),
     `${practice.short}, not scored and counted in neither figure: what it asks`,
-    [paperNote(practice), NOTE.unscored]);
+    marked([paperNote(practice), NOTE.unscored]));
   const row = parent ? view.subRow(practiceRowId(id), parent, name) : element("tr");
   if (!parent) {
     row.id = practiceRowId(id);
@@ -833,12 +839,141 @@ function unscoredRow(id, parent, column) {
   row.classList.add("practice-row");
   row.dataset.practice = id;
   row.dataset.level = parent ? "3" : "2";
-  board.labs.forEach(lab => row.append(view.naCell({
+  labs.forEach(lab => row.append(view.naCell({
     name: lab.name, rowLabel: practice.short.toLowerCase(),
     dataset: { lab: lab.id, row: id },
     build: content => unscoredScore(content, lab, practice),
   })));
   return row;
+}
+
+/* How the Index draws a cell of these rows: every figure out of 10. */
+const indexCell = (lab, { rowLabel, row, value, build }) =>
+  cellFor(lab, rowLabel, row, { value, max: TEN, text: shown(value), build });
+
+/* The rows under the final score: each figure, its questions and their checks,
+ * its practices and its groups of practices. The Index draws them under its own
+ * final score and the overview under its own, through this one function.
+ *
+ * The options are rowsFor's: `cell(lab, row)` draws one cell from what the row
+ * is ("total" or "scored", its figure out of 10, its figure and scale as
+ * scored, how it is named and addressed, its popover), `columns` orders the
+ * companies' cells by id, `parent` is the fold the two figures' heads sit in,
+ * none on the Index, and `marks` false leaves out the signs pointing to the
+ * Index's numbered notes. */
+function rowsBelowTotal({ cell, columns = null, parent = null, marks = true }) {
+  const labs = columns ? columns.map(id => {
+    const lab = board.labs.find(one => one.id === id);
+    if (!lab) throw new Error(`The governance board has no company ${id}.`);
+    return lab;
+  }) : board.labs;
+  const marked = list => (marks ? list : []);
+  const draw = { labs, cell, marked };
+  const rows = [];
+  const top = [];
+  const total = board.data.total;
+
+  board.data.columns.forEach(column => {
+    const figure = column.name.toLowerCase();
+    const count = rowsOf(column);
+    // The head of a column: its own figure, in the size the board gives a
+    // headline, with a rule above it so the two read as two figures rather than
+    // one column of rows.
+    const head = element("tr", "total-row outside-row column-row");
+    head.dataset.column = column.id;
+    head.dataset.level = "1";
+    // On another page the head folds under that page's own final score, shut
+    // until it is opened, with an id its fold can name.
+    if (parent) {
+      head.id = `gov-column-${column.id}`;
+      head.dataset.parent = parent;
+      head.hidden = true;
+      top.push(head.id);
+    }
+    head.append(view.rowHead(
+      view.rowToggle(columnKey(column), columnChildren(column),
+        { parts: "rows", name: column.name }),
+      view.rowName(column.name,
+      weightLine(share(total.weights[column.id]), "the final score"),
+      content => aboutColumn(content, column), `${column.name}: what it covers`,
+      marked([NOTE[column.id]]))));
+    labs.forEach(lab => head.append(cell(lab, { kind: "total", rowLabel: figure, row: column.id,
+      value: lab.byColumn[column.id], build: content => columnScore(content, lab, column) })));
+    rows.push(head);
+
+    column.questions.forEach(id => {
+      const question = questionOf(id);
+      const row = element("tr", "question-row");
+      row.id = `gov-question-${question.id}`;
+      row.dataset.question = question.id;
+      row.dataset.parent = columnKey(column);
+      row.dataset.level = "2";
+      row.append(view.rowHead(
+        view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
+          { parts: "checks", name: question.name }),
+        view.rowName(question.name, rowWeight(column, frac(question.checks.length, count), figure),
+          content => aboutQuestion(content, question),
+          `${question.name}${question.minimum ? ", part of the minimum" : ""}: what it asks`,
+          marked(question.minimum ? [NOTE.minimum, paperNote(question)] : [paperNote(question)]))));
+      labs.forEach(lab => {
+        row.append(cell(lab, { kind: "total", rowLabel: question.name.toLowerCase(),
+          row: question.id, value: onTen(lab.byQuestion[question.id], SCALE),
+          build: content => questionScore(content, lab, question) }));
+      });
+      rows.push(row);
+
+      question.checks.forEach(check => {
+        const sub = view.subRow(rowId(check.id), question.id,
+          view.rowName(check.short, rowWeight(column, frac(1, count), figure),
+            content => aboutCheck(content, question, check),
+            `${check.short}: what its scores mean`));
+        sub.dataset.level = "3";
+        labs.forEach(lab => {
+          const given = board.data.scores[lab.id][check.id];
+          sub.append(cell(lab, { kind: "scored", rowLabel: check.short.toLowerCase(),
+            row: check.id, value: onTen(given, SCALE), scored: { value: given, max: SCALE },
+            build: content => checkScore(content, lab, question, check) }));
+        });
+        rows.push(sub);
+      });
+    });
+
+    // A column's practices sit under it one by one, unless the column gathers
+    // them into groups: then each group is one row, the mean of its practices,
+    // which opens into them the way a question opens into its checks. Grouping
+    // is only how the rows are shown. The column's figure is still the mean of
+    // every practice, each counted once.
+    const grouped = new Set((column.groups || [])
+      .flatMap(group => [...group.practices, ...(group.unscored || [])]));
+    column.practices.filter(id => !grouped.has(id))
+      .forEach(id => rows.push(practiceRow(column, id, null, draw)));
+    (column.unscored || []).filter(id => !grouped.has(id))
+      .forEach(id => rows.push(unscoredRow(id, null, column, draw)));
+
+    (column.groups || []).forEach(group => {
+      const members = [...group.practices, ...(group.unscored || [])];
+      const row = element("tr", "question-row group-row");
+      row.id = `gov-group-${group.id}`;
+      row.dataset.group = group.id;
+      row.dataset.parent = columnKey(column);
+      row.dataset.level = "2";
+      row.append(view.rowHead(
+        view.rowToggle(groupKey(group), members.map(practiceRowId),
+          { parts: "practices", name: group.name }),
+        view.rowName(group.name, rowWeight(column, frac(group.practices.length, count), figure),
+          content => aboutGroup(content, group, column), `${group.name}: what it gathers`)));
+      labs.forEach(lab => {
+        row.append(cell(lab, { kind: "total", rowLabel: group.name.toLowerCase(),
+          row: groupKey(group), value: groupAverage(lab.id, group),
+          build: content => groupScore(content, lab, group) }));
+      });
+      rows.push(row);
+      group.practices.forEach(id => rows.push(practiceRow(column, id, groupKey(group), draw)));
+      (group.unscored || []).forEach(id => rows.push(unscoredRow(id, groupKey(group), column, draw)));
+    });
+  });
+
+  return { rows, top };
 }
 
 function renderTable() {
@@ -856,105 +991,7 @@ function renderTable() {
     build: content => totalScore(content, lab),
   })));
   body.append(totalRow);
-
-  board.data.columns.forEach(column => {
-    const figure = column.name.toLowerCase();
-    const rows = rowsOf(column);
-    // The head of a column: its own figure, in the size the board gives a
-    // headline, with a rule above it so the two read as two figures rather than
-    // one column of rows.
-    const head = element("tr", "total-row outside-row column-row");
-    head.dataset.column = column.id;
-    head.dataset.level = "1";
-    head.append(view.rowHead(
-      view.rowToggle(columnKey(column), columnChildren(column),
-        { parts: "rows", name: column.name }),
-      view.rowName(column.name,
-      weightLine(share(total.weights[column.id]), "the final score"),
-      content => aboutColumn(content, column), `${column.name}: what it covers`,
-      [NOTE[column.id]])));
-    board.labs.forEach(lab => head.append(cellFor(lab, figure, column.id, {
-      value: lab.byColumn[column.id], max: TEN, text: shown(lab.byColumn[column.id]),
-      build: content => columnScore(content, lab, column),
-    })));
-    body.append(head);
-
-    column.questions.forEach(id => {
-      const question = questionOf(id);
-      const row = element("tr", "question-row");
-      row.id = `gov-question-${question.id}`;
-      row.dataset.question = question.id;
-      row.dataset.parent = columnKey(column);
-      row.dataset.level = "2";
-      row.append(view.rowHead(
-        view.rowToggle(question.id, question.checks.map(check => rowId(check.id)),
-          { parts: "checks", name: question.name }),
-        view.rowName(question.name, rowWeight(column, frac(question.checks.length, rows), figure),
-          content => aboutQuestion(content, question),
-          `${question.name}${question.minimum ? ", part of the minimum" : ""}: what it asks`,
-          question.minimum ? [NOTE.minimum, paperNote(question)] : [paperNote(question)])));
-      board.labs.forEach(lab => {
-        const value = onTen(lab.byQuestion[question.id], SCALE);
-        row.append(cellFor(lab, question.name.toLowerCase(), question.id, {
-          value, max: TEN, text: shown(value),
-          build: content => questionScore(content, lab, question),
-        }));
-      });
-      body.append(row);
-
-      question.checks.forEach(check => {
-        const sub = view.subRow(rowId(check.id), question.id,
-          view.rowName(check.short, rowWeight(column, frac(1, rows), figure),
-            content => aboutCheck(content, question, check),
-            `${check.short}: what its scores mean`));
-        sub.dataset.level = "3";
-        board.labs.forEach(lab => {
-          const value = onTen(board.data.scores[lab.id][check.id], SCALE);
-          sub.append(cellFor(lab, check.short.toLowerCase(), check.id, {
-            value, max: TEN, text: shown(value),
-            build: content => checkScore(content, lab, question, check),
-          }));
-        });
-        body.append(sub);
-      });
-    });
-
-    // A column's practices sit under it one by one, unless the column gathers
-    // them into groups: then each group is one row, the mean of its practices,
-    // which opens into them the way a question opens into its checks. Grouping
-    // is only how the rows are shown. The column's figure is still the mean of
-    // every practice, each counted once.
-    const grouped = new Set((column.groups || [])
-      .flatMap(group => [...group.practices, ...(group.unscored || [])]));
-    column.practices.filter(id => !grouped.has(id))
-      .forEach(id => body.append(practiceRow(column, id)));
-    (column.unscored || []).filter(id => !grouped.has(id))
-      .forEach(id => body.append(unscoredRow(id, null, column)));
-
-    (column.groups || []).forEach(group => {
-      const members = [...group.practices, ...(group.unscored || [])];
-      const row = element("tr", "question-row group-row");
-      row.id = `gov-group-${group.id}`;
-      row.dataset.group = group.id;
-      row.dataset.parent = columnKey(column);
-      row.dataset.level = "2";
-      row.append(view.rowHead(
-        view.rowToggle(groupKey(group), members.map(practiceRowId),
-          { parts: "practices", name: group.name }),
-        view.rowName(group.name, rowWeight(column, frac(group.practices.length, rows), figure),
-          content => aboutGroup(content, group, column), `${group.name}: what it gathers`)));
-      board.labs.forEach(lab => {
-        const value = groupAverage(lab.id, group);
-        row.append(cellFor(lab, group.name.toLowerCase(), groupKey(group), {
-          value, max: TEN, text: shown(value),
-          build: content => groupScore(content, lab, group),
-        }));
-      });
-      body.append(row);
-      group.practices.forEach(id => body.append(practiceRow(column, id, groupKey(group))));
-      (group.unscored || []).forEach(id => body.append(unscoredRow(id, groupKey(group))));
-    });
-  });
+  body.append(...rowsBelowTotal({ cell: indexCell }).rows);
 
   const table = view.nodes.table;
   table.tHead.replaceChildren(headRow());
@@ -1218,6 +1255,17 @@ function wireSources() {
  * it. The Index opens a cell the address names this way. */
 export const openCell = (lab, row) => Boolean(view?.pressCell({ lab, row }));
 
+/* The rows under the final score, drawn by another page's board: the overview
+ * calls this with its own board, its own order of columns and its own way of
+ * drawing a cell, and the popovers of these rows then open on that page. That
+ * page never runs this board's initialiser, so the module's state is read from
+ * the file given here. */
+export function rowsFor(givenView, data, options) {
+  view = givenView;
+  prepare(data);
+  return rowsBelowTotal(options);
+}
+
 export async function initializeGovernance() {
   const byId = id => document.getElementById(id);
   view = createBoard({
@@ -1247,8 +1295,7 @@ export async function initializeGovernance() {
       origin: byId("gov-origin"),
     });
     byId("gov-as-of").textContent = data.as_of ? `As of ${data.as_of}` : "";
-    board.data = data;
-    board.labs = ranked(data);
+    prepare(data);
     // Where the questions and the practices come from, said once, above the board.
     if (board.nodes.origin) board.nodes.origin.textContent = data.origin;
     renderTable();
