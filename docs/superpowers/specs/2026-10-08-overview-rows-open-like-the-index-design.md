@@ -58,6 +58,17 @@ access A, open licence 2 out of 2; what it engages F, training and use C.
   carries no note mark there.
 - The rows still in preparation and the context rows stay under the scores,
   unchanged.
+- How constitutions are governed comes first, above what the constitutions say,
+  and the companies' columns are sorted by it: the governance board's own
+  ranking (`ranked` in `site/governance.js`), with its tiebreak, so the overview
+  and that board order the companies alike. The corner under "Grade" says so,
+  "companies by how their constitution is governed", in place of "companies in
+  alphabetical order". The overview shows no rank number.
+- A popover borrowed from the governance board cites its sources by code, each
+  code a link to the source's entry under "Sources reviewed" on that board. The
+  overview carries no list of sources, so there a code opens that entry on the
+  Index's governance view, in a new tab, which the Index already scrolls to and
+  marks when its address names a source.
 
 ## How it is built
 
@@ -82,6 +93,14 @@ pages cannot show a row two ways.
   by the export and serves the overview's popovers.
 - Every row id and fold id on the overview is unique across the two boards.
 
+## The Index's menu
+
+The header's Index menu lists "How constitutions are governed" before "What the
+constitutions say", the order the overview now leads with. The addresses do not
+change: `/index` still opens what the constitutions say and
+`/index?view=governance` how they are governed, so every link already shared
+lands where it did. The browser walker's check of the menu's order follows.
+
 ## The one sentence that changes
 
 `grid.scale` in `site/overview.json` ends: "The parts behind a figure are each
@@ -101,7 +120,9 @@ stay in its file.
 - The overview's own popovers (a final score's, a company's) keep showing their
   parts as they do today, figures out of 10.
 - The Index pages, their popovers and their links are unchanged.
-- The MCP's `overview_board` still answers the final scores' letters only.
+- The MCP's `overview_board` still answers the final scores' letters only. Its
+  rows follow the file, so the governance final score now comes first there too.
+- The Index's default view, which stays what the constitutions say.
 
 ## Tests
 
