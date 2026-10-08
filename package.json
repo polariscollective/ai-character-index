@@ -6,7 +6,7 @@
     "node": ">=22.13 <25"
   },
   "scripts": {
-    "prebuild": "rm -rf public && mkdir -p public && cp -R site/. public/",
+    "prebuild": "rm -rf public && mkdir -p public && cp -R site/. public/ && node engine/write-deployment.mjs",
     "predev": "rm -rf public && mkdir -p public && cp -R site/. public/",
     "dev": "next dev",
     "build": "next build",

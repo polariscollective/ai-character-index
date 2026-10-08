@@ -22,7 +22,7 @@
  * claim. Everything here is built as nodes: a page gains one script tag.
  */
 
-import { isLocal, readsFiles, setReadsFiles } from "./publication-data.js";
+import { offersFiles, readsFiles, setReadsFiles } from "./publication-data.js";
 import { keepPosted } from "./keep-posted.js";
 
 const STYLE = `
@@ -268,7 +268,7 @@ function start() {
   const brand = document.querySelector(".site-brand");
   if (!brand) return;
   build(brand);
-  if (isLocal()) sourceSwitch(brand);
+  if (offersFiles()) sourceSwitch(brand);
 }
 
 start();
