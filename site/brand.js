@@ -556,8 +556,8 @@ function followHeight(header) {
 const VIEWS = [
   { title: "Process", view: "governance" },
   { title: "Content", view: null },
-  { title: "How constitutions are regulated", coming: true },
-  { title: "Adherence of models to constitutions", coming: true },
+  { title: "Regulation", coming: true },
+  { title: "Adherence", coming: true },
 ];
 
 function indexMenu() {
