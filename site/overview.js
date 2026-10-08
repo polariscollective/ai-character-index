@@ -149,10 +149,7 @@ const indexCell = (company, row, part) => (row.board === "governance"
   ? `/index?view=governance&company=${company.id}&cell=${encodeURIComponent(part.row)}`
   : `/index?company=${company.id}&cell=${encodeURIComponent(part.row)}`);
 
-/* The row's own word for a figure that earns no letter, as the file gives it. */
-const noneWord = () => state.overview.grid.groups[0]?.final?.zero || "None";
-
-/* A figure's letter, or null where it prints as nought. */
+/* A figure's letter: 0.0 is a G, and only a figure nobody gave has none. */
 const letterOf = value => gradeOf(value, state.overview.grid.grades);
 
 /* The file's grades, highest threshold first. */
@@ -160,20 +157,17 @@ const orderedGrades = () => [...state.overview.grid.grades].sort((a, b) => b.fro
 
 /* Where a letter sits on the boards' colour ramp: at its own threshold, so it
  * wears the colour that figure wears in the Index, unless its text would fall
- * below WCAG AA there (paintAt in grades.js). None has no place on the ramp: it
- * is left unpainted. */
+ * below WCAG AA there (paintAt in grades.js). A figure of 0.0 is a G and wears
+ * G's colour, like any other. */
 function gradeValue(letter) {
   const grade = state.overview.grid.grades.find(candidate => candidate.letter === letter);
   return grade ? paintAt(grade.from) : 0;
 }
 
-/* A final score's letter as a chip, painted where the grid paints it; a figure
- * with no letter is the unpainted chip of a figure not assessed. */
+/* A final score's letter as a chip, painted where the grid paints it. */
 function gradeChip(value) {
   const letter = letterOf(value);
-  return letter
-    ? view.chip(gradeValue(letter), TEN, letter)
-    : element("span", "chip chip-na", noneWord());
+  return view.chip(gradeValue(letter), TEN, letter);
 }
 
 /* A company's overall grade: the average of its final scores, no higher than F
@@ -184,7 +178,7 @@ const overallFor = company => overallOf(
 
 /* The letter large, and the figure behind it, at the head of a popover. */
 const gradeFigure = value =>
-  view.figure(letterOf(value) ?? noneWord(), `, ${shown(value)} out of ${TEN}`);
+  view.figure(letterOf(value), `, ${shown(value)} out of ${TEN}`);
 
 let view = null;
 let state = null;
@@ -255,9 +249,9 @@ function scaleOf(content) {
 }
 
 /* The whole scale, opened from the legend: every letter with the figures out
- * of 10 it covers, then None. A letter is read from the figure as it is shown,
- * to one decimal, so a band runs from its threshold to a tenth below the next
- * one up, and F starts at the first figure that does not show as 0.0. */
+ * of 10 it covers. A letter is read from the figure as it is shown, to one
+ * decimal, so a band runs from its threshold to a tenth below the next one up,
+ * and G runs from 0.0. */
 function aboutScale(content) {
   const words = state.overview.grid.grade_scale || {};
   view.titled(content, words.title || "The grading scale");
@@ -265,7 +259,7 @@ function aboutScale(content) {
   const list = element("ul", "check-list ovw-scale-list");
   let next = null;
   orderedGrades().forEach(({ letter, from }) => {
-    const low = from > 0 ? from : 0.1;
+    const low = Math.max(from, 0);
     const high = next === null ? TEN : next - 0.1;
     const item = element("li");
     item.append(view.chip(gradeValue(letter), TEN, letter),
@@ -273,10 +267,6 @@ function aboutScale(content) {
     list.append(item);
     next = from;
   });
-  const none = element("li");
-  none.append(element("span", "chip chip-na", noneWord()),
-              element("span", "ovw-scale-range", (0).toFixed(1)));
-  list.append(none);
   content.append(list);
 }
 
@@ -339,9 +329,8 @@ function aboutOverall(content) {
 
 /* The overall grade, the first row of the grid: a quiet band rather than a row
  * of painted cells, since it is read from the two letters under it and adds no
- * figure of its own. Each cell is the letter with its figure beside it, small;
- * a figure that prints as 0.0 earns no letter and shows as it is. Nothing folds
- * under it, and only its name opens a popover. */
+ * figure of its own. Each cell is the letter with its figure beside it, small.
+ * Nothing folds under it, and only its name opens a popover. */
 function overallRow() {
   const { overall } = state.overview.grid;
   const tr = element("tr", "ovw-overall-row");
@@ -355,10 +344,9 @@ function overallRow() {
     // Seen as "C+ (7.5)", heard as "C+, 7.5 out of 10".
     const seen = element("span", "ovw-overall-seen");
     seen.setAttribute("aria-hidden", "true");
-    seen.append(element("span", "ovw-overall-letter", letter ?? shown(value)));
-    if (letter) seen.append(element("span", "ovw-overall-figure", `(${shown(value)})`));
-    cell.append(seen, element("span", "visually-hidden",
-      `${letter ? `${letter}, ` : ""}${shown(value)} out of ${TEN}`));
+    seen.append(element("span", "ovw-overall-letter", letter),
+                element("span", "ovw-overall-figure", `(${shown(value)})`));
+    cell.append(seen, element("span", "visually-hidden", `${letter}, ${shown(value)} out of ${TEN}`));
     tr.append(cell);
   });
   return tr;
@@ -616,21 +604,22 @@ function headRow() {
 /* The fold a final score's rows sit in. */
 const foldOf = group => `ovw-${group.final.board}`;
 
-/* A row that adds up others, as a letter: painted where its threshold sits on
- * the ramp, or the unpainted word for nothing. Its figure out of 10 is in its
- * accessible name and in the popover it opens. */
-function letterCell(company, { rowLabel, row, value, build, zero }) {
+/* A row that adds up others, as a letter, painted where its threshold sits on
+ * the ramp: a figure of 0.0 is a G like any other. Its figure out of 10 is in
+ * its accessible name and in the popover it opens. */
+function letterCell(company, { rowLabel, row, value, build }) {
   const letter = letterOf(value);
   const { cell, button } = view.cellButton({ lab: company.id, row },
-    `${company.name}, ${rowLabel}: ${letter ?? zero}, ${shown(value ?? 0)} out of ${TEN}`, build,
-    letter ? "cell-button cell-grade" : "cell-button cell-grade cell-na");
-  if (letter) view.paint(button, gradeValue(letter), TEN);
-  button.append(element("span", "cell-figure", letter ?? zero));
+    `${company.name}, ${rowLabel}: ${letter}, ${shown(value)} out of ${TEN}`, build,
+    "cell-button cell-grade");
+  view.paint(button, gradeValue(letter), TEN);
+  button.append(element("span", "cell-figure", letter));
   return cell;
 }
 
 /* One cell of a row borrowed from the Index, drawn by the overview's rule
- * (overview-rows.js): a total as a letter, a scored row on its own scale. */
+ * (overview-rows.js): a total as a letter, a scored row on its own scale, and a
+ * row with no figure as NA. */
 function borrowedCell(company, row) {
   const shape = cellShape(row, state.overview.grid.grades);
   const dataset = { lab: company.id, row: row.row };
@@ -642,7 +631,7 @@ function borrowedCell(company, row) {
       max: shape.max, text: shape.text, build: row.build, dataset });
   }
   return letterCell(company, { rowLabel: row.rowLabel, row: row.row, value: row.value,
-    build: row.build, zero: noneWord() });
+    build: row.build });
 }
 
 /* The rows each board of the Index shows under its final score, built by that
@@ -672,8 +661,7 @@ function figureRow(group, borrowed) {
   state.companies.forEach(company => {
     const value = company.figures[row.board][row.figure] ?? 0;
     tr.append(letterCell(company, { rowLabel: group.name.toLowerCase(), row: row.figure, value,
-      build: content => aboutFinal(content, company, group, value),
-      zero: row.zero || noneWord() }));
+      build: content => aboutFinal(content, company, group, value) }));
   });
   return tr;
 }
@@ -685,11 +673,6 @@ function drawLegend() {
   orderedGrades().filter(({ letter }) => letter.length === 1).forEach(({ letter }) => {
     legend.append(view.swatches([gradeValue(letter)], TEN), element("span", "", letter));
   });
-  // The word an empty cell of the grid says, so the scale and the cells agree,
-  // and its swatch is as unpainted as the cell.
-  const none = element("span", "swatches");
-  none.append(element("span", "swatch swatch-na"));
-  legend.append(none, element("span", "", noneWord()));
   byId("ovw-legend").replaceChildren(legend);
 }
 

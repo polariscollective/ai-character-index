@@ -1202,10 +1202,10 @@ function renderMethod() {
   if (state.assessment) {
     blocks.push(rich({ lead: `The score at the top, out of ${FINAL_MAX}.` },
       "The two halves of the board added together: the clarity of the document, out of ",
-      { mono: WHOLE_MAX }, ", and the behaviours, out of ", { mono: WHOLE_MAX },
+      { mono: WHOLE_MAX }, ", and behaviour coverage, out of ", { mono: WHOLE_MAX },
       ". Companies are ranked by it, and companies level on it share a place."));
   }
-  blocks.push(rich({ lead: "The behaviours." },
+  blocks.push(rich({ lead: "Behaviour coverage." },
     "The plain mean of the constitution's figures over every behaviour this publication gives it "
     + "one for, which may be fewer than the behaviours the board carries. A group's figure is the "
     + "plain mean of the behaviours in it."));

@@ -1500,7 +1500,7 @@
    {
     "number": "1",
     "title": "Final score",
-    "text": "The average of the clarity of the document and the behaviours, each counting for half. It ranks the companies. Every figure on the board is out of 10."
+    "text": "The average of the clarity of the document and behaviour coverage, each counting for half. It ranks the companies. Every figure on the board is out of 10."
    },
    {
     "number": "2",
@@ -1509,7 +1509,7 @@
    },
    {
     "number": "3",
-    "title": "The behaviours",
+    "title": "Behaviour coverage",
     "text": "How far the constitution goes on each behaviour the index asks about, from saying nothing about it to setting rules and showing them applied to worked examples, on the scale above. For us, a behaviour is one precise thing a constitution can ask of a model, such as deferring to users’ decisions about their own lives, or not asserting what the model believes to be false. Each is written in two parts, what it requires and where it stops, so that a careful reader could mark every passage of a constitution that bears on it. In the [doc reader](/doc-reader/) you can pick a behaviour and read every passage of a constitution that bears on it."
    },
    {
@@ -1573,7 +1573,7 @@
        ]
       }
      },
-     "The last criterion is not scored by a judge. Each judge lists the contradictions it finds, every judge then reads every claim, and a claim counts when at least two readings say it holds. The figure follows from the claims that count.\n\n### The behaviours\n\nEach behaviour is written in two parts, what it requires and where it stops. The judges read the constitution against that definition, mark every passage that bears on it, and each gives a depth from 0 to 10 on the scale under the board. A behaviour’s figure is the mean of the three depths. A category is the average of its behaviours, and the behaviours’ figure is the average of all of them, each counting for the same share, so a category counts for as many behaviours as it holds.\n\n### The final score\n\nThe average of the clarity of the document and the behaviours, each counting for 1/2. A company that publishes no constitution scores 0 on every row."
+     "The last criterion is not scored by a judge. Each judge lists the contradictions it finds, every judge then reads every claim, and a claim counts when at least two readings say it holds. The figure follows from the claims that count.\n\n### Behaviour coverage\n\nEach behaviour is written in two parts, what it requires and where it stops. The judges read the constitution against that definition, mark every passage that bears on it, and each gives a depth from 0 to 10 on the scale under the board. A behaviour’s figure is the mean of the three depths. A category is the average of its behaviours, and behaviour coverage is the average of all of them, each counting for the same share, so a category counts for as many behaviours as it holds.\n\n### The final score\n\nThe average of the clarity of the document and behaviour coverage, each counting for 1/2. A company that publishes no constitution scores 0 on every row."
     ]
    },
    {

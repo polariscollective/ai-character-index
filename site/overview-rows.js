@@ -3,10 +3,11 @@
  * The rows are built by the boards' own code (rowsFor in constitutions.js and
  * governance.js); only the drawing of a cell is the overview's. A row that adds
  * up others is a letter on the overview's scale, read from its figure out of
- * 10, or None at nought. A row scored directly keeps the scale it was scored
- * on, a criterion and a check out of 4, a practice out of 2, a behaviour out of
- * 10: a whole score written whole, a mean to one decimal. A row nobody scored
- * is NA. The rule is here, apart from the page, so node can test it. */
+ * 10, nought included, which is a G. A row scored directly keeps the scale it
+ * was scored on, a criterion and a check out of 4, a practice out of 2, a
+ * behaviour out of 10: a whole score written whole, a mean to one decimal. A
+ * row nobody scored, and a total with no figure, is NA. The rule is here, apart
+ * from the page, so node can test it. */
 
 import { gradeOf } from "./grades.js";
 
@@ -18,5 +19,5 @@ export function cellShape(row, grades) {
     return { kind: "scored", text, value: given, max: row.scored.max };
   }
   const letter = gradeOf(row.value, grades);
-  return letter ? { kind: "letter", text: letter } : { kind: "none" };
+  return letter ? { kind: "letter", text: letter } : { kind: "na" };
 }

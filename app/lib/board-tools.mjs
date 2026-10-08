@@ -30,8 +30,8 @@ const matches = (name, wanted) =>
 /* The first board as the front page draws it, from the board the publication
  * froze (site/constitutions.json as it stood when the publication was built).
  * Every figure is out of 10, as on the page: a criterion given out of 4 is
- * answered with both, and the final score is the average of the document as a
- * whole and the behaviours, with the weights the board carries. */
+ * answered with both, and the final score is the average of the clarity of the
+ * document and behaviour coverage, with the weights the board carries. */
 const TEN = 10;
 const CRITERION_SCALE = 4;
 const mean = values => (values.length
@@ -89,7 +89,7 @@ export function constitutionsBoard(snapshot, args = {}) {
     measures: {
       final_score: {
         max: TEN,
-        means: "The average of the clarity of the document and the behaviours. It ranks the "
+        means: "The average of the clarity of the document and behaviour coverage. It ranks the "
           + "companies.",
         weights: board.weights,
       },
@@ -350,7 +350,7 @@ export function governanceBoard(snapshot, args = {}) {
 }
 
 /* One company's overall grade as an answer: the figure out of 10 and its
- * letter, null where the figure prints as 0.0. */
+ * letter. */
 function overallAnswer(finals, grades) {
   const { value, letter } = overallOf(finals, grades);
   return { figure: value, max: 10, grade: letter };
@@ -366,15 +366,15 @@ function overallAnswer(finals, grades) {
  * final scores and the four parts they are made of), and each is graded with
  * its letter, read against the thresholds the file gives by the function the
  * page uses (site/grades.js), so the page and this answer cannot disagree
- * either; a total of nought answers the row's own word for it, None, as the
- * page shows. The companies come in the governance ranking, as the page lists
- * them. A publication frozen before the letters carries no thresholds, or an
- * empty list of them, and is not drawn, as the page does not draw it.
+ * either; a total of 0.0 is a G, as the page shows it. The companies come in
+ * the governance ranking, as the page lists them. A publication frozen before the
+ * letters carries no thresholds, or an empty list of them, and is not drawn, as
+ * the page does not draw it.
  *
  * Where the file names an overall grade, each company carries it as `overall`:
  * the average of its final scores, graded on the same scale and no higher than
- * F where either final score is an F, a G or 0.0, by the function the page
- * draws its first row with (overallOf in site/grades.js).
+ * F where either final score is an F or a G, by the function the page draws its
+ * first row with (overallOf in site/grades.js).
  */
 export function overviewBoard(snapshot, args = {}) {
   const overview = snapshot?.overview;
@@ -434,7 +434,7 @@ export function overviewBoard(snapshot, args = {}) {
       figures: rows.map(row => {
         const value = figureOf(row.board, row.figure, id);
         const figure = { row: row.name, figure: value, max: 10 };
-        figure.grade = gradeOf(value, grades) ?? (row.zero || "None");
+        figure.grade = gradeOf(value, grades);
         return figure;
       }),
     })),

@@ -7,29 +7,33 @@
  * MCP server alike, so the two cannot give one figure two letters.
  *
  * The letter is read from the figure as the page prints it, to one decimal, so
- * a figure printed "9.0" never carries the letter below. A figure that prints
- * as 0.0 earns no letter: the grid says the row's own word for nothing. */
+ * a figure printed "9.0" never carries the letter below. Every figure earns a
+ * letter, 0.0 included, which takes the lowest one, G. Only a missing figure
+ * has none. */
 
 import { rampAt, inkOver, contrastRatio } from "./depth-scale.js";
 
 /* The figure as the page prints it, as a number. */
 export const asShown = value => Number((value ?? 0).toFixed(1));
 
-/* `grades` is the file's list, each { letter, from }, in any order. */
+/* `grades` is the file's list, each { letter, from }, in any order. A figure
+ * below every threshold takes the lowest letter; null, undefined or NaN, a
+ * figure nobody gave, takes none. */
 export function gradeOf(value, grades) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
   const shown = asShown(value);
-  if (!(shown > 0)) return null;
   const ordered = [...grades].sort((a, b) => b.from - a.from);
-  return ordered.find(grade => shown >= grade.from)?.letter ?? null;
+  return (ordered.find(grade => shown >= grade.from) ?? ordered[ordered.length - 1])?.letter
+    ?? null;
 }
 
 /* The overall grade: the average of `values`, each a figure out of 10, read on
  * the same scale as every other letter, and no higher than `cap` when any one
- * of them earns `cap` or a letter below it, or prints as 0.0. A company that
- * fails one of the two final scores cannot make up for it with the other. The
- * lower of the average's letter and `cap` is kept, so an average that already
- * reads below `cap` keeps its own letter. A scale with no `cap` letter caps
- * nothing. */
+ * of them earns `cap` or a letter below it, 0 included. A company that fails
+ * one of the two final scores cannot make up for it with the other. The lower
+ * of the average's letter and `cap` is kept, so an average that already reads
+ * below `cap` keeps its own letter. A missing figure counts as 0. A scale with
+ * no `cap` letter caps nothing. */
 export function overallOf(values, grades, cap = "F") {
   const figures = values.map(value => value ?? 0);
   const value = figures.length

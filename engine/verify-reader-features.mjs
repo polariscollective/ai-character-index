@@ -2498,7 +2498,7 @@ console.log("== Index: the constitutions board ==");
     + "boards", JSON.stringify(board.heads.map(head => [head.id, head.mark])));
 
   const expectedRows = ["Final score", "Clarity of the document",
-    ...file.criteria.map(criterion => criterion.name), "The behaviours",
+    ...file.criteria.map(criterion => criterion.name), "Behaviour coverage",
     ...categories.flatMap(category => [category,
       ...file.behaviours.filter(behaviour => behaviour.category === category)
         .map(behaviour => behaviour.name)])];
@@ -2798,7 +2798,7 @@ console.log("== Coverage: the board, on the scale of four and on the scale of te
   }));
   check(headline.title === "Each constitution scored, with the passages behind every figure"
       && headline.lede.includes("scores each one twice, out of 10 each")
-      && headline.parts.join(" | ") === "Clarity of the document. | The behaviours."
+      && headline.parts.join(" | ") === "Clarity of the document. | Behaviour coverage."
       && headline.asterisk === "/about#why",
     "the coverage board's title says what it carries that the front board does not, and the "
     + "lede says what its two halves are", JSON.stringify(headline));

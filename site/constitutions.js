@@ -140,10 +140,11 @@ const categoryFigure = (company, members) =>
 
 const behavioursFigure = company => categoryFigure(company, state.data.behaviours);
 
-/* The final score: the document as a whole and the behaviours, averaged with the
- * weights the file gives them. Worked out here rather than read from the file,
- * so it cannot disagree with the two figures it is made of. The overview reads
- * the two halves from here too, so the front page and the board cannot differ. */
+/* The final score: the clarity of the document and behaviour coverage,
+ * averaged with the weights the file gives them. Worked out here rather than
+ * read from the file, so it cannot disagree with the two figures it is made of.
+ * The overview reads the two halves from here too, so the front page and the
+ * board cannot differ. */
 export function figuresOf(data, company) {
   const whole = number(company.whole?.total) ?? 0;
   const behaviours = mean(data.behaviours
@@ -265,7 +266,7 @@ function aboutFinal(content) {
   const weights = state.data.weights;
   board.titled(content, `Final score, out of ${finalMax()}`,
     `The average of two halves, each out of ${TEN}: the clarity of the document, counting for `
-    + `${share(weights.whole)}, and the behaviours, counting for ${share(weights.behaviours)}.`);
+    + `${share(weights.whole)}, and behaviour coverage, counting for ${share(weights.behaviours)}.`);
   const table = element("table", "readings figures");
   const headRow = element("tr");
   ["Rank", "Company", "Final score"].forEach(name => {
@@ -305,7 +306,7 @@ function finalScore(content, company) {
   const halves = [
     { name: "Clarity of the document", value: wholeTotal(company), max: wholeMax(),
       reading: company.readings?.whole, open: rest => wholeScore(rest, company), row: "whole" },
-    { name: "The behaviours", value: behavioursFigure(company), max: depthMax(),
+    { name: "Behaviour coverage", value: behavioursFigure(company), max: depthMax(),
       reading: company.readings?.behaviours, open: rest => behavioursScore(rest, company),
       row: "behaviours" },
   ];
@@ -477,7 +478,7 @@ function criterionScore(content, company, criterion) {
 
 function aboutBehaviours(content) {
   const every = state.data.behaviours.length;
-  board.titled(content, "The behaviours",
+  board.titled(content, "Behaviour coverage",
     `The mean of all ${every} behaviours, each out of ${depthMax()} and each counting for `
     + `${frac(1, every)}. It counts for ${share(state.data.weights.behaviours)} of the `
     + "final score.");
@@ -489,7 +490,7 @@ function aboutBehaviours(content) {
 
 function behavioursScore(content, company) {
   const value = behavioursFigure(company);
-  board.titled(content, `${company.name}: the behaviours`, documentLine(company));
+  board.titled(content, `${company.name}: behaviour coverage`, documentLine(company));
   content.append(board.figure(shown(value), ` out of ${depthMax()}`));
   cellSentences(content, company, company.readings?.behaviours);
   content.append(board.h3("What it is made of"));
@@ -726,20 +727,20 @@ function rowsBelowFinal({ cell, columns = null, parent = null, marks = true }) {
     rows.push(sub);
   });
 
-  /* The behaviours: every behaviour's depth averaged, which is the other half of
-   * the final score, then each category with its behaviours folded under it. A
-   * category counts for its share of every behaviour on the board, which is what
-   * the mean of every behaviour amounts to. */
+  /* Behaviour coverage: every behaviour's depth averaged, which is the other half
+   * of the final score, then each category with its behaviours folded under it.
+   * A category counts for its share of every behaviour on the board, which is
+   * what the mean of every behaviour amounts to. */
   const behavioursRow = element("tr", "total-row outside-row half-row");
   behavioursRow.dataset.level = "1";
   foldUnder(behavioursRow, "cov-row-behaviours");
   behavioursRow.append(board.rowHead(
     board.rowToggle("behaviours", state.categories.map(category => `board-row-${category.id}`),
-      { parts: "categories", name: "The behaviours" }),
-    board.rowName("The behaviours", null, aboutBehaviours,
-    "The behaviours: how they are averaged", marked([NOTE.behaviours]))));
+      { parts: "categories", name: "Behaviour coverage" }),
+    board.rowName("Behaviour coverage", null, aboutBehaviours,
+    "Behaviour coverage: how it is averaged", marked([NOTE.behaviours]))));
   companies.forEach(company => {
-    behavioursRow.append(cell(company, { kind: "total", rowLabel: "the behaviours",
+    behavioursRow.append(cell(company, { kind: "total", rowLabel: "behaviour coverage",
       row: "behaviours", value: behavioursFigure(company),
       build: content => behavioursScore(content, company) }));
   });

@@ -12,11 +12,12 @@ import { cellShape } from "../../../site/overview-rows.js";
 const { grid } = JSON.parse(await readFile(
   new URL("../../../site/overview.json", import.meta.url), "utf8"));
 
-test("a row that adds up others is its letter, and None at nought", () => {
+test("a row that adds up others is its letter, and a G at nought", () => {
   assert.deepEqual(cellShape({ kind: "total", value: 9.33 }, grid.grades), { kind: "letter", text: "A" });
   assert.deepEqual(cellShape({ kind: "total", value: 5.625 }, grid.grades), { kind: "letter", text: "E" });
-  assert.deepEqual(cellShape({ kind: "total", value: 0 }, grid.grades), { kind: "none" });
-  assert.deepEqual(cellShape({ kind: "total", value: null }, grid.grades), { kind: "none" });
+  assert.deepEqual(cellShape({ kind: "total", value: 0 }, grid.grades), { kind: "letter", text: "G" });
+  // A total nobody gave a figure is not a zero: it is not assessed.
+  assert.deepEqual(cellShape({ kind: "total", value: null }, grid.grades), { kind: "na" });
 });
 
 test("a row scored directly keeps its own scale, whole scores whole and means to a decimal", () => {

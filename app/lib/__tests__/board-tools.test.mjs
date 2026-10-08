@@ -168,12 +168,12 @@ test("the overview answers each company's figures from the two boards, with its 
       assert.equal(figure.max, 10);
       const measured = answer.measures.rows.find(row => row.name === figure.row);
       assert.ok(measured, figure.row);
-      // Every row is a total and the page shows each as a letter: the letter by
-      // the same function, the row's own word where the figure prints as nought.
-      assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades) ?? "None",
+      // Every row is a total and the page shows each as a letter, by the same
+      // function: a figure of 0.0 is a G, and no word stands in for it.
+      assert.equal(figure.grade, gradeOf(figure.figure, overview.grid.grades),
                    `${company.name} ${figure.row}`);
-      if (asShown(figure.figure) > 0) assert.notEqual(figure.grade, "None");
-      else assert.equal(figure.grade, "None", `${company.name} ${figure.row}`);
+      if (asShown(figure.figure) === 0) assert.equal(figure.grade, "G", `${company.name} ${figure.row}`);
+      else assert.ok(figure.grade, `${company.name} ${figure.row}`);
     }
   }
   // Two final scores and four parts: six rows, and the two final scores are the
@@ -197,7 +197,7 @@ test("the overview answers each company's figures from the two boards, with its 
   const { grades, ...withoutGrades } = overview.grid;
   assert.throws(() => overviewBoard({ ...snapshot(), overview: { ...overview, grid: withoutGrades } }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
-  // An empty list would read every cell None, which claims nothing meets the row.
+  // An empty list would leave every cell without a letter.
   assert.throws(() => overviewBoard({ ...snapshot(),
                                       overview: { ...overview, grid: { ...overview.grid, grades: [] } } }),
                 error => error instanceof ToolError && error.message === INCOMPATIBLE);
@@ -219,9 +219,9 @@ test("the overview answers each company's overall grade, by the function the pag
     assert.ok(Math.abs(company.overall.figure - mean) < 1e-9, company.name);
     assert.equal(company.overall.max, 10);
     assert.equal(company.overall.grade, overallOf(finals, grades).letter, company.name);
-    // Either final score an F, a G or 0.0, and the overall grade is no higher
-    // than F; otherwise it is the average's own letter.
-    const fails = finals.some(figure => ["F", "G", null].includes(gradeOf(figure, grades)));
+    // Either final score an F or a G, 0.0 included, and the overall grade is no
+    // higher than F; otherwise it is the average's own letter.
+    const fails = finals.some(figure => ["F", "G"].includes(gradeOf(figure, grades)));
     const own = gradeOf(mean, grades);
     const from = letter => grades.find(grade => grade.letter === letter)?.from ?? -1;
     if (fails) {
@@ -240,7 +240,7 @@ test("the overview answers each company's overall grade, by the function the pag
   assert.ok(bare.companies.every(company => !("overall" in company)));
 });
 
-test("the overview's own file carries the American school thresholds with plus and minus, and E, F and G below D", async () => {
+test("the overview's own file carries its thresholds, with plus and minus down to D, and E, F and G below it", async () => {
   const overview = JSON.parse(await readFile(
     new URL("../../../site/overview.json", import.meta.url), "utf8"));
   assert.deepEqual(overview.grid.grades, [
