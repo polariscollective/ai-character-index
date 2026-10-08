@@ -13,14 +13,21 @@
  * against the thresholds the file names (site/grades.js). A cell opens the
  * figure behind its letter, what the figure means, and the board that explains
  * it.
+ *
+ * Each final score folds open into the rows its board of the Index shows under
+ * it, built by that board's own code (rowsFor), so a row and its popover are
+ * the Index's; only the drawing of a cell is the overview's (overview-rows.js).
+ * How constitutions are governed leads, and orders the companies.
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
 import { FORMAT, renderPage } from "./page-content.js";
 import { renderMarkup, renderInline } from "./markup.js";
 import { createBoard, element } from "./board.js";
-import { figuresOf, partsOf as constitutionParts } from "./constitutions.js";
-import { totalsFor, partsOf as governanceParts } from "./governance.js";
+import { figuresOf, partsOf as constitutionParts, rowsFor as constitutionRows } from "./constitutions.js";
+import { totalsFor, partsOf as governanceParts, rowsFor as governanceRows,
+         ranked as governanceRanked } from "./governance.js";
+import { cellShape } from "./overview-rows.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
 import { gradeOf, paintAt } from "./grades.js";
@@ -37,9 +44,11 @@ const lowerFirst = text =>
 /* One company's four figures, and whether it publishes a constitution. The
  * constitutions board names each company's newest document under the company's
  * id; an earlier version carries an id of its own and is left out here, as the
- * board leaves it out of its columns. Companies are in alphabetical order: the
- * overview ranks nobody, the boards of the Index do. */
+ * board leaves it out of its columns. Companies are in the order of how their
+ * constitution is governed, the governance board's own ranking with its
+ * tiebreak, so the overview and that board order them alike. */
 function companiesOf(constitutions, governance, overview) {
+  const order = governanceRanked(governance).map(lab => lab.id);
   return governance.labs.map(lab => {
     const written = constitutions.companies.find(company => company.id === lab.id);
     const said = written ? figuresOf(constitutions, written) : { final: 0, whole: 0, behaviours: 0 };
@@ -70,7 +79,7 @@ function companiesOf(constitutions, governance, overview) {
         governance: { total: governed.total, ...governed.byColumn },
       },
     };
-  }).sort((a, b) => a.name.localeCompare(b.name, "en"));
+  }).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 }
 
 /* The overview's summary of one figure for one company. A company with no
@@ -552,7 +561,7 @@ function headRow() {
   corner.scope = "col";
   corner.append(
     element("span", "head-name", "Grade"),
-    element("span", "head-sub", "companies in alphabetical order"));
+    element("span", "head-sub", "companies by how their constitution is governed"));
   row.append(corner);
   state.companies.forEach(company => {
     const cell = element("th");
@@ -585,45 +594,66 @@ function headRow() {
   return row;
 }
 
-/* One row of figures, a level below where the Index puts it, so the page reads
- * as a summary rather than a second board: the final score of a group is drawn
- * as the Index draws the document as a whole (level 1), and its halves as the
- * Index draws a category (level 2), set in by the space the Index keeps for a
- * fold. There is nothing to fold here, so the space alone shows which figures a
- * final score is made of. */
-function figureRow(group, row, final) {
-  const tr = element("tr", final ? "total-row outside-row half-row" : "question-row");
-  tr.dataset.level = final ? "1" : "2";
-  tr.dataset.row = row.figure;
-  if (final) {
-    const head = element("th");
-    head.scope = "row";
-    const line = element("div", "row-head");
-    line.append(rowTitle(group.name, content => aboutGroup(content, group),
-      `${group.name}: what it measures`));
-    head.append(line);
-    tr.append(head);
-  } else {
-    tr.append(view.rowHead(null, view.rowName(row.name, null,
-      content => aboutRow(content, group, row), `${row.name}: what it measures`)));
+/* The fold a final score's rows sit in. */
+const foldOf = group => `ovw-${group.final.board}`;
+
+/* A row that adds up others, as a letter: painted where its threshold sits on
+ * the ramp, or the unpainted word for nothing. Its figure out of 10 is in its
+ * accessible name and in the popover it opens. */
+function letterCell(company, { rowLabel, row, value, build, zero }) {
+  const letter = letterOf(value);
+  const { cell, button } = view.cellButton({ lab: company.id, row },
+    `${company.name}, ${rowLabel}: ${letter ?? zero}, ${shown(value ?? 0)} out of ${TEN}`, build,
+    letter ? "cell-button cell-grade" : "cell-button cell-grade cell-na");
+  if (letter) view.paint(button, gradeValue(letter), TEN);
+  button.append(element("span", "cell-figure", letter ?? zero));
+  return cell;
+}
+
+/* One cell of a row borrowed from the Index, drawn by the overview's rule
+ * (overview-rows.js): a total as a letter, a scored row on its own scale. */
+function borrowedCell(company, row) {
+  const shape = cellShape(row, state.overview.grid.grades);
+  const dataset = { lab: company.id, row: row.row };
+  if (shape.kind === "na") {
+    return view.naCell({ name: company.name, rowLabel: row.rowLabel, dataset, build: row.build });
   }
+  if (shape.kind === "scored") {
+    return view.scoreCell({ name: company.name, rowLabel: row.rowLabel, value: shape.value,
+      max: shape.max, text: shape.text, build: row.build, dataset });
+  }
+  return letterCell(company, { rowLabel: row.rowLabel, row: row.row, value: row.value,
+    build: row.build, zero: noneWord() });
+}
+
+/* The rows each board of the Index shows under its final score, built by that
+ * board's own code with this grid, its order of companies and its way of
+ * drawing a cell. The note marks stay on the Index, where their notes are. */
+function borrowedRows() {
+  const columns = state.companies.map(company => company.id);
+  const options = board => ({ cell: borrowedCell, columns, parent: `ovw-${board}`, marks: false });
+  return {
+    constitutions: constitutionRows(view, state.boards.constitutions, options("constitutions")),
+    governance: governanceRows(view, state.boards.governance, options("governance")),
+  };
+}
+
+/* A final score's row, drawn as the Index draws its own final score: its fold
+ * opens onto the rows that board shows under it, and its cells are letters. */
+function figureRow(group, borrowed) {
+  const row = group.final;
+  const tr = element("tr", "total-row outside-row");
+  tr.dataset.level = "0";
+  tr.dataset.row = row.figure;
+  tr.append(view.rowHead(
+    view.rowToggle(foldOf(group), borrowed.top, { parts: "rows", name: group.name }),
+    view.rowName(group.name, null, content => aboutGroup(content, group),
+      `${group.name}: what it measures`)));
   state.companies.forEach(company => {
     const value = company.figures[row.board][row.figure] ?? 0;
-    const build = final
-      ? content => aboutFinal(content, company, group, value)
-      : content => aboutCell(content, company, group, row, value);
-    const letter = letterOf(value);
-    const label = final ? group.name : row.name;
-    const zero = row.zero || noneWord();
-    // The letter alone in the cell; its figure is in the accessible name and in
-    // the popover the cell opens.
-    const { cell, button } = view.cellButton({ lab: company.id, row: row.figure },
-      `${company.name}, ${label.toLowerCase()}: ${letter ?? zero}, `
-      + `${shown(value)} out of ${TEN}`, build,
-      letter ? "cell-button cell-grade" : "cell-button cell-grade cell-na");
-    if (letter) view.paint(button, gradeValue(letter), TEN);
-    button.append(element("span", "cell-figure", letter ?? zero));
-    tr.append(cell);
+    tr.append(letterCell(company, { rowLabel: group.name.toLowerCase(), row: row.figure, value,
+      build: content => aboutFinal(content, company, group, value),
+      zero: row.zero || noneWord() }));
   });
   return tr;
 }
@@ -675,12 +705,17 @@ function draw() {
                  ...(shownContext?.note ? [{ title: context.name, text: context.note }] : [])];
   const contextNote = shownContext?.note ? (grid.notes || []).length + 1 : null;
   view.nodes.table.tHead.replaceChildren(headRow());
-  // Only the final scores of the two boards, each opening what it is made of,
-  // then the views still in preparation, then the context.
+  // Each final score, then the rows its board of the Index shows under it, then
+  // the views in preparation and the context.
+  const borrowed = borrowedRows();
   view.nodes.table.tBodies[0].replaceChildren(
-    ...grid.groups.map(group => figureRow(group, group.final, true)),
+    ...grid.groups.flatMap(group => [figureRow(group, borrowed[group.final.board]),
+                                     ...borrowed[group.final.board].rows]),
     ...(grid.coming || []).map(comingRow),
     ...contextRows(contextNote));
+  // Every borrowed row starts shut, whatever its board left open: shutting a
+  // fold sets every row under every fold from what is open, which is nothing.
+  grid.groups.forEach(group => view.setExpanded(foldOf(group), false));
   byId("ovw-hint").textContent = grid.hint;
   byId("ovw-notes").replaceChildren(...notes.map(({ title, text }, index) => {
     const item = element("li");
@@ -708,20 +743,20 @@ export async function initializeOverview() {
   // A publication frozen before the letters carries no thresholds, and is not
   // drawn rather than drawn with letters it was never built with.
   if (overview?.format !== FORMAT || !overview.page || !Array.isArray(overview.grid?.grades)
-      || !overview.grid.grades.length
+      || !overview.grid.grades.length || !overview.grid.every_row
       || !constitutions?.companies || !governance?.labs) {
     status.textContent = INCOMPATIBLE;
     return;
   }
   view = createBoard({
-    nodes: { table: byId("ovw-grid"), pop: byId("ovw-pop"), expandAll: null },
-    everyRow: null,
+    nodes: { table: byId("ovw-grid"), pop: byId("ovw-pop"), expandAll: byId("ovw-expand-all") },
+    everyRow: overview.grid.every_row,
   });
   try {
     needed().forEach(node => { node.hidden = false; });
     renderPage("ovw", overview.page);
     state = { overview, companies: companiesOf(constitutions, governance, overview),
-              showContext: true };
+              boards: { constitutions, governance }, showContext: true };
     draw();
     drawTakeaways(overview.takeaways || []);
     renderMenu(document.getElementById("view-overview"));
@@ -735,6 +770,16 @@ export async function initializeOverview() {
   // The legend is drawn again with the grid, and keeps its one listener.
   const legend = byId("ovw-legend");
   legend.addEventListener("click", () => view.openPopover(legend, aboutScale));
+  view.nodes.expandAll.addEventListener("click", () => view.expandEvery());
+  // A source code in a popover borrowed from the governance board names an
+  // entry under that board's "Sources reviewed", which the overview does not
+  // carry: it opens there, in a new tab, which the Index scrolls to and marks.
+  byId("ovw-pop").addEventListener("click", event => {
+    const link = event.target.closest?.('a[href^="#src-"]');
+    if (!link) return;
+    event.preventDefault();
+    window.open(`/index?view=governance${link.getAttribute("href")}`, "_blank", "noopener");
+  });
 
   status.textContent = "";
 }

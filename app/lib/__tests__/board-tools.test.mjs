@@ -182,7 +182,7 @@ test("the overview answers each company's figures from the two boards, with its 
   }
   // Two final scores are graded, and four parts are not.
   assert.deepEqual(answer.measures.rows.filter(row => row.final_score).map(row => row.name),
-    ["What the constitutions say, final score", "How constitutions are governed, final score"]);
+    ["How constitutions are governed, final score", "What the constitutions say, final score"]);
   assert.equal(answer.measures.rows.filter(row => !row.final_score).length, 4);
   // OpenAI's document as a whole is the highest part there is, and it is no A here.
   const openai = answer.companies.find(company => company.id === "openai");

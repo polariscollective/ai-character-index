@@ -9,32 +9,6 @@
   "caption": "The two final scores of the index for ten companies, each shown as a letter from A to F, or None where there is nothing to score",
   "groups": [
    {
-    "name": "What the constitutions say",
-    "href": "/index#cov-chart",
-    "rows": [
-     {
-      "board": "constitutions",
-      "figure": "whole",
-      "name": "Document as a whole",
-      "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, whether its rules give their reasons, which domains a model is used in have rules of their own, and whether it contradicts itself.",
-      "zero": "None"
-     },
-     {
-      "board": "constitutions",
-      "figure": "behaviours",
-      "name": "Behaviours covered",
-      "plain": "How deeply the constitution addresses fourteen behaviours a model should show.",
-      "zero": "None"
-     }
-    ],
-    "final": {
-     "board": "constitutions",
-     "figure": "final",
-     "plain": "The document as a whole and the behaviours it covers, together.",
-     "zero": "None"
-    }
-   },
-   {
     "name": "How constitutions are governed",
     "href": "/index?view=governance#gov-chart",
     "rows": [
@@ -59,6 +33,32 @@
      "plain": "What the company publishes about its constitution and how far it binds its models to it, together.",
      "zero": "None"
     }
+   },
+   {
+    "name": "What the constitutions say",
+    "href": "/index#cov-chart",
+    "rows": [
+     {
+      "board": "constitutions",
+      "figure": "whole",
+      "name": "Document as a whole",
+      "plain": "How clearly the constitution says which rule wins when two conflict, how firm each rule is, whether its rules give their reasons, which domains a model is used in have rules of their own, and whether it contradicts itself.",
+      "zero": "None"
+     },
+     {
+      "board": "constitutions",
+      "figure": "behaviours",
+      "name": "Behaviours covered",
+      "plain": "How deeply the constitution addresses fourteen behaviours a model should show.",
+      "zero": "None"
+     }
+    ],
+    "final": {
+     "board": "constitutions",
+     "figure": "final",
+     "plain": "The document as a whole and the behaviours it covers, together.",
+     "zero": "None"
+    }
    }
   ],
   "grades": [
@@ -77,12 +77,13 @@
    { "letter": "F", "from": 2 },
    { "letter": "G", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, the thresholds of American school grades, then **E from 4.0, F from 2.0 and G above 0**, and **None at 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the American scale has a single F; the index splits it into three bands of 2, as an energy label runs from A to G, because most scores fall there. E, F and G carry no plus or minus. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. The parts behind a figure are each given on a scale of their own, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice, and each is shown out of 10 as its share of that scale.",
+  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, the thresholds of American school grades, then **E from 4.0, F from 2.0 and G above 0**, and **None at 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the American scale has a single F; the index splits it into three bands of 2, as an energy label runs from A to G, because most scores fall there. E, F and G carry no plus or minus. Press the scale above the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures. A cell, once opened, shows the figure out of 10 behind its letter. Opened, a score shows the rows it is made of: a row that adds up others is a letter on the same scale, and a row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice.",
   "hint": "Press a cell to see the score behind it, or the scale to see what each letter covers.",
   "grade_scale": {
    "title": "The grading scale",
    "text": "Each letter covers the figures out of 10 beside it, on the thresholds of American school grades down to D, and in three bands of 2 below it, E, F and G, where the American scale has a single F. The letter is read from the figure as it is shown, to one decimal. None means nothing the company publishes meets what the row measures."
   },
+  "every_row": { "show": "Show every row", "hide": "Hide every row" },
   "no_constitution": "It publishes no constitution, so there is nothing to score here. A document of this kind may exist inside the company without having been released.",
   "notes": [
    {
