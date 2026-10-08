@@ -1159,8 +1159,7 @@ function sourceEntry(entry) {
   return item;
 }
 
-function renderSources() {
-  const node = document.getElementById("gov-source-list");
+function renderSources(node = document.getElementById("gov-source-list")) {
   if (!node) return;
   const fragment = document.createDocumentFragment();
   [...board.data.labs, SEVERAL].forEach(company => {
@@ -1210,6 +1209,11 @@ function wireSources() {
   // An address that names a source, from a code opened in its own tab.
   if (location.hash.startsWith("#src-")) showSource(location.hash.slice("#src-".length));
 }
+
+/* The sources list and the move to one entry, for a page that draws this
+ * board's rows elsewhere (the overview, through rowsFor): its own copy of the
+ * list goes into the node it names, and a code pressed there lands on it. */
+export { renderSources as sourcesInto, showSource };
 
 /* Open one cell of this board as a press on it would, unfolding the rows above
  * it. The Index opens a cell the address names this way. */

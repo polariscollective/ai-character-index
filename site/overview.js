@@ -30,7 +30,7 @@ import { renderMarkup, renderInline } from "./markup.js";
 import { createBoard, element } from "./board.js";
 import { figuresOf, partsOf as constitutionParts, rowsFor as constitutionRows } from "./constitutions.js";
 import { totalsFor, partsOf as governanceParts, rowsFor as governanceRows,
-         ranked as governanceRanked } from "./governance.js";
+         ranked as governanceRanked, sourcesInto, showSource } from "./governance.js";
 import { cellShape } from "./overview-rows.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
@@ -785,6 +785,57 @@ function draw() {
   drawLegend();
 }
 
+/* Every source the overview's cells cite, at the foot of the page: the
+ * governance board's sources, drawn by its own code (sourcesInto), then those
+ * of the context rows, each opening in its own tab. */
+function drawSources() {
+  sourcesInto(byId("ovw-sources"));
+  const context = state.overview.context;
+  const list = element("ul", "source-list ovw-context-sources");
+  const linked = (text, url) => {
+    const link = element("a", "", text);
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    return link;
+  };
+  (context?.rows || []).forEach(row => {
+    if (row.url) {
+      const item = element("li", "source-entry");
+      item.append(element("strong", "", `${row.name}. `), linked(row.source || row.url, row.url));
+      list.append(item);
+    }
+  });
+  state.companies.forEach(company => {
+    const entry = context?.companies?.[company.id] || {};
+    Object.values(entry).forEach(part => (part?.signals || []).filter(signal => signal.url)
+      .forEach(signal => {
+        const item = element("li", "source-entry");
+        item.append(element("strong", "", `${company.name}. `), linked(signal.text, signal.url));
+        list.append(item);
+      }));
+  });
+  byId("ovw-context-sources").replaceChildren(
+    ...(list.children.length ? [element("h3", "", context?.name || "For context"), list] : []));
+}
+
+/* Under the source a code led to, the way back: to the cell the code was
+ * pressed in, scrolled into view and its popover opened again. One at a time;
+ * it goes once used. */
+function offerWayBack(entry, from) {
+  if (!entry || !from) return;
+  document.querySelectorAll("#view-overview .source-back").forEach(button => button.remove());
+  const back = element("button", "gov-button source-back", "Back to where you were");
+  back.type = "button";
+  back.addEventListener("click", () => {
+    back.remove();
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    from.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+    setTimeout(() => from.click(), still ? 0 : 400);
+  });
+  entry.append(back);
+}
+
 function drawTakeaways(takeaways) {
   byId("ovw-takeaways").replaceChildren(...takeaways.map(({ title, text }) => {
     const item = element("article", "ovw-takeaway");
@@ -817,6 +868,7 @@ export async function initializeOverview() {
               boards: { constitutions, governance }, showContext: true };
     draw();
     drawTakeaways(overview.takeaways || []);
+    drawSources();
     renderMenu(document.getElementById("view-overview"));
   } catch (error) {
     console.error(error);
@@ -842,22 +894,18 @@ export async function initializeOverview() {
     fold.open = true;
     target.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  // A source code in a popover borrowed from the governance board names an
-  // entry under that board's "Sources reviewed", which the overview does not
-  // carry. Each such link is rewritten once it appears, to open there in a new
-  // tab (the Index scrolls to the entry and marks it), so a middle-click or a
-  // copied link goes to the Index as well, and not to a "#src-" that is nowhere
-  // on this page.
-  const pop = byId("ovw-pop");
-  new MutationObserver(() => {
-    pop.querySelectorAll('a[href^="#src-"]').forEach(link => {
-      const spoken = link.getAttribute("aria-label") || link.textContent;
-      link.setAttribute("aria-label", `${spoken}, in the Index, in a new tab`);
-      link.href = `/index?view=governance${link.getAttribute("href")}`;
-      link.target = "_blank";
-      link.rel = "noopener";
-    });
-  }).observe(pop, { childList: true, subtree: true });
+  // A source code in a popover leads to its entry under Sources, at the foot of
+  // this page, which offers the way back to the cell it was pressed in. The
+  // cell is read before the popover shuts, since shutting it forgets it.
+  byId("ovw-pop").addEventListener("click", event => {
+    const link = event.target.closest?.('a[href^="#src-"]');
+    if (!link) return;
+    const from = document.querySelector("#view-overview .is-open");
+    const code = link.getAttribute("href").slice("#src-".length);
+    if (!showSource(code)) return;
+    event.preventDefault();
+    offerWayBack(document.getElementById(`src-${code}`), from);
+  });
 
   status.textContent = "";
 }
