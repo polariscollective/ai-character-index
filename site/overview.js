@@ -300,6 +300,7 @@ function aboutGroup(content, group) {
  * the way to its profile on each board of the Index. */
 function aboutCompany(content, company) {
   view.titled(content, company.name);
+  content.append(overallLine(company));
   const profile = company.summary.profile;
   if (profile) renderMarkup(content, profile);
   content.append(view.h3("Its final scores"), figureList(state.overview.grid.groups.map(group =>
@@ -331,6 +332,34 @@ function rowTitle(name, build, label) {
 
 /* ---- The overall grade --------------------------------------------------- */
 
+/* One line on a company's overall grade, at the head of its popover: the letter,
+ * the figure, and the two scores it averages; and, where an F or a G on either
+ * holds it at F, which score does and what the average alone would have been. */
+function overallLine(company) {
+  const { value, letter } = overallFor(company);
+  const halves = state.overview.grid.groups.map(group => {
+    const figure = company.figures[group.final.board][group.final.figure] ?? 0;
+    return { name: group.name.toLowerCase(), figure, letter: letterOf(figure) };
+  });
+  const averaged = halves.map(half => `${half.name} (${half.letter}, ${shown(half.figure)})`)
+    .join(" and ");
+  const line = element("p", "ovw-overall-line");
+  line.append(element("strong", "", `Overall grade ${letter}`));
+  const unheld = letterOf(value);
+  if (unheld === letter) {
+    line.append(document.createTextNode(`, ${shown(value)} out of ${TEN}: the average of ${averaged}.`));
+    return line;
+  }
+  // "an E", "an F", "a G": the article a letter takes when read aloud.
+  const article = grade => (/^[AEF]/.test(grade) ? `an ${grade}` : `a ${grade}`);
+  const failing = halves.filter(half => half.letter === "F" || half.letter === "G");
+  line.append(document.createTextNode(`. The average of ${averaged} is ${shown(value)}, `
+    + `${article(unheld)}, but its ${failing.map(half => half.name).join(" and ")} score is `
+    + `${failing.map(half => article(half.letter)).join(" and ")}, and a company with an F or a G `
+    + `on either score gets no more than F.`));
+  return line;
+}
+
 /* How the overall grade is worked out, in the file's words. */
 function aboutOverall(content) {
   const { overall } = state.overview.grid;
@@ -340,8 +369,8 @@ function aboutOverall(content) {
 
 /* The overall grade, the first row of the grid: a quiet band rather than a row
  * of painted cells, since it is read from the two letters under it and adds no
- * figure of its own. Each cell is the letter with its figure beside it, small.
- * Nothing folds under it, and only its name opens a popover. */
+ * figure of its own. Each cell is the letter with its figure beside it, small,
+ * and opens the company's popover. Nothing folds under it. */
 function overallRow() {
   const { overall } = state.overview.grid;
   const tr = element("tr", "ovw-overall-row");
@@ -352,12 +381,21 @@ function overallRow() {
     const { value, letter } = overallFor(company);
     const cell = element("td", "cell ovw-overall-cell");
     cell.dataset.lab = company.id;
-    // Seen as "C+ (7.5)", heard as "C+, 7.5 out of 10".
-    const seen = element("span", "ovw-overall-seen");
-    seen.setAttribute("aria-hidden", "true");
-    seen.append(element("span", "ovw-overall-letter", letter),
-                element("span", "ovw-overall-figure", `(${shown(value)})`));
-    cell.append(seen, element("span", "visually-hidden", `${letter}, ${shown(value)} out of ${TEN}`));
+    // Seen as "C+ (7.5)", heard as "C+, 7.5 out of 10". A press opens the
+    // company's popover, as its name does, which starts with this grade.
+    const button = element("button", "ovw-overall-button");
+    button.type = "button";
+    button.dataset.lab = company.id;
+    button.dataset.row = "overall";
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-label", `${company.name}, overall grade: ${letter}, `
+      + `${shown(value)} out of ${TEN}`);
+    button.append(element("span", "ovw-overall-letter", letter),
+                  element("span", "ovw-overall-figure", `(${shown(value)})`));
+    button.addEventListener("click", () =>
+      view.openPopover(button, content => aboutCompany(content, company)));
+    cell.append(button);
     tr.append(cell);
   });
   return tr;

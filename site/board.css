@@ -1573,3 +1573,22 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* On the overview each company's mark and name sit centred over its column. */
 .ovw-board thead .company-button { text-align: center; }
 .ovw-board thead .company-mark { margin-left: auto; margin-right: auto; }
+/* An overall grade is a button that keeps the band's look: no ground, no edge,
+   the letter and its figure centred, the focus ring every control has. */
+.ovw-board .ovw-overall-button {
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.ovw-board .ovw-overall-button:hover,
+.ovw-board .ovw-overall-button.is-open { background: rgb(92 107 60 / .08); }
+.ovw-board .ovw-overall-button:focus-visible { outline: 2px solid var(--energy); outline-offset: -2px; }
+/* The line on the overall grade at the head of a company's popover. */
+.gov-pop .ovw-overall-line { margin: 0 0 10px; }
