@@ -25,12 +25,14 @@
  */
 
 import { INCOMPATIBLE, loadBoard } from "./publication-data.js";
-import { FORMAT, renderPage } from "./page-content.js";
+import { FORMAT, renderPage, part } from "./page-content.js";
 import { renderMarkup, renderInline } from "./markup.js";
 import { createBoard, element } from "./board.js";
-import { figuresOf, partsOf as constitutionParts, rowsFor as constitutionRows } from "./constitutions.js";
+import { figuresOf, partsOf as constitutionParts, rowsFor as constitutionRows,
+         criterionInto, depthScaleItems, CRITERION_SCALE } from "./constitutions.js";
 import { totalsFor, partsOf as governanceParts, rowsFor as governanceRows,
-         ranked as governanceRanked, sourcesInto, showSource } from "./governance.js";
+         ranked as governanceRanked, sourcesInto, showSource,
+         checksTable, scaleList } from "./governance.js";
 import { cellShape } from "./overview-rows.js";
 import { companyMark } from "./company-marks.js";
 import { renderMenu } from "./page-menu.js";
@@ -237,16 +239,17 @@ function everyScore(content) {
   return button;
 }
 
-/* Each board's takeaways: the key its file writes them under, and the section
- * of the Index that shows them (boards.html), which boards.js lands on once the
- * board is drawn. */
+/* Each board's takeaways: the key its file writes them under. The pages that
+ * draw each board on its own stay online but are left out of the menu, so
+ * nothing on this page leads to them (owner, 9 October 2026). */
 const TAKEAWAYS = { governance: "findings", constitutions: "takeaways" };
 
 /* What a final score's name opens: what the score is, in one line, then the
  * takeaways of the board it comes from, as that board's file writes them. Not
- * the page's own takeaways, which are across both scores. Wide, since it carries a whole board's takeaways: the
- * class sits on the popover's body, which every popover replaces, so the next
- * one opens at the usual width (board.css). */
+ * the page's own takeaways, which are across both scores. Wide, since it
+ * carries a whole board's takeaways: the class sits on the popover's body,
+ * which every popover replaces, so the next one opens at the usual width
+ * (board.css). */
 function aboutGroup(content, group) {
   const key = TAKEAWAYS[group.final.board];
   content.classList.add("ovw-pop-wide");
@@ -979,6 +982,283 @@ function offerWayBack(entry, from) {
   else entry.prepend(back);
 }
 
+/* ---- The methodology ----------------------------------------------------- */
+
+/* How every score of the grid is worked out and where every row comes from, in
+ * the folds of the section the file calls "Methodology". What the boards' files
+ * carry is read from them here, into the slots the file leaves: the weights and
+ * the counts of rows, every check with what earns 0, 2 and 4, every practice and
+ * criterion with its scale, the depth scale, the behaviours, and the rules
+ * added for cases the descriptions left open. Where the board's own page draws
+ * the same thing, its code draws it here too (checksTable, scaleList,
+ * criterionInto, depthScaleItems). So no sentence here can give a weight or a
+ * scale the figures were not computed with, and the file's own words say only
+ * what no board carries: where each part comes from. */
+
+const COUNTS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+  "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+  "eighteen", "nineteen", "twenty"];
+/* "eleven rows", "one check": a count in words, as the prose around it writes one. */
+const counted = (count, one, many = `${one}s`) =>
+  `${COUNTS[count] ?? count} ${count === 1 ? one : many}`;
+const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
+/* "a, b and c". */
+const listed = names => (names.length < 2 ? names.join("")
+  : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
+
+/* A weight as the fraction it is, 0.5 as 1/2, as the boards write one. */
+function fraction(weight) {
+  for (let of = 1; of <= 20; of += 1) {
+    if (Math.abs(weight * of - Math.round(weight * of)) < 1e-9) {
+      return `${Math.round(weight * of)}/${of}`;
+    }
+  }
+  return weight.toFixed(2);
+}
+
+/* "transparency and applicability, each counting for 1/2", or each with its own
+ * share where the shares differ. */
+function weighed(names, shares) {
+  if (shares.every(share => share === shares[0])) {
+    return `${listed(names)}, each counting for ${shares[0]}`;
+  }
+  return listed(names.map((name, index) => `${name}, counting for ${shares[index]}`));
+}
+
+/* The weights a final score gives its two halves, by the figure each half is. */
+const weightsOf = board => (board === "governance"
+  ? state.boards.governance.total.weights : state.boards.constitutions.weights);
+
+/* A final score: what it measures, in the grid's words, and its halves with
+ * their weights, from the board. */
+function finalLine(group) {
+  const weights = weightsOf(group.final.board);
+  return `**${group.name}** measures ${lowerFirst(group.final.plain)} It is the average of its `
+    + `${counted(group.rows.length, "half", "halves")}, `
+    + `${weighed(group.rows.map(row => lowerFirst(row.name)),
+      group.rows.map(row => fraction(weights[row.figure])))}.`;
+}
+
+/* How one of the four halves is worked out from the rows under it. */
+function halfSum(row) {
+  const { constitutions, governance } = state.boards;
+  if (row.figure === "whole") {
+    const criteria = constitutions.criteria.length;
+    return `It is the average of its ${counted(criteria, "criterion", "criteria")}, each scored from `
+      + `0 to ${CRITERION_SCALE} and counting for 1/${criteria}.`;
+  }
+  if (row.figure === "behaviours") {
+    const every = constitutions.behaviours.length;
+    const categories = new Set(constitutions.behaviours.map(one => one.category)).size;
+    const top = constitutions.scale.depth[constitutions.scale.depth.length - 1].level;
+    return `It is the average of all ${counted(every, "behaviour")}, each given a depth from 0 to `
+      + `${top} and counting for 1/${every}. They fall into `
+      + `${counted(categories, "category", "categories")}, and a category shows the average of `
+      + "its behaviours, so it counts for as many behaviours as it holds.";
+  }
+  const column = governance.columns.find(one => one.id === row.figure);
+  const questions = column.questions.map(id => governance.questions.find(one => one.id === id));
+  const checks = questions.reduce((sum, question) => sum + question.checks.length, 0);
+  const practices = column.practices.length;
+  const groups = (column.groups || []).length;
+  const rows = checks + practices;
+  const said = [];
+  if (checks && practices) {
+    said.push(`It is the average of ${counted(rows, "row")}, each counting for 1/${rows} as its `
+      + "share of its own scale.",
+    `${capital(counted(checks, "is the check", "are the checks"))} of its `
+      + `${counted(questions.length, "question")}, each scored from 0 to 4, and `
+      + `${counted(practices, "is a best practice", "are best practices")}, scored 0, 1 or 2.`);
+  } else if (checks) {
+    said.push(`It is the average of the ${counted(checks, "check")} of its `
+      + `${counted(questions.length, "question")}, each scored from 0 to 4 and counting for `
+      + `1/${checks}.`);
+  } else {
+    said.push(`It is the average of ${counted(practices, "best practice")}, each scored 0, 1 or 2 `
+      + `and counting for 1/${practices}.`);
+  }
+  if (questions.length && groups) {
+    said.push("A question shows the average of its checks, and a group the average of its practices.");
+  } else if (questions.length) {
+    said.push("A question shows the average of its checks.");
+  } else if (groups) {
+    said.push(`They fall into ${counted(groups, "group")}, and a group shows the average of its `
+      + "practices.");
+  }
+  return said.join(" ");
+}
+
+/* A half: what it measures, in the grid's words, and how it is worked out. */
+const halfLine = row => `**${row.name}** measures ${lowerFirst(row.plain)} ${halfSum(row)}`;
+
+/* A fold of the methodology built here rather than in the file, drawn as the
+ * file's own folds are; its body takes what follows. */
+function methodFold(title) {
+  const fold = part({ title, blocks: [] });
+  fold.lastChild.classList.add("ovw-method-body");
+  return fold;
+}
+
+/* Where something comes from, in the quiet line under it. */
+function sourceLine(text) {
+  return renderInline(element("p", "ovw-method-source"), text);
+}
+
+/* The working paper a row comes from, by its key in the governance file. */
+const paperBy = key => state.boards.governance.papers?.[key]?.by;
+
+/* A question: what it asks, how its figure is worked out, its checks with what
+ * earns 0, 2 and 4, and where it comes from: the paper, and what the file adds
+ * about the ask it follows. */
+function questionFold(question) {
+  const fold = methodFold(question.name);
+  const checks = question.checks.length;
+  fold.lastChild.append(element("p", "", question.question),
+    element("p", "", checks === 1
+      ? "Its one check is scored from 0 to 4, and the question shows its score."
+      : `It is the average of its ${counted(checks, "check")}, each scored from 0 to 4.`),
+    checksTable(question),
+    sourceLine([`From the working paper by ${paperBy(question.paper)}.`,
+      state.overview.method?.questions?.[question.id]].filter(Boolean).join(" ")));
+  return fold;
+}
+
+/* A practice: its name and what it asks, what earns 0, 1 and 2, and the part of
+ * the paper it comes from. The five practices nobody outside a company can see
+ * carry descriptions of their own, and our reading of what the paper asks; the
+ * others share one scale, whose note the section says once. */
+function practiceItem(id) {
+  const governance = state.boards.governance;
+  const internal = (governance.internal || []).find(one => one.id === id);
+  const practice = internal || governance.supporting.find(one => one.id === id);
+  const item = element("div", "ovw-method-practice");
+  const name = element("p");
+  name.append(element("span", "check-id", `${practice.id} `),
+    element("strong", "", `${practice.short}. `), document.createTextNode(practice.label));
+  const shared = { ...governance.supporting_scale };
+  delete shared.note;
+  item.append(name, scaleList(null, practice.anchors || shared),
+    sourceLine([`From the working paper by ${paperBy(practice.paper)}, `
+      + `${lowerFirst(practice.source)}.`, internal ? practice.reading : null]
+      .filter(Boolean).join(" ")));
+  return item;
+}
+
+/* A group of practices: what it gathers, what it shows, and its practices. */
+function groupFold(group, column) {
+  const fold = methodFold(group.name);
+  const towards = column.name.toLowerCase();
+  fold.lastChild.append(element("p", "", group.plain),
+    element("p", "", group.practices.length === 1
+      ? `It holds one practice and shows its score, which counts towards ${towards} as a row `
+        + "of its own."
+      : `It shows the average of its ${counted(group.practices.length, "practice")}, and each `
+        + `counts towards ${towards} as a row of its own.`),
+    ...group.practices.map(practiceItem));
+  if (group.unscored?.length) {
+    fold.lastChild.append(element("p", "", state.boards.governance.internal_note),
+      ...group.unscored.map(practiceItem));
+  }
+  return fold;
+}
+
+/* A column's practices that sit in no group, then its groups. */
+function practicesOf(column) {
+  const grouped = new Set((column.groups || [])
+    .flatMap(group => [...group.practices, ...(group.unscored || [])]));
+  return [...column.practices.filter(id => !grouped.has(id)).map(practiceItem),
+          ...(column.groups || []).map(group => groupFold(group, column))];
+}
+
+/* The rules decided for cases the descriptions left open, as the governance
+ * file's own scoring section writes them, under the heading "Rules we added to
+ * the descriptions". The fold's title stands in for that heading here, so the
+ * asterisk that pointed from the heading to the closing note goes with it. */
+function rulesText(governance) {
+  const method = (governance.page?.sections || []).find(section => section.id === "gov-method");
+  const block = (method?.blocks || []).find(one => typeof one === "string"
+    && /^### Rules\b/m.test(one));
+  if (!block) return null;
+  const body = block.slice(block.search(/^### Rules\b/m)).split("\n").slice(1).join("\n");
+  const next = body.search(/^### /m);
+  return (next === -1 ? body : body.slice(0, next)).replace(/^\*(?=\S)/m, "").trim();
+}
+
+/* The behaviours, category by category, each with what it covers and where it
+ * stops, in the file's words. */
+function behavioursInto(node) {
+  const byCategory = new Map();
+  state.boards.constitutions.behaviours.forEach(behaviour => {
+    const name = behaviour.category || "Behaviours";
+    if (!byCategory.has(name)) byCategory.set(name, []);
+    byCategory.get(name).push(behaviour);
+  });
+  byCategory.forEach((members, name) => {
+    const list = element("ul", "gov-bullets ovw-method-behaviours");
+    members.forEach(behaviour => {
+      const item = element("li");
+      const covers = element("p");
+      covers.append(element("strong", "", `${behaviour.name}. `));
+      renderInline(covers, behaviour.is);
+      const stops = element("p", "ovw-method-stops");
+      stops.append(element("span", "ovw-method-label", "Where it stops. "));
+      renderInline(stops, behaviour.is_not);
+      item.append(covers, stops);
+      list.append(item);
+    });
+    node.append(element("h4", "ovw-method-category", name), list);
+  });
+}
+
+/* Each slot of the methodology, filled from the boards. A slot the file does
+ * not leave is skipped, and a fold whose slot has nothing to hold is taken out
+ * rather than left empty. */
+function drawMethod() {
+  const { constitutions, governance } = state.boards;
+  const fill = (id, draw) => {
+    const node = byId(id);
+    if (node) draw(node);
+  };
+  const groupOf = board => state.overview.grid.groups.find(group => group.final.board === board);
+  const rowOf = figure => state.overview.grid.groups.flatMap(group => group.rows)
+    .find(row => row.figure === figure);
+  fill("ovw-method-content", node => renderMarkup(node, finalLine(groupOf("constitutions"))));
+  fill("ovw-method-process", node => renderMarkup(node, finalLine(groupOf("governance"))));
+  [["ovw-method-clarity", "whole"], ["ovw-method-coverage", "behaviours"],
+   ["ovw-method-transparency", "published"], ["ovw-method-applicability", "engages"]]
+    .forEach(([id, figure]) => fill(id, node => renderMarkup(node, halfLine(rowOf(figure)))));
+  fill("ovw-method-criteria", node => constitutions.criteria.forEach(criterion => {
+    const fold = methodFold(criterion.name);
+    criterionInto(fold.lastChild, criterion, CRITERION_SCALE);
+    node.append(fold);
+  }));
+  fill("ovw-method-depth", node => node.append(depthScaleItems()));
+  fill("ovw-method-behaviours", behavioursInto);
+  fill("ovw-method-papers", node => Object.values(governance.papers || {}).forEach(paper => {
+    const item = element("li");
+    item.append(element("strong", "", `${paper.by}, "${paper.title}"`),
+      document.createTextNode(`, ${paper.status}. ${paper.purpose}`));
+    node.append(item);
+  }));
+  const column = id => governance.columns.find(one => one.id === id);
+  fill("ovw-method-questions", node => {
+    const published = column("published");
+    node.append(...published.questions.map(id =>
+      questionFold(governance.questions.find(one => one.id === id))), ...practicesOf(published));
+  });
+  fill("ovw-method-practices", node => {
+    const engages = column("engages");
+    [governance.disclosed_intro, governance.disclosure_note].filter(Boolean)
+      .forEach(text => node.append(element("p", "", text)));
+    node.append(...practicesOf(engages));
+  });
+  fill("ovw-method-rules", node => {
+    const rules = rulesText(governance);
+    if (rules) renderMarkup(node, rules);
+    else node.closest("details")?.remove();
+  });
+}
+
 function drawTakeaways(takeaways) {
   byId("ovw-takeaways").replaceChildren(...takeaways.map(({ title, text }) => {
     const item = element("article", "ovw-takeaway");
@@ -1010,6 +1290,7 @@ export async function initializeOverview() {
     state = { overview, companies: companiesOf(constitutions, governance, overview),
               boards: { constitutions, governance }, showContext: true };
     draw();
+    drawMethod();
     drawTakeaways(overview.takeaways || []);
     drawSources();
     renderMenu(document.getElementById("view-overview"));

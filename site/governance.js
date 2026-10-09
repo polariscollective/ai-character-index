@@ -277,8 +277,9 @@ function unscoredList(column, marked) {
 
 /* What 0, 1 and 2 mean for a practice, with the score's place marked. The
  * research note never wrote these down for the five anyone can check, and the
- * list says so. */
-function scaleList(score, anchors = board.data.supporting_scale) {
+ * list says so. The overview's methodology lists each practice's scale with it,
+ * no score marked. */
+export function scaleList(score, anchors = board.data.supporting_scale) {
   const list = element("ol", "anchors");
   [0, 1, 2].forEach(mark => {
     const item = element("li");
@@ -1072,33 +1073,41 @@ function renderFindings() {
 
 /* ---- The reference text under the board ----------------------------------------- */
 
+/* One question's checks as a table: each check named as the board names it,
+ * and what earns 0, 2 and 4 on it. This page draws one under each question in
+ * its scoring section, and the overview one in each question of its
+ * methodology. */
+export function checksTable(question) {
+  const wrap = element("div", "table-scroll");
+  const table = element("table", "gov-table gov-scoring-table");
+  const head = element("tr");
+  ["Check", "0", "2", "4"].forEach((text, index) => {
+    const cell = element("th", index ? "" : "check-col", text);
+    cell.scope = "col";
+    head.append(cell);
+  });
+  const thead = element("thead");
+  thead.append(head);
+  const tbody = element("tbody");
+  question.checks.forEach(check => {
+    const row = element("tr");
+    const name = element("th");
+    name.scope = "row";
+    name.append(element("strong", "", `${check.short}. `), element("span", "", check.label));
+    row.append(name);
+    ["0", "2", "4"].forEach(mark => row.append(element("td", "", check.anchors[mark])));
+    tbody.append(row);
+  });
+  table.append(thead, tbody);
+  wrap.append(table);
+  return wrap;
+}
+
 function renderScoring() {
   const blocks = document.createDocumentFragment();
   board.data.questions.forEach(question => {
     blocks.append(element("h3", "", `${question.name}: ${question.question}`));
-    const wrap = element("div", "table-scroll");
-    const table = element("table", "gov-table gov-scoring-table");
-    const head = element("tr");
-    ["Check", "0", "2", "4"].forEach((text, index) => {
-      const cell = element("th", index ? "" : "check-col", text);
-      cell.scope = "col";
-      head.append(cell);
-    });
-    const thead = element("thead");
-    thead.append(head);
-    const tbody = element("tbody");
-    question.checks.forEach(check => {
-      const row = element("tr");
-      const name = element("th");
-      name.scope = "row";
-      name.append(element("strong", "", `${check.short}. `), element("span", "", check.label));
-      row.append(name);
-      ["0", "2", "4"].forEach(mark => row.append(element("td", "", check.anchors[mark])));
-      tbody.append(row);
-    });
-    table.append(thead, tbody);
-    wrap.append(table);
-    blocks.append(wrap);
+    blocks.append(checksTable(question));
   });
   board.nodes.scoring.replaceChildren(blocks);
 

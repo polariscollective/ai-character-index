@@ -8,37 +8,84 @@
     "id": "ovw-methodology",
     "title": "Methodology",
     "blocks": [
-     "Each of ten companies gets two scores. **Content** reads its constitution, the document in which it says how its models should behave. **Process** reads what it publishes about how it governs that document. Neither score tests how the models behave. A constitution that covers a behaviour thoroughly is no evidence that the model follows it, and measuring that is work the index has yet to do.",
-     {
-      "kind": "fold",
-      "title": "How Content is scored",
-      "blocks": [
-       "Content is the average of the clarity of the document and its behaviour coverage, each counting for half. A company that publishes no constitution scores 0 on every row. The figures come from a panel of three judges, each a frontier language model from a different company, which read the constitutions against precise written definitions. Each figure is the mean of the three judges, except where this section says otherwise.",
-       "There is no agreed standard yet for what makes a good constitution, and the index is a first attempt at one. It prefers a document that states its rules, and which of them wins, explicitly, because that is what lets anyone test a model against it. A document that deliberately leaves more to the model's judgement scores lower, and a clearer document is not proof of a better model. That preference is ours and open to challenge.",
-       "**Behaviours.** The index asks about fourteen behaviours in four categories: autonomy, oversight and authority; harm and safety; helpfulness and judgement; honesty and epistemics. Each is written in two parts, what it requires and where it stops, so that a careful reader could mark every passage of a constitution that bears on it. The behaviours, their definitions and their categories are the index's own, and open to challenge.",
-       "**Passages.** Each judge reads the whole constitution against one behaviour and gives every paragraph 3, 2, 1 or 0. A passage is kept when the three verdicts add up to 4 or more, and the sum places it in one of three bands. A defining passage is the document's fullest statement of the behaviour, a core passage establishes it, and a related passage bears on it without establishing it.",
-       "**Depth.** In a second pass each judge reads the kept passages of all three bands, with the passages that state the document's general rules for conflicts, and gives the behaviour a depth from 0 to 10. A depth is a reading of those passages and not of the whole document, so a figure can move when a passage changes band. The six levels sit on the even numbers. An odd number means the level below is fully met and the one above only in part.",
-       "- **0, absent.** Nothing in the document bears on the behaviour.\n- **2, named.** The behaviour is mentioned, usually inside a list or a passage about something else, and nothing further is said about it.\n- **4, discussed.** The document takes the behaviour up in its own right and says what it expects and why, in terms too general to grade an answer against.\n- **6, prescribed.** The document states concrete do and don't rules, precise enough that anyone testing a model could quote its own sentences as the standard.\n- **8, demonstrated.** The rules come with worked cases showing the response the document sanctions, close enough to settle a borderline answer.\n- **10, bounded.** Demonstrated, and for every part of the behaviour the document shows where the line falls, names one of its own rules that pulls against this one and says which prevails, and says what to do when the case cannot be decided.",
-       "A behaviour's figure is the mean of the three depths. A category is the average of its behaviours, and behaviour coverage is the average of all fourteen, each counting the same.",
-       "**Clarity of the document.** Each judge reads the whole document and scores five criteria from 0 to 4, against written descriptions of what earns 0, 2 and 4, with a 1 or a 3 falling between the descriptions either side. Clarity is the average of the five.",
-       "- **Clarity when two rules are contradictory.** What the document says, in general, when two of its own rules conflict. A 4 needs a strict order that decides who wins, a rule for two rules of the same rank, and examples of the order applied.\n- **How firm each rule is.** Whether a reader can tell, for each rule, if it is absolute or a default, and who may change it.\n- **Reasons for the rules.** Whether the rules say why they exist, specifically enough to decide a case the document does not show.\n- **Domains covered.** Whether the document has rules of its own for six domains: ordinary conversation, actions taken with tools, images, audio and video, users who may be under eighteen, other AI agents, and deployments a business has customised. The six are our list.\n- **Remaining unsettled contradictions.** No judge scores this one. Each judge lists every contradiction it finds, every judge then reads every claim, and a claim is confirmed when at least two readings say it holds. None confirmed earns 4, one or two earn 2, and three or more, or any that involves a rule the document calls absolute, earn 0.",
-       "**When a judge cannot answer.** If a judge's provider withholds its reply, or its reply cannot be read, another model declared in advance judges in its seat. Each substitution is recorded with its reason, and the doc reader names the substitute.",
-       "**Provisional readings.** A constitution the panel has not yet read can be read provisionally by one language model, answering in one working session the questions the panel's judges are asked, through the same pipeline. Its passages, depths and criteria are one model's reading, and the doc reader marks them provisional. The panel's reading replaces it once the panel has read the document.",
-       "**Corrections by hand.** A passage's band, a depth or a criterion can be set by hand where the judges' figure is found wrong, with a written reason. The judges' own figures are kept beside each correction, and the doc reader says where a band or a depth was set by hand. As of October 2026, eleven behaviour figures and four criteria are set by hand. The depths raised by hand rest on worked examples, which the judges' rubric counts as related at most, so three judges can never keep one and the depth judges never see it."
-      ]
-     },
+     "Each of ten companies gets two scores. **Process** reads what it publishes about how it governs its constitution, the document in which it says how its models should behave. **Content** reads the constitution itself. Neither score tests how the models behave. A constitution that covers a behaviour thoroughly is no evidence that the model follows it, and measuring that is work the index has yet to do. Each part below says how a score is worked out from the rows under it, and where every row comes from.",
      {
       "kind": "fold",
       "title": "How Process is scored",
       "blocks": [
-       "Process is the average of Transparency and Applicability, each counting for half. It draws on two working papers, and each part below says which one it comes from. The first is Polaris Collective's \"Model spec governance and transparency: the state of play and four transparency asks\", in its draft of 10 September 2026. The second is \"Emerging International Best Practices for AI Model Specs\" by Edward Kembery et al., a working paper under review.",
-       "**Transparency.** Eleven rows, each counting the same: the ten checks of five questions, and one practice. The five questions come from Polaris Collective's paper, and their checks rest on its text. The questions follow its four asks, with the fourth, on hard constraints, split in two. Each check is scored from 0 to 4 against a written description of what earns 0, 2 and 4, and a 1 or a 3 falls between them.",
-       "- **Published constitution.** Constitution published, coverage stated, and covers government and defence models. It is the paper's first ask.\n- **Change log.** Versions kept, changes explained, and the scope of the log. It is the second ask.\n- **Guardrails.** Guardrails disclosed, and guardrail changes logged. It is the third ask.\n- **Hard constraints.** Hard constraints listed. No ask in either paper is behind this check. It uses the paper's definition of a hard constraint, and the fourth ask presumes such a list, since nobody can comment on the weakening of a rule that was never named.\n- **Public input.** A window for public comment before a hard constraint is weakened. It is the fourth ask.\n- **Open licence.** Anyone may freely reuse the published constitution. This row is a practice from the paper by Edward Kembery et al., scored 0, 1 or 2.",
-       "**Applicability.** Nine practices, each scored 0, 1 or 2 and counting the same. All nine come from the paper by Edward Kembery et al.",
-       "- **Four anyone can check from public sources.** Adherence tests published, outside testers, release threshold, and change approval published.\n- **Five nobody outside a company can see.** Trained to follow it, internal models, same text inside, monitored in use, and separate sign-off. The paper asks companies to state the first four publicly and raises the fifth as an open problem. Each is scored on what the company publishes.",
-       "The paper describes no score for a practice. In ours, 2 is the practice in full, 1 is part of it or a weaker form of it, and 0 means we found nothing published.",
-       "**What is ours.** Neither paper splits a question into checks, weighs one row against another or says what earns a score. The split of each question into checks is ours, and so are the descriptions of what earns 0, 2 and 4 on a check, the summary of what 0, 1 and 2 mean on a practice, the weights, and the rules described below. The check that hard constraints are listed is ours too, as no ask in either paper is behind it, and so is the choice to score a separate sign-off on changes on what a company publishes, which the paper raises without asking anyone to publish.",
+       { "slot": "ovw-method-process", "tag": "div", "class": "" },
+       "It draws on two working papers, and each part below says which one it comes from.",
+       { "slot": "ovw-method-papers", "tag": "ul", "class": "gov-bullets" },
+       "**What is ours.** Neither paper splits a question into checks, weighs one row against another or says what earns a score. The split of each question into checks is ours, and so are the descriptions of what earns 0, 2 and 4 on a check, the descriptions of what 0, 1 and 2 mean on a practice, the groups of practices, the weights, and the rules described below. The check that hard constraints are listed is ours too, as no ask in either paper is behind it, and so is the choice to score a separate sign-off on changes on what a company publishes, which the paper raises without asking anyone to publish.",
+       {
+        "kind": "fold",
+        "title": "Transparency",
+        "blocks": [
+         { "slot": "ovw-method-transparency", "tag": "div", "class": "" },
+         "The five questions follow the four asks of Polaris Collective's paper, with the fourth, on hard constraints, split in two. Each check is scored from 0 to 4 against a written description of what earns 0, 2 and 4, and a 1 or a 3 falls between them. The checks and their descriptions are ours.",
+         { "slot": "ovw-method-questions", "tag": "div", "class": "" }
+        ]
+       },
+       {
+        "kind": "fold",
+        "title": "Applicability",
+        "blocks": [
+         { "slot": "ovw-method-applicability", "tag": "div", "class": "" },
+         "Every practice here comes from the paper by Edward Kembery et al., and each says the part of the paper it comes from. The paper describes no score for a practice, and every description of 0, 1 and 2 below is ours.",
+         { "slot": "ovw-method-practices", "tag": "div", "class": "" }
+        ]
+       },
+       {
+        "kind": "fold",
+        "title": "Rules for cases the descriptions left open",
+        "blocks": [
+         { "slot": "ovw-method-rules", "tag": "div", "class": "" }
+        ]
+       },
        "**How the rows were scored.** The rows were scored by hand from public documents between 18 and 21 September 2026, and read again on 23 and 24 September 2026, when the passage behind each score was recorded with its address and date. On 25 September 2026 an audit carried out with language models checked every row against its sources. Corrections a second model confirmed were applied, and those held back were decided by a person on 26 September 2026. Ten rules settle cases the descriptions left open, nine written on 26 September 2026 and one on 28 September 2026, and apply to every company. One company, added on 28 September 2026, was researched and scored by a language model against the same descriptions and rules. No score was taken from another ranking. A 0 means we looked and found nothing public, and a company may follow a practice without saying so."
+      ]
+     },
+     {
+      "kind": "fold",
+      "title": "How Content is scored",
+      "blocks": [
+       { "slot": "ovw-method-content", "tag": "div", "class": "" },
+       "A company that publishes no constitution scores 0 on every row. The figures are given by a panel of three AI language models, each made by a different company, which act as judges and read the constitutions against precise written definitions. Each figure is the mean of the three judges, except where this section says otherwise. Limitations, at the end of this section, names the models.",
+       "There is no agreed standard yet for what makes a good constitution, and the index is a first attempt at one. It prefers a document that states its rules, and which of them wins, explicitly, because that is what lets anyone test a model against it. A document that deliberately leaves more to the model's judgement scores lower, and a clearer document is not proof of a better model. That preference is ours and open to challenge.",
+       "**Where it comes from.** The index began as the AI Character Index, created by Andrés Cotton with Matt Stults. From their method come the way a judge reads every paragraph against a behaviour, the bands a paragraph lands in, the panel of three judges, the first five levels of the depth scale, and nine of the fourteen behaviours. Polaris Collective added the rest in September 2026: the depth scale out of 10 and its top level, the second pass that gives a depth, the clarity of the document, the categories, the plain descriptions of the behaviours on this page, and the weights.",
+       {
+        "kind": "fold",
+        "title": "Clarity of the document",
+        "blocks": [
+         { "slot": "ovw-method-clarity", "tag": "div", "class": "" },
+         "Each judge, an AI language model, reads the whole document and scores the first four criteria against written descriptions of what earns each score, and a score between two descriptions falls between them. The fifth follows from the contradictions the judges confirm. The five criteria, their descriptions and the list of six domains are ours, written by Polaris Collective in September 2026.",
+         { "slot": "ovw-method-criteria", "tag": "div", "class": "" },
+         "**How contradictions are counted.** Each judge lists every contradiction it finds, every judge then reads every claim, and a claim is confirmed when at least two readings say it holds. The last criterion's score follows from the claims confirmed, on the scale given above. The models that find and read the contradictions are named under Limitations."
+        ]
+       },
+       {
+        "kind": "fold",
+        "title": "Behaviour coverage",
+        "blocks": [
+         { "slot": "ovw-method-coverage", "tag": "div", "class": "" },
+         "**Passages.** Each judge, an AI language model, reads the whole constitution against one behaviour and gives every paragraph 3, 2, 1 or 0. A passage is kept when the three verdicts add up to 4 or more, and the sum places it in one of three bands. A defining passage is the document's fullest statement of the behaviour, a core passage establishes it, and a related passage bears on it without establishing it.",
+         "**Depth.** In a second pass each judge reads the kept passages of all three bands, with the passages that state the document's general rules for conflicts, and gives the behaviour a depth from 0 to 10 on the scale below. A depth reads those passages alone, so a figure can move when a passage changes band. A behaviour's figure is the mean of the three depths.",
+         { "slot": "ovw-method-depth", "tag": "ol", "class": "anchors ovw-method-scale" },
+         "The six levels sit on the even numbers. An odd number means the level below is fully met and the one above only in part. The levels from absent to demonstrated come from the original index by Andrés Cotton and Matt Stults, who scored them from 0 to 4. Polaris Collective moved them to the even numbers of a scale of 10 and added bounded at the top in September 2026.",
+         {
+          "kind": "fold",
+          "title": "The behaviours, by category",
+          "blocks": [
+           "Each behaviour is written in two parts, what it requires and where it stops, so that a careful reader could mark every passage of a constitution that bears on it. The definitions the judges are given for nine of them come from the original index by Andrés Cotton and Matt Stults. Polaris Collective wrote the other five in September 2026: avoiding illegitimate concentration of power, instruction-hierarchy conformance, not undermining human oversight of AI, preventing secret loyalties, and honesty and non-deception. The categories and the plain descriptions below are ours. All of it is open to challenge.",
+           { "slot": "ovw-method-behaviours", "tag": "div", "class": "" }
+          ]
+         }
+        ]
+       },
+       "**When a judge cannot answer.** If a judge's provider withholds its reply, or its reply cannot be read, another AI model declared in advance judges in its seat. Each substitution is recorded with its reason, and the doc reader names the substitute.",
+       "**Provisional readings.** A constitution the panel has not yet read can be read provisionally by one language model, answering in one working session the questions the panel's judges are asked, through the same pipeline. Its passages, depths and criteria are one model's reading, and the doc reader marks them provisional. The panel's reading replaces it once the panel has read the document.",
+       "**Corrections by hand.** A passage's band, a depth or a criterion can be set by hand where the judges' figure is found wrong, with a written reason. The judges' own figures are kept beside each correction, and the doc reader says where a band or a depth was set by hand. As of October 2026, eleven behaviour figures and four criteria are set by hand. The depths raised by hand rest on worked examples, which the judges' rubric counts as related at most, so three judges can never keep one and the depth judges never see it.",
+       "These three rules are Polaris Collective's, added in September 2026."
       ]
      },
      {
@@ -48,7 +95,7 @@
        "Every score that adds up other rows is a letter, read from its figure out of 10 as the page shows it, to one decimal. Opened, a cell shows the figure behind its letter.",
        "- **A** from 9.3 and **A-** from 9.0. Meets nearly all of what the row asks.\n- **B+** from 8.7, **B** from 8.3 and **B-** from 8.0. Meets most of it, with gaps.\n- **C+** from 7.7, **C** from 7.3 and **C-** from 7.0. Falls short in places.\n- **D+** from 6.7, **D** from 6.3 and **D-** from 6.0. Falls well short.\n- **E** from 4.0. Meets about half at best.\n- **F** from 2.0. Meets little of it.\n- **G** from 0. Meets almost nothing, or nothing published.",
        "Down to D, a minus marks the bottom of a band and a plus its top. Below D the scale runs in three bands of 2 with neither, because most scores fall there. A row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 2 for a practice and 0 to 10 for a behaviour. Where rows are averaged, each counts as its share of 10, so a check of 3 out of 4 counts as 7.5.",
-       "**Overall grade.** The average of Process and Content, read on the same scale. A company with an F or a G on either gets no more than F, whatever the average, because a company that fails one score cannot make up for it with the other. An asterisk marks a grade held at F. Companies are listed by overall grade, and within one letter by the figure behind it."
+       "**Overall grade.** The average of Process and Content, read on the same scale. A company with an F or a G on either gets no more than F, whatever the average, because a company that fails one score cannot make up for it with the other. An asterisk marks a grade held at F. Companies are listed by overall grade, and within one letter by the figure behind it. The letters, their thresholds and the cap at F are Polaris Collective's."
       ]
      },
      {
@@ -63,11 +110,11 @@
       "kind": "fold",
       "title": "Limitations",
       "blocks": [
-       "- **Judges reading their own company's document.** Two of the three judges are made by companies the index scores, and each reads its own company's constitution. The models behind the provisional readings, the figures set by hand and the audit of the Process rows are also made by a company the index scores. Nothing in the figures corrects for this. In the audit, corrections that would have raised that company were held until a person decided them.\n- **Readings by one model.** A provisional reading is one model's, and the model that finds a contradiction also confirms it, where the panel needs two readings of three. Each figure set by hand was read from the document by one reader, a language model. As of September 2026, no person has read the Process rows a language model scored against their sources.\n- **Contradictions.** The last criterion of clarity turns on what the judges happen to notice in one reading, and it can swing its whole range between two runs over the same text. As of September 2026, no person has reviewed a contradiction the judges confirmed.\n- **Depth reads what was kept.** A behaviour the judges cited thinly is scored on what they cited. Two behaviour figures were restored by arithmetic from stored values.\n- **Scores that are ours.** Every Process score, and the checks, weights, descriptions and rules behind it, are ours and follow no established scoring method. A different reading could move a company by a few points.\n- **Downloadable models.** No Process question reaches how a model behaves once someone has downloaded it, so for a company whose flagship model anyone can download, part of a low score reflects a limit of the questions.\n- **What could not be checked.** Some pages carry no date and have no earlier copy, so a quiet edit to them would not show. The Chinese regulatory filings could not be retrieved. One constitution serves no text at its own address, so it is read from the index's own copy. It is published in Chinese and read in an English translation, and the doc reader shows the original beside every passage."
+       "- **AI models give the Content figures.** The passages and depths behind every behaviour figure, and the first four criteria of clarity, are read and scored by a panel of three AI language models: OpenAI's GPT-5.6 Sol, Anthropic's Claude Fable 5 and DeepSeek's DeepSeek V3.2. Where a model cannot answer, another declared in advance takes its seat: Anthropic's Claude Opus 4.8, Moonshot AI's Kimi K3 or Z.ai's GLM 5.2. The contradictions are found and confirmed by GPT-5.6 Sol, Claude Opus 4.8 and Kimi K3. Every Content figure carries the leanings of the models that gave it, and nothing in the figures corrects for them.\n- **Models reading their own company's document.** OpenAI, Anthropic and DeepSeek, which make the three models of the panel, are all scored by the index, and so is Moonshot AI, which makes one of the substitutes. The OpenAI and Anthropic models each read their own company's constitution. Nothing in the figures corrects for this.\n- **Readings by one model.** Every figure of one constitution comes from a provisional reading by a single AI model, Anthropic's Claude Opus 5.5, and the model that finds a contradiction there also confirms it, where the panel needs two readings of three. Each figure set by hand was read from the document by one reader, an Anthropic language model. The audit of the Process rows on 25 September 2026 was carried out with Anthropic's language models, and corrections that would have raised Anthropic were held until a person decided them. As of September 2026, no person has read the Process rows a language model scored against their sources.\n- **Contradictions.** The last criterion of clarity turns on what the judges happen to notice in one reading, and it can swing its whole range between two runs over the same text. As of September 2026, no person has reviewed a contradiction the judges confirmed.\n- **Depth reads what was kept.** A behaviour the judges cited thinly is scored on what they cited. Two behaviour figures were restored by arithmetic from stored values.\n- **Scores that are ours.** Every Process score, and the checks, weights, descriptions and rules behind it, are ours and follow no established scoring method. A different reading could move a company by a few points.\n- **Downloadable models.** No Process question reaches how a model behaves once someone has downloaded it, so for a company whose flagship model anyone can download, part of a low score reflects a limit of the questions.\n- **What could not be checked.** Some pages carry no date and have no earlier copy, so a quiet edit to them would not show. The Chinese regulatory filings could not be retrieved. One constitution serves no text at its own address, so it is read from the index's own copy. It is published in Chinese and read in an English translation, and the doc reader shows the original beside every passage."
       ]
      },
      "### Where to read more",
-     "[About](/about) explains why constitutions matter and how to propose a constitution or a behaviour. The [doc reader](/doc-reader/) shows every passage behind a behaviour figure, why it was cited and how strongly, and the depth each judge gave. The Index pages, [Content](/index) and [Process](/index?view=governance), set out what earns each score on every criterion and check, and Process lists the sources it read for each company."
+     "[About](/about) explains why constitutions matter and how to propose a constitution or a behaviour. The [doc reader](/doc-reader/) shows every passage behind a behaviour figure, why it was cited and how strongly, and the depth each judge gave. Sources reviewed, at the foot of this page, lists every document read for each company."
     ]
    },
    {
@@ -80,6 +127,15 @@
    }
   ]
  },
+ "method": {
+  "questions": {
+   "1": "It is the paper's first ask. Coverage stated also draws on the paper by Edward Kembery et al., which asks that the document itself say which models it covers.",
+   "2": "It is the paper's second ask. Versions kept draws on the paper by Edward Kembery et al., which asks that every version be dated and stay retrievable, a thing the ask takes for granted.",
+   "3": "It is the paper's third ask.",
+   "4": "Its one check, hard constraints listed, is ours, and no ask in either paper is behind it. It uses the paper's definition of a hard constraint, and the paper's fourth ask presumes such a list, since nobody can comment on the weakening of a rule that was never named.",
+   "5": "It is the paper's fourth ask."
+  }
+ },
  "grid": {
   "caption": "The overall grade of ten companies and the two final scores of the index it averages, each a letter from A to G, each final score opening into the rows it is made of",
   "overall": {
@@ -89,7 +145,6 @@
   "groups": [
    {
     "name": "Process",
-    "href": "/index?view=governance#gov-chart",
     "rows": [
      {
       "board": "governance",
@@ -112,7 +167,6 @@
    },
    {
     "name": "Content",
-    "href": "/index#cov-chart",
     "rows": [
      {
       "board": "constitutions",
@@ -150,7 +204,7 @@
    { "letter": "F", "from": 2 },
    { "letter": "G", "from": 0 }
   ],
-  "scale": "Every score is **a letter**, read from the figure out of 10 the Index gives: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, then **E from 4.0, F from 2.0 and G from 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the scale runs in three bands of 2, because most scores fall there, and E, F and G carry no plus or minus. Press the key under the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. A cell, once opened, shows the figure out of 10 behind its letter. Opened, a score shows the rows it is made of: a row that adds up others is a letter on the same scale, and a row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice.",
+  "scale": "Every score is **a letter**, read from its figure out of 10: **A from 9.3, B from 8.3, C from 7.3 and D from 6.3**, then **E from 4.0, F from 2.0 and G from 0**. A minus marks the bottom of a band and a plus its top: A- from 9.0, B+ from 8.7, B- from 8.0, and so on down to D- from 6.0. Below D the scale runs in three bands of 2, because most scores fall there, and E, F and G carry no plus or minus. Press the key under the grid to see every letter and the figures it covers. The letter is read from the figure as it is shown, to one decimal. A cell, once opened, shows the figure out of 10 behind its letter. Opened, a score shows the rows it is made of: a row that adds up others is a letter on the same scale, and a row scored directly keeps its own scale, 0 to 4 for a criterion or a check, 0 to 10 for a behaviour and 0 to 2 for a practice.",
   "hint": "Press a cell to see the score behind it, or the key under the grid to see the figures each letter covers.",
   "grade_scale": {
    "title": "The grading scale",

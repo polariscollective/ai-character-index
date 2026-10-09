@@ -1629,6 +1629,32 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .section-fold .section-fold > summary { align-items: center; padding: 6px 0; }
 .section-fold .section-fold > summary h3 { margin: 0; }
 .section-fold .section-fold > summary::before { margin-bottom: 0; }
+/* The methodology's folds go three deep under the section's own. Each part
+   opens a step in, its body level with its heading's words, and the heading
+   shrinks a step at each level, so a part reads as part of the one it sits in.
+   What the folds hold that the boards' pages draw too (a scale, a table of
+   checks) keeps their styles; only its spacing and its small headings are set
+   here. */
+#ovw-methodology .section-fold .section-fold > div { padding-left: 16px; }
+#ovw-methodology .section-fold .section-fold .section-fold > summary h3 { font-size: 15px; }
+#ovw-methodology .section-fold .section-fold .section-fold .section-fold > summary h3 {
+  font-family: var(--ui); font-weight: 600;
+}
+#ovw-methodology .ovw-method-body > h3 {
+  margin: 12px 0 6px; font-family: var(--ui); font-size: 14px; font-weight: 600;
+}
+#ovw-methodology .ovw-method-category { margin: 20px 0 8px; font-family: var(--ui); font-size: 15px; font-weight: 600; }
+#ovw-methodology p.ovw-method-source { font-size: 14px; color: var(--muted); }
+#ovw-methodology .ovw-method-practice { margin: 0 0 20px; }
+#ovw-methodology .ovw-method-practice > p:first-child { margin-bottom: 6px; }
+#ovw-methodology .ovw-method-scale { margin-bottom: 12px; }
+#ovw-methodology .ovw-method-scale .anchor-level { width: 3.4em; white-space: nowrap; }
+#ovw-methodology .ovw-method-behaviours li p { margin: 0 0 4px; }
+#ovw-methodology .ovw-method-stops { color: var(--muted); }
+#ovw-methodology .ovw-method-label { font-weight: 600; }
+@media (max-width: 560px) {
+  #ovw-methodology .section-fold .section-fold > div { padding-left: 8px; }
+}
 /* Under a source, the cells that cite it. */
 .source-entry .source-cited { margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
 .source-entry .source-cited .inline-button { font-size: 13px; }

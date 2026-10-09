@@ -82,8 +82,9 @@ function blocksInto(parent, blocks) {
  * It is for a long section whose parts a reader opens one at a time, and any
  * page's section may use it. It takes the section's own fold, so it carries the
  * same chevron, and it is shut until opened. Its blocks are any of the kinds
- * above. */
-function part({ title, blocks }) {
+ * above. The overview builds the folds of its methodology that are read from
+ * the boards with it, and appends to the fold's last child, its body. */
+export function part({ title, blocks }) {
   const fold = element("details", "section-fold");
   const summary = element("summary");
   summary.append(element("h3", "", title));

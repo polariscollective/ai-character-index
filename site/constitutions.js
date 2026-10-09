@@ -52,9 +52,10 @@ const nodes = {};
 
 /* Every figure the table shows is out of 10. A behaviour's depth already is; a
  * criterion is given out of 4 and shown as its share of that, with the score it
- * was given said in its popover. */
+ * was given said in its popover. The overview's methodology states that scale
+ * from here. */
 const TEN = 10;
-const CRITERION_SCALE = 4;
+export const CRITERION_SCALE = 4;
 const onTen = (value, max) => value / max * TEN;
 /* A behaviour's depth is out of the top level of the file's own scale, which is
  * 10: read off the file so a scale that changes moves the board with it. */
@@ -411,12 +412,19 @@ function aboutWhole(content) {
     const summary = element("summary");
     summary.append(element("span", "", criterion.name));
     fold.append(summary);
-    renderMarkup(fold, criterion.what_it_is);
-    renderMarkup(fold, criterion.why_it_matters);
-    scaleOf(fold, criterion);
+    criterionInto(fold, criterion);
     content.append(fold);
   });
   content.append(board.showInTable("whole", "the criteria"));
+}
+
+/* What a criterion asks, why it matters and its scale, in the file's words:
+ * folded in the popover above, and under the criterion's own heading in the
+ * overview's methodology, which gives the scale out of 4 as its grid does. */
+export function criterionInto(node, criterion, max = TEN) {
+  renderMarkup(node, criterion.what_it_is);
+  renderMarkup(node, criterion.why_it_matters);
+  scaleOf(node, criterion, max);
 }
 
 function wholeScore(content, company) {
@@ -458,14 +466,16 @@ function aboutCriterion(content, criterion) {
 /* What each figure of a criterion means, out of 10 as the board shows it, in
  * the file's words. The owner asked for the scale where a criterion is
  * described, so a reader need not go to the scoring section under the table to
- * learn what a 5 is. */
-function scaleOf(content, criterion) {
+ * learn what a 5 is. Given a `max` of 4, each figure is said on the scale the
+ * criterion was given on, in the same colour. */
+function scaleOf(content, criterion, max = TEN) {
   if (!criterion.scale?.length) return;
   content.append(board.h3("The scale"));
   const list = element("ul", "check-list");
   criterion.scale.forEach(({ shown: at, text }) => {
     const item = element("li");
-    item.append(board.chip(at, TEN, shown(at)), element("span", "", text));
+    item.append(board.chip(at, TEN, max === TEN ? shown(at) : onScale(at / TEN * max)),
+      element("span", "", text));
     list.append(item);
   });
   content.append(list);
@@ -833,9 +843,17 @@ function renderLegend() {
   nodes.legend.replaceChildren(legend);
 }
 
-/* The scale a behaviour is read on, under the table and nowhere else. A
- * document's parts are read out of 2, which each row says beside its name. */
+/* The scale a behaviour is read on, under the table. A document's parts are
+ * read out of 2, which each row says beside its name. */
 function renderScales() {
+  nodes.behaviourScaleTitle.textContent =
+    `How far a constitution goes on one behaviour, out of ${depthMax()}`;
+  nodes.behaviourScale.replaceChildren(depthScaleItems());
+}
+
+/* Each level of that scale as an item of a list: its swatch, its figure, its
+ * name and what it means. The overview's methodology lists the same items. */
+export function depthScaleItems() {
   const behaviours = document.createDocumentFragment();
   state.data.scale.depth.forEach(({ level: at, name, plain }) => {
     const item = element("li");
@@ -851,9 +869,7 @@ function renderScales() {
     item.append(level, text);
     behaviours.append(item);
   });
-  nodes.behaviourScaleTitle.textContent =
-    `How far a constitution goes on one behaviour, out of ${depthMax()}`;
-  nodes.behaviourScale.replaceChildren(behaviours);
+  return behaviours;
 }
 
 /* The ties the ranking cannot break, said under the table. There is one figure
