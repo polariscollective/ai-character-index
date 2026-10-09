@@ -92,11 +92,25 @@ test("the board of governance answers the ten companies in the board's own order
     assert.ok(question.checks.length >= 1, question.id);
     assert.ok(question.checks.every(check => check.anchors["4"]), question.id);
   }
-  // Every practice says which paper it comes from, and the one no figure counts
-  // says so where it sits.
+  // Every practice says which paper it comes from, and every one is scored out
+  // of 2 and counted in a figure.
   assert.ok(answer.measures.best_practices.practices.every(one => one.from === "Kembery et al."));
-  assert.deepEqual(answer.companies[0].counted_in_no_figure.map(one => one.id), ["I5"]);
+  assert.ok(answer.measures.best_practices.practices.every(one => one.max === 2));
+  assert.deepEqual(answer.companies[0].counted_in_no_figure, []);
   assert.equal(answer.as_of, "September 2026");
+});
+
+test("a board frozen before every practice was scored says which one no figure counts", () => {
+  const frozen = structuredClone(governance);
+  const engages = frozen.columns.find(column => column.id === "engages");
+  engages.practices = engages.practices.filter(id => id !== "I5");
+  engages.unscored = ["I5"];
+  frozen.internal_note = "Not assessed for any company.";
+  const answer = governanceBoard({ ...snapshot(), governance: frozen });
+  assert.deepEqual(answer.companies[0].counted_in_no_figure.map(one => one.id), ["I5"]);
+  const practice = answer.measures.best_practices.practices.find(one => one.id === "I5");
+  assert.equal(practice.max, null);
+  assert.equal(practice.not_assessed, "Not assessed for any company.");
 });
 
 test("a company argument narrows the governance board too", () => {

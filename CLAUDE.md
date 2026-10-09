@@ -1417,8 +1417,13 @@ The scores come from research on 21 September 2026, one agent per practice acros
 all nine companies so that each practice is judged the same way everywhere, and
 every score above 0 rests on a quoted passage with its address in
 `internal_evidence`. The fifth, a separate sign-off on changes, the paper raises
-as an open problem without asking anyone to publish it, so it stays NA for every
-company and the test fails if it is ever scored.
+as an open problem without asking anyone to publish it, and it stayed NA for
+every company until 9 October 2026. The owner then had it scored on what a
+company publishes like the other four, since a company that separates drafting
+from approval can say so: 0 for every company, on what the research for S5 had
+already found, with its own 0, 1 and 2. Applicability has nine rows since, no
+place on the governance board moved, and four letters on the overview did.
+`governance.js` still draws an unscored practice, for publications frozen before.
 
 One reading in that research is a judgement call and is worth knowing. For
 training on the specification, five of the six companies with no specification

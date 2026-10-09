@@ -44,7 +44,8 @@ PAGE = (ROOT / "site" / "boards.html").read_text(encoding="utf-8")
 # DeepSeek from ninth to eighth, above Moonshot AI. On 28 September 2026
 # Microsoft AI was added as the tenth company, scored on its draft Code of
 # Conduct and a tenth rule, and took third place: everyone from xAI down moved
-# one place lower.
+# one place lower. On 9 October 2026 the separate sign-off on changes was
+# scored, 0 for every company, and no place moved.
 ORDER = ["openai", "anthropic", "microsoft", "xai", "google", "alibaba", "meta",
          "mistral", "deepseek", "moonshot"]
 OPEN_WEIGHTS = {"alibaba", "mistral", "moonshot", "deepseek"}
@@ -56,6 +57,7 @@ CHECKS = [check for question in DATA["questions"] for check in question["checks"
 
 ASKED = [practice for practice in DATA["internal"] if practice.get("asked_to_publish")]
 AUDIT_ONLY = [practice for practice in DATA["internal"] if not practice.get("asked_to_publish")]
+INTERNAL = DATA["internal"]
 COLUMNS = {column["id"]: column for column in DATA["columns"]}
 
 
@@ -210,14 +212,15 @@ class TheData(unittest.TestCase):
                 self.assertGreater(DATA["supporting_scores"][lab][practice], 0, f"{lab} {practice}")
                 self.assertTrue(note.strip())
 
-    def test_what_only_an_audit_could_show_carries_no_score(self):
+    def test_every_practice_only_a_company_can_show_is_scored_on_what_it_publishes(self):
         # The paper asks companies to publish four of the five practices only a
-        # company can show, and those are scored on what it publishes. The fifth
-        # it does not, no audit has been done, and nothing may score it.
+        # company can show, and raises the fifth, a separate sign-off on
+        # changes, as an open problem. Since 9 October 2026 all five are scored
+        # on what the company publishes, since a company can say how it does it.
         self.assertEqual([p["id"] for p in ASKED], ["I1", "I2", "I3", "I4"])
         self.assertEqual([p["id"] for p in AUDIT_ONLY], ["I5"])
         for lab in ORDER:
-            self.assertEqual(sorted(DATA["internal_scores"][lab]), ["I1", "I2", "I3", "I4"], lab)
+            self.assertEqual(sorted(DATA["internal_scores"][lab]), ["I1", "I2", "I3", "I4", "I5"], lab)
         for practice in DATA["internal"]:
             for field in ("id", "short", "label", "source", "audit"):
                 self.assertTrue(practice.get(field, "").strip(), f"{practice['id']} {field}")
@@ -235,8 +238,8 @@ class TheData(unittest.TestCase):
 
 class TheTwoFigures(unittest.TestCase):
     """Every row the board scores is counted in one figure and no other, the two
-    are never added, and the practice the paper raises as an open problem is
-    counted in neither."""
+    are never added, and every practice is counted, the one the paper raises as
+    an open problem included."""
 
     def test_the_figures_are_the_two_the_page_names(self):
         self.assertEqual([column["id"] for column in DATA["columns"]], ["published", "engages"])
@@ -254,12 +257,12 @@ class TheTwoFigures(unittest.TestCase):
         practices = [pid for column in DATA["columns"] for pid in column["practices"]]
         self.assertEqual(sorted(questions), sorted(QUESTIONS))
         self.assertEqual(sorted(practices),
-                         sorted([p["id"] for p in DATA["supporting"]] + [p["id"] for p in ASKED]))
+                         sorted([p["id"] for p in DATA["supporting"]] + [p["id"] for p in INTERNAL]))
         self.assertEqual(len(practices), len(set(practices)))
-        # Eleven rows carry transparency, eight applicability.
+        # Eleven rows carry transparency, nine applicability.
         published, engages = DATA["columns"]
         self.assertEqual(len(CHECKS) + len(published["practices"]), 11)
-        self.assertEqual(len(engages["practices"]), 8)
+        self.assertEqual(len(engages["practices"]), 9)
 
     def test_a_column_groups_its_rows_without_changing_them(self):
         # Groups are how the board folds a column's practices, and nothing more:
@@ -279,15 +282,12 @@ class TheTwoFigures(unittest.TestCase):
                              column.get("unscored", []))
             self.assertEqual(len({group["id"] for group in groups}), len(groups))
 
-    def test_the_unscored_practice_is_in_neither_figure(self):
-        unscored = [pid for column in DATA["columns"] for pid in column.get("unscored", [])]
-        self.assertEqual(unscored, [practice["id"] for practice in AUDIT_ONLY])
-        for column in DATA["columns"]:
-            for pid in column.get("unscored", []):
-                self.assertNotIn(pid, column["practices"], pid)
-        # The note the popovers carry says it, and the row itself says it where
-        # it sits, which governance.js writes as the row's second line.
-        self.assertIn("counted in neither", DATA["internal_note"])
+    def test_no_practice_is_left_out_and_a_frozen_board_still_draws_one(self):
+        # Every practice is counted now. A publication frozen before 9 October
+        # 2026 carries the separate sign-off as unscored, with the note saying
+        # why, and governance.js still draws that row as counted in neither.
+        self.assertEqual([pid for column in DATA["columns"] for pid in column.get("unscored", [])], [])
+        self.assertNotIn("internal_note", DATA)
         self.assertIn("in neither figure", Path(ROOT / "site" / "governance.js")
                       .read_text(encoding="utf-8"))
 
@@ -310,15 +310,13 @@ class TheTwoFigures(unittest.TestCase):
         order = sorted((lab["id"] for lab in DATA["labs"]), key=lambda lab: -ranking(lab))
         self.assertEqual(order, ORDER)
         self.assertEqual([shown(ranking(lab)) for lab in order],
-                         ["6.3", "6.2", "4.1", "3.4", "3.0", "2.5", "2.0", "1.7", "1.0", "0.8"])
+                         ["6.0", "5.9", "3.9", "3.3", "2.9", "2.4", "1.9", "1.7", "0.9", "0.7"])
         self.assertEqual([shown(totals(lab)[1]["published"]) for lab in order],
                          ["7.0", "6.8", "4.5", "4.3", "3.0", "3.2", "1.6", "3.4", "0.7", "0.9"])
-        # OpenAI, Anthropic and Moonshot AI land on exactly 5.625 and 0.625,
-        # which the board prints as 5.6 and 0.6, the digit after the half being
-        # a 2. DeepSeek and Microsoft AI land on exactly 1.25 and 3.75, true
-        # halves, printed 1.3 and 3.8.
+        # Nine practices make every figure of applicability a multiple of 10/18,
+        # which never ends on a half, so the printed digit is plain rounding.
         self.assertEqual([shown(totals(lab)[1]["engages"]) for lab in order],
-                         ["5.6", "5.6", "3.8", "2.5", "3.1", "1.9", "2.5", "0.0", "1.3", "0.6"])
+                         ["5.0", "5.0", "3.3", "2.2", "2.8", "1.7", "2.2", "0.0", "1.1", "0.6"])
         # No two companies are level on the final score, so every place is
         # taken once.
         self.assertEqual([rank(lab) for lab in order], list(range(1, 11)))
@@ -329,13 +327,13 @@ class TheTwoFigures(unittest.TestCase):
 
 
 class WhatOnlyTheCompanyCanShow(unittest.TestCase):
-    """Four practices are scored on what each company publishes, 0 when it
+    """Five practices are scored on what each company publishes, 0 when it
     publishes nothing. Every score says why in a sentence, and every score above
     0 rests on at least one passage the company published, with its address."""
 
     def test_every_score_is_0_1_or_2_and_says_why(self):
         for lab in ORDER:
-            for practice in ASKED:
+            for practice in INTERNAL:
                 score = DATA["internal_scores"][lab][practice["id"]]
                 found = DATA["internal_evidence"][lab][practice["id"]]
                 self.assertIn(score, range(3), f"{lab} {practice['id']}")
@@ -344,7 +342,7 @@ class WhatOnlyTheCompanyCanShow(unittest.TestCase):
 
     def test_a_score_above_0_rests_on_something_published(self):
         for lab in ORDER:
-            for practice in ASKED:
+            for practice in INTERNAL:
                 score = DATA["internal_scores"][lab][practice["id"]]
                 sources = DATA["internal_evidence"][lab][practice["id"]]["sources"]
                 if score:
@@ -354,7 +352,7 @@ class WhatOnlyTheCompanyCanShow(unittest.TestCase):
                     self.assertTrue(source["quote"].strip() and source["title"].strip() and source["date"].strip())
 
     def test_each_practice_says_what_its_scores_mean(self):
-        for practice in ASKED:
+        for practice in INTERNAL:
             self.assertEqual(sorted(practice["anchors"]), ["0", "1", "2"], practice["id"])
         self.assertTrue(DATA["disclosure_note"].strip() and DATA["disclosed_intro"].strip())
 
@@ -364,7 +362,7 @@ class WhatOnlyTheCompanyCanShow(unittest.TestCase):
         # say that we looked and found nothing published.
         self.assertIn("found nothing published", DATA["disclosure_note"])
         self.assertIn("Nothing published", DATA["supporting_scale"]["0"])
-        for practice in ASKED:
+        for practice in INTERNAL:
             self.assertIn("Nothing published", practice["anchors"]["0"], practice["id"])
         self.assertIn("Where nothing is published, the board says nothing is published", FLAT)
 

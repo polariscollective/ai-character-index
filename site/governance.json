@@ -52,8 +52,8 @@
    "id": "engages",
    "name": "Applicability",
    "out_of": 10,
-   "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It is the other half of the final score.",
-   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Eight rows carry it and each counts the same, so a group counts for as many eighths as it has practices. It is added to transparency to give the final score.",
+   "plain": "Whether the document binds the models: published tests of adherence, outside evaluators, a threshold a model must meet before release, who may approve a change and whether another team can veto it, training on the document, the models the company uses internally, whether the published text is the one used inside, and monitoring in use. It is the other half of the final score.",
+   "about": "Nobody outside a company can watch it train, test or monitor a model, so no row here can be checked the way a published document can. What is scored is what each company publishes about its own practice, and a row scores 0 when we looked and found nothing. Nine rows carry it and each counts the same, so a group counts for as many ninths as it has practices. It is added to transparency to give the final score.",
    "prose": "practices_engaged",
    "questions": [],
    "practices": [
@@ -61,13 +61,11 @@
     "S3",
     "S4",
     "S5",
+    "I5",
     "I1",
     "I2",
     "I3",
     "I4"
-   ],
-   "unscored": [
-    "I5"
    ],
    "groups": [
     {
@@ -83,11 +81,9 @@
     {
      "id": "changes",
      "name": "Change control",
-     "plain": "Who may change the constitution: whether the company publishes who approves a change, and whether a second team can veto one on safety grounds. Only the first is scored.",
+     "plain": "Who may change the constitution: whether the company publishes who approves a change, and whether a second team can veto one on safety grounds.",
      "practices": [
-      "S5"
-     ],
-     "unscored": [
+      "S5",
       "I5"
      ]
     },
@@ -843,7 +839,7 @@
    "label": "A change to the constitution is drafted by one team and can be vetoed by another on safety, legal or ethical grounds.",
    "source": "Section 4g",
    "audit": "The records of how past changes were proposed, reviewed and approved.",
-   "reading": "The paper raises this as an open problem, not a recommendation. It does not ask companies to publish it. Who approves a change is the published part, and it is scored under S5.",
+   "reading": "The paper raises this as an open problem rather than a recommendation, and does not ask companies to publish it. We score it on what a company publishes all the same, since a company that separates drafting from approval can say so. Who approves a change is scored under S5.",
    "quotes": [
     {
      "paper": "kembery",
@@ -851,12 +847,16 @@
      "text": "Drafting, review, and approval are currently largely informal; as stakes grow, formalised separations of responsibility [...] one team drafting spec language, another holding veto or amendment authority on safety, legal, or ethical grounds, [...] could ensure commercially motivated decisions face meaningful internal challenge before deployment."
     }
    ],
-   "asked_to_publish": false
+   "asked_to_publish": false,
+   "anchors": {
+    "0": "Nothing published that names a team, separate from the one drafting, that must sign off a change.",
+    "1": "It names a team, separate from the one drafting, that reviews or signs off a change, without saying it can stop one on safety, legal or ethical grounds.",
+    "2": "It says one team drafts a change and names another that can veto or amend it on safety, legal or ethical grounds."
+   }
   }
  ],
- "disclosed_intro": "Four practices from the same working paper that nobody outside a company can see, and that the paper asks companies to state publicly. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
+ "disclosed_intro": "Five practices from the same working paper that nobody outside a company can see. The paper asks companies to state four of them publicly, and raises the fifth, a separate sign-off on changes, as an open problem. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.",
  "disclosure_note": "A 0 means we looked and found nothing published, at the company's own pages and at the sources listed under the board. A company may well follow a practice without saying so, and no audit anyone outside could check exists. Tell us if we are wrong.",
- "internal_note": "The paper raises this as an open problem and asks no company to publish it, so it is not assessed for any company, is marked NA, and is counted in neither figure.",
  "open_weights_note": "Marks a company whose flagship model, or nearly, anyone can download and run. None of these questions can reach how such a model behaves once it has been downloaded, so part of a low score there reflects a limit of the questions.",
  "ours_note": "Every score is ours, given by hand from public documents, and open to challenge. The checks under each question, the groups of practices and the weights are ours too: neither paper splits a question into checks or weighs one row against another. So are the rules we added on 26 and 28 September 2026 for cases the descriptions left open.",
  "scores": {
@@ -1063,61 +1063,71 @@
    "I1": 1,
    "I2": 1,
    "I3": 2,
-   "I4": 2
+   "I4": 2,
+   "I5": 0
   },
   "anthropic": {
    "I1": 2,
    "I2": 1,
    "I3": 2,
-   "I4": 2
+   "I4": 2,
+   "I5": 0
   },
   "alibaba": {
    "I1": 1,
    "I2": 0,
    "I3": 1,
-   "I4": 0
+   "I4": 0,
+   "I5": 0
   },
   "google": {
    "I1": 1,
    "I2": 0,
    "I3": 0,
-   "I4": 1
+   "I4": 1,
+   "I5": 0
   },
   "mistral": {
    "I1": 0,
    "I2": 0,
    "I3": 0,
-   "I4": 0
+   "I4": 0,
+   "I5": 0
   },
   "meta": {
    "I1": 1,
    "I2": 0,
    "I3": 0,
-   "I4": 1
+   "I4": 1,
+   "I5": 0
   },
   "xai": {
    "I1": 1,
    "I2": 0,
    "I3": 0,
-   "I4": 1
+   "I4": 1,
+   "I5": 0
   },
   "moonshot": {
    "I1": 1,
    "I2": 0,
    "I3": 0,
-   "I4": 0
+   "I4": 0,
+   "I5": 0
   },
   "deepseek": {
    "I1": 1,
    "I2": 0,
    "I3": 0,
-   "I4": 0
+   "I4": 0,
+   "I5": 0
   },
   "microsoft": {
    "I1": 1,
    "I2": 0,
    "I3": 1,
-   "I4": 1
+   "I4": 1,
+   "I5": 0
   }
  },
  "internal_evidence": {
@@ -1260,6 +1270,18 @@
       "date": "March 2026"
      }
     ]
+   },
+   "I5": {
+    "sentence": "OpenAI says final updates to the Model Spec are approved by a broad set of cross-functional stakeholders, and names no team, separate from those who draft a change, that must sign it off or can stop it.",
+    "sources": [
+     {
+      "ref": "OA17",
+      "quote": "The Model Spec is developed through an open internal process. Anyone at OpenAI can comment on it or propose changes, and final updates are approved by a broad set of cross-functional stakeholders.",
+      "title": "Inside our approach to the Model Spec",
+      "url": "https://openai.com/index/our-approach-to-the-model-spec/",
+      "date": "25 March 2026"
+     }
+    ]
    }
   },
   "anthropic": {
@@ -1387,6 +1409,10 @@
       "date": "9 September 2026"
      }
     ]
+   },
+   "I5": {
+    "sentence": "We found no published account of how a change to Anthropic's constitution is reviewed or approved, in the document or in the repository that holds it.",
+    "sources": []
    }
   },
   "alibaba": {
@@ -1422,6 +1448,10 @@
    },
    "I4": {
     "sentence": "Alibaba's Model Spec says service providers need continuous monitoring, but there is no public description of Alibaba monitoring its deployed models against it and no published incident reports.",
+    "sources": []
+   },
+   "I5": {
+    "sentence": "We found nothing published on how a change to Alibaba's Spec is reviewed or approved.",
     "sources": []
    }
   },
@@ -1478,6 +1508,10 @@
       "date": "February 2026"
      }
     ]
+   },
+   "I5": {
+    "sentence": "Google DeepMind publishes no constitution, and we found nothing published on how a change to the rules Gemini follows is reviewed or approved.",
+    "sources": []
    }
   },
   "mistral": {
@@ -1495,6 +1529,10 @@
    },
    "I4": {
     "sentence": "There is no public description of Mistral monitoring its deployed models' behaviour and no published report of a behaviour incident.",
+    "sources": []
+   },
+   "I5": {
+    "sentence": "Mistral AI publishes no constitution, and we found nothing published on how a change to the system prompts it publishes is reviewed or approved.",
     "sources": []
    }
   },
@@ -1542,6 +1580,18 @@
       "title": "Muse Spark Safety & Preparedness Report",
       "url": "https://ai.meta.com/static-resource/muse-spark-safety-and-preparedness-report/",
       "date": "26 May 2026"
+     }
+    ]
+   },
+   "I5": {
+    "sentence": "Meta publishes no constitution. Its Advanced AI Scaling Framework says who confirms an update to that framework, which covers catastrophic risks and no document about behaviour.",
+    "sources": [
+     {
+      "ref": "ME1",
+      "quote": "After a Framework assessment, we will update our Framework, have it confirmed by our Director of Alignment and Risk and Chief AI Officer, and publish the updated version.",
+      "title": "Advanced AI Scaling Framework, version 2, section 5.1",
+      "url": "https://ai.meta.com/static-resource/Meta_Advanced-AI-Scaling-Framework-v2",
+      "date": "7 April 2026"
      }
     ]
    }
@@ -1606,6 +1656,10 @@
       "date": "30 June 2026"
      }
     ]
+   },
+   "I5": {
+    "sentence": "xAI publishes no constitution, and we found nothing published on how a change to the system prompts it publishes is reviewed or approved.",
+    "sources": []
    }
   },
   "moonshot": {
@@ -1631,6 +1685,10 @@
    },
    "I4": {
     "sentence": "There is no public description of Moonshot AI monitoring Kimi's behaviour in use and no published incident report, including on the 2026 incidents others reported.",
+    "sources": []
+   },
+   "I5": {
+    "sentence": "Moonshot AI publishes no constitution, and we found nothing published on how a change to the rules its models follow is reviewed or approved.",
     "sources": []
    }
   },
@@ -1665,6 +1723,10 @@
    },
    "I4": {
     "sentence": "DeepSeek's R1 paper describes a filter that screens conversations on its own service, which is counted under guardrails disclosed (3.1); DeepSeek publishes nothing on monitoring how its models behave in use, and no incident reports.",
+    "sources": []
+   },
+   "I5": {
+    "sentence": "DeepSeek publishes no constitution, and we found nothing published on how a change to the rules its models follow is reviewed or approved.",
     "sources": []
    }
   },
@@ -1747,6 +1809,18 @@
       "ref": "MS8",
       "quote": "Where we or others identify serious or critical incidents that may pose public safety or national security risks, we operationalize incident response policies and processes, conduct investigations, provide reports to regulatory authorities and impacted customers as appropriate, apply mitigations and remediation, and manage after-action reviews and policy, process, and practice updates.",
       "title": "Microsoft Frontier Governance Framework, February 2026, 4. Mitigations",
+      "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
+      "date": "February 2026"
+     }
+    ]
+   },
+   "I5": {
+    "sentence": "We found no published account of how a change to Microsoft AI's Code of Conduct is reviewed or approved. Microsoft's Frontier Governance Framework, a different document, says updates to it are reviewed by its Chief Responsible AI Officer before adoption.",
+    "sources": [
+     {
+      "ref": "MS8",
+      "quote": "Any updates to our practices will be reviewed by Microsoft’s Chief Responsible AI Officer prior to their adoption.",
+      "title": "Microsoft Frontier Governance Framework, February 2026, 5. Governance",
       "url": "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Frontier-Governance-Framework-Feb-2026.pdf",
       "date": "February 2026"
      }
@@ -8112,7 +8186,7 @@
     "id": "gov-method",
     "title": "Detailed scoring",
     "blocks": [
-     "### Where the rows come from\n\nThe board has two sources and no others. The five questions are the four asks of Polaris Collective's working paper \"Model spec governance and transparency\", in its draft of 10 September 2026, with the ask on hard constraints split in two: whether they are named, and whether the public can comment before one is weakened.[^CO1] The ten best practices beside them come from \"Emerging International Best Practices for AI Model Specs\", a working paper by Edward Kembery and colleagues that is under review.[^CO2] Every row on the board carries the number of the note that names its source, and the paper's own words sit in the popover the row's name opens. Neither paper splits a question into checks, weighs one row against another, or says what earns a score. We did all three, and every score on the board is ours.\n\n### How a figure is worked out\n\nA question is split into checks, each scored from 0 to 4: three for each of the first two questions and two for the others. Every check carries a written description of what earns 0, what earns 2 and what earns 4, in the tables below. A question's own figure is the average of its checks. A best practice is scored 0, 1 or 2. Four of them carry a description of each score of their own, and the others share one scale.\n\nThe board shows every score out of 10, as its share of the scale it was given on: a check scored 3 of 4 shows 7.5, and a practice scored 1 of 2 shows 5.0. The score as given is in the panel that opens on it.\n\nEach row belongs to one figure and one only, and every row of a figure counts the same. Transparency has eleven rows, the ten checks and the licence practice, so each counts for 1/11 of it and a question with three checks counts for 3/11. Applicability has eight, all of them practices, each counting for 1/8.\n\n**The final score averages the two figures**, each counting for half, and companies are ranked on it. Companies level on it share a place. The two figures measure different things, what a company has published and what it says about its own practice, so both stay on the board under the final score and a reader can see which half a company earned it on.\n\nBelow, every question, check and practice is named as it is on the board. The tables say what earns 0, 2 and 4 on each check, and a score of 1 or 3 falls between the descriptions either side of it.",
+     "### Where the rows come from\n\nThe board has two sources and no others. The five questions are the four asks of Polaris Collective's working paper \"Model spec governance and transparency\", in its draft of 10 September 2026, with the ask on hard constraints split in two: whether they are named, and whether the public can comment before one is weakened.[^CO1] The ten best practices beside them come from \"Emerging International Best Practices for AI Model Specs\", a working paper by Edward Kembery and colleagues that is under review.[^CO2] Every row on the board carries the number of the note that names its source, and the paper's own words sit in the popover the row's name opens. Neither paper splits a question into checks, weighs one row against another, or says what earns a score. We did all three, and every score on the board is ours.\n\n### How a figure is worked out\n\nA question is split into checks, each scored from 0 to 4: three for each of the first two questions and two for the others. Every check carries a written description of what earns 0, what earns 2 and what earns 4, in the tables below. A question's own figure is the average of its checks. A best practice is scored 0, 1 or 2. Five of them carry a description of each score of their own, and the others share one scale.\n\nThe board shows every score out of 10, as its share of the scale it was given on: a check scored 3 of 4 shows 7.5, and a practice scored 1 of 2 shows 5.0. The score as given is in the panel that opens on it.\n\nEach row belongs to one figure and one only, and every row of a figure counts the same. Transparency has eleven rows, the ten checks and the licence practice, so each counts for 1/11 of it and a question with three checks counts for 3/11. Applicability has nine, all of them practices, each counting for 1/9.\n\n**The final score averages the two figures**, each counting for half, and companies are ranked on it. Companies level on it share a place. The two figures measure different things, what a company has published and what it says about its own practice, so both stay on the board under the final score and a reader can see which half a company earned it on.\n\nBelow, every question, check and practice is named as it is on the board. The tables say what earns 0, 2 and 4 on each check, and a score of 1 or 3 falls between the descriptions either side of it.",
      {
       "slot": "gov-scoring",
       "tag": "div",
@@ -8131,19 +8205,13 @@
       "tag": "ul",
       "class": "gov-bullets"
      },
-     "Four more are counted in the same figure, and nobody outside a company can see whether it follows them. The paper asks companies to say so publicly, so each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.[^CO2]",
+     "Five more are counted in the same figure, and nobody outside a company can see whether it follows them. The paper asks companies to say so publicly for four of them, and raises the fifth, a separate sign-off on changes, as an open problem. Each is scored 0, 1 or 2 on what the company publishes, and 0 when it publishes nothing.[^CO2]",
      {
       "slot": "gov-disclosed",
       "tag": "ul",
       "class": "gov-bullets"
      },
-     "One is scored for nobody, for the reason note 7 gives, and is counted in neither figure.",
-     {
-      "slot": "gov-internal",
-      "tag": "ul",
-      "class": "gov-bullets"
-     },
-     "The paper gives no description of what 0, 1 and 2 mean on a practice. In our scoring, 2 is the practice in full, 1 part of it or a weaker form of it, and 0 means we found nothing published.\n\n### How we looked\n\nEvery score was first given by hand, by reading documents. No model judged any row in that reading, and no score was taken from another ranking. The reading was done between 18 and 21 September 2026, and the sources it rests on are listed company by company below. Microsoft AI was added on 28 September 2026. Its rows were researched and scored that day by a language model, against the same descriptions and rules, and no person has yet read them against their sources.\n\nFor each company we searched its own pages first: the constitution or policy document where one exists, the developer documentation, the model cards and system cards, the terms of service and usage policy, the change logs and release notes, and the safety or frontier framework. We then searched for the company by name against the practices it had not answered, and read the outside sources listed below, among them the EU Code of Practice signatory list, the Stanford Foundation Model Transparency Index, and the evaluations published by the UK AI Security Institute and the US Center for AI Standards and Innovation.[^AN12][^MI5][^MO10][^DS8][^DS9][^CO7] For the four practices only a company can show, the search was run one practice at a time across the nine companies then on the board, so that each practice was judged the same way everywhere, and Microsoft AI, added on 28 September 2026, was searched for the same four practices on its own.\n\nEvery row was read again on 23 and 24 September 2026, and the passage behind each score was recorded with its address and its date.\n\nOn 25 September 2026 an audit carried out with language models checked every row against its sources and found documents that reading had missed. Where a second model confirmed a correction, the score was changed to follow the board's descriptions of each score, and the rows it changed cite the documents it found with that date. Corrections that turned on a rule the board had not written down were held, and so were corrections that would raise Anthropic, since the models that carried out the audit are Anthropic's. A person decided both on 26 September 2026: the first nine rules listed above were written down and applied to every company, and four corrections raising Anthropic were approved. The rows they changed cite the audit's sources with that date.\n\n**Where nothing is published, the board says nothing is published.** A 0 is not a judgement that a company does not do something. It says we looked and found nothing public, and a company may well follow a practice without saying so. Every row on the board rests on a passage quoted with its address in the popover behind the score, or on a sentence there saying where we looked and found nothing. Two searches failed outright, and both are named under Limitations: the Chinese regulatory filings, and older copies of pages that carry no date.\n\nTell us if we are wrong. The button at the bottom right of this page sends us a note, and a correction that carries the address of the document is the most useful thing anyone can send.\n\n### How to read the scores\n\n**Publishing a constitution and covering models with it are scored separately.** Alibaba's constitution names no model, and on a single \"has a constitution\" column it would score the same as one that binds a company's products.\n\n**The rows say more than the figure.** OpenAI and Anthropic are the two highest on transparency and fall short in opposite ways. OpenAI keeps every version at a dated address, where Anthropic's one earlier version survives at its old address and nothing records the edits since.[^OA5][^OA6][^OA7][^AN4] Anthropic names the things its models must never do as a closed set, where OpenAI's top level points at detailed policies it does not publish.[^OA1][^AN1]\n\n**The two figures do not agree with each other.** Meta publishes little and is fifth on applicability, level with xAI, which leaves it seventh on the final score. Mistral AI is fifth on transparency and scores 0 on applicability, the only company that does, which leaves it eighth. That is why both figures stay on the board under the final score.\n\n**Six of the ten companies publish no constitution**, and what they publish instead decides their first figure. xAI and Mistral AI publish system prompts, which we count as a partial constitution, and they are fourth and fifth on transparency, ahead of Alibaba, whose full constitution names no model and keeps no change log.[^MI1][^XA7] Google DeepMind publishes guidelines for its app and is seventh.[^GO1] Meta, Moonshot AI and DeepSeek publish fragments and hold the three lowest places. Of the four that publish a constitution, OpenAI and Anthropic score on the change log and Alibaba and Microsoft AI score nothing there. Microsoft AI's Code of Conduct, a draft its models are not yet trained on, is third on transparency.[^MS1]\n\n### Who the companies are\n\nSome trading names mislead, so here are the companies behind four of them. Moonshot AI is Beijing Moonshot AI Technology (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is 杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI SAS, of Paris. Microsoft AI is a division of Microsoft Corporation, of Redmond, and makes the MAI models."
+     "The paper gives no description of what 0, 1 and 2 mean on a practice. In our scoring, 2 is the practice in full, 1 part of it or a weaker form of it, and 0 means we found nothing published.\n\n### How we looked\n\nEvery score was first given by hand, by reading documents. No model judged any row in that reading, and no score was taken from another ranking. The reading was done between 18 and 21 September 2026, and the sources it rests on are listed company by company below. Microsoft AI was added on 28 September 2026. Its rows were researched and scored that day by a language model, against the same descriptions and rules, and no person has yet read them against their sources.\n\nFor each company we searched its own pages first: the constitution or policy document where one exists, the developer documentation, the model cards and system cards, the terms of service and usage policy, the change logs and release notes, and the safety or frontier framework. We then searched for the company by name against the practices it had not answered, and read the outside sources listed below, among them the EU Code of Practice signatory list, the Stanford Foundation Model Transparency Index, and the evaluations published by the UK AI Security Institute and the US Center for AI Standards and Innovation.[^AN12][^MI5][^MO10][^DS8][^DS9][^CO7] For the four practices only a company can show, the search was run one practice at a time across the nine companies then on the board, so that each practice was judged the same way everywhere, and Microsoft AI, added on 28 September 2026, was searched for the same four practices on its own. The fifth, a separate sign-off on changes, was scored on 9 October 2026 from what that research had found on who approves a change, without a search of its own.\n\nEvery row was read again on 23 and 24 September 2026, and the passage behind each score was recorded with its address and its date.\n\nOn 25 September 2026 an audit carried out with language models checked every row against its sources and found documents that reading had missed. Where a second model confirmed a correction, the score was changed to follow the board's descriptions of each score, and the rows it changed cite the documents it found with that date. Corrections that turned on a rule the board had not written down were held, and so were corrections that would raise Anthropic, since the models that carried out the audit are Anthropic's. A person decided both on 26 September 2026: the first nine rules listed above were written down and applied to every company, and four corrections raising Anthropic were approved. The rows they changed cite the audit's sources with that date.\n\n**Where nothing is published, the board says nothing is published.** A 0 is not a judgement that a company does not do something. It says we looked and found nothing public, and a company may well follow a practice without saying so. Every row on the board rests on a passage quoted with its address in the popover behind the score, or on a sentence there saying where we looked and found nothing. Two searches failed outright, and both are named under Limitations: the Chinese regulatory filings, and older copies of pages that carry no date.\n\nTell us if we are wrong. The button at the bottom right of this page sends us a note, and a correction that carries the address of the document is the most useful thing anyone can send.\n\n### How to read the scores\n\n**Publishing a constitution and covering models with it are scored separately.** Alibaba's constitution names no model, and on a single \"has a constitution\" column it would score the same as one that binds a company's products.\n\n**The rows say more than the figure.** OpenAI and Anthropic are the two highest on transparency and fall short in opposite ways. OpenAI keeps every version at a dated address, where Anthropic's one earlier version survives at its old address and nothing records the edits since.[^OA5][^OA6][^OA7][^AN4] Anthropic names the things its models must never do as a closed set, where OpenAI's top level points at detailed policies it does not publish.[^OA1][^AN1]\n\n**The two figures do not agree with each other.** Meta publishes little and is fifth on applicability, level with xAI, which leaves it seventh on the final score. Mistral AI is fifth on transparency and scores 0 on applicability, the only company that does, which leaves it eighth. That is why both figures stay on the board under the final score.\n\n**Six of the ten companies publish no constitution**, and what they publish instead decides their first figure. xAI and Mistral AI publish system prompts, which we count as a partial constitution, and they are fourth and fifth on transparency, ahead of Alibaba, whose full constitution names no model and keeps no change log.[^MI1][^XA7] Google DeepMind publishes guidelines for its app and is seventh.[^GO1] Meta, Moonshot AI and DeepSeek publish fragments and hold the three lowest places. Of the four that publish a constitution, OpenAI and Anthropic score on the change log and Alibaba and Microsoft AI score nothing there. Microsoft AI's Code of Conduct, a draft its models are not yet trained on, is third on transparency.[^MS1]\n\n### Who the companies are\n\nSome trading names mislead, so here are the companies behind four of them. Moonshot AI is Beijing Moonshot AI Technology (北京月之暗面科技有限公司), which makes the Kimi models. DeepSeek is 杭州深度求索人工智能基础技术研究有限公司, of Hangzhou, spun out of the High-Flyer (幻方) quantitative investment fund. Mistral AI is Mistral AI SAS, of Paris. Microsoft AI is a division of Microsoft Corporation, of Redmond, and makes the MAI models."
     ]
    },
    {
@@ -8342,7 +8410,7 @@
   },
   "mistral": {
    "published": "No constitution. It publishes the system prompts of its coding agent under an open licence, with every change shown line by line and a short list of approvals marked as not overridable, and it describes its guardrails for developers with some record of how they change.[^MI1][^MI10][^MI11][^MI13][^MI16]",
-   "engages": "Nothing found on any of the eight practices, from training on a document to testing or monitoring models against it."
+   "engages": "Nothing found on any of the nine practices, from training on a document to testing or monitoring models against it."
   },
   "meta": {
    "published": "Little: no constitution and no list of hard constraints, a short record of versions of its framework, fragments of intended behaviour in a template prompt and rules for teenagers, and guardrails described for developers and listed by kind for its Muse agent, with some changes to them announced in its newsroom.[^ME1][^ME3][^ME4][^ME5][^ME7][^ME9]",

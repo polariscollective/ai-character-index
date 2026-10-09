@@ -182,8 +182,9 @@ let governance = null;
 export const INCOMPATIBLE = "This publication is not compatible with this version of the "
   + "index: it carries no board of this kind, or not in a shape this server reads.";
 
-/* A practice by its id, from either list, and whether any figure counts it. The
- * one the paper raises as an open problem is counted in neither. */
+/* A practice by its id, from either list, and whether any figure counts it. A
+ * board frozen before 9 October 2026 carries one practice counted in neither,
+ * the separate sign-off on changes; a newer board scores every practice. */
 const practiceOf = id => governance.supporting.find(practice => practice.id === id)
   || governance.internal.find(practice => practice.id === id);
 const practiceScore = (labId, id) => governance.supporting_scores[labId]?.[id]
@@ -295,12 +296,12 @@ export function governanceBoard(snapshot, args = {}) {
         practices: [...governance.supporting, ...governance.internal].map(practice => ({
           id: practice.id,
           name: practice.short,
-          max: practice.asked_to_publish === false ? null : PRACTICE,
+          max: unscoredIds().includes(practice.id) ? null : PRACTICE,
           from: governance.papers[practice.paper].credit,
           means: practice.label,
           reading: practice.reading,
           anchors: practice.anchors || governance.supporting_scale,
-          ...(practice.asked_to_publish === false
+          ...(unscoredIds().includes(practice.id)
             ? { not_assessed: governance.internal_note }
             : {}),
         })),

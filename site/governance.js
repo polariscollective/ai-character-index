@@ -682,6 +682,12 @@ function aboutGroup(content, group, column) {
 function prepare(data) {
   board.data = data;
   board.labs = ranked(data);
+  // A board frozen before every practice was scored carries one that is not,
+  // and note 7 says why. On a board with none, the notes close on open weights
+  // as 7, so their numbers run on with no gap.
+  const unscored = data.columns.some(column => (column.unscored || []).length);
+  NOTE.unscored = unscored ? "7" : null;
+  NOTE.openWeights = unscored ? "8" : "7";
 }
 
 /* ---- The table --------------------------------------------------------------- */
@@ -988,7 +994,7 @@ function renderColumns() {
     [NOTE.kembery, "Kembery et al. working paper", paper("kembery")],
     [NOTE.unscored, "Not scored", data.internal_note],
     [NOTE.openWeights, "Open weights", data.open_weights_note],
-  ];
+  ].filter(([number]) => number);
   const list = element("ol", "gov-notes");
   notes.forEach(([number, name, text]) => {
     const item = element("li");
@@ -1075,6 +1081,7 @@ function renderScoring() {
     return item;
   };
   const fill = (node, ids) => {
+    if (!node) return;
     const list = document.createDocumentFragment();
     ids.forEach(id => list.append(bullet(id)));
     node.replaceChildren(list);
@@ -1084,7 +1091,10 @@ function renderScoring() {
   fill(board.nodes.publishedPractices, published.practices);
   fill(board.nodes.engagedPractices,
     engages.practices.filter(id => !onlyTheCompany(board.data, id)));
-  fill(board.nodes.disclosed, engages.practices.filter(id => onlyTheCompany(board.data, id)));
+  // In the paper's order, I1 to I5, though the sign-off is folded with change
+  // control and so comes first in the column.
+  fill(board.nodes.disclosed, board.data.internal.map(practice => practice.id)
+    .filter(id => engages.practices.includes(id)));
   fill(board.nodes.internal, engages.unscored || []);
 }
 

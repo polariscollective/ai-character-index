@@ -83,7 +83,7 @@ applicability") are still open.
 | 10 | Context cell popovers repeat the row's explanation; keep it only in the row's own popover | `site/overview.js` `aboutContextCell` | later |
 | 11 | Remove the weight fractions under row names ("1/8 of the figure") across the boards and their popovers; reverses the 24 September rule | `site/constitutions.js` `weightLine`, `site/governance.js` `rowWeight`, `aboutColumn` | done |
 | 12 | Remove the "From Kembery et al." source lines in popovers, across the boards | `site/governance.js` `aboutColumn`, `fromLine` | done |
-| 13 | "What this column does not count" (I5) in the column popover: remove or reword | `site/governance.js` `aboutColumn` | decide |
+| 13 | "What this column does not count" (I5) in the column popover: gone, since I5 is scored 0 for every company on what it publishes (9 October 2026) | `site/governance.json` | done |
 | 14 | Make the Constitutions page introduction agree with the overview's, or remove it | `site/constitutions.json` `page.intro` | content |
 | 15 | The governance page's first sentence may go; its second and third could inform the overview's wording | `site/governance.json` `page.intro` | content |
 | 16 | Add the public comment window and the open licence to the description of "What is published" (call, low confidence) | `site/overview.json` `grid.groups[0].rows[0].plain` | done |
