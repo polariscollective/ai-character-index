@@ -1629,3 +1629,23 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 /* Under a source, the cells that cite it. */
 .source-entry .source-cited { margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
 .source-entry .source-cited .inline-button { font-size: 13px; }
+/* The popover a final score's name opens on the overview: wide, since it
+   carries a whole board's takeaways. The class is on the popover's body, which
+   board.js replaces on every open, so no other popover keeps the width. On a
+   phone every popover already takes the screen (the rule at 560px). */
+@media (min-width: 561px) {
+  .gov-pop:has(> .ovw-pop-wide) {
+    width: min(720px, calc(100vw - 16px));
+    max-height: min(82vh, 760px);
+  }
+}
+.gov-pop .ovw-pop-takeaway { padding: 10px 0 2px; border-top: 1px solid rgb(92 107 60 / .2); }
+.gov-pop .ovw-pop-takeaway h4 {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.gov-pop .ovw-pop-takeaway p { max-width: 72ch; }
+.gov-pop .ovw-pop-wide .ovw-pop-link { padding-top: 12px; border-top: 1px solid rgb(92 107 60 / .2); }

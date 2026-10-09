@@ -54,8 +54,27 @@ Promise.allSettled([initializeConstitutions(), initializeGovernance()])
     results.filter(result => result.status === "rejected")
       .forEach(result => console.error(result.reason));
     renderMenu(viewFromAddress());
+    landOnSection();
     openCompanyFromAddress();
   });
+
+/* An address that names a section of the view on screen, such as the overview's
+ * link to a board's takeaways, lands on it once the boards are drawn. The
+ * browser's own move to it comes while the section is still hidden, waiting for
+ * its board, and on the governance view finds nothing to scroll to. A folded
+ * section is opened, as the menu down the margin opens it. A source's code is
+ * governance.js's to open (showSource). */
+function landOnSection() {
+  let id = "";
+  try { id = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+  if (!id || id.startsWith("src-")) return;
+  const target = document.getElementById(id);
+  if (!target || target.closest("[hidden]")) return;
+  const fold = target.tagName === "DETAILS" ? target
+    : target.querySelector(":scope > details.section-fold");
+  if (fold) fold.open = true;
+  target.scrollIntoView({ block: "start" });
+}
 
 /* ?company=<id> opens that company's profile in the view on screen, as a press
  * on its name would, and ?company=<id>&cell=<row> opens that one cell of it,
