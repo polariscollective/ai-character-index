@@ -38,7 +38,10 @@ import { companyMark } from "./company-marks.js";
 
 const byId = id => document.getElementById(id);
 
-const state = { data: null, companies: [], categories: [] };
+/* `ownScale` is set where these rows are drawn on the overview, which shows a
+ * criterion on the scale of 4 it was given on rather than out of 10. */
+const state = { data: null, companies: [], categories: [], ownScale: false };
+const shownOutOfTen = () => (state.ownScale ? "" : ` and shown out of ${TEN}`);
 
 let board = null;
 
@@ -250,13 +253,13 @@ function cellSentences(content, company, ...blocks) {
 /* A figure beside a name, pressable. With the cell it names (`cell`, the
  * cell's data attributes) it opens that cell, unfolding the rows above it and
  * moving the selection there; without one it refills the popover in place. */
-function figureItem(value, max, name, label, open, cell) {
+function figureItem(value, max, name, label, open, cell, text = shown(value)) {
   const item = element("li");
   const button = element("button", "inline-button", name);
   button.type = "button";
   button.setAttribute("aria-label", label);
   button.addEventListener("click", () => (cell ? board.follow(cell, open) : board.refill(open)));
-  item.append(board.chip(value, max, shown(value)), button);
+  item.append(board.chip(value, max, text), button);
   return item;
 }
 
@@ -399,8 +402,8 @@ function profile(content, company) {
 
 function aboutWhole(content) {
   board.titled(content, "Clarity of the document",
-    `${state.data.criteria.length} criteria, each given out of ${CRITERION_SCALE} and shown out of `
-    + `${TEN}. The figure is their average, each counting for `
+    `${state.data.criteria.length} criteria, each given out of ${CRITERION_SCALE}${shownOutOfTen()}. `
+    + "The figure is their average, each counting for "
     + `${frac(1, state.data.criteria.length)}.`);
   state.data.criteria.forEach(criterion => {
     const fold = element("details");
@@ -427,9 +430,16 @@ function wholeScore(content, company) {
   state.data.criteria.forEach(criterion => {
     const part = criterionPart(company, criterion);
     if (part === null) return;
-    list.append(figureItem(part, shownMax(), criterion.name,
-      `${criterion.name}, ${shown(part)} out of ${shownMax()}`,
-      rest => criterionScore(rest, company, criterion), { lab: company.id, row: criterion.id }));
+    // On the overview a criterion is shown as given, out of 4.
+    const given = criterionScore10(company, criterion);
+    list.append(state.ownScale
+      ? figureItem(given, CRITERION_SCALE, criterion.name,
+        `${criterion.name}, ${onScale(given)} out of ${CRITERION_SCALE}`,
+        rest => criterionScore(rest, company, criterion), { lab: company.id, row: criterion.id },
+        onScale(given))
+      : figureItem(part, shownMax(), criterion.name,
+        `${criterion.name}, ${shown(part)} out of ${shownMax()}`,
+        rest => criterionScore(rest, company, criterion), { lab: company.id, row: criterion.id }));
   });
   content.append(list);
   content.append(board.popButton(`The whole profile of ${company.name}`,
@@ -439,7 +449,7 @@ function wholeScore(content, company) {
 function aboutCriterion(content, criterion) {
   board.titled(content, criterion.name,
     `One of the ${state.data.criteria.length} criteria on the clarity of the document, given out of `
-    + `${CRITERION_SCALE} and shown out of ${TEN}.`);
+    + `${CRITERION_SCALE}${shownOutOfTen()}.`);
   sentences(content, criterion.what_it_is, criterion.why_it_matters);
   scaleOf(content, criterion);
 }
@@ -468,9 +478,14 @@ function criterionScore(content, company, criterion) {
   const part = criterionPart(company, criterion);
   const entry = company.whole?.criteria?.[criterion.id] || {};
   board.titled(content, `${company.name}: ${lowerFirst(criterion.name)}`, documentLine(company));
-  content.append(board.figure(shown(part), ` out of ${shownMax()}`),
-    element("p", "subtitle", `Scored ${onScale(criterionScore10(company, criterion))} on its own `
-      + `scale of 0 to ${CRITERION_SCALE}.`));
+  if (state.ownScale) {
+    content.append(board.figure(onScale(criterionScore10(company, criterion)),
+      ` out of ${CRITERION_SCALE}`));
+  } else {
+    content.append(board.figure(shown(part), ` out of ${shownMax()}`),
+      element("p", "subtitle", `Scored ${onScale(criterionScore10(company, criterion))} on its own `
+        + `scale of 0 to ${CRITERION_SCALE}.`));
+  }
   renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
   scaleOf(content, criterion);
@@ -906,6 +921,7 @@ async function showPublishedAt(publication) {
  * the file given here. */
 export function rowsFor(view, data, options) {
   board = view;
+  state.ownScale = true;
   prepare(data);
   return rowsBelowFinal(options);
 }

@@ -71,7 +71,29 @@ const onTen = (value, max) => value / max * TEN;
 const onItsScale = (value, max) =>
   `Scored ${Number(Number(value).toFixed(1))} on its own scale of 0 to ${max}.`;
 
-const board = { data: null, labs: [], nodes: {} };
+/* `ownScale` is set where these rows are drawn on the overview, which shows a
+ * row scored directly on the scale it was given on rather than out of 10. */
+const board = { data: null, labs: [], nodes: {}, ownScale: false };
+/* How a sentence names a row's scale: "scored from 0 to 4 and shown out of
+ * 10" on the Index, and only the first half on the overview. */
+const shownOutOfTen = () => (board.ownScale ? "" : ` and shown out of ${TEN}`);
+
+/* A row's chip in a popover's list: out of 10 on the Index, and the score as
+ * given on the overview. */
+const rowChip = (value, max) => (board.ownScale
+  ? view.chip(value, max, String(Number(Number(value).toFixed(1))))
+  : view.chip(onTen(value, max), TEN, shown(onTen(value, max))));
+
+/* A row's figure at the head of its popover: out of 10 on the Index, with the
+ * score as given under it, and the score as given alone on the overview. */
+function scoreFigure(content, value, max) {
+  if (board.ownScale) {
+    content.append(view.figure(String(Number(Number(value).toFixed(1))), ` out of ${max}`));
+    return;
+  }
+  content.append(view.figure(shown(onTen(value, max)), ` out of ${TEN}`),
+    element("p", "subtitle", onItsScale(value, max)));
+}
 
 const questionOf = id => board.data.questions.find(question => question.id === id);
 /* A practice by its id, from either list: the five anyone can check and the
@@ -196,7 +218,7 @@ function checksOf(lab, question) {
   question.checks.forEach(check => {
     const item = element("li");
     const value = board.data.scores[lab.id][check.id];
-    item.append(view.chip(onTen(value, SCALE), TEN, shown(onTen(value, SCALE))),
+    item.append(rowChip(value, SCALE),
       element("span", "check-id", check.id),
       pressable(`${check.label} (${value} of ${SCALE})`, { lab: lab.id, row: check.id },
         content => checkScore(content, lab, question, check)));
@@ -215,7 +237,7 @@ function practicesOf(lab, ids) {
     const said = onlyTheCompany(board.data, id)
       ? board.data.internal_evidence[lab.id][id].sentence : practice.label;
     const value = practiceScoreOf(board.data, lab.id, id);
-    item.append(view.chip(onTen(value, PRACTICE), TEN, shown(onTen(value, PRACTICE))),
+    item.append(rowChip(value, PRACTICE),
       element("span", "check-id", id),
       pressable(`${said} (${value} of ${PRACTICE})`, { lab: lab.id, row: id },
         practiceContent(lab, practice)));
@@ -457,9 +479,8 @@ function questionScore(content, lab, question) {
 function checkScore(content, lab, question, check) {
   const value = board.data.scores[lab.id][check.id];
   view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.label}.`);
-  content.append(view.figure(shown(onTen(value, SCALE)), ` out of ${TEN}`),
-    element("p", "subtitle", onItsScale(value, SCALE)),
-    element("p", "", meansAt(check.anchors, value)));
+  scoreFigure(content, value, SCALE);
+  content.append(element("p", "", meansAt(check.anchors, value)));
   content.append(view.h3("What each score means"), anchorsList(check, value));
   content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
     paragraphs(board.data.profiles[lab.id][question.id]));
@@ -472,9 +493,8 @@ function practiceScore(content, lab, practice) {
   const value = board.data.supporting_scores[lab.id][practice.id];
   const column = columnOf(board.data, practice.id);
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
-  content.append(view.figure(shown(onTen(value, PRACTICE)), ` out of ${TEN}`),
-    element("p", "subtitle", onItsScale(value, PRACTICE)),
-    element("p", "", meansAt(board.data.supporting_scale, value)));
+  scoreFigure(content, value, PRACTICE);
+  content.append(element("p", "", meansAt(board.data.supporting_scale, value)));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
   if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
@@ -491,9 +511,8 @@ function disclosedScore(content, lab, practice) {
   const value = board.data.internal_scores[lab.id][practice.id];
   const found = board.data.internal_evidence[lab.id][practice.id];
   view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
-  content.append(view.figure(shown(onTen(value, PRACTICE)), ` out of ${TEN}`),
-    element("p", "subtitle", onItsScale(value, PRACTICE)),
-    element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
+  scoreFigure(content, value, PRACTICE);
+  content.append(element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
   if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
   if (found.sources.length) {
     content.append(view.h3(`What ${lab.name} publishes`));
@@ -576,8 +595,8 @@ function aboutQuestion(content, question) {
     content.append(view.h3("Part of the minimum"), element("p", "", board.data.minimum_note));
   }
   content.append(view.h3("How it is scored"));
-  content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4 and `
-    + "shown out of 10. The question's figure is their average, and each check counts on its own "
+  content.append(element("p", "", `${question.checks.length} checks, each scored from 0 to 4`
+    + `${shownOutOfTen()}. The question's figure is their average, and each check counts on its own `
     + "towards transparency. Open a check to see what earns each score."));
   question.checks.forEach(check => {
     const fold = element("details");
@@ -595,8 +614,8 @@ function aboutQuestion(content, question) {
 function aboutCheck(content, question, check) {
   view.titled(content, check.short, `${check.label}.`);
   content.append(element("p", "subtitle",
-    `One of the checks on the ${question.name.toLowerCase()} question, scored from 0 to 4 and `
-    + "shown out of 10."));
+    `One of the checks on the ${question.name.toLowerCase()} question, scored from 0 to 4`
+    + `${shownOutOfTen()}.`));
   content.append(view.h3("What each score means"), anchorsList(check, null),
     element("p", "subtitle", "A score of 1 or 3 falls between the descriptions either side of it."),
     paperFold(check));
@@ -605,7 +624,7 @@ function aboutCheck(content, question, check) {
 function aboutPractice(content, practice, column) {
   view.titled(content, practice.short, practice.label);
   content.append(element("p", "subtitle",
-    `A best practice, scored 0, 1 or 2 and shown out of 10, counted in `
+    `A best practice, scored 0, 1 or 2${shownOutOfTen()}, counted in `
     + `${column.name.toLowerCase()}.`),
   view.h3("What each score means"), scaleList(null),
   element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
@@ -615,7 +634,7 @@ function aboutDisclosedPractice(content, practice) {
   view.titled(content, practice.short, practice.label);
   content.append(
     element("p", "subtitle", "A best practice only the company can show, scored 0, 1 or 2 on what "
-      + "it publishes and shown out of 10."),
+      + `it publishes${shownOutOfTen()}.`),
     view.h3("What each score means"), scaleList(null, practice.anchors),
     element("p", "subtitle", board.data.disclosure_note), paperFold(practice));
 }
@@ -638,7 +657,7 @@ function groupScore(content, lab, group) {
   group.practices.forEach(id => {
     const item = element("li");
     const score = practiceScoreOf(board.data, lab.id, id);
-    item.append(view.chip(onTen(score, PRACTICE), TEN, shown(onTen(score, PRACTICE))),
+    item.append(rowChip(score, PRACTICE),
       element("span", "check-id", id),
       pressable(`${practiceOf(board.data, id).label} (${score} of ${PRACTICE})`,
         { lab: lab.id, row: id }, practiceContent(lab, practiceOf(board.data, id))));
@@ -1236,6 +1255,7 @@ export const openCell = (lab, row) => Boolean(view?.pressCell({ lab, row }));
  * the file given here. */
 export function rowsFor(givenView, data, options) {
   view = givenView;
+  board.ownScale = true;
   prepare(data);
   return rowsBelowTotal(options);
 }
