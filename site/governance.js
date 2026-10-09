@@ -1228,7 +1228,11 @@ function showSource(code) {
   if (fold) fold.open = true;
   setOpen(entry, true);
   const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  entry.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+  // An entry taller than most of the screen is brought in at its top: centred,
+  // its code and title would sit above the screen, which on a phone is most
+  // entries with several quoted passages.
+  const tall = entry.getBoundingClientRect().height > window.innerHeight * 0.8;
+  entry.scrollIntoView({ behavior: still ? "auto" : "smooth", block: tall ? "start" : "center" });
   entry.focus({ preventScroll: true });
   entry.classList.remove("is-cited");
   // Read once so the class, taken off and put back, marks the entry again.
