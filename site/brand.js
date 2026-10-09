@@ -149,73 +149,6 @@ const STYLE = `
 .brand-pop ul.brand-links { margin: 12px 0 0; padding: 0; list-style: none; }
 .brand-pop ul.brand-links li { margin: 0 0 6px; }
 
-/* ---------- the Index menu ----------
- *
- * The views of the index are chosen here rather than from tabs on the page:
- * pointing at Index opens the list, pressing Index opens the first view, and
- * the small button beside it opens the list for a keyboard or a finger. The
- * list hangs from the link with no gap between them, so the pointer can travel
- * down into it without the list closing on the way. */
-.index-menu { position: relative; display: inline-flex; align-items: center; gap: 2px; }
-.index-menu .index-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-}
-.index-menu .index-toggle svg { width: 10px; height: 10px; transition: transform 150ms; }
-.index-menu.is-open .index-toggle svg { transform: rotate(180deg); }
-.index-menu .index-toggle:hover { background: #B7C94B; color: #23281B; }
-.index-menu .index-toggle:focus-visible { outline: 2px solid #B7C94B; outline-offset: 2px; }
-.index-list {
-  position: absolute;
-  top: 100%;
-  left: -12px;
-  z-index: 60;
-  display: none;
-  min-width: 300px;
-  margin: 0;
-  padding: 10px 0 0;
-  list-style: none;
-}
-.index-list-inner {
-  margin: 0;
-  padding: 6px 0;
-  list-style: none;
-  border: 1px solid #5C6B3C;
-  border-radius: 4px;
-  background: #F1EFE3;
-}
-.index-menu.is-open .index-list { display: block; }
-@media (hover: hover) {
-  .index-menu:hover .index-list { display: block; }
-}
-.index-list li { margin: 0; }
-.index-list a, .index-list .index-coming {
-  display: block;
-  padding: 7px 14px;
-  color: #23281B;
-  font-family: "Instrument Sans", system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.4;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow: none;
-}
-.index-list a:hover, .index-list a:focus-visible { background: #B7C94B; color: #23281B; }
-.index-list a[aria-current="page"] { box-shadow: inset 3px 0 0 #B7C94B; font-weight: 600; }
-.index-list .index-coming { color: #676C58; cursor: default; }
-.index-list .index-coming small { display: block; font-size: 11px; }
-@media (prefers-reduced-motion: reduce) {
-  .index-menu .index-toggle svg { transition: none; }
-}
-
 /* ---------- the header on a narrow screen ----------
  *
  * The header is a brand at one end and a menu at the other, held on one line of
@@ -549,90 +482,11 @@ function followHeight(header) {
   wrapped.addEventListener("change", write);
 }
 
-/* The views of the index, how constitutions are governed first, as the
- * overview leads with it. The addresses are unchanged: /index is still what the
- * constitutions say. The two the index is still building are listed so a
- * reader sees where it is going, and cannot be chosen. */
-const VIEWS = [
-  { title: "Process", view: "governance" },
-  { title: "Content", view: null },
-  { title: "Regulation", coming: true },
-  { title: "Adherence", coming: true },
-];
-
-function indexMenu() {
-  const link = document.querySelector(".site-header nav a[data-index-menu]");
-  if (!link) return;
-  const wrap = node("span", "index-menu");
-  link.replaceWith(wrap);
-
-  const toggle = node("button", "index-toggle");
-  toggle.type = "button";
-  toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-controls", "index-list");
-  toggle.setAttribute("aria-label", "The views of the index");
-  const SVG = "http://www.w3.org/2000/svg";
-  const chevron = document.createElementNS(SVG, "svg");
-  chevron.setAttribute("viewBox", "0 0 10 10");
-  chevron.setAttribute("aria-hidden", "true");
-  chevron.setAttribute("focusable", "false");
-  const stroke = document.createElementNS(SVG, "path");
-  for (const [name, value] of Object.entries({
-    d: "M1.5 3.5 5 7l3.5-3.5", fill: "none", stroke: "currentColor",
-    "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round",
-  })) stroke.setAttribute(name, value);
-  chevron.append(stroke);
-  toggle.append(chevron);
-
-  const onIndex = /^\/index\/?$/.test(location.pathname);
-  const shown = new URLSearchParams(location.search).get("view");
-  const outer = node("div", "index-list");
-  outer.id = "index-list";
-  const list = node("ul", "index-list-inner");
-  for (const { title, view, coming } of VIEWS) {
-    const item = node("li");
-    if (coming) {
-      const label = node("span", "index-coming", title);
-      label.setAttribute("aria-disabled", "true");
-      label.append(node("small", "", "In preparation"));
-      item.append(label);
-    } else {
-      const choice = node("a", "", title);
-      choice.href = view ? `/index?view=${view}` : "/index";
-      if (onIndex && (shown === view || (!view && shown !== "governance"))) {
-        choice.setAttribute("aria-current", "page");
-      }
-      item.append(choice);
-    }
-    list.append(item);
-  }
-  outer.append(list);
-  wrap.append(link, toggle, outer);
-
-  const set = open => {
-    wrap.classList.toggle("is-open", open);
-    toggle.setAttribute("aria-expanded", String(open));
-  };
-  toggle.addEventListener("click", () => set(!wrap.classList.contains("is-open")));
-  wrap.addEventListener("focusout", event => {
-    if (!wrap.contains(event.relatedTarget)) set(false);
-  });
-  wrap.addEventListener("keydown", event => {
-    if (event.key !== "Escape" || !wrap.classList.contains("is-open")) return;
-    set(false);
-    toggle.focus();
-  });
-  document.addEventListener("click", event => {
-    if (!wrap.contains(event.target)) set(false);
-  });
-}
-
 function start() {
   // The loaders written into every page's markup take their style from here.
   styleLoaders();
   document.addEventListener("click", carryPin, true);
   document.addEventListener("auxclick", carryPin, true);
-  indexMenu();
   const wordmark = document.querySelector(".site-header .wordmark");
   if (!wordmark) return;
   const style = document.createElement("style");

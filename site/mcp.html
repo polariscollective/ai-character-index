@@ -255,8 +255,7 @@
     <a class="wordmark brand-stack" href="/"><span class="brand-name">AI Constitutions Index</span><span class="collective">by Polaris Collective</span></a>
   </span>
   <nav aria-label="Primary navigation">
-    <a href="/">Overview</a>
-    <a href="/index" data-index-menu>Index</a>
+    <a href="/">Index</a>
     <a href="/doc-reader/">Doc reader</a>
     <a href="/about">About</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
@@ -469,16 +468,16 @@ If you cannot add it yourself, give me the exact steps for this app.</code></pre
     judge&rsquo;s entry of the depth, with the model and the reason.</p>
     <p>A pair with no passages says so rather than disappearing. Absence of coverage is a result
     of the index, not a hole in it.</p>
-    <p><b>constitutions_board.</b> Every figure on the overview&rsquo;s first board, each with the
+    <p><b>constitutions_board.</b> Every figure behind the Content score, each with the
     scale it is on: the final score out of 10, which is the average of the clarity of the document and
     behaviour coverage, the clarity of the document out of 10 with its five criteria, and how far each
     constitution goes on every behaviour. It carries what each criterion asked
     and what each level of the depth scale asks for, so a figure can be read without a second
     call. One argument, <b>company</b>, optional, which narrows it to one company.</p>
-    <p><b>governance_board.</b> The overview&rsquo;s second board: ten companies scored on how
+    <p><b>governance_board.</b> Every figure behind the Process score: ten companies scored on how
     they govern the rules their models follow, in two figures out of 10 averaged into a final
     score. Transparency reads ten checks, each scored 0 to 4, and the licence. Applicability
-    reads eight practices, each scored 0, 1 or 2. Every row comes with the description it
+    reads nine practices, each scored 0, 1 or 2. Every row comes with the description it
     was scored against and the paragraph we wrote on what we found. Every document behind the
     board has a code, such as OA3, which the paragraphs cite after a sentence, and the answer
     lists each one with its address and the passages quoted from it. One argument,
@@ -486,8 +485,9 @@ If you cannot add it yourself, give me the exact steps for this app.</code></pre
     judged by the panel. The board is the one the publication froze, and carries its own as-of
     date.</p>
     <p><b>overview_board.</b> The grid the site opens on: for each company, the figures that sum
-    up the two boards, each out of 10, and each figure graded with a letter from A to G against
-    fixed thresholds, with the overview&rsquo;s takeaways and a short written summary of each company. One argument,
+    up the two boards, each out of 10, each figure graded with a letter from A to G against
+    fixed thresholds, the overall grade, the index&rsquo;s takeaways and a short written summary of
+    each company. One argument,
     <b>company</b>, optional.</p>
     <p><b>compare_documents.</b> Everything one run found between two constitutions on one
     behaviour: the passages each of them carries, every pair of passages the judges linked with

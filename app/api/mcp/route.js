@@ -232,7 +232,7 @@ const handler = createMcpHandler(
     }, args => answer(snapshot => governanceBoard(snapshot, args)));
 
     server.registerTool("overview_board", {
-      title: "The overview",
+      title: "The index",
       description:
         "The grid the index's site opens on: for each of ten AI companies, "
         + "the few figures that sum up the two boards, what its constitution "
@@ -243,7 +243,7 @@ const handler = createMcpHandler(
         + "names. Each company also carries an overall grade, the average of its "
         + "two final scores on the same scale, no higher than F where either final "
         + "score is an F or a G. With them come the "
-        + "overview's takeaways and a short written summary of each company.\n\n"
+        + "index's takeaways and a short written summary of each company.\n\n"
         + "Every figure is the one constitutions_board or governance_board gives, "
         + "read from the same publication, so call those for what a figure rests "
         + "on. Pass company to narrow to one, such as Anthropic.",

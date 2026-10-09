@@ -2062,7 +2062,6 @@ console.log("== Index: the governance view ==");
   const seen = await page.evaluate(() => ({
     governanceShown: !document.querySelector("#view-governance").hidden,
     coverageHidden: document.querySelector("#view-coverage").hidden,
-    selected: document.querySelector('.index-list a[aria-current="page"]')?.getAttribute("href"),
     companies: [...document.querySelectorAll("#gov-heatmap thead .company-name")].map(n => n.textContent),
     total: [...document.querySelectorAll('#gov-heatmap .cell-button[data-row="total"] .cell-figure')]
       .map(b => b.textContent),
@@ -2084,7 +2083,7 @@ console.log("== Index: the governance view ==");
     appendices: [...document.querySelectorAll("#gov-sections section > details > summary")]
       .map(node => node.textContent),
   }));
-  check(seen.governanceShown && seen.coverageHidden && seen.selected === "/index?view=governance",
+  check(seen.governanceShown && seen.coverageHidden,
     "?view=governance opens on the governance view with the grid hidden", JSON.stringify(seen));
   check(seen.companies.join(", ") === "Anthropic, OpenAI, Google DeepMind, Alibaba, xAI, "
         + "Meta, Moonshot AI, Mistral AI, DeepSeek"
@@ -2301,47 +2300,23 @@ console.log("== Index: the governance view ==");
   await page.keyboard.press("Escape");
   await page.waitForTimeout(100);
 
-  // The views are chosen from the Index menu in the header, which a pointer
-  // opens by resting on Index and a keyboard by the button beside it.
-  const listShown = () => page.evaluate(() =>
-    getComputedStyle(document.querySelector(".index-list")).display !== "none");
-  const closedAtRest = await listShown();
-  await page.locator(".index-menu > a").hover();
-  await page.waitForTimeout(100);
-  const openOnHover = await listShown();
-  const listed = await page.evaluate(() => ({
-    choices: [...document.querySelectorAll(".index-list a")].map(a => a.textContent),
-    coming: [...document.querySelectorAll(".index-list .index-coming")]
-      .map(node => node.firstChild.textContent),
+  // The header names the front page Index and offers no menu of views: the
+  // two views stay at their addresses, reached from no menu.
+  const header = await page.evaluate(() => ({
+    links: [...document.querySelectorAll(".site-header nav a")].map(a => a.textContent.trim()),
+    views: document.querySelectorAll(".index-menu, .index-list").length,
   }));
-  check(!closedAtRest && openOnHover
-      && listed.choices.join(" | ") === "Process | Content"
-      && listed.coming.length === 2,
-    "resting on Index opens its views, the two to come listed and not choosable",
-    JSON.stringify({ closedAtRest, openOnHover, ...listed }));
+  check(header.links.join(" | ") === "Index | Doc reader | About" && header.views === 0,
+    "the header lists Index, Doc reader and About, with no menu of views", JSON.stringify(header));
 
-  await page.locator(".index-list a", { hasText: "Content" }).click();
-  await page.waitForLoadState("networkidle");
+  await page.goto(root, { waitUntil: "networkidle" });
   const back = await page.evaluate(() => ({
     coverageShown: !document.querySelector("#view-coverage").hidden,
     governanceHidden: document.querySelector("#view-governance").hidden,
     view: new URL(location.href).searchParams.get("view"),
   }));
   check(back.coverageShown && back.governanceHidden && back.view === null,
-    "the menu's first view returns to the grid with no ?view= in the address", JSON.stringify(back));
-
-  await page.mouse.move(5, 700);
-  await page.locator(".index-toggle").focus();
-  await page.keyboard.press("Enter");
-  await page.waitForTimeout(100);
-  const keyed = { open: await listShown(),
-    expanded: await page.locator(".index-toggle").getAttribute("aria-expanded") };
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(100);
-  keyed.closed = !(await listShown());
-  check(keyed.open && keyed.expanded === "true" && keyed.closed,
-    "the button beside Index opens the menu from the keyboard, and Escape closes it",
-    JSON.stringify(keyed));
+    "/index with no ?view= opens on the grid", JSON.stringify(back));
 
   check(pageErrors.length === 0, "the governance view: no console errors", pageErrors.join("; "));
 }

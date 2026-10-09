@@ -911,7 +911,7 @@ export function about({ publication, payload, documents, notes }, { site = null 
     + "one the publication froze, and carries its own as-of date.",
     "  overview_board: the grid the site opens on, the summary figures of both "
     + "boards for each company, each figure with the letter from A to G the "
-    + "site grades it with, the overview's takeaways and a written summary of "
+    + "site grades it with, the index's takeaways and a written summary of "
     + "each company.",
     "  compare_documents: everything one run found between two documents on one "
     + "behaviour, passage by passage. Its full answer runs to hundreds of "
