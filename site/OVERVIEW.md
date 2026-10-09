@@ -13,8 +13,8 @@ No data lives here. The reader and the pages fetch it from the application's rou
 | Path | What it is |
 |---|---|
 | `index.html` | Minimal redirect to `spec-reader/`, which is the landing surface. The core-page prototype it carried is retired; its design history lives in `design/`. |
-| `about.html` | Served at `/about`; `/how-it-works`, its address until 18 September 2026, redirects there. What the index is and which documents it reads, how passages are judged and depths given, what it does not tell you, how to cite a passage or the index (its citation block reads `/api/reader/publication`), Andrés Cotton's original tool, and running it yourself. It carries both proposal forms, a new model spec and a new behaviour, in a dialog opened from a button in each section; both forms post to `/api/submit`. |
-| `mcp.html` | Served at `/mcp`. How to connect to the public MCP endpoint, `/api/mcp`: streamable HTTP, no account, four read-only tools, the first of them an introduction an assistant reads before the others. |
+| `about.html` | Served at `/about`; `/how-it-works`, its address until 18 September 2026, redirects there. Who runs the index, what the index is, how passages are judged and depths given, how to use the site and its MCP server (the one link to `/mcp`, which the header's menu no longer carries), how to cite a passage or the index (its citation block reads `/api/reader/publication`), Andrés Cotton's original tool, and running it yourself. It carries both proposal forms, a new model spec and a new behaviour, in a dialog opened from a button in each section; both forms post to `/api/submit`. |
+| `mcp.html` | Served at `/mcp`, and reached from `about.html` rather than from the header's menu. How to connect to the public MCP endpoint, `/api/mcp`: streamable HTTP, no account, eight read-only tools, the first of them an introduction an assistant reads before the others. |
 | `overview.html`, `overview.js`, `constitutions.js`, `constitutions.json`, `governance.js`, `governance.json` | The front page, served at `/` and `/overview`: two views of one board (`board.js`) behind tabs, and `overview.js` owns only the tabs and the address. The first view is `constitutions.js`, which reads the written file `constitutions.json` and no route at all: the final score out of 20 at the top, the document as a whole out of 10 opening into its five criteria out of 2, and each behaviour category opening into its behaviours out of 10, with companies ranked by the final score. Every figure and every sentence a popover shows comes out of that file; the two scales are written once under the table and never inside a popover, and nothing on it says how the figures were arrived at. A company that publishes no constitution scores nought rather than NA. The second view, `?view=governance`, is unchanged: how each company governs its model spec, from `governance.json`, which is editorial. |
 | `coverage.html`, `coverage.js` | The board the front page led with until 23 September 2026, served at `/coverage`. It is built from the publication the site is serving, on the same rows, and it is the one board whose figures open on the passages behind them and on the contradictions in the sheet. The front board links to it in one line, carrying the publication its own file names. |
 | `board.css` | The stylesheet both board pages link, which was the `<style>` block of `overview.html` until the coverage board moved to a page of its own. |
@@ -45,7 +45,7 @@ graph LR
   how -->|"proposal forms"| submit["/api/submit"]
   mcp["mcp.html"] -.->|"describes"| endpoint["/api/mcp"]
   reader -->|"nav links"| how
-  reader -->|"nav links"| mcp
+  how -->|"links"| mcp
 ```
 
 ## As-is observations

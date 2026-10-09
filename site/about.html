@@ -424,7 +424,6 @@
     <a href="/index" data-index-menu>Index</a>
     <a href="/doc-reader/">Doc reader</a>
     <a class="active" href="/about" aria-current="page">About</a>
-    <a href="/mcp">MCP</a>
     <!-- Hidden, not removed. The umber surface is not offered anywhere in the
          index, and the same button is hidden the same way on the reader. -->
     <button class="mode" id="mode" type="button" hidden
@@ -446,10 +445,26 @@
 
   <div id="said-page" hidden></div>
 
-  <!-- The page opens on what the index is, for someone who has not seen the site
-       and is not technical. Every section below is written to the user's rules for
+  <!-- Who runs the index, said only from what the repository already says of
+       Polaris Collective: the footer, the header's note, the README and
+       CITATION.cff. -->
+  <section class="m" id="about-us">
+    <h2>About us</h2>
+    <p class="lead">Polaris Collective runs the AI Constitutions Index. We maintain it and renew
+    it as the documents change.</p>
+    <p>We took the index over from its creator, Andr&eacute;s Cotton, in September 2026, with
+    Andr&eacute;s&rsquo;s agreement. We run the panel of judges behind the Content scores, and give the Process scores
+    by hand from public documents. We also wrote part of the method, including some of the
+    behaviour descriptions and the working paper on model spec governance from which Process takes
+    its five questions.</p>
+    <p>Our scoring method is open to challenge, and we want to hear where you think it is wrong.
+    More about the collective is at <a href="https://polariscollective.org" target="_blank"
+    rel="noopener">polariscollective.org</a>.</p>
+  </section>
+  <!-- Then what the index is, for someone who has not seen the site and is not
+       technical. Every section of the page is written to the user's rules for
        English prose: plain declarative sentences, one antithesis for the whole page
-       (the opening section's third sentence, because that contrast is the whole
+       (the third sentence of What this is, because that contrast is the whole
        caveat), no triads where two items would do, no closing punchlines. -->
   <section class="m" id="tldr">
     <h2>What this is</h2>
@@ -474,8 +489,6 @@
     <a href="/index?view=governance">process</a>, scores ten companies on how
     open they are about their constitution and how far it is made to bind their models. The two
     still in preparation are <a href="#ambition">described below</a>.</p>
-    <p>Polaris Collective maintains the index and renews it as the documents change. Its scoring
-    method is open to challenge, and we want to hear where you think it is wrong.</p>
   </section>
   <!-- Why the index exists, for a reader who has not seen how these models are
        made. The asterisk beside the first "should" on the site points here. -->
@@ -594,39 +607,35 @@
       a rule is weakened.</li>
     </ul>
   </section>
-  <!-- The setup lives on the MCP page. What belongs here is why a reader might
-       want it at all. -->
+  <!-- How to read the site, then the MCP server. The header's menu no longer
+       leads to the MCP page, so the link here is the way to its setup. The id is
+       the one this section had as "Use the index from your AI assistant", kept
+       for links already shared. -->
   <section class="m" id="your-assistant">
-    <h2>Use the index from your AI assistant</h2>
-    <p class="lead">You can connect the index to an assistant such as Claude or ChatGPT, so that
-    its answers about these documents come from the index.</p>
-    <p>The connection uses MCP, the Model Context Protocol, a standard way for an assistant to
-    look something up in another service while it answers. Once connected, your assistant quotes
-    the passages a document gives on a behaviour and says where each one sits, so you can check
-    the answer. The index only reads, and needs no account or key.</p>
-    <p>It is useful to people who write about how AI companies govern their models, and to people
-    who build evaluations. The <a href="/mcp">MCP page</a> explains the setup and what the index
-    can be asked.</p>
-  </section>
-  <section class="m">
-    <h2>What the index reads</h2>
-    <p>As of September 2026 the index reads four constitutions: Claude&rsquo;s Constitution
-    (2026-01-20), the OpenAI Model Spec in two versions (2025-12-18 and 2026-08-18) and the
-    Alibaba Model Spec (2026-04-00). Each runs to tens of thousands of words, and what it says
-    about any one subject is spread across it.</p>
-    <p>Each version is read as a document of its own, named
-    <code>&lt;company&gt;--&lt;document&gt;@&lt;version&gt;</code>, so the two OpenAI versions are
-    read and cited separately. Alibaba publishes its constitution in Chinese. The index works from
-    an English translation, and the doc reader shows the original beside every passage.</p>
-    <p>As of September 2026 the index groups the behaviours it asks about in four categories: autonomy,
-    oversight and authority; harm and safety; helpfulness and judgement; honesty and
-    epistemics.</p>
-    <p>In the <a href="/doc-reader/">doc reader</a>, tick a behaviour and every passage that bears
-    on it is highlighted in the document you are reading, or in two documents side by side. All
-    three bands are shown by default, with related passages drawn softer, and each band can be
-    switched off. Clicking a passage shows why it was cited and how strongly. The <b>i</b> beside
-    each behaviour shows the description the index read it against. The export saves the passages
-    you ticked as a file.</p>
+    <h2>How to use this tool</h2>
+    <p class="lead">The <a href="/">overview</a> grades each company on one board, with a letter
+    from A to G for every score.</p>
+    <ul>
+      <li>Press a cell to see the score behind it.</li>
+      <li>Press a row&rsquo;s name to see what the row measures, or a company&rsquo;s name to read
+      about the company.</li>
+      <li>Press the round button before a score&rsquo;s name to open it into the rows it is made
+      of. Show every row opens them all at once.</li>
+      <li>Press the key under the grid to see the range of figures each letter covers.</li>
+    </ul>
+    <p>The Index has a page for each of the two scores, <a href="/index">Content</a> and
+    <a href="/index?view=governance">Process</a>, with every row and the takeaways of each, read
+    the same way. In the <a href="/doc-reader/">doc reader</a> you can read each constitution in
+    full. Tick a behaviour and the passages the judges marked for it are highlighted, then press a
+    passage to see why it was cited and how strongly.</p>
+    <p>You can also connect the index to an AI assistant such as Claude or ChatGPT through its MCP
+    server. MCP, the Model Context Protocol, is a standard way for an assistant to look something
+    up in another service while it answers. Ask your assistant how the index works and how a score
+    is given, or have it work from the index&rsquo;s content. That covers the scores and findings
+    of every board, the passages the judges marked in each constitution for each behaviour, and
+    comparisons between two documents on one behaviour. Your assistant quotes each passage with
+    its place in the document, so you can check the answer. The server only reads and needs no
+    account or key. The <a href="/mcp">MCP page</a> explains the setup.</p>
   </section>
   <!-- Two sections, so each kind of proposal has its own place in the rail and its
        own button into the form it needs. The wrapper keeps #propose, which links
@@ -666,17 +675,6 @@
     data-kind="behaviour">Propose a new behaviour</button></p>
   </section>
   </div>
-  <section class="m">
-    <h2>What it does not tell you</h2>
-    <p>The index reports what a document says. A constitution that covers a behaviour thoroughly
-    is no evidence that the model follows it, and measuring that is separate work the citations
-    here can feed.</p>
-    <p>When two companies&rsquo; documents treat a behaviour differently, it is usually because
-    they made different choices. A figure measures how much a document gives an evaluation to work
-    with.</p>
-    <p>For the Alibaba constitution the index reports what the English translation says, and the doc
-    reader shows the original for comparison.</p>
-  </section>
   <section class="m">
     <h2>Citing what you find</h2>
     <p>Every passage carries a locator, such as these two.</p>
