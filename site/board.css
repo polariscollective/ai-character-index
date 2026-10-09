@@ -1461,9 +1461,9 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    row: two lines' room for the model's name, which starts at the top of every
    cell, then the months, starting at the same height whatever the name takes. */
 .ovw-board .cell-context > .cell-context-words { align-self: start; }
-/* Open weights under the usage squares, on one line whatever the column's width. */
+/* Open weights under the usage figures, on one line whatever the column's width. */
 .ovw-board .cell-context-open { font-size: 10px; line-height: 1.2; color: var(--faint); white-space: nowrap; }
-/* In a usage cell the squares take the first band, centred in it. */
+/* In a usage cell the figures take the first band, centred in it. */
 .ovw-board .cell-context > .usage-meter { align-self: center; }
 .ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
 /* A row's name, and under it in small type what its cells say. */
@@ -1504,17 +1504,19 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    the one word that matters most on the row is seen first. */
 .ovw-board .cell-context-lead { font-weight: 600; color: var(--ink); font-size: 13px; line-height: 15px; }
 .ovw-board .cell-context-band { font-family: var(--mono); font-size: 13px; line-height: 1.2; }
-/* The usage estimate: three small squares in grey, filled one per step, the
-   empty ones drawn as an outline. Grey rather than a colour of the boards, since
-   it is a rough estimate and no score. */
-.ovw-board .usage-meter, .gov-pop .usage-meter { display: inline-flex; gap: 3px; }
+/* The usage estimate: three small figures of a person in grey, filled one per
+   step, the empty ones drawn as an outline, so fill and outline tell them apart
+   rather than the two greys. Grey rather than a colour of the boards, since it
+   is a rough estimate and no score. The SVG draws in currentColor. */
+.ovw-board .usage-meter, .gov-pop .usage-meter { display: inline-flex; gap: 2px; }
 .ovw-board .usage-step, .gov-pop .usage-step {
+  display: block;
+  flex: none;
   width: 10px;
-  height: 10px;
-  border: 1px solid var(--neutral);
-  border-radius: 2px;
+  height: 12px;
+  color: var(--neutral);
 }
-.ovw-board .usage-step-on, .gov-pop .usage-step-on { background: var(--faint); border-color: var(--faint); }
+.ovw-board .usage-step-on, .gov-pop .usage-step-on { color: var(--faint); }
 .gov-pop .usage-figure { display: flex; align-items: center; gap: 10px; }
 .gov-pop .usage-scale { margin: 6px 0 10px; padding: 0; list-style: none; }
 .gov-pop .usage-signals { margin: 8px 0 10px; padding-left: 18px; font-size: 13px; }

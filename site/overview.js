@@ -410,7 +410,7 @@ function aboutContextRow(content, context, row) {
     .forEach(([heading, text]) => {
       if (!text) return;
       content.append(view.h3(heading), element("p", "", text));
-      // A row drawn in squares shows them, each with what it stands for.
+      // A row drawn in figures shows them, each with what it stands for.
       if (heading === "What it is" && row.scale?.length) {
         const list = element("ul", "usage-scale");
         row.scale.forEach(step => {
@@ -424,16 +424,39 @@ function aboutContextRow(content, context, row) {
   (row.links || []).forEach(link => leadTo(content, link.url, link.text));
 }
 
-/* The usage estimate as three squares, filled one per step, all three empty
- * where there is nothing to go on. Decorative: the words beside it say it. */
+/* The usage estimate as three small figures of a person, filled one per step
+ * and drawn in outline for the rest, all three in outline where there is
+ * nothing to go on. Fill against outline is what tells them apart, not colour.
+ * Decorative: the words beside it say it. */
 function usageMeter(level) {
   const filled = level === "-" ? 0 : level.length;
   const meter = element("span", "usage-meter");
   meter.setAttribute("aria-hidden", "true");
-  for (let step = 0; step < 3; step += 1) {
-    meter.append(element("span", step < filled ? "usage-step usage-step-on" : "usage-step"));
-  }
+  for (let step = 0; step < 3; step += 1) meter.append(usagePerson(step < filled));
   return meter;
+}
+
+/* One figure, drawn here rather than fetched, in currentColor so the
+ * stylesheet chooses its ink: a round head over rounded shoulders, on a 10 by
+ * 12 grid at a stroke of 1, the same size filled or not. */
+function usagePerson(on) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", on ? "usage-step usage-step-on" : "usage-step");
+  svg.setAttribute("viewBox", "0 0 10 12");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  svg.setAttribute("fill", on ? "currentColor" : "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1");
+  const head = document.createElementNS(ns, "circle");
+  head.setAttribute("cx", "5");
+  head.setAttribute("cy", "2.7");
+  head.setAttribute("r", "2.1");
+  const body = document.createElementNS(ns, "path");
+  body.setAttribute("d", "M1.2 11.4V10.2a3.8 3.6 0 0 1 7.6 0v1.2z");
+  svg.append(head, body);
+  return svg;
 }
 
 /* One company's fact on one context row: what it is, the company's own words
@@ -443,7 +466,7 @@ function aboutContextCell(content, context, row, company, entry) {
   if (entry.behind) content.append(view.figure(entry.behind, ""));
   if (entry.band) content.append(view.figure(entry.band, " a month"));
   if (entry.level) {
-    // The same three squares the cell shows, and what they are.
+    // The same three figures the cell shows, and what they are.
     const line = element("p", "figure usage-figure");
     line.append(usageMeter(entry.level), document.createTextNode("Our estimate"));
     content.append(line);
@@ -544,11 +567,11 @@ function contextRows(noteNumber) {
       } else if (Number.isFinite(entry.share)) {
         button.append(element("span", "cell-context-band", entry.shown));
       } else if (entry.level) {
-        // Our rough estimate as three squares, filled one per step, all three
-        // empty where there is nothing to go on.
-        // Under the squares, whether anyone can download the company's
+        // Our rough estimate as three small figures, filled one per step, all
+        // three in outline where there is nothing to go on.
+        // Under the figures, whether anyone can download the company's
         // flagship model, as the governance board records it; the line keeps
-        // its place when empty, so the squares sit level across the row.
+        // its place when empty, so the figures sit level across the row.
         const open = element("span", "cell-context-open", company.openWeights ? "Open weights" : "\u00a0");
         if (!company.openWeights) open.setAttribute("aria-hidden", "true");
         button.append(usageMeter(entry.level), open);

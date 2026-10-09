@@ -56,7 +56,7 @@
       "title": "For context",
       "blocks": [
        "Two rows in the grid count towards no score and show what is at stake.",
-       "- **Capabilities.** The company's own model that scores highest on Epoch AI's Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. The months read Epoch's finding that the frontier has gained about 14 points a year. It measures capability on benchmarks and says nothing about danger, and a gap of a few months is within Epoch's margin of error. The data are as of 28 September 2026.\n- **Model usage.** Our rough estimate of how widely the company's models are used, from none to three squares, pieced together from the user counts companies state, developer traffic, downloads of open models and outside estimates. Much of what a robust scale would need is not public, and the kinds of use it combines have no common measure."
+       "- **Capabilities.** The company's own model that scores highest on Epoch AI's Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. The months read Epoch's finding that the frontier has gained about 14 points a year. It measures capability on benchmarks and says nothing about danger, and a gap of a few months is within Epoch's margin of error. The data are as of 28 September 2026.\n- **Model usage.** Our rough estimate of how widely the company's models are used, from none to three filled figures, pieced together from the user counts companies state, developer traffic, downloads of open models and outside estimates. Much of what a robust scale would need is not public, and the kinds of use it combines have no common measure."
       ]
      },
      {
@@ -307,7 +307,7 @@
     "id": "usage",
     "name": "Model usage",
     "sub": "Our rough estimate",
-    "plain": "A rough idea of how widely the company's models are used, from none to three squares. It is our own estimate, pieced together from chat assistants, API use and downloads of open models, and gives only an idea.",
+    "plain": "A rough idea of how widely the company's models are used, from none to three filled figures. It is our own estimate, pieced together from chat assistants, API use and downloads of open models, and gives only an idea.",
     "what": "A rough idea of how widely each company's models are used.",
     "from": "Our own reading of scattered signals: the user counts companies state, their share of developer traffic on OpenRouter, downloads of their open models and outside estimates. For the number of people who use its models, we take the most recent figure that says what it counts and is less than a year old, whether the company states it or an outside firm estimates it. Where a company's only count covers one country, we also weigh its web traffic and its share of developer use. Each cell lists the signals behind it.",
     "limits": "It gives only a limited idea of model usage. Much of what it would need to be a robust scale is not public. Most companies publish no comparable count of users, and the few figures for use through an API are counted in different ways. A chat assistant, a model called through an API and an open model downloaded and run elsewhere are different kinds of use with no common measure, so they may not be fully comparable on one scale.",
