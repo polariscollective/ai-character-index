@@ -154,7 +154,7 @@
   "hint": "Press a cell to see the score behind it, or the key under the grid to see the figures each letter covers.",
   "grade_scale": {
    "title": "The grading scale",
-   "text": "Each letter covers the figures out of 10 beside it. Down to D, a minus marks the bottom of a band and a plus its top; below D, E, F and G are three bands of 2 with neither. The letter is read from the figure as it is shown, to one decimal."
+   "text": "Each letter stands for the scores out of 10 beside it."
   },
   "grade_words": {
    "A": "Meets nearly all of what the row asks",
