@@ -972,13 +972,15 @@ dialog::backdrop { background: rgb(35 40 27 / .55); }
 .gov-more-body p, .gov-more-body li { max-width: 72ch; font-size: 15px; line-height: 1.6; }
 .gov-more-body p { margin: 0 0 12px; }
 .gov-more-body h3 { margin: 24px 0 8px; font-family: var(--display); font-size: 16px; font-weight: 600; }
-.gov-more a, .page-prose a {
+.gov-more a, .page-prose a, .ovw-takeaways a, .gov-notes a {
   color: var(--ink);
   text-decoration: underline 2px var(--energy);
   text-underline-offset: 3px;
 }
 .gov-more a:hover, .gov-more a:focus-visible,
-.page-prose a:hover, .page-prose a:focus-visible { background: var(--energy); }
+.page-prose a:hover, .page-prose a:focus-visible,
+.ovw-takeaways a:hover, .ovw-takeaways a:focus-visible,
+.gov-notes a:hover, .gov-notes a:focus-visible { background: var(--energy); }
 
 /* A source a sentence rests on: its code as a superscript after the sentence,
    in the link style, and in mono because it is a reference a reader matches
