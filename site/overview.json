@@ -56,7 +56,7 @@
       "title": "For context",
       "blocks": [
        "Two rows in the grid count towards no score and show what is at stake.",
-       "- **Capabilities.** The company's own model that scores highest on Epoch AI's Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. The months read Epoch's finding that the frontier has gained about 14 points a year. It measures capability on benchmarks and says nothing about danger, and a gap of a few months is within Epoch's margin of error. The data are as of 28 September 2026.\n- **Model usage.** Our rough estimate of how widely the company's models are used, from none to three filled figures, pieced together from the user counts companies state, developer traffic, downloads of open models and outside estimates. Much of what a robust scale would need is not public, and the kinds of use it combines have no common measure."
+       "- **Capabilities.** The company's own model that scores highest on Epoch AI's Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates. The months are our own conversion of the gap in points, at the 14 points a year Epoch finds the frontier has gained. It measures capability on benchmarks and says nothing about danger, and a gap of a few months is within Epoch's margin of error. The data are as of 28 September 2026.\n- **Model usage.** Our rough estimate of how widely the company's models are used, from none to three filled figures, pieced together from the user counts companies state, developer traffic, downloads of open models and outside estimates. Much of what a robust scale would need is not public, and the kinds of use it combines have no common measure."
       ]
      },
      {
@@ -289,7 +289,7 @@
     "source": "Epoch AI, Epoch Capabilities Index, as of 28 September 2026",
     "url": "https://epoch.ai/eci",
     "what": "The model the company builds itself that scores highest on the Epoch Capabilities Index, which combines more than fifty benchmarks into one scale of general capability, shown as how many months it trails the most capable model Epoch rates.",
-    "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months come from Epoch's finding that, since reasoning models arrived in September 2024, the frontier has gained about 14 points a year on its index.",
+    "from": "Epoch AI's Epoch Capabilities Index, data of 28 September 2026, published under CC BY 4.0. The months are our own conversion, not Epoch's: we divide the gap in points by the 14 points a year Epoch finds the frontier has gained on its index since reasoning models arrived in September 2024.",
     "links": [
      {
       "text": "Epoch Capabilities Index",
