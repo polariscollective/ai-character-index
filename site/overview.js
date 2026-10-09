@@ -785,11 +785,13 @@ function draw() {
   drawLegend();
 }
 
-/* Every source the overview's cells cite, at the foot of the page: the
- * governance board's sources, drawn by its own code (sourcesInto), then those
- * of the context rows, each opening in its own tab. */
+/* Every source the overview's cells cite, in the page's last section, laid out
+ * as the governance board lays out its own: its sources, drawn by its own code
+ * (sourcesInto), then those of the context rows, each opening in its own tab. */
 function drawSources() {
-  sourcesInto(byId("ovw-sources"));
+  const node = byId("ovw-source-list");
+  if (!node) return;
+  sourcesInto(node);
   const context = state.overview.context;
   const list = element("ul", "source-list ovw-context-sources");
   const linked = (text, url) => {
@@ -815,8 +817,7 @@ function drawSources() {
         list.append(item);
       }));
   });
-  byId("ovw-context-sources").replaceChildren(
-    ...(list.children.length ? [element("h3", "", context?.name || "For context"), list] : []));
+  if (list.children.length) node.append(element("h3", "", context?.name || "For context"), list);
 }
 
 /* Under the source a code led to, the way back: to the cell the code was

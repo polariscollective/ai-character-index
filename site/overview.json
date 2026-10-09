@@ -69,6 +69,14 @@
      "### Where to read more",
      "[About](/about) explains why constitutions matter and how to propose a constitution or a behaviour. The [doc reader](/doc-reader/) shows every passage behind a behaviour figure, why it was cited and how strongly, and the depth each judge gave. The Index pages, [Content](/index) and [Process](/index?view=governance), set out what earns each score on every criterion and check, and Process lists the sources it read for each company."
     ]
+   },
+   {
+    "id": "ovw-sources",
+    "title": "Sources reviewed",
+    "blocks": [
+     "What was read for each company, with the address of each document. The last group holds the sources that cover more than one company. Each document carries the code the texts on this page cite it by, and the passages we quote from it. The sources of the context rows close the list.",
+     { "slot": "ovw-source-list", "tag": "div", "class": "source-registry" }
+    ]
    }
   ]
  },

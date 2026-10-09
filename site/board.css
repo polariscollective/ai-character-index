@@ -1618,10 +1618,6 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    few bold words at the weight the takeaways' titles use. */
 #ovw-lede, #ovw-lede p { color: var(--ink); }
 #ovw-lede strong { font-weight: 600; color: var(--ink); }
-/* The overview's sources, at the foot of the page. */
-.ovw-sources { margin-top: 48px; }
-.ovw-sources h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 600; }
-.ovw-sources .ovw-context-sources .source-entry { margin: 4px 0; font-size: 14px; }
 .source-entry .source-back { display: inline-block; margin: 6px 0 4px; }
 /* A fold inside a section, under a smaller heading: the chevron sits level with
    the heading's words, and the heading keeps no margin of its own in the line. */
