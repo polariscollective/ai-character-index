@@ -1624,3 +1624,6 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .section-fold .section-fold > summary { align-items: center; padding: 6px 0; }
 .section-fold .section-fold > summary h3 { margin: 0; }
 .section-fold .section-fold > summary::before { margin-bottom: 0; }
+/* Under a source, the cells that cite it. */
+.source-entry .source-cited { margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
+.source-entry .source-cited .inline-button { font-size: 13px; }

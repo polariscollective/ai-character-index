@@ -818,6 +818,81 @@ function drawSources() {
       }));
   });
   if (list.children.length) node.append(element("h3", "", context?.name || "For context"), list);
+  citedIn(node);
+}
+
+/* Every cell of the grid that cites a source, from the governance file the
+ * grid's rows were built from: a check's or a practice's evidence, a practice
+ * no outsider can see, or a figure's reading. Keyed by the source's code, each
+ * cell as the grid addresses it, by company and row. */
+function citationsOf(governance) {
+  const cited = new Map();
+  const codesIn = value => {
+    const codes = new Set();
+    const walk = part => {
+      if (typeof part === "string") {
+        for (const match of part.matchAll(/\[\^([A-Z]{2}\d+)\]/g)) codes.add(match[1]);
+      } else if (Array.isArray(part)) part.forEach(walk);
+      else if (part && typeof part === "object") {
+        if (typeof part.ref === "string") codes.add(part.ref);
+        Object.values(part).forEach(walk);
+      }
+    };
+    walk(value);
+    return codes;
+  };
+  const add = (code, lab, row) => {
+    const list = cited.get(code) || [];
+    if (!list.some(cell => cell.lab === lab && cell.row === row)) list.push({ lab, row });
+    cited.set(code, list);
+  };
+  [governance.evidence, governance.internal_evidence, governance.column_readings]
+    .forEach(byLab => Object.entries(byLab || {}).forEach(([lab, rows]) =>
+      Object.entries(rows || {}).forEach(([row, entry]) =>
+        codesIn(entry).forEach(code => add(code, lab, row)))));
+  return cited;
+}
+
+/* Under each source, the cells that cite it, each a button that opens the rows
+ * down to that cell and opens its popover, in the order of the grid's columns
+ * and rows. */
+function citedIn(node) {
+  const governance = state.boards.governance;
+  const cited = citationsOf(governance);
+  const names = new Map([
+    ...(governance.columns || []).map(column => [column.id, column.name]),
+    ...(governance.questions || []).flatMap(question => question.checks.map(check => [check.id, check.short])),
+    ...[...(governance.supporting || []), ...(governance.internal || [])].map(practice => [practice.id, practice.short]),
+  ]);
+  const order = state.companies.map(company => company.id);
+  const rowOrder = [...names.keys()];
+  node.querySelectorAll(".source-entry[id^='src-']").forEach(entry => {
+    const cells = (cited.get(entry.id.slice("src-".length)) || [])
+      .filter(cell => order.includes(cell.lab) && names.has(cell.row))
+      .sort((a, b) => order.indexOf(a.lab) - order.indexOf(b.lab)
+        || rowOrder.indexOf(a.row) - rowOrder.indexOf(b.row));
+    if (!cells.length) return;
+    // The company named once, then its cells: "OpenAI: transparency, ...".
+    const line = element("p", "source-cited");
+    line.append(document.createTextNode("Cited in "));
+    const labs = [...new Set(cells.map(cell => cell.lab))];
+    labs.forEach((lab, at) => {
+      if (at) line.append(document.createTextNode("; "));
+      const company = state.companies.find(one => one.id === lab);
+      line.append(document.createTextNode(`${company.name}: `));
+      cells.filter(cell => cell.lab === lab).forEach((cell, index) => {
+        if (index) line.append(document.createTextNode(", "));
+        const button = element("button", "inline-button", names.get(cell.row).toLowerCase());
+        button.type = "button";
+        button.setAttribute("aria-label", `${company.name}, ${names.get(cell.row).toLowerCase()}: open its cell`);
+        button.addEventListener("click", () => view.pressCell({ lab: cell.lab, row: cell.row }));
+        line.append(button);
+      });
+    });
+    const meta = entry.querySelector(".source-meta") || entry.querySelector(".source-head");
+    if (meta) meta.after(line);
+    else entry.append(line);
+  });
 }
 
 /* Under the source a code led to, the way back: to the cell the code was
@@ -826,7 +901,10 @@ function drawSources() {
 function offerWayBack(entry, from) {
   if (!entry || !from) return;
   document.querySelectorAll("#view-overview .source-back").forEach(button => button.remove());
-  const back = element("button", "gov-button source-back", "Back to where you were");
+  // Named after the cell, from the first part of its accessible name.
+  const place = (from.getAttribute("aria-label") || "").split(":")[0].trim();
+  const back = element("button", "gov-button source-back",
+    place ? `Back to ${place}` : "Back to where you were");
   back.type = "button";
   back.addEventListener("click", () => {
     back.remove();
@@ -834,7 +912,10 @@ function offerWayBack(entry, from) {
     from.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
     setTimeout(() => from.click(), still ? 0 : 400);
   });
-  entry.append(back);
+  // At the top of the entry, under its title, where the eye lands.
+  const head = entry.querySelector(".source-head");
+  if (head) head.after(back);
+  else entry.prepend(back);
 }
 
 function drawTakeaways(takeaways) {
