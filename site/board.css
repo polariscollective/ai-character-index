@@ -1613,6 +1613,11 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
 .gov-pop .ovw-tree-head { display: inline-flex; align-items: center; gap: 8px; }
 .gov-pop .ovw-tree li > .ovw-tree-head { margin-left: 14px; }
 .gov-pop .ovw-tree-fold > summary { display: flex; align-items: center; gap: 6px; cursor: pointer; list-style: none; }
+/* One rule between two branches of the tree. Each branch is the only fold in
+ * its list item, so the popover's rule for a last fold would draw a second line
+ * under every one of them. */
+.gov-pop .ovw-tree details.ovw-tree-fold { border-bottom: 0; }
+.gov-pop .ovw-tree li:has(> .ovw-tree-fold) { margin: 0; }
 .gov-pop .ovw-tree-fold > summary::-webkit-details-marker { display: none; }
 .gov-pop .ovw-tree-chip { min-width: 30px; text-align: center; font-size: 12px; }
 .gov-pop .ovw-tree-name { font-size: 14px; }
