@@ -459,11 +459,25 @@
    },
    "microsoft": {
     "capability": {
-     "shown": "-",
-     "model": null,
+     "shown": "MAI-Thinking-1",
+     "model": "MAI-Thinking-1",
      "eci": null,
-     "text": "Epoch rates no model Microsoft AI has built. The one Microsoft model it rates is Phi-4, a Microsoft Research model released in December 2024, at 130.4.",
-     "behind": null
+     "released": "2026-06-02",
+     "open_weights": false,
+     "text": "MAI-Thinking-1, which Microsoft AI announced on 2 June 2026 as its flagship reasoning model, has been in public preview on Microsoft Foundry since 12 August 2026. Its weights cannot be downloaded. Epoch does not rate it, as of 9 October 2026, so its distance from the frontier cannot be measured on Epoch's scale. The Microsoft model Epoch rates highest is Phi-4, a Microsoft Research model released in December 2024, at 130.4.",
+     "behind": "Not rated by Epoch",
+     "months_behind": null,
+     "short": "Not rated",
+     "signals": [
+      {
+       "text": "Microsoft AI announced MAI-Thinking-1, its flagship reasoning model, on 2 June 2026.",
+       "url": "https://microsoft.ai/news/building-a-hillclimbing-machine-launching-seven-new-mai-models/"
+      },
+      {
+       "text": "Microsoft AI said on 12 August 2026 that MAI-Thinking-1 is in public preview on Microsoft Foundry.",
+       "url": "https://microsoft.ai/news/introducing-mai-thinking-1/"
+      }
+     ]
     },
     "usage": {
      "shown": "-",
