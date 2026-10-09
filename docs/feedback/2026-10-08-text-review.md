@@ -80,7 +80,7 @@ applicability") are still open.
 | 7 | Alibaba's "current Qwen line": find which line is current and name it (likely the 3.8 generation) | four texts in `site/overview.json` and `site/governance.json` | content |
 | 8 | Split Alibaba's "gaps" sentence; ambiguous whether by the two halves of what the constitutions say or against governance; if the former, it applies to every company's summary that names gaps | `site/overview.json` `summaries.*.constitutions` | decide |
 | 9 | Remove "Motivation" and "What comes next" from the board pages (the owner: "Shouldn't be there"); if motivation moves, `/about` already has "Why it matters" | `site/constitutions.json`, `site/governance.json` `page.sections` | decide (one or both) |
-| 10 | Context cell popovers repeat the row's explanation; keep it only in the row's own popover | `site/overview.js` `aboutContextCell` | later |
+| 10 | Context cell popovers repeat the row's explanation; keep it only in the row's own popover. Done for every row of the overview, not only the context rows (9 October 2026) | `site/overview.js`, `site/governance.js`, `site/constitutions.js` | done |
 | 11 | Remove the weight fractions under row names ("1/8 of the figure") across the boards and their popovers; reverses the 24 September rule | `site/constitutions.js` `weightLine`, `site/governance.js` `rowWeight`, `aboutColumn` | done |
 | 12 | Remove the "From Kembery et al." source lines in popovers, across the boards | `site/governance.js` `aboutColumn`, `fromLine` | done |
 | 13 | "What this column does not count" (I5) in the column popover: gone, since I5 is scored 0 for every company on what it publishes (9 October 2026) | `site/governance.json` | done |
