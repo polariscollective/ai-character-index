@@ -727,6 +727,30 @@ function drawLegend() {
   byId("ovw-legend").replaceChildren(list, spoken);
 }
 
+/* What the key opens: every letter with the figures out of 10 it covers, from
+ * its threshold up to the tenth below the next one. */
+function aboutScale(content) {
+  const words = state.overview.grid.grade_scale || {};
+  view.titled(content, words.title || "The grading scale");
+  if (words.text) renderMarkup(content, words.text);
+  const list = element("ul", "check-list ovw-scale-list");
+  let next = null;
+  orderedGrades().forEach(({ letter, from }) => {
+    const low = Math.max(from, 0);
+    const high = next === null ? TEN : next - 0.1;
+    const item = element("li");
+    item.append(view.chip(gradeValue(letter), TEN, letter),
+                element("span", "ovw-scale-range", `${low.toFixed(1)} to ${high.toFixed(1)}`));
+    // What a plain letter means, beside its range: the key under the grid
+    // shows only the letters, and this is where their words are read.
+    const meaning = (state.overview.grid.grade_words || {})[letter];
+    if (meaning) item.append(element("span", "ovw-scale-words", meaning));
+    list.append(item);
+    next = from;
+  });
+  content.append(list);
+}
+
 function draw() {
   const { grid } = state.overview;
   byId("ovw-caption").textContent = grid.caption;
