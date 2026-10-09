@@ -71,23 +71,27 @@ const onTen = (value, max) => value / max * TEN;
 const onItsScale = (value, max) =>
   `Scored ${Number(Number(value).toFixed(1))} on its own scale of 0 to ${max}.`;
 
-/* `ownScale` is set where these rows are drawn on the overview, which shows a
- * row scored directly on the scale it was given on rather than out of 10. */
-const board = { data: null, labs: [], nodes: {}, ownScale: false };
+/* `onOverview` is set where these rows are drawn on the overview, which shows
+ * a row scored directly on the scale it was given on rather than out of 10, and
+ * keeps what a row is in the popover its name opens: a cell's popover there
+ * says only what is particular to the company. */
+const board = { data: null, labs: [], nodes: {}, onOverview: false };
+/* A row's own description under a cell's title, on the Index only. */
+const rowLine = text => (board.onOverview ? null : text);
 /* How a sentence names a row's scale: "scored from 0 to 4 and shown out of
  * 10" on the Index, and only the first half on the overview. */
-const shownOutOfTen = () => (board.ownScale ? "" : ` and shown out of ${TEN}`);
+const shownOutOfTen = () => (board.onOverview ? "" : ` and shown out of ${TEN}`);
 
 /* A row's chip in a popover's list: out of 10 on the Index, and the score as
  * given on the overview. */
-const rowChip = (value, max) => (board.ownScale
+const rowChip = (value, max) => (board.onOverview
   ? view.chip(value, max, String(Number(Number(value).toFixed(1))))
   : view.chip(onTen(value, max), TEN, shown(onTen(value, max))));
 
 /* A row's figure at the head of its popover: out of 10 on the Index, with the
  * score as given under it, and the score as given alone on the overview. */
 function scoreFigure(content, value, max) {
-  if (board.ownScale) {
+  if (board.onOverview) {
     content.append(view.figure(String(Number(Number(value).toFixed(1))), ` out of ${max}`));
     return;
   }
@@ -449,7 +453,7 @@ function partItem(value, name, open, cell) {
 }
 
 function columnScore(content, lab, column) {
-  view.titled(content, `${lab.name}: ${column.name.toLowerCase()}`, column.plain);
+  view.titled(content, `${lab.name}: ${column.name.toLowerCase()}`, rowLine(column.plain));
   content.append(view.figure(shown(lab.byColumn[column.id]), ` out of ${column.out_of}`));
   // Why the company stands where it does, in the file's words; the overview
   // shows the same reading for this cell.
@@ -469,7 +473,7 @@ function columnScore(content, lab, column) {
 }
 
 function questionScore(content, lab, question) {
-  view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, question.plain);
+  view.titled(content, `${lab.name}: ${question.name.toLowerCase()}`, rowLine(question.plain));
   content.append(view.figure(shown(onTen(lab.byQuestion[question.id], SCALE)), ` out of ${TEN}`),
     checksOf(lab, question));
   content.append(view.h3("What we found"),
@@ -478,10 +482,10 @@ function questionScore(content, lab, question) {
 
 function checkScore(content, lab, question, check) {
   const value = board.data.scores[lab.id][check.id];
-  view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, `${check.label}.`);
+  view.titled(content, `${lab.name}: ${check.short.toLowerCase()}`, rowLine(`${check.label}.`));
   scoreFigure(content, value, SCALE);
   content.append(element("p", "", meansAt(check.anchors, value)));
-  content.append(view.h3("What each score means"), anchorsList(check, value));
+  if (!board.onOverview) content.append(view.h3("What each score means"), anchorsList(check, value));
   content.append(view.h3(`What we found on ${lab.name}'s ${question.name.toLowerCase()}`),
     paragraphs(board.data.profiles[lab.id][question.id]));
   evidenceBlock(content, lab, check.id);
@@ -492,13 +496,15 @@ function checkScore(content, lab, question, check) {
 function practiceScore(content, lab, practice) {
   const value = board.data.supporting_scores[lab.id][practice.id];
   const column = columnOf(board.data, practice.id);
-  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
+  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, rowLine(practice.label));
   scoreFigure(content, value, PRACTICE);
   content.append(element("p", "", meansAt(board.data.supporting_scale, value)));
   const note = board.data.supporting_notes[lab.id]?.[practice.id];
   if (note) content.append(element("p", "", note));
-  if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
-  content.append(view.h3("What each score means"), scaleList(value));
+  if (!board.onOverview) {
+    if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
+    content.append(view.h3("What each score means"), scaleList(value));
+  }
   content.append(view.h3(`What we found on ${lab.name}`),
     paragraphs(board.data.profiles[lab.id][column.prose]));
   evidenceBlock(content, lab, practice.id);
@@ -510,13 +516,19 @@ function practiceScore(content, lab, practice) {
 function disclosedScore(content, lab, practice) {
   const value = board.data.internal_scores[lab.id][practice.id];
   const found = board.data.internal_evidence[lab.id][practice.id];
-  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, practice.label);
+  view.titled(content, `${lab.name}: ${practice.short.toLowerCase()}`, rowLine(practice.label));
   scoreFigure(content, value, PRACTICE);
   content.append(element("p", "", meansAt(practice.anchors, value)), element("p", "", found.sentence));
-  if (value === 0) content.append(element("p", "subtitle", board.data.disclosure_note));
+  if (value === 0 && !board.onOverview) {
+    content.append(element("p", "subtitle", board.data.disclosure_note));
+  }
   if (found.sources.length) {
     content.append(view.h3(`What ${lab.name} publishes`));
     found.sources.forEach(source => content.append(sourceQuote(source)));
+  }
+  if (board.onOverview) {
+    content.append(toProfile(lab, null));
+    return;
   }
   content.append(view.h3("What each score means"),
     scaleList(value, practice.anchors), toProfile(lab, null), paperFold(practice));
@@ -651,7 +663,7 @@ function aboutUnscoredPractice(content, practice) {
 /* A group of practices for one company: the mean, and each practice under it. */
 function groupScore(content, lab, group) {
   const value = groupAverage(lab.id, group);
-  view.titled(content, `${lab.name}: ${group.name.toLowerCase()}`, group.plain);
+  view.titled(content, `${lab.name}: ${group.name.toLowerCase()}`, rowLine(group.plain));
   content.append(view.figure(shown(value), ` out of ${TEN}`));
   const list = element("ul", "check-list");
   group.practices.forEach(id => {
@@ -667,7 +679,7 @@ function groupScore(content, lab, group) {
   if (group.unscored) {
     content.append(view.h3("Not scored"), unscoredList(group, true));
   }
-  if (group.practices.some(id => onlyTheCompany(board.data, id))) {
+  if (!board.onOverview && group.practices.some(id => onlyTheCompany(board.data, id))) {
     content.append(element("p", "subtitle", board.data.disclosure_note));
   }
   content.append(view.showInTable(groupKey(group), "its practices"), toProfile(lab, null));
@@ -1255,7 +1267,7 @@ export const openCell = (lab, row) => Boolean(view?.pressCell({ lab, row }));
  * the file given here. */
 export function rowsFor(givenView, data, options) {
   view = givenView;
-  board.ownScale = true;
+  board.onOverview = true;
   prepare(data);
   return rowsBelowTotal(options);
 }

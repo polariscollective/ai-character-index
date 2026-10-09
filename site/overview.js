@@ -169,7 +169,8 @@ function leadTo(content, href, text) {
  * halves. One press, the whole picture. */
 function aboutFinal(content, company, group, value) {
   const final = group.final;
-  view.titled(content, `${company.name}: ${group.name.toLowerCase()}`, final.plain);
+  // What the score measures is in the popover its name opens, not repeated here.
+  view.titled(content, `${company.name}: ${group.name.toLowerCase()}`);
   content.append(gradeFigure(value));
   const reason = summaryOf(company, final.board, final.board);
   if (reason) renderMarkup(content, reason);
@@ -519,7 +520,7 @@ function aboutContextCell(content, context, row, company, entry) {
     if (entry.source) content.append(element("p", "subtitle", entry.source));
   }
   if (entry.downloads) content.append(element("p", "subtitle", entry.downloads));
-  content.append(element("p", "subtitle", row.plain));
+  // What the row is lives in its own popover, under its name, and not here.
   if (entry.url) leadTo(content, entry.url, "Source");
   else if (row.url) leadTo(content, row.url, row.source || row.url);
 }

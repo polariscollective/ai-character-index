@@ -38,10 +38,11 @@ import { companyMark } from "./company-marks.js";
 
 const byId = id => document.getElementById(id);
 
-/* `ownScale` is set where these rows are drawn on the overview, which shows a
- * criterion on the scale of 4 it was given on rather than out of 10. */
-const state = { data: null, companies: [], categories: [], ownScale: false };
-const shownOutOfTen = () => (state.ownScale ? "" : ` and shown out of ${TEN}`);
+/* `onOverview` is set where these rows are drawn on the overview, which shows
+ * a criterion on the scale of 4 it was given on rather than out of 10, and
+ * keeps what a criterion is in the popover its name opens. */
+const state = { data: null, companies: [], categories: [], onOverview: false };
+const shownOutOfTen = () => (state.onOverview ? "" : ` and shown out of ${TEN}`);
 
 let board = null;
 
@@ -432,7 +433,7 @@ function wholeScore(content, company) {
     if (part === null) return;
     // On the overview a criterion is shown as given, out of 4.
     const given = criterionScore10(company, criterion);
-    list.append(state.ownScale
+    list.append(state.onOverview
       ? figureItem(given, CRITERION_SCALE, criterion.name,
         `${criterion.name}, ${onScale(given)} out of ${CRITERION_SCALE}`,
         rest => criterionScore(rest, company, criterion), { lab: company.id, row: criterion.id },
@@ -478,7 +479,7 @@ function criterionScore(content, company, criterion) {
   const part = criterionPart(company, criterion);
   const entry = company.whole?.criteria?.[criterion.id] || {};
   board.titled(content, `${company.name}: ${lowerFirst(criterion.name)}`, documentLine(company));
-  if (state.ownScale) {
+  if (state.onOverview) {
     content.append(board.figure(onScale(criterionScore10(company, criterion)),
       ` out of ${CRITERION_SCALE}`));
   } else {
@@ -486,9 +487,9 @@ function criterionScore(content, company, criterion) {
       element("p", "subtitle", `Scored ${onScale(criterionScore10(company, criterion))} on its own `
         + `scale of 0 to ${CRITERION_SCALE}.`));
   }
-  renderMarkup(content, criterion.what_it_is, "subtitle");
+  if (!state.onOverview) renderMarkup(content, criterion.what_it_is, "subtitle");
   cellSentences(content, company, entry.what_the_document_does, entry.why);
-  scaleOf(content, criterion);
+  if (!state.onOverview) scaleOf(content, criterion);
 }
 
 function aboutBehaviours(content) {
@@ -921,7 +922,7 @@ async function showPublishedAt(publication) {
  * the file given here. */
 export function rowsFor(view, data, options) {
   board = view;
-  state.ownScale = true;
+  state.onOverview = true;
   prepare(data);
   return rowsBelowFinal(options);
 }
