@@ -1464,7 +1464,8 @@ a.source-code:hover, a.source-code:focus-visible { background: var(--energy); }
    cell, then the months, starting at the same height whatever the name takes. */
 .ovw-board .cell-context > .cell-context-words { align-self: start; }
 /* Open weights under the usage figures, on one line whatever the column's width. */
-.ovw-board .cell-context-open { font-size: 10px; line-height: 1.2; color: var(--faint); white-space: nowrap; }
+/* At 9px "Open weights" fits inside the cell's padding, so it centres under the figures. */
+.ovw-board .cell-context-open { font-size: 9px; line-height: 1.2; color: var(--faint); white-space: nowrap; }
 /* In a usage cell the figures take the first band, centred in it. */
 .ovw-board .cell-context > .usage-meter { align-self: center; }
 .ovw-board .cell-context > :only-child { grid-row: 1 / -1; align-self: center; margin: 0; }
