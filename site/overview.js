@@ -240,19 +240,15 @@ function everyScore(content) {
 /* Each board's takeaways: the key its file writes them under, and the section
  * of the Index that shows them (boards.html), which boards.js lands on once the
  * board is drawn. */
-const TAKEAWAYS = {
-  governance: { key: "findings", href: "/index?view=governance#gov-takeaways" },
-  constitutions: { key: "takeaways", href: "/index#cov-takeaways" },
-};
+const TAKEAWAYS = { governance: "findings", constitutions: "takeaways" };
 
 /* What a final score's name opens: what the score is, in one line, then the
- * takeaways of the board it comes from, as that board's file writes them, and
- * the way to them on the Index. Not the overview's own takeaways, which are
- * across both scores. Wide, since it carries a whole board's takeaways: the
+ * takeaways of the board it comes from, as that board's file writes them. Not
+ * the page's own takeaways, which are across both scores. Wide, since it carries a whole board's takeaways: the
  * class sits on the popover's body, which every popover replaces, so the next
  * one opens at the usual width (board.css). */
 function aboutGroup(content, group) {
-  const { key, href } = TAKEAWAYS[group.final.board];
+  const key = TAKEAWAYS[group.final.board];
   content.classList.add("ovw-pop-wide");
   view.titled(content, group.name);
   content.append(element("p", "", group.final.plain));
@@ -266,7 +262,6 @@ function aboutGroup(content, group) {
       content.append(item);
     });
   }
-  leadTo(content, href, `Open the ${group.name} takeaways on the Index`);
 }
 
 /* A company: the whole picture in a few sentences, its two final scores, and
