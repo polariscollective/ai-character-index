@@ -101,7 +101,7 @@
               transition: background-color .15s ease, color .15s ease; }
   .repo-btn:hover { background: var(--energy); color: var(--ink); }
 
-  section.m { padding: 32px 0; border-top: 1px solid var(--hair); }
+  section.m { padding: 32px 0; }
   /* The framework's section heading: a 56px chartreuse rule, the heading under it. */
   h2 { font-family: var(--display); font-size: 22px; font-weight: 600; color: var(--ink);
        margin-bottom: 16px; padding-top: 19px;
@@ -445,22 +445,6 @@
 
   <div id="said-page" hidden></div>
 
-  <!-- Who runs the index, said only from what the repository already says of
-       Polaris Collective: the footer, the header's note, the README and
-       CITATION.cff. -->
-  <section class="m" id="about-us">
-    <h2>About us</h2>
-    <p class="lead">Polaris Collective runs the AI Constitutions Index. We maintain it and renew
-    it as the documents change.</p>
-    <p>We took the index over from its creator, Andr&eacute;s Cotton, in September 2026, with
-    Andr&eacute;s&rsquo;s agreement. We run the panel of judges behind the Content scores, and give the Process scores
-    by hand from public documents. We also wrote part of the method, including some of the
-    behaviour descriptions and the working paper on model spec governance from which Process takes
-    its five questions.</p>
-    <p>Our scoring method is open to challenge, and we want to hear where you think it is wrong.
-    More about the collective is at <a href="https://polariscollective.org" target="_blank"
-    rel="noopener">polariscollective.org</a>.</p>
-  </section>
   <!-- Then what the index is, for someone who has not seen the site and is not
        technical. Every section of the page is written to the user's rules for
        English prose: plain declarative sentences, one antithesis for the whole page
@@ -489,6 +473,8 @@
     <a href="/index?view=governance">process</a>, scores ten companies on how
     open they are about their constitution and how far it is made to bind their models. The two
     still in preparation are <a href="#ambition">described below</a>.</p>
+    <p>The scoring method is open to challenge, and we want to hear where you think it is
+    wrong.</p>
   </section>
   <!-- Why the index exists, for a reader who has not seen how these models are
        made. The asterisk beside the first "should" on the site points here. -->
@@ -511,6 +497,24 @@
       was trained on it and behaves as it says. This index does not measure that yet, and it is
       part of <a href="#ambition">our ambition</a>.</li>
     </ol>
+  </section>
+  <!-- Who runs the index, after what the index is and why it matters, said from
+       polariscollective.org as of October 2026. -->
+  <section class="m" id="about-us">
+    <h2>About us</h2>
+    <p class="lead">Polaris Collective runs this index. We are a non-profit in formation, based in
+    London and Brussels, working on the constitutions AI companies publish for their models, the
+    documents also called model specs.</p>
+    <p>We keep a public record of those documents and of how they change, in this index. We also
+    research what a constitution should contain and how it should be governed, for companies and
+    for policymakers, and we are preparing independent evaluations of whether models follow
+    theirs.</p>
+    <p>Polaris Collective was founded by Gabriel Levie, Samuel Verboomen and Isabelle Ferreras.
+    Our work is anchored at the Institute for Ethics in AI at the University of Oxford, through its
+    Accelerator Fellowship Programme. As of October 2026 we are funded by BlueDot Impact and
+    Catalyze Impact, and we receive no funding from AI companies.</p>
+    <p>More about us is at <a href="https://polariscollective.org" target="_blank"
+    rel="noopener">polariscollective.org</a>.</p>
   </section>
   <!-- The words the index uses, defined near the top so the rest of the page can
        lean on them. The behaviours open in a dialog read from the
